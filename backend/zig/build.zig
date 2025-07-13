@@ -3,99 +3,146 @@ const std = @import("std");
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
-pub fn build(b: *std.Build) !void {
-    // Standard target options allows the person running `zig build` to choose
+pub fn build(b: *std.Build) void {
+    // Standard target options allows the person running zig build to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
     // for restricting supported target set are available.
-    const target = b.standardTargetOptions(.{
-        .default_target = .{
-            .os_tag = .freestanding,
-            .cpu_arch = .wasm32,
-        },
-    });
+    const target = b.standardTargetOptions(.{ .default_target = .{
+        .cpu_arch = .wasm32,
+        .os_tag = .wasi,
+    } });
 
-    // Standard optimization options allow the person running `zig build` to select
+    // Standard optimization options allow the person running zig build to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .ReleaseSmall,
     });
+    const graphviz_build_mode = std.builtin.OptimizeMode.ReleaseFast;
 
-    const wasm = b.addStaticLibrary(.{
-        .name = "dotviz",
+    // This creates a "module", which represents a collection of source files alongside
+    // some compilation options, such as optimization mode and linked system libraries.
+    // Every executable or library we compile will be based on one or more modules.
+    const lib_mod = b.createModule(.{
+        // root_source_file is the Zig "entry point" of the module. If a module
+        // only contains e.g. external object files, you can make this null.
+        // In this case the main source file is merely a path, however, in more
+        // complicated build scripts, this could be a generated file.
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const zemscripten = b.dependency("zemscripten", .{});
-    b.sysroot = b.dependency("emsdk", .{}).path("upstream/emscripten/cache/sysroot").getPath(b);
-    const activate_emsdk_step = @import("zemscripten").activateEmsdkStep(b);
-
-    wasm.root_module.addImport("zemscripten", zemscripten.module("root"));
-
-    const emcc_flags = @import("zemscripten").emccDefaultFlags(b.allocator, .{
-        .optimize = optimize,
-        .fsanitize = true,
-    });
-
-    var emcc_settings = @import("zemscripten").emccDefaultSettings(b.allocator, .{
-        .optimize = optimize,
-    });
-    try emcc_settings.put("EXPORTED_FUNCTIONS", "['_main', '_viz_parse_json_to_svg', '_malloc', '_free', 'stringToNewUTF8', 'UTF8ToString']");
-
-    // EXPAT
-    const expat_dep = b.dependency("libexpat", .{
+    // We will also create a module for our other entry point, 'main.zig'.
+    const exe_mod = b.createModule(.{
+        // root_source_file is the Zig "entry point" of the module. If a module
+        // only contains e.g. external object files, you can make this null.
+        // In this case the main source file is merely a path, however, in more
+        // complicated build scripts, this could be a generated file.
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    const expat_artifact = expat_dep.artifact("expat");
-    expat_artifact.linkLibC();
-    var expat_settings = @import("zemscripten").emccDefaultSettings(b.allocator, .{
-        .optimize = optimize,
+    // Modules can depend on one another using the std.Build.Module.addImport function.
+    // This is what allows Zig source code to use @import("foo") where 'foo' is not a
+    // file path. In this case, we set up exe_mod to import lib_mod.
+    exe_mod.addImport("dotviz_lib", lib_mod);
+
+    // Now, we will create a static library based on the module we created above.
+    // This creates a std.Build.Step.Compile, which is the build step responsible
+    // for actually invoking the compiler.
+    var lib = b.addLibrary(.{
+        .linkage = .static,
+        .name = "dotviz",
+        .root_module = lib_mod,
     });
-    try expat_settings.put("EXPORTED_FUNCTIONS", "['stringToNewUTF8', 'UTF8ToString']");
 
-    expat_artifact.addIncludePath(.{ .dependency = .{
-        .dependency = b.dependency("emsdk", .{}),
-        .sub_path = "upstream/emscripten/cache/sysroot/include",
-    } });
-    wasm.addIncludePath(.{ .dependency = .{
-        .dependency = b.dependency("emsdk", .{}),
-        .sub_path = "upstream/emscripten/cache/sysroot/include",
-    } });
-    // EXPAT
+    const graphviz_build = b.dependency("graphviz_build", .{
+        .target = target,
+        .optimize = graphviz_build_mode,
+    });
+    const artifact = graphviz_build.artifact("graphvizstatic");
+    // This declares intent for the library to be installed into the standard
+    // location when the user invokes the "install" step (the default step when
+    // running zig build).
+    // b.installArtifact(lib);
 
-    wasm.linkLibrary(expat_artifact);
-    const emcc_step = @import("zemscripten").emccStep(
-        b,
-        wasm,
-        .{
-            .optimize = optimize,
-            .flags = emcc_flags,
-            .settings = emcc_settings,
-            .use_preload_plugins = true,
-            .embed_paths = &.{},
-            .preload_paths = &.{},
-            .install_dir = .{ .custom = "web" },
-            .shell_file_path = "index.html",
-        },
-    );
-    emcc_step.dependOn(activate_emsdk_step);
+    // This creates another std.Build.Step.Compile, but this one builds an executable
+    // rather than a static library.
+    const exe = b.addExecutable(.{
+        .name = "dotviz",
+        .root_module = exe_mod,
+    });
 
-    b.getInstallStep().dependOn(emcc_step);
+    // This declares intent for the executable to be installed into the
+    // standard location when the user invokes the "install" step (the default
+    // step when running zig build).
+    exe.addIncludePath(b.path(
+        "src",
+    ));
+    lib.linkLibrary(artifact);
+    lib.root_module.addCMacro("_WASI_EMULATED_SIGNAL", "");
+    lib.linkSystemLibrary("wasi-emulated-signal");
+    lib.addIncludePath(b.path("src"));
+    exe.addIncludePath(b.path("src"));
+    lib.addCSourceFile(.{
+        .file = b.path("src/hello.c"),
+    });
+    exe.want_lto = true;
+    exe.import_symbols = true;
+    exe.export_table = true;
+    exe.bundle_ubsan_rt = false;
+    exe.root_module.strip = true;
+    lib.root_module.export_symbol_names = &.{
+        "viz_svg_len",
+        "viz_dot_to_svg",
+    };
+    lib.export_table = true;
 
-    const html_filename = try std.fmt.allocPrint(b.allocator, "{s}.html", .{wasm.name});
+    b.installArtifact(exe);
 
-    const emrun_args = .{};
-    const emrun_step = @import("zemscripten").emrunStep(
-        b,
-        b.getInstallPath(.{ .custom = "web" }, html_filename),
-        &emrun_args,
-    );
+    // This *creates* a Run step in the build graph, to be executed when another
+    // step is evaluated that depends on it. The next line below will establish
+    // such a dependency.
+    const run_cmd = b.addRunArtifact(exe);
 
-    emrun_step.dependOn(emcc_step);
+    // By making the run step depend on the install step, it will be run from the
+    // installation directory rather than directly from within the cache directory.
+    // This is not necessary, however, if the application depends on other installed
+    // files, this ensures they will be present and in the expected location.
+    run_cmd.step.dependOn(b.getInstallStep());
 
-    b.step("emrun", "Build and open the web app locally using emrun").dependOn(emrun_step);
+    // This allows the user to pass arguments to the application in the build
+    // command itself, like this: zig build run -- arg1 arg2 etc
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+
+    // This creates a build step. It will be visible in the zig build --help menu,
+    // and can be selected like this: zig build run
+    // This will evaluate the run step rather than the default, which is "install".
+    const run_step = b.step("run", "Run the app");
+    run_step.dependOn(&run_cmd.step);
+
+    // Creates a step for unit testing. This only builds the test executable
+    // but does not run it.
+    const lib_unit_tests = b.addTest(.{
+        .root_module = lib_mod,
+    });
+
+    const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
+
+    const exe_unit_tests = b.addTest(.{
+        .root_module = exe_mod,
+    });
+
+    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+
+    // Similar to creating the run step earlier, this exposes a test step to
+    // the zig build --help menu, providing a way for the user to request
+    // running the unit tests.
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_lib_unit_tests.step);
+    test_step.dependOn(&run_exe_unit_tests.step);
 }

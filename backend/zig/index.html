@@ -1,59 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>dotviz demo</title>
   <style>
-    body { font-family: sans-serif; padding: 1em; }
-    #output { margin-top: 1em; border: 1px solid #ccc; padding: 1em; }
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 2em;
+      background-color: #f9f9f9;
+    }
+
+    textarea {
+      width: 80%;
+      height: 200px;
+      font-family: monospace;
+      font-size: 14px;
+      margin-bottom: 1em;
+    }
+
+    button {
+      padding: 0.6em 1.2em;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 1em;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #svgContainer {
+      width: 80%;
+      margin-top: 2em;
+      border: 1px solid #ccc;
+      padding: 1em;
+      background: white;
+    }
+
+    #rawContainer {
+      width: 80%;
+      margin-top: 1em;
+      font-size: 13px;
+      background: #f1f1f1;
+      padding: 1em;
+      border: 1px solid #ccc;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
   </style>
 </head>
 <body>
-  <h1>dotviz</h1>
+  <h1>Graphviz WASM via Zig</h1>
 
-  <textarea id="test"></textarea>
+  <textarea id="dotInput">
+digraph {
+  a -> b;
+  b -> c;
+  c -> a;
+}
+  </textarea>
 
-  {{{ SCRIPT }}}
+  <button onclick="run()">Generate SVG</button>
 
-  <script>
-    const graph = {
-      graphAttributes: { rankdir: "LR" },
-      nodeAttributes: { shape: "circle" },
-      nodes: [
-        { name: "a", attributes: { label: { html: "&lt;i&gt;A&lt;/i&gt;" }, color: "red" } },
-        { name: "b", attributes: { label: { html: "&lt;b&gt;A&lt;/b&gt;" }, color: "green" } }
-      ],
-      edges: [
-        { tail: "a", head: "b", attributes: { label: "1" } },
-        { tail: "b", head: "c", attributes: { label: "2", headport: "name" } }
-      ],
-      subgraphs: [
-        {
-          name: "cluster_1",
-          nodes: [
-            {
-              name: "c",
-              attributes: {
-                label: {
-                  html: "&lt;table&gt;&lt;tr&gt;&lt;td&gt;test&lt;/td&gt;&lt;td port=\"name\"&gt;C&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;"
-                }
-              }
-            }
-          ]
-        }
-      ]
+  <div id="svgContainer"></div>
+
+  <details style="width: 80%; margin-top: 1em;">
+    <summary>Show raw SVG</summary>
+    <div id="rawContainer"><code>(No SVG yet)</code></div>
+  </details>
+
+<script type="module">
+  async function initWasm() {
+    const response = await fetch('zig-out/bin/dotviz.wasm');
+    const buffer = await response.arrayBuffer();
+    
+    const result = await WebAssembly.instantiate(buffer, {
+      env: {
+        __indirect_function_table: new WebAssembly.Table({ initial: 0, element: 'anyfunc' }),
+        __stack_pointer: new WebAssembly.Global({ value: 'i32', mutable: true }, 1024),
+      },
+      wasi_snapshot_preview1: {
+        proc_exit() {},
+        args_sizes_get() {},
+        environ_get() {},
+        environ_sizes_get() {},
+        clock_time_get() {},
+        fd_fdstat_get() {},
+        fd_close() {},
+        args_get() {},
+        fd_fdstat_set_flags() {},
+        fd_filestat_get() {},
+        fd_prestat_get() {},
+        fd_prestat_dir_name() {},
+        fd_read() {},
+        fd_seek() {},
+        path_filestat_get() {},
+        path_open() {},
+        fd_write() {},
+        random_get() {},
+      },
+    });
+
+    return result.instance;
+  }
+
+  let wasmInstance;
+  let viz_dot_to_svg, viz_svg_len, memory;
+
+  initWasm().then(instance => {
+    wasmInstance = instance;
+    viz_dot_to_svg = wasmInstance.exports.viz_dot_to_svg;
+    viz_svg_len = wasmInstance.exports.viz_svg_len;
+    memory = wasmInstance.exports.memory;
+
+    window.run = function () {
+      const dot = document.getElementById("dotInput").value;
+      const encoded = new TextEncoder().encode(dot);
+      const inputPtr = 1024;
+
+      new Uint8Array(memory.buffer).set(encoded, inputPtr);
+
+      const svgPtr = viz_dot_to_svg(inputPtr, encoded.length);
+      const len = viz_svg_len();
+
+      const svgBytes = new Uint8Array(memory.buffer).slice(svgPtr, svgPtr + len);
+      const svgText = new TextDecoder().decode(svgBytes);
+
+      document.getElementById("svgContainer").innerHTML = svgText;
+      document.getElementById("rawContainer").innerText = svgText;
     };
+  }).catch(err => {
+    console.error("Failed to load wasm", err);
+  });
+</script>
 
-    Module = {}
-
-    Module['onRuntimeInitialized'] = function() {
-      const str_ptr = Module.stringToNewUTF8(JSON.stringify(graph))
-      const res_ptr = Module._viz_parse_json_to_svg(str_ptr)
-      const res = Module.UTF8ToString(res_ptr)
-      document.getElementById("test").textContent = "From wasm: "+res
-      Module._free(str_ptr)
-      Module._free(res_ptr)
-    }
-  </script>
 </body>
 </html>

@@ -1,31 +1,31 @@
 const std = @import("std");
-const core = @import("core.zig");
+const testing = std.testing;
 
-const zemscripten = @import("zemscripten");
-pub const panic = zemscripten.panic;
+pub const c = @cImport({
+    @cInclude("gvc.h");
+    @cInclude("hello.h");
+});
 
-const expat = @cImport(@cInclude("expat.h"));
+var output_buf: [64 * 1024]u8 = undefined;
+var output_len: usize = 0;
 
-pub const std_options = std.Options{
-    .logFn = zemscripten.log,
-};
-export fn viz_parse_json_to_svg(cstring: [*c]u8) [*c]const u8 {
-    std.log.info("{s} {any}\n", .{ expat.XML_ExpatVersion(), expat.XML_ExpatVersionInfo() });
-    var a = zemscripten.EmmalocAllocator{};
-    const allocator = a.allocator();
-    const string: [:0]const u8 = std.mem.span(cstring);
-    const _res = core.viz_parse_json_to_svg(
-        allocator,
-        string,
-    ) catch unreachable;
-    const res: [*:0]const u8 = @ptrCast(allocator.dupeZ(
-        u8,
-        _res,
-    ) catch unreachable);
-    return res;
+pub export fn viz_dot_to_svg(dot_string: [*]const u8) ?[*]const u8 {
+    const gvc = c.viz_create_context();
+    if (gvc == null) return null;
+
+    const err = c.hello(
+        gvc,
+        dot_string,
+        &output_buf,
+        output_buf.len,
+        &output_len,
+    );
+
+    if (err != 0) return null;
+
+    return &output_buf;
 }
 
-export fn main() c_int {
-    std.log.info("hello, world.", .{});
-    return 0;
+pub export fn viz_svg_len() usize {
+    return output_len;
 }
