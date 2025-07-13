@@ -89,6 +89,9 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{
         .file = b.path("src/hello.c"),
     });
+    lib.addCSourceFile(.{
+        .file = b.path("src/agrw.c"),
+    });
     exe.want_lto = true;
     exe.import_symbols = true;
     exe.export_table = true;
@@ -97,6 +100,10 @@ pub fn build(b: *std.Build) void {
     lib.root_module.export_symbol_names = &.{
         "viz_svg_len",
         "viz_dot_to_svg",
+        "viz_json_to_graph",
+        "viz_free_graph",
+        "viz_graph_to_svg",
+        "viz_create_context",
     };
     lib.export_table = true;
 

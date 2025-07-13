@@ -67,7 +67,72 @@ digraph {
 }
   </textarea>
 
-  <button onclick="run()">Generate SVG</button>
+  <button onclick="run()">Generate SVG from DOT</button>
+
+  <textarea id="jsonInput">
+{
+    "graphAttributes": {
+        "rankdir": "LR"
+    },
+    "nodeAttributes": {
+        "shape": "circle"
+    },
+    "nodes": [
+        {
+            "name": "a",
+            "attributes": {
+                "label": {
+                    "html": "&lt;i&gt;A&lt;/i&gt;"
+                },
+                "color": "red"
+            }
+        },
+        {
+            "name": "b",
+            "attributes": {
+                "label": {
+                    "html": "&lt;b&gt;A&lt;/b&gt;"
+                },
+                "color": "green"
+            }
+        }
+    ],
+    "edges": [
+        {
+            "tail": "a",
+            "head": "b",
+            "attributes": {
+                "label": "1"
+            }
+        },
+        {
+            "tail": "b",
+            "head": "c",
+            "attributes": {
+                "label": "2",
+                "headport": "name"
+            }
+        }
+    ],
+    "subgraphs": [
+        {
+            "name": "cluster_1",
+            "nodes": [
+                {
+                    "name": "c",
+                    "attributes": {
+                        "label": {
+                            "html": "&lt;table&gt;&lt;tr&gt;&lt;td&gt;test&lt;/td&gt;&lt;td port=\"name\"&gt;C&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;"
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
+  </textarea>
+
+  <button onclick="runJson()">Generate SVG from JSON</button>
 
   <div id="svgContainer"></div>
 
@@ -111,30 +176,54 @@ digraph {
     return result.instance;
   }
 
-  let wasmInstance;
-  let viz_dot_to_svg, viz_svg_len, memory;
+  let viz_dot_to_svg, viz_json_to_graph, viz_graph_to_svg, viz_svg_len, viz_free_graph, memory;
 
   initWasm().then(instance => {
-    wasmInstance = instance;
-    viz_dot_to_svg = wasmInstance.exports.viz_dot_to_svg;
-    viz_svg_len = wasmInstance.exports.viz_svg_len;
-    memory = wasmInstance.exports.memory;
+    const wasm = instance.exports;
+    viz_dot_to_svg = wasm.viz_dot_to_svg;
+    viz_json_to_graph = wasm.viz_json_to_graph;
+    viz_graph_to_svg = wasm.viz_graph_to_svg;
+    viz_svg_len = wasm.viz_svg_len;
+    viz_free_graph = wasm.viz_free_graph;
+    memory = wasm.memory;
+
+    if (instance.exports.viz_create_context) {
+      instance.exports.viz_create_context()
+    }
 
     window.run = function () {
       const dot = document.getElementById("dotInput").value;
       const encoded = new TextEncoder().encode(dot);
       const inputPtr = 1024;
-
       new Uint8Array(memory.buffer).set(encoded, inputPtr);
-
       const svgPtr = viz_dot_to_svg(inputPtr, encoded.length);
       const len = viz_svg_len();
-
       const svgBytes = new Uint8Array(memory.buffer).slice(svgPtr, svgPtr + len);
       const svgText = new TextDecoder().decode(svgBytes);
-
       document.getElementById("svgContainer").innerHTML = svgText;
       document.getElementById("rawContainer").innerText = svgText;
+    };
+
+    window.runJson = function () {
+      const json = document.getElementById("jsonInput").value;
+      const encoded = new TextEncoder().encode(json);
+      const inputPtr = 4096;
+      new Uint8Array(memory.buffer).set(encoded, inputPtr);
+
+      const graph = viz_json_to_graph(inputPtr);
+      if (!graph) {
+        alert("Error: failed to parse JSON");
+        return;
+      }
+
+      const svgPtr = viz_graph_to_svg(graph);
+      const len = viz_svg_len();
+      const svgBytes = new Uint8Array(memory.buffer).slice(svgPtr, svgPtr + len);
+      const svgText = new TextDecoder().decode(svgBytes);
+      document.getElementById("svgContainer").innerHTML = svgText;
+      document.getElementById("rawContainer").innerText = svgText;
+
+      viz_free_graph(graph);
     };
   }).catch(err => {
     console.error("Failed to load wasm", err);
