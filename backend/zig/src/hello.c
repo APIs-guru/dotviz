@@ -18,6 +18,14 @@ GVC_t *create_context(void) {
   return gvContextPlugins(lt_preloaded_symbols, 0);
 }
 
+uintptr_t read_graph_from_string(const char *dot_string) {
+  Agraph_t *graph = agmemread(dot_string);
+  if (!graph) {
+    return 0;
+  }
+  return (uintptr_t)graph;
+}
+
 int render_graph_to_svg(GVC_t *gvc, uintptr_t graphptr, char *outputBuf,
                         size_t bufSize, size_t *writtenLen) {
   *writtenLen = 0;
@@ -27,23 +35,17 @@ int render_graph_to_svg(GVC_t *gvc, uintptr_t graphptr, char *outputBuf,
   size_t svgLen = 0;
 
   if (gvLayout(gvc, graph, "dot") != 0) {
-    agclose(graph);
-    gvFreeContext(gvc);
     return -2;
   }
 
   if (gvRenderData(gvc, graph, "svg", &svgData, &svgLen) != 0) {
     gvFreeLayout(gvc, graph);
-    agclose(graph);
-    gvFreeContext(gvc);
     return -3;
   }
 
   if (svgLen + 1 > bufSize) {
     gvFreeRenderData(svgData);
     gvFreeLayout(gvc, graph);
-    agclose(graph);
-    gvFreeContext(gvc);
     return -4;
   }
 
@@ -52,24 +54,6 @@ int render_graph_to_svg(GVC_t *gvc, uintptr_t graphptr, char *outputBuf,
   *writtenLen = svgLen;
 
   gvFreeRenderData(svgData);
-  return 0;
-}
-
-int hello(GVC_t *gvc, const char *dot_string, char *outputBuf, size_t bufSize,
-          size_t *writtenLen) {
-  Agraph_t *graph = agmemread(dot_string);
-  if (!graph) {
-    gvFreeContext(gvc);
-    return -1;
-  }
-
-  int res = render_graph_to_svg(gvc, (uintptr_t)graph, outputBuf, bufSize,
-                                writtenLen);
-  if (res != 0) {
-    return res;
-  }
-
   gvFreeLayout(gvc, graph);
-  agclose(graph);
   return 0;
 }

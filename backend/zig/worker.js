@@ -51,11 +51,20 @@ self.onmessage = async function (e) {
     const encoded = new TextEncoder().encode(dot);
     const ptr = 1024;
     new Uint8Array(memory.buffer).set(encoded, ptr);
-    const svgPtr = wasm.viz_dot_to_svg(ptr, encoded.length);
+
+    const graph = wasm.viz_dot_to_graph(ptr);
+    if (!graph) {
+      self.postMessage({ type: "error", error: "Invalid DOT" });
+      return;
+    }
+
+    const svgPtr = wasm.viz_graph_to_svg(graph);
     const len = wasm.viz_svg_len();
     const svgBytes = new Uint8Array(memory.buffer).slice(svgPtr, svgPtr + len);
     const svg = new TextDecoder().decode(svgBytes);
     self.postMessage({ type: "svg", svg });
+
+    wasm.viz_free_graph(graph);
     return;
   }
 
@@ -75,6 +84,7 @@ self.onmessage = async function (e) {
     const svgBytes = new Uint8Array(memory.buffer).slice(svgPtr, svgPtr + len);
     const svg = new TextDecoder().decode(svgBytes);
     self.postMessage({ type: "svg", svg });
+
     wasm.viz_free_graph(graph);
     return;
   }

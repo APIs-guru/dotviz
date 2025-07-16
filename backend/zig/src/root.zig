@@ -7,6 +7,7 @@ pub const c = @cImport({
     @cInclude("hello.h");
     @cInclude("agrw.h");
 });
+
 const wasm_allocator = std.heap.wasm_allocator;
 pub const Agrw_t = usize;
 
@@ -15,20 +16,8 @@ var output_len: usize = 0;
 
 extern var GVC: ?*c.GVC_t;
 
-pub export fn viz_dot_to_svg(dot_string: [*c]const u8) ?[*]const u8 {
-    if (GVC == null) return null;
-
-    const err = c.hello(
-        GVC,
-        dot_string,
-        &output_buf,
-        output_buf.len,
-        &output_len,
-    );
-
-    if (err != 0) return null;
-
-    return &output_buf;
+pub export fn viz_dot_to_graph(dot_string: [*c]const u8) Agrw_t {
+    return c.read_graph_from_string(dot_string);
 }
 
 pub export fn viz_svg_len() usize {
@@ -36,33 +25,32 @@ pub export fn viz_svg_len() usize {
 }
 
 pub export fn viz_json_to_graph(json: [*c]const u8) Agrw_t {
-    const graph = core.parse_json_to_graph(
-        std.heap.wasm_allocator,
+    const parsed = core.parse_json_to_graph(
+        wasm_allocator,
         std.mem.span(json),
     ) catch unreachable;
+
     var agrw: Agrw_t = 0;
-    if (graph.name) |graph_name| {
-        const string = wasm_allocator.dupeZ(
-            u8,
-            graph_name,
-        ) catch unreachable;
+    if (parsed.name) |graph_name| {
+        const string = wasm_allocator.dupeZ(u8, graph_name) catch unreachable;
         defer wasm_allocator.free(string);
         agrw = c.gw_agopen(string, c.Agrw_directed);
     } else {
-        const string: [*c]const u8 = "graph";
-        agrw = c.gw_agopen(string, c.Agrw_directed);
+        const default_name: [*c]const u8 = "graph";
+        agrw = c.gw_agopen(default_name, c.Agrw_directed);
     }
 
     var nodes = std.StringHashMap(c.Agrw_node_t).init(wasm_allocator);
     defer nodes.deinit();
-    for (graph.nodes.?) |node| {
+
+    for (parsed.nodes.?) |node| {
         const node_name = wasm_allocator.dupeZ(u8, node.name) catch unreachable;
         defer wasm_allocator.free(node_name);
         const gw_node = c.gw_agnode(agrw, node_name);
         nodes.put(node.name, gw_node) catch unreachable;
     }
 
-    for (graph.edges.?) |edge| {
+    for (parsed.edges.?) |edge| {
         const tail = nodes.get(edge.tail);
         const head = nodes.get(edge.head);
         if (tail) |_tail| {
@@ -71,6 +59,7 @@ pub export fn viz_json_to_graph(json: [*c]const u8) Agrw_t {
             }
         }
     }
+
     return agrw;
 }
 
@@ -79,14 +68,17 @@ pub export fn viz_free_graph(graph: Agrw_t) void {
 }
 
 pub export fn viz_graph_to_svg(graph: Agrw_t) ?[*]const u8 {
-    if (GVC == null or graph == 0) return "a";
-    _ = c.render_graph_to_svg(
+    if (GVC == null or graph == 0) return null;
+
+    const err = c.render_graph_to_svg(
         GVC,
         graph,
         &output_buf,
         output_buf.len,
         &output_len,
     );
+
+    if (err != 0) return null;
     return &output_buf;
 }
 

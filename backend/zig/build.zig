@@ -99,7 +99,7 @@ pub fn build(b: *std.Build) void {
     exe.root_module.strip = true;
     lib.root_module.export_symbol_names = &.{
         "viz_svg_len",
-        "viz_dot_to_svg",
+        "viz_dot_to_graph",
         "viz_json_to_graph",
         "viz_free_graph",
         "viz_graph_to_svg",

@@ -1,4 +1,3 @@
-<!-- dotviz-demo.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,7 +29,11 @@
       cursor: pointer;
       margin-bottom: 1em;
     }
-    button:hover {
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    button:hover:not(:disabled) {
       background-color: #45a049;
     }
     #svgContainer {
@@ -50,100 +53,86 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
+    #status {
+      margin: 1em;
+      font-style: italic;
+      color: #555;
+    }
   </style>
 </head>
 <body>
   <h1>Graphviz WASM via Zig (Web Worker)</h1>
 
   <textarea id="dotInput">digraph { a -> b; b -> c; c -> a; }</textarea>
-  <button onclick="run()">Generate SVG from DOT</button>
+  <button id="dotBtn" onclick="run()">Generate SVG from DOT</button>
 
   <textarea id="jsonInput">
 {
-    "graphAttributes": {
-        "rankdir": "LR"
-    },
-    "nodeAttributes": {
-        "shape": "circle"
-    },
-    "nodes": [
-        {
-            "name": "a",
-            "attributes": {
-                "label": {
-                    "html": "&lt;i&gt;A&lt;/i&gt;"
-                },
-                "color": "red"
-            }
-        },
-        {
-            "name": "b",
-            "attributes": {
-                "label": {
-                    "html": "&lt;b&gt;A&lt;/b&gt;"
-                },
-                "color": "green"
-            }
-        }
-    ],
-    "edges": [
-        {
-            "tail": "a",
-            "head": "b",
-            "attributes": {
-                "label": "1"
-            }
-        },
-        {
-            "tail": "b",
-            "head": "c",
-            "attributes": {
-                "label": "2",
-                "headport": "name"
-            }
-        }
-    ],
-    "subgraphs": [
-        {
-            "name": "cluster_1",
-            "nodes": [
-                {
-                    "name": "c",
-                    "attributes": {
-                        "label": {
-                            "html": "&lt;table&gt;&lt;tr&gt;&lt;td&gt;test&lt;/td&gt;&lt;td port=\"name\"&gt;C&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;"
-                        }
-                    }
-                }
-            ]
-        }
-    ]
+  "graphAttributes": { "rankdir": "LR" },
+  "nodeAttributes": { "shape": "circle" },
+  "nodes": [
+    { "name": "a", "attributes": { "label": { "html": "&lt;i&gt;A&lt;/i&gt;" }, "color": "red" } },
+    { "name": "b", "attributes": { "label": { "html": "&lt;b&gt;A&lt;/b&gt;" }, "color": "green" } }
+  ],
+  "edges": [
+    { "tail": "a", "head": "b", "attributes": { "label": "1" } },
+    { "tail": "b", "head": "c", "attributes": { "label": "2", "headport": "name" } }
+  ],
+  "subgraphs": [
+    {
+      "name": "cluster_1",
+      "nodes": [
+        { "name": "c", "attributes": {
+          "label": { "html": "&lt;table&gt;&lt;tr&gt;&lt;td&gt;test&lt;/td&gt;&lt;td port=\"name\"&gt;C&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" }
+        }}
+      ]
+    }
+  ]
 }
   </textarea>
-  <button onclick="runJson()">Generate SVG from JSON</button>
+  <button id="jsonBtn" onclick="runJson()">Generate SVG from JSON</button>
 
+  <div id="status"></div>
   <div id="svgContainer"></div>
   <details style="width: 80%; margin-top: 1em;">
     <summary>Show raw SVG</summary>
     <div id="rawContainer"><code>(No SVG yet)</code></div>
   </details>
+
 <script>
 const worker = new Worker("worker.js", { type: "module" });
 
 let workerReady = false;
 
 worker.onmessage = function (e) {
+  const dotBtn = document.getElementById("dotBtn");
+  const jsonBtn = document.getElementById("jsonBtn");
+  const status = document.getElementById("status");
+
   if (e.data.type === "ready") {
     workerReady = true;
+    status.innerText = "Worker ready!";
   } else if (e.data.type === "svg") {
+    status.innerText = "Done!";
+    dotBtn.disabled = false;
+    jsonBtn.disabled = false;
     document.getElementById("svgContainer").innerHTML = e.data.svg;
     document.getElementById("rawContainer").innerText = e.data.svg;
   } else if (e.data.type === "error") {
+    status.innerText = "Error: " + e.data.error;
+    dotBtn.disabled = false;
+    jsonBtn.disabled = false;
     alert("Error: " + e.data.error);
   }
 };
 
 worker.postMessage({ type: "init" });
+
+function showProcessing() {
+  document.getElementById("status").innerText = "Processing...";
+  document.getElementById("dotBtn").disabled = true;
+  document.getElementById("jsonBtn").disabled = true;
+}
 
 window.run = function () {
   if (!workerReady) {
@@ -151,6 +140,7 @@ window.run = function () {
     return;
   }
   const dot = document.getElementById("dotInput").value;
+  showProcessing();
   worker.postMessage({ type: "dot", dot });
 };
 
@@ -160,6 +150,7 @@ window.runJson = function () {
     return;
   }
   const json = document.getElementById("jsonInput").value;
+  showProcessing();
   worker.postMessage({ type: "json", json });
 };
 </script>
