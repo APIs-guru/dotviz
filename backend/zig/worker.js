@@ -1,6 +1,6 @@
 let wasm;
 let memory;
-const OUT_LEN = 64 * 1024;
+const OUT_LEN = 1000 * 1024;
 
 const fdBuffers = {
   1: "", // stdout
@@ -42,22 +42,68 @@ self.onmessage = async function (e) {
         __stack_pointer: new WebAssembly.Global({ value: "i32", mutable: true }, 1024),
       },
       wasi_snapshot_preview1: {
-        proc_exit() { },
-        args_sizes_get() { },
-        environ_get() { },
-        environ_sizes_get() { },
-        clock_time_get() { },
-        fd_fdstat_get() { },
-        fd_close() { },
-        args_get() { },
-        fd_fdstat_set_flags() { },
-        fd_filestat_get() { },
-        fd_prestat_get() { },
-        fd_prestat_dir_name() { },
-        fd_read() { },
-        fd_seek() { },
-        path_filestat_get() { },
-        path_open() { },
+        proc_exit() {
+          return 52; // __WASI_ERRNO_NOSYS
+        },
+        args_sizes_get(argc_ptr, argv_buf_size_ptr) {
+          return 52;
+        },
+
+        args_get(argv_ptr, argv_buf_ptr) {
+          return 52;
+        },
+
+        environ_sizes_get(count_ptr, buf_size_ptr) {
+          return 0;
+        },
+
+        environ_get(env_ptr, env_buf_ptr) {
+          return 0;
+        },
+
+        clock_time_get(id, precision, time_ptr) {
+          return 52;
+        },
+
+        fd_fdstat_get(fd, stat_ptr) {
+          return 8; // __WASI_ERRNO_BADF
+        },
+
+        fd_close(fd) {
+          return 8;
+        },
+
+        fd_fdstat_set_flags(fd, flags) {
+          return 8;
+        },
+
+        fd_filestat_get(fd, stat_ptr) {
+          return 8;
+        },
+
+        fd_prestat_get(fd, prestat_ptr) {
+          return 8;
+        },
+
+        fd_prestat_dir_name(fd, path_ptr, path_len) {
+          return 8;
+        },
+
+        fd_read(fd, iovs_ptr, iovs_len, nread_ptr) {
+          return 8;
+        },
+
+        fd_seek(fd, offset_low, offset_high, whence, newOffsetPtr) {
+          return 8;
+        },
+
+        path_filestat_get(fd, flags, path_ptr, path_len, stat_ptr) {
+          return 44; // __WASI_ERRNO_NOENT
+        },
+
+        path_open(fd, dirflags, path_ptr, path_len, oflags, fs_rights_base, fs_rights_inheriting, fdflags, opened_fd_ptr) {
+          return 52;
+        },
         fd_write(fd, iovs_ptr, iovs_len, nwritten_ptr) {
           if (!memory) return 52; // WASI_ERRNO_NOTSUP
           const mem = new Uint8Array(memory.buffer);
@@ -85,7 +131,9 @@ self.onmessage = async function (e) {
 
           return 0;
         },
-        random_get() { },
+        random_get(buf_ptr, buf_len) {
+          return 52;
+        },
       },
     });
 
