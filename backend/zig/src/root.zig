@@ -64,6 +64,14 @@ pub export fn viz_free_graph(graph: Agrw_t) void {
     _ = c.gw_agclose(graph);
 }
 
+pub export fn viz_layout_graph(graph: Agrw_t) c_int {
+    return c.layout_graph(GVC, graph);
+}
+
+pub export fn viz_layout_done(graph: Agrw_t) bool {
+    return c.layout_done(graph);
+}
+
 pub export fn viz_graph_to_svg(
     graph: Agrw_t,
     buf_ptr: [*]u8,
@@ -73,10 +81,7 @@ pub export fn viz_graph_to_svg(
 
     var written_len: usize = 0;
 
-    var err = c.layout_graph(GVC, graph);
-    if (err != 0) return 0;
-
-    err = c.render_graph_to_svg(
+    const err = c.render_graph_to_svg(
         GVC,
         graph,
         buf_ptr,
@@ -84,7 +89,11 @@ pub export fn viz_graph_to_svg(
         &written_len,
     );
 
-    if (err != 0) return 0;
+    if (err != 0) {
+        std.debug.print("{d}\n", .{err});
+
+        return 0;
+    }
     return written_len;
 }
 

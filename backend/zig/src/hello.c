@@ -27,10 +27,11 @@ uintptr_t read_graph_from_string(const char *dot_string) {
 }
 
 int layout_graph(GVC_t *gvc, uintptr_t graphptr) {
-  if (gvLayout(gvc, (Agraph_t*)graphptr, "dot") != 0) {
-    return -2;
-  }
-  return 0;
+  return gvLayout(gvc, (Agraph_t*)graphptr, "dot");
+}
+
+bool layout_done(uintptr_t graphptr) {
+  return gvLayoutDone((Agraph_t*)graphptr);
 }
 
 int render_graph_to_svg(GVC_t *gvc, uintptr_t graphptr, char *outputBuf,

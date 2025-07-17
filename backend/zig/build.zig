@@ -101,6 +101,8 @@ pub fn build(b: *std.Build) void {
         "viz_dot_to_graph",
         "viz_json_to_graph",
         "viz_free_graph",
+        "viz_layout_graph",
+        "viz_layout_done",
         "viz_graph_to_svg",
         "viz_create_context",
         "viz_alloc",

@@ -136,6 +136,8 @@
         document.getElementById("rawContainer").innerText = svgText;
 
         document.getElementById("svgContainer").innerHTML = svgText;
+      } else if (e.data.type === "error") {
+        alert(e.data.error)
       }
     };
 

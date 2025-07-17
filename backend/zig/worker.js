@@ -80,6 +80,12 @@ self.onmessage = async function (e) {
       return;
     }
 
+    const layout_res = wasm.viz_layout_graph(graph)
+    if (layout_res != 0) {
+      self.postMessage({ type: "error", error: `layout error: ${layout_res}` });
+      return;
+    }
+
     const written = wasm.viz_graph_to_svg(graph, outPtr, outLen);
     wasm.viz_free_graph(graph);
 
