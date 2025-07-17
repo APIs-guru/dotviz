@@ -9,7 +9,7 @@ pub fn parse_json_to_graph(
         vizjs_types.Graph,
         allocator,
         json_string,
-        .{},
+        .{ .ignore_unknown_fields = true },
     );
     return res;
 }
