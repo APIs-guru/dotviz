@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <title>dotviz demo with Web Worker</title>
@@ -42,17 +41,26 @@
       background-color: #45a049;
     }
 
+    #status {
+      margin: 1em;
+      font-style: italic;
+      color: #555;
+    }
+
+    #metaInfo {
+      margin: 1em;
+      font-size: 14px;
+      color: #333;
+    }
+
     #svgContainer {
-      width: 80%;
-      margin-top: 2em;
       border: 1px solid #ccc;
       padding: 1em;
       background: white;
     }
 
     #rawContainer {
-      width: 80%;
-      margin-top: 1em;
+      width: 100%;
       font-size: 13px;
       background: #f1f1f1;
       padding: 1em;
@@ -61,10 +69,14 @@
       word-break: break-word;
     }
 
-    #status {
-      margin: 1em;
-      font-style: italic;
-      color: #555;
+    details {
+      width: 80%;
+      margin-top: 1em;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -102,16 +114,23 @@
   <button id="jsonBtn" onclick="runJson()">Generate SVG from JSON</button>
 
   <div id="status"></div>
-  <div id="svgContainer"></div>
-  <details style="width: 80%; margin-top: 1em;">
+  <div id="metaInfo"></div>
+
+  <details open>
+    <summary>Rendered SVG</summary>
+    <div id="svgContainer"></div>
+  </details>
+
+  <details>
     <summary>Show raw SVG</summary>
     <div id="rawContainer"><code>(No SVG yet)</code></div>
   </details>
+  <button onclick="copySVG()">📋 Copy SVG to Clipboard</button>
 
   <script>
     const worker = new Worker("worker.js", { type: "module" });
-
     let workerReady = false;
+    let lastSvg = "";
 
     worker.onmessage = function (e) {
       const dotBtn = document.getElementById("dotBtn");
@@ -122,25 +141,24 @@
         workerReady = true;
         status.innerText = "Worker ready!";
       } else if (e.data.type === "svg") {
-        status.innerText = "Done!";
-        dotBtn.disabled = false;
-        jsonBtn.disabled = false;
-        document.getElementById("svgContainer").innerHTML = e.data.svg;
-        document.getElementById("rawContainer").innerText = e.data.svg;
-      } else if (e.data.type === "svg") {
         const svgText = e.data.svg;
+        lastSvg = svgText;
         status.innerText = "Done!";
         dotBtn.disabled = false;
         jsonBtn.disabled = false;
-
-        document.getElementById("rawContainer").innerText = svgText;
 
         document.getElementById("svgContainer").innerHTML = svgText;
+        document.getElementById("rawContainer").innerText = svgText;
+
+        const nodeCount = countSvgNodes(svgText);
+        const lineCount = svgText.split("\n").length;
+        document.getElementById("metaInfo").innerText =
+          `SVG nodes: ${nodeCount} | SVG lines: ${lineCount}`;
       } else if (e.data.type === "error") {
-        alert(e.data.error)
-        console.log(e.data.error)
-      } if (e.data.type === "status") {
-        document.getElementById("status").innerText = e.data.status;
+        alert(e.data.error);
+        console.error(e.data.error);
+      } else if (e.data.type === "status") {
+        status.innerText = e.data.status;
       }
     };
 
@@ -171,7 +189,23 @@
       showProcessing();
       worker.postMessage({ type: "json", json });
     };
+
+    function countSvgNodes(svg) {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svg, "image/svg+xml");
+        return doc.querySelectorAll("g.node").length;
+      } catch {
+        return 0;
+      }
+    }
+
+    function copySVG() {
+      if (!lastSvg) return;
+      navigator.clipboard.writeText(lastSvg)
+        .then(() => alert("✅ SVG copied to clipboard!"))
+        .catch(err => alert("❌ Failed to copy SVG: " + err));
+    }
   </script>
 </body>
-
 </html>
