@@ -1,5 +1,6 @@
 let wasm;
 let memory;
+const OUT_LEN = 64*1024;
 
 self.onmessage = async function (e) {
   const { type, dot, json } = e.data;
@@ -36,6 +37,7 @@ self.onmessage = async function (e) {
 
     wasm = instance.instance.exports;
     memory = wasm.memory;
+
     if (wasm.viz_create_context) wasm.viz_create_context();
 
     self.postMessage({ type: "ready" });
@@ -47,45 +49,62 @@ self.onmessage = async function (e) {
     return;
   }
 
-  if (type === "dot") {
-    const encoded = new TextEncoder().encode(dot);
-    const ptr = 1024;
-    new Uint8Array(memory.buffer).set(encoded, ptr);
+  const ENCODER = new TextEncoder();
+  const DECODER = new TextDecoder();
 
-    const graph = wasm.viz_dot_to_graph(ptr);
-    if (!graph) {
-      self.postMessage({ type: "error", error: "Invalid DOT" });
+  async function handleGraphInput(encoded, parseFn) {
+    const inputLen = encoded.length + 1;
+    const inputPtr = wasm.viz_alloc(inputLen);
+    if (!inputPtr) {
+      self.postMessage({ type: "error", error: "Failed to allocate input buffer" });
       return;
     }
 
-    const svgPtr = wasm.viz_graph_to_svg(graph);
-    const len = wasm.viz_svg_len();
-    const svgBytes = new Uint8Array(memory.buffer).slice(svgPtr, svgPtr + len);
-    const svg = new TextDecoder().decode(svgBytes);
-    self.postMessage({ type: "svg", svg });
+    const inputBuf = new Uint8Array(memory.buffer, inputPtr, inputLen);
+    inputBuf.set(encoded);
+    inputBuf[encoded.length] = 0;
 
+    const graph = parseFn(inputPtr);
+    wasm.viz_free(inputPtr, inputLen);
+
+    if (!graph) {
+      self.postMessage({ type: "error", error: "Invalid input" });
+      return;
+    }
+
+    const outLen = OUT_LEN;
+    const outPtr = wasm.viz_alloc(outLen);
+    if (!outPtr) {
+      wasm.viz_free_graph(graph);
+      self.postMessage({ type: "error", error: "Failed to allocate output buffer" });
+      return;
+    }
+
+    const written = wasm.viz_graph_to_svg(graph, outPtr, outLen);
     wasm.viz_free_graph(graph);
+
+    if (written === 0) {
+      wasm.viz_free(outPtr, outLen);
+      self.postMessage({ type: "error", error: "Failed to render SVG" });
+      return;
+    }
+
+    const svgBytes = new Uint8Array(memory.buffer, outPtr, written);
+    const svg = DECODER.decode(svgBytes);
+    wasm.viz_free(outPtr, outLen);
+
+    self.postMessage({ type: "svg", svg });
+  }
+
+  if (type === "dot") {
+    const encoded = ENCODER.encode(dot);
+    handleGraphInput(encoded, wasm.viz_dot_to_graph);
     return;
   }
 
   if (type === "json") {
-    const encoded = new TextEncoder().encode(json);
-    const ptr = 4096;
-    new Uint8Array(memory.buffer).set(encoded, ptr);
-
-    const graph = wasm.viz_json_to_graph(ptr);
-    if (!graph) {
-      self.postMessage({ type: "error", error: "Invalid JSON" });
-      return;
-    }
-
-    const svgPtr = wasm.viz_graph_to_svg(graph);
-    const len = wasm.viz_svg_len();
-    const svgBytes = new Uint8Array(memory.buffer).slice(svgPtr, svgPtr + len);
-    const svg = new TextDecoder().decode(svgBytes);
-    self.postMessage({ type: "svg", svg });
-
-    wasm.viz_free_graph(graph);
+    const encoded = ENCODER.encode(json);
+    handleGraphInput(encoded, wasm.viz_json_to_graph);
     return;
   }
 };

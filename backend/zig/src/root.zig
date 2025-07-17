@@ -8,44 +8,37 @@ pub const c = @cImport({
     @cInclude("agrw.h");
 });
 
-const wasm_allocator = std.heap.wasm_allocator;
+const allocator = std.heap.wasm_allocator;
 pub const Agrw_t = usize;
-
-var output_buf: [64 * 1024]u8 = undefined;
-var output_len: usize = 0;
 
 extern var GVC: ?*c.GVC_t;
 
-pub export fn viz_dot_to_graph(dot_string: [*c]const u8) Agrw_t {
+pub export fn viz_dot_to_graph(dot_string: [*:0]const u8) Agrw_t {
     return c.read_graph_from_string(dot_string);
-}
-
-pub export fn viz_svg_len() usize {
-    return output_len;
 }
 
 pub export fn viz_json_to_graph(json: [*c]const u8) Agrw_t {
     const parsed = core.parse_json_to_graph(
-        wasm_allocator,
+        allocator,
         std.mem.span(json),
     ) catch unreachable;
 
     var agrw: Agrw_t = 0;
     if (parsed.name) |graph_name| {
-        const string = wasm_allocator.dupeZ(u8, graph_name) catch unreachable;
-        defer wasm_allocator.free(string);
+        const string = allocator.dupeZ(u8, graph_name) catch unreachable;
+        defer allocator.free(string);
         agrw = c.gw_agopen(string, c.Agrw_directed);
     } else {
         const default_name: [*c]const u8 = "graph";
         agrw = c.gw_agopen(default_name, c.Agrw_directed);
     }
 
-    var nodes = std.StringHashMap(c.Agrw_node_t).init(wasm_allocator);
+    var nodes = std.StringHashMap(c.Agrw_node_t).init(allocator);
     defer nodes.deinit();
 
     for (parsed.nodes.?) |node| {
-        const node_name = wasm_allocator.dupeZ(u8, node.name) catch unreachable;
-        defer wasm_allocator.free(node_name);
+        const node_name = allocator.dupeZ(u8, node.name) catch unreachable;
+        defer allocator.free(node_name);
         const gw_node = c.gw_agnode(agrw, node_name);
         nodes.put(node.name, gw_node) catch unreachable;
     }
@@ -67,21 +60,37 @@ pub export fn viz_free_graph(graph: Agrw_t) void {
     _ = c.gw_agclose(graph);
 }
 
-pub export fn viz_graph_to_svg(graph: Agrw_t) ?[*]const u8 {
-    if (GVC == null or graph == 0) return null;
+pub export fn viz_graph_to_svg(
+    graph: Agrw_t,
+    buf_ptr: [*]u8,
+    buf_len: usize,
+) usize {
+    if (GVC == null or graph == 0) return 0;
+
+    var written_len: usize = 0;
 
     const err = c.render_graph_to_svg(
         GVC,
         graph,
-        &output_buf,
-        output_buf.len,
-        &output_len,
+        buf_ptr,
+        buf_len,
+        &written_len,
     );
 
-    if (err != 0) return null;
-    return &output_buf;
+    if (err != 0) return 0;
+    return written_len;
 }
 
 pub export fn viz_create_context() void {
     GVC = c.create_context();
+}
+
+pub export fn viz_alloc(len: usize) ?[*]u8 {
+    const mem = allocator.alloc(u8, len) catch return null;
+    return mem.ptr;
+}
+
+pub export fn viz_free(ptr: [*]u8, len: usize) void {
+    const slice = ptr[0..len];
+    allocator.free(slice);
 }

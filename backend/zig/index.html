@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>dotviz demo with Web Worker</title>
@@ -12,6 +13,7 @@
       margin: 2em;
       background-color: #f9f9f9;
     }
+
     textarea {
       width: 80%;
       height: 200px;
@@ -19,6 +21,7 @@
       font-size: 14px;
       margin-bottom: 1em;
     }
+
     button {
       padding: 0.6em 1.2em;
       font-size: 16px;
@@ -29,13 +32,16 @@
       cursor: pointer;
       margin-bottom: 1em;
     }
+
     button:disabled {
       background-color: #999;
       cursor: not-allowed;
     }
+
     button:hover:not(:disabled) {
       background-color: #45a049;
     }
+
     #svgContainer {
       width: 80%;
       margin-top: 2em;
@@ -43,6 +49,7 @@
       padding: 1em;
       background: white;
     }
+
     #rawContainer {
       width: 80%;
       margin-top: 1em;
@@ -53,6 +60,7 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
+
     #status {
       margin: 1em;
       font-style: italic;
@@ -60,6 +68,7 @@
     }
   </style>
 </head>
+
 <body>
   <h1>Graphviz WASM via Zig (Web Worker)</h1>
 
@@ -99,60 +108,65 @@
     <div id="rawContainer"><code>(No SVG yet)</code></div>
   </details>
 
-<script>
-const worker = new Worker("worker.js", { type: "module" });
+  <script>
+    const worker = new Worker("worker.js", { type: "module" });
 
-let workerReady = false;
+    let workerReady = false;
 
-worker.onmessage = function (e) {
-  const dotBtn = document.getElementById("dotBtn");
-  const jsonBtn = document.getElementById("jsonBtn");
-  const status = document.getElementById("status");
+    worker.onmessage = function (e) {
+      const dotBtn = document.getElementById("dotBtn");
+      const jsonBtn = document.getElementById("jsonBtn");
+      const status = document.getElementById("status");
 
-  if (e.data.type === "ready") {
-    workerReady = true;
-    status.innerText = "Worker ready!";
-  } else if (e.data.type === "svg") {
-    status.innerText = "Done!";
-    dotBtn.disabled = false;
-    jsonBtn.disabled = false;
-    document.getElementById("svgContainer").innerHTML = e.data.svg;
-    document.getElementById("rawContainer").innerText = e.data.svg;
-  } else if (e.data.type === "error") {
-    status.innerText = "Error: " + e.data.error;
-    dotBtn.disabled = false;
-    jsonBtn.disabled = false;
-    alert("Error: " + e.data.error);
-  }
-};
+      if (e.data.type === "ready") {
+        workerReady = true;
+        status.innerText = "Worker ready!";
+      } else if (e.data.type === "svg") {
+        status.innerText = "Done!";
+        dotBtn.disabled = false;
+        jsonBtn.disabled = false;
+        document.getElementById("svgContainer").innerHTML = e.data.svg;
+        document.getElementById("rawContainer").innerText = e.data.svg;
+      } else if (e.data.type === "svg") {
+        const svgText = e.data.svg;
+        status.innerText = "Done!";
+        dotBtn.disabled = false;
+        jsonBtn.disabled = false;
 
-worker.postMessage({ type: "init" });
+        document.getElementById("rawContainer").innerText = svgText;
 
-function showProcessing() {
-  document.getElementById("status").innerText = "Processing...";
-  document.getElementById("dotBtn").disabled = true;
-  document.getElementById("jsonBtn").disabled = true;
-}
+        document.getElementById("svgContainer").innerHTML = svgText;
+      }
+    };
 
-window.run = function () {
-  if (!workerReady) {
-    alert("Still initializing...");
-    return;
-  }
-  const dot = document.getElementById("dotInput").value;
-  showProcessing();
-  worker.postMessage({ type: "dot", dot });
-};
+    worker.postMessage({ type: "init" });
 
-window.runJson = function () {
-  if (!workerReady) {
-    alert("Still initializing...");
-    return;
-  }
-  const json = document.getElementById("jsonInput").value;
-  showProcessing();
-  worker.postMessage({ type: "json", json });
-};
-</script>
+    function showProcessing() {
+      document.getElementById("status").innerText = "Processing...";
+      document.getElementById("dotBtn").disabled = true;
+      document.getElementById("jsonBtn").disabled = true;
+    }
+
+    window.run = function () {
+      if (!workerReady) {
+        alert("Still initializing...");
+        return;
+      }
+      const dot = document.getElementById("dotInput").value;
+      showProcessing();
+      worker.postMessage({ type: "dot", dot });
+    };
+
+    window.runJson = function () {
+      if (!workerReady) {
+        alert("Still initializing...");
+        return;
+      }
+      const json = document.getElementById("jsonInput").value;
+      showProcessing();
+      worker.postMessage({ type: "json", json });
+    };
+  </script>
 </body>
+
 </html>
