@@ -36,19 +36,23 @@ pub export fn viz_json_to_graph(json: [*c]const u8) Agrw_t {
     var nodes = std.StringHashMap(c.Agrw_node_t).init(allocator);
     defer nodes.deinit();
 
-    for (parsed.nodes.?) |node| {
-        const node_name = allocator.dupeZ(u8, node.name) catch unreachable;
-        defer allocator.free(node_name);
-        const gw_node = c.gw_agnode(agrw, node_name);
-        nodes.put(node.name, gw_node) catch unreachable;
+    if (parsed.nodes) |nodes_| {
+        for (nodes_) |node| {
+            const node_name = allocator.dupeZ(u8, node.name) catch unreachable;
+            defer allocator.free(node_name);
+            const gw_node = c.gw_agnode(agrw, node_name);
+            nodes.put(node.name, gw_node) catch unreachable;
+        }
     }
 
-    for (parsed.edges.?) |edge| {
-        const tail = nodes.get(edge.tail);
-        const head = nodes.get(edge.head);
-        if (tail) |_tail| {
-            if (head) |_head| {
-                _ = c.gw_agedge(agrw, _tail, _head);
+    if (parsed.edges) |edges| {
+        for (edges) |edge| {
+            const tail = nodes.get(edge.tail);
+            const head = nodes.get(edge.head);
+            if (tail) |_tail| {
+                if (head) |_head| {
+                    _ = c.gw_agedge(agrw, _tail, _head);
+                }
             }
         }
     }
