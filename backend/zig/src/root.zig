@@ -73,7 +73,10 @@ pub export fn viz_graph_to_svg(
 
     var written_len: usize = 0;
 
-    const err = c.render_graph_to_svg(
+    var err = c.layout_graph(GVC, graph);
+    if (err != 0) return 0;
+
+    err = c.render_graph_to_svg(
         GVC,
         graph,
         buf_ptr,

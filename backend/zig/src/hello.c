@@ -26,6 +26,13 @@ uintptr_t read_graph_from_string(const char *dot_string) {
   return (uintptr_t)graph;
 }
 
+int layout_graph(GVC_t *gvc, uintptr_t graphptr) {
+  if (gvLayout(gvc, (Agraph_t*)graphptr, "dot") != 0) {
+    return -2;
+  }
+  return 0;
+}
+
 int render_graph_to_svg(GVC_t *gvc, uintptr_t graphptr, char *outputBuf,
                         size_t bufSize, size_t *writtenLen) {
   *writtenLen = 0;
@@ -33,10 +40,6 @@ int render_graph_to_svg(GVC_t *gvc, uintptr_t graphptr, char *outputBuf,
 
   char *svgData = NULL;
   size_t svgLen = 0;
-
-  if (gvLayout(gvc, graph, "dot") != 0) {
-    return -2;
-  }
 
   if (gvRenderData(gvc, graph, "svg", &svgData, &svgLen) != 0) {
     gvFreeLayout(gvc, graph);
