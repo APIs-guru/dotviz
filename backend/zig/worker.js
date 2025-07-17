@@ -2,6 +2,28 @@ let wasm;
 let memory;
 const OUT_LEN = 64 * 1024;
 
+const fdBuffers = {
+  1: "", // stdout
+  2: "", // stderr
+};
+
+const flush = (fd) => {
+  const output = fdBuffers[fd];
+  if (!output) return;
+  if (fd === 1) console.log(output.trimEnd());
+  else if (fd === 2) console.error(output.trimEnd());
+  fdBuffers[fd] = "";
+};
+
+let flushTimer = null;
+const scheduleFlush = () => {
+  if (flushTimer !== null) clearTimeout(flushTimer);
+  flushTimer = setTimeout(() => {
+    flush(1);
+    flush(2);
+  }, 10);
+};
+
 self.onmessage = async function (e) {
   const { type, dot, json } = e.data;
 
@@ -20,24 +42,50 @@ self.onmessage = async function (e) {
         __stack_pointer: new WebAssembly.Global({ value: "i32", mutable: true }, 1024),
       },
       wasi_snapshot_preview1: {
-        proc_exit() {},
-        args_sizes_get() {},
-        environ_get() {},
-        environ_sizes_get() {},
-        clock_time_get() {},
-        fd_fdstat_get() {},
-        fd_close() {},
-        args_get() {},
-        fd_fdstat_set_flags() {},
-        fd_filestat_get() {},
-        fd_prestat_get() {},
-        fd_prestat_dir_name() {},
-        fd_read() {},
-        fd_seek() {},
-        path_filestat_get() {},
-        path_open() {},
-        fd_write() {},
-        random_get() {},
+        proc_exit() { },
+        args_sizes_get() { },
+        environ_get() { },
+        environ_sizes_get() { },
+        clock_time_get() { },
+        fd_fdstat_get() { },
+        fd_close() { },
+        args_get() { },
+        fd_fdstat_set_flags() { },
+        fd_filestat_get() { },
+        fd_prestat_get() { },
+        fd_prestat_dir_name() { },
+        fd_read() { },
+        fd_seek() { },
+        path_filestat_get() { },
+        path_open() { },
+        fd_write(fd, iovs_ptr, iovs_len, nwritten_ptr) {
+          if (!memory) return 52; // WASI_ERRNO_NOTSUP
+          const mem = new Uint8Array(memory.buffer);
+          const view = new DataView(memory.buffer);
+          const decoder = new TextDecoder("utf-8");
+
+          let totalWritten = 0;
+
+          for (let i = 0; i < iovs_len; i++) {
+            const base = view.getUint32(iovs_ptr + i * 8, true);
+            const len = view.getUint32(iovs_ptr + i * 8 + 4, true);
+            const chunk = mem.subarray(base, base + len);
+            const text = decoder.decode(chunk);
+            totalWritten += len;
+
+            if (fdBuffers[fd] !== undefined) {
+              fdBuffers[fd] += text;
+            } else {
+              console.warn(`fd_write: unknown fd ${fd}`);
+            }
+          }
+
+          view.setUint32(nwritten_ptr, totalWritten, true);
+          scheduleFlush();
+
+          return 0;
+        },
+        random_get() { },
       },
     });
 
