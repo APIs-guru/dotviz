@@ -1,13 +1,19 @@
 let wasm;
 let memory;
-const OUT_LEN = 64*1024;
+const OUT_LEN = 64 * 1024;
 
 self.onmessage = async function (e) {
   const { type, dot, json } = e.data;
 
+  function status(msg) {
+    self.postMessage({ type: "status", status: msg });
+  }
+
   if (type === "init") {
+    status("Fetching and instantiating WebAssembly...");
     const response = await fetch("zig-out/bin/dotviz.wasm");
     const buffer = await response.arrayBuffer();
+
     const instance = await WebAssembly.instantiate(buffer, {
       env: {
         __indirect_function_table: new WebAssembly.Table({ initial: 0, element: "anyfunc" }),
@@ -53,6 +59,7 @@ self.onmessage = async function (e) {
   const DECODER = new TextDecoder();
 
   async function handleGraphInput(encoded, parseFn) {
+    status("Allocating input buffer...");
     const inputLen = encoded.length + 1;
     const inputPtr = wasm.viz_alloc(inputLen);
     if (!inputPtr) {
@@ -64,6 +71,7 @@ self.onmessage = async function (e) {
     inputBuf.set(encoded);
     inputBuf[encoded.length] = 0;
 
+    status("Parsing input...");
     const graph = parseFn(inputPtr);
     wasm.viz_free(inputPtr, inputLen);
 
@@ -80,12 +88,16 @@ self.onmessage = async function (e) {
       return;
     }
 
-    const layout_res = wasm.viz_layout_graph(graph)
+    status("Laying out graph...");
+    const layout_res = wasm.viz_layout_graph(graph);
     if (layout_res != 0) {
-      self.postMessage({ type: "error", error: `layout error: ${layout_res}` });
+      wasm.viz_free_graph(graph);
+      wasm.viz_free(outPtr, outLen);
+      self.postMessage({ type: "error", error: `Layout error: ${layout_res}` });
       return;
     }
 
+    status("Rendering SVG...");
     const written = wasm.viz_graph_to_svg(graph, outPtr, outLen);
     wasm.viz_free_graph(graph);
 
@@ -95,6 +107,7 @@ self.onmessage = async function (e) {
       return;
     }
 
+    status("Done");
     const svgBytes = new Uint8Array(memory.buffer, outPtr, written);
     const svg = DECODER.decode(svgBytes);
     wasm.viz_free(outPtr, outLen);
@@ -103,12 +116,14 @@ self.onmessage = async function (e) {
   }
 
   if (type === "dot") {
+    status("Encoding DOT string...");
     const encoded = ENCODER.encode(dot);
     handleGraphInput(encoded, wasm.viz_dot_to_graph);
     return;
   }
 
   if (type === "json") {
+    status("Encoding JSON graph...");
     const encoded = ENCODER.encode(json);
     handleGraphInput(encoded, wasm.viz_json_to_graph);
     return;

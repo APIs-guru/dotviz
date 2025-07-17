@@ -138,6 +138,9 @@
         document.getElementById("svgContainer").innerHTML = svgText;
       } else if (e.data.type === "error") {
         alert(e.data.error)
+        console.log(e.data.error)
+      } if (e.data.type === "status") {
+        document.getElementById("status").innerText = e.data.status;
       }
     };
 
