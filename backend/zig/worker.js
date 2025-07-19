@@ -1,6 +1,6 @@
 let wasm;
 let memory;
-const OUT_LEN = 1000 * 1024;
+const OUT_LEN = 200 * 1024 * 1024;
 
 const fdBuffers = {
   1: "", // stdout
