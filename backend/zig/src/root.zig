@@ -4,7 +4,6 @@ const core = @import("core.zig");
 
 pub const c = @cImport({
     @cInclude("gvc.h");
-    @cInclude("hello.h");
     @cInclude("agrw.h");
 });
 
@@ -14,7 +13,7 @@ pub const Agrw_t = usize;
 extern var GVC: ?*c.GVC_t;
 
 pub export fn viz_dot_to_graph(dot_string: [*:0]const u8) Agrw_t {
-    return c.read_graph_from_string(dot_string);
+    return c.gw_agmemread(dot_string);
 }
 
 pub export fn viz_json_to_graph(json: [*c]const u8) Agrw_t {
@@ -61,44 +60,39 @@ pub export fn viz_json_to_graph(json: [*c]const u8) Agrw_t {
 }
 
 pub export fn viz_free_graph(graph: Agrw_t) void {
+    _ = c.gw_gvFreeLayout(GVC, graph);
     _ = c.gw_agclose(graph);
 }
 
 pub export fn viz_layout_graph(graph: Agrw_t) c_int {
-    return c.layout_graph(GVC, graph);
+    return c.gw_gvLayoutDot(GVC, graph);
 }
 
 pub export fn viz_layout_done(graph: Agrw_t) bool {
-    return c.layout_done(graph);
+    return c.gw_gvLayoutDone(GVC, graph);
 }
 
 pub export fn viz_graph_to_svg(
     graph: Agrw_t,
-    buf_ptr: [*]u8,
-    buf_len: usize,
-) usize {
-    if (GVC == null or graph == 0) return 0;
-
-    var written_len: usize = 0;
-
-    const err = c.render_graph_to_svg(
-        GVC,
-        graph,
-        buf_ptr,
-        buf_len,
-        &written_len,
-    );
-
+) ?[*]u8 {
+    if (GVC == null or graph == 0) return null;
+    var buf: ?[*]u8 = null;
+    var buf_len: usize = 0;
+    const err = c.gw_gvRenderDataSvg(GVC, graph, &buf, &buf_len);
     if (err != 0) {
         std.debug.print("{d}\n", .{err});
-
-        return 0;
+        c.gw_gvFreeRenderData(buf);
+        return null;
     }
-    return written_len;
+    return buf;
+}
+
+pub export fn viz_free_svg(buf: ?[*]u8) void {
+    c.gw_gvFreeRenderData(buf);
 }
 
 pub export fn viz_create_context() void {
-    GVC = c.create_context();
+    GVC = c.gw_create_context();
 }
 
 pub export fn viz_alloc(len: usize) ?[*]u8 {

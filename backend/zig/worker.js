@@ -1,6 +1,5 @@
 let wasm;
 let memory;
-const OUT_LEN = 200 * 1024 * 1024;
 
 const fdBuffers = {
   1: "", // stdout
@@ -176,38 +175,34 @@ self.onmessage = async function (e) {
       return;
     }
 
-    const outLen = OUT_LEN;
-    const outPtr = wasm.viz_alloc(outLen);
-    if (!outPtr) {
-      wasm.viz_free_graph(graph);
-      self.postMessage({ type: "error", error: "Failed to allocate output buffer" });
-      return;
-    }
-
     status("Laying out graph...");
     const layout_res = wasm.viz_layout_graph(graph);
     if (layout_res != 0) {
       wasm.viz_free_graph(graph);
-      wasm.viz_free(outPtr, outLen);
       self.postMessage({ type: "error", error: `Layout error: ${layout_res}` });
       return;
     }
 
-    status("Rendering SVG...");
-    const written = wasm.viz_graph_to_svg(graph, outPtr, outLen);
-    wasm.viz_free_graph(graph);
+    function readCString(ptr) { // максимум 1МБ
+      const buf = new Uint8Array(memory.buffer);
+      let end = ptr;
+      while (buf[end] !== 0) {
+        end++;
+      }
+      return new TextDecoder("utf-8").decode(buf.subarray(ptr, end));
+    }
 
-    if (written === 0) {
-      wasm.viz_free(outPtr, outLen);
+    status("Rendering SVG...");
+    const svgptr = wasm.viz_graph_to_svg(graph);
+    if (svgptr === 0) {
+      wasm.viz_free_graph(graph)
       self.postMessage({ type: "error", error: "Failed to render SVG" });
       return;
     }
-
+    const svg = readCString(svgptr)
     status("Done");
-    const svgBytes = new Uint8Array(memory.buffer, outPtr, written);
-    const svg = DECODER.decode(svgBytes);
-    wasm.viz_free(outPtr, outLen);
-
+    wasm.viz_free_graph(graph)
+    wasm.viz_free_svg(svgptr)
     self.postMessage({ type: "svg", svg });
   }
 

@@ -98,9 +98,6 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(b.path("src"));
     exe.addIncludePath(b.path("src"));
     lib.addCSourceFile(.{
-        .file = b.path("src/hello.c"),
-    });
-    lib.addCSourceFile(.{
         .file = b.path("src/agrw.c"),
     });
     exe.want_lto = true;
@@ -115,6 +112,7 @@ pub fn build(b: *std.Build) void {
         "viz_layout_graph",
         "viz_layout_done",
         "viz_graph_to_svg",
+        "viz_free_svg",
         "viz_create_context",
         "viz_alloc",
         "viz_free",
