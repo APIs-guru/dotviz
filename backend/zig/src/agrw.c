@@ -43,7 +43,7 @@ int gw_gvFreeLayout(GVC_t *gvc, Agrw_t graph) {
 Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 
 // undirected
-#include "const.h" // IWYU pragma: keep
+#include "const.h"  // IWYU pragma: keep
 #include "gvcint.h" // IWYU pragma: keep
 // undirected
 
@@ -52,7 +52,22 @@ Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
   graph_t *g = (graph_t *)graph;
   int rc;
-  rc = gvlayout_select(gvc, "dot");
+
+  gvplugin_available_t *plugin;
+  gvplugin_installed_t *typeptr;
+
+  plugin = gvplugin_load(gvc, API_layout, "dot", NULL);
+  if (plugin) {
+    typeptr = plugin->typeptr;
+    gvc->layout.type = typeptr->type;
+    gvc->layout.engine = typeptr->engine;
+    gvc->layout.id = typeptr->id;
+    gvc->layout.features = typeptr->features;
+    rc = GVRENDER_PLUGIN; /* FIXME - need better return code */
+  } else {
+    return NO_SUPPORT;
+  }
+  
   if (gvLayoutJobs(gvc, g) == -1)
     return -1;
 
