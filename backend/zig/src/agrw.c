@@ -48,53 +48,47 @@ Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 // undirected
 
 #include "gvcproc.h"
-int g_gvLayout(GVC_t *gvc, graph_t *g, const char *engine)
-{
-    char buf[256];
-    int rc;
-
-    rc = gvlayout_select(gvc, engine);
-    if (rc == NO_SUPPORT) {
-        agerrorf("Layout type: \"%s\" not recognized. Use one of:%s\n",
-                engine, gvplugin_list(gvc, API_layout, engine));
-        return -1;
-    }
-
-    if (gvLayoutJobs(gvc, g) == -1)
-	return -1;
-
-/* set bb attribute for basic layout.
- * doesn't yet include margins, scaling or page sizes because
- * those depend on the renderer being used. */
-    if (GD_drawing(g)->landscape)
-        snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f",
-                 round(GD_bb(g).LL.y), round(GD_bb(g).LL.x),
-                 round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
-    else
-        snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f",
-                 round(GD_bb(g).LL.x), round(GD_bb(g).LL.y),
-                 round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
-    agsafeset(g, "bb", buf, "");
-
-    return 0;
-}
 
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
-  graph_t* g = (graph_t*)graph;
-  return g_gvLayout(gvc, (graph_t *)graph, "dot");
+  graph_t *g = (graph_t *)graph;
+  const char* engine = "dot";
+  char buf[256];
+  int rc;
+
+  rc = gvlayout_select(gvc, engine);
+  if (rc == NO_SUPPORT) {
+    agerrorf("Layout type: \"%s\" not recognized. Use one of:%s\n", engine,
+             gvplugin_list(gvc, API_layout, engine));
+    return -1;
+  }
+
+  if (gvLayoutJobs(gvc, g) == -1)
+    return -1;
+
+  /* set bb attribute for basic layout.
+   * doesn't yet include margins, scaling or page sizes because
+   * those depend on the renderer being used. */
+  if (GD_drawing(g)->landscape)
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.y),
+             round(GD_bb(g).LL.x), round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
+  else
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.x),
+             round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
+  agsafeset(g, "bb", buf, "");
+
+  return 0;
 }
 
 bool gw_gvLayoutDone(GVC_t *gvc, Agrw_t graph) {
   return gvLayoutDone((Agraph_t *)graph);
 }
 
-int gw_gvRenderDataSvg(GVC_t *gvc, Agrw_t graph, char **result, size_t *length) {
-  return gvRenderData(gvc, (Agraph_t*)graph, "svg", result, length);
+int gw_gvRenderDataSvg(GVC_t *gvc, Agrw_t graph, char **result,
+                       size_t *length) {
+  return gvRenderData(gvc, (Agraph_t *)graph, "svg", result, length);
 }
 
-void gw_gvFreeRenderData(char* data) {
-  gvFreeRenderData(data);
-}
+void gw_gvFreeRenderData(char *data) { gvFreeRenderData(data); }
 
 Agrw_node_t gw_agnode(Agrw_t graph, const char *name) {
   return (Agrw_node_t)agnode((Agraph_t *)graph, (char *)name, 1);
