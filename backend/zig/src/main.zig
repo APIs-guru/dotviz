@@ -1,3 +1,6 @@
+// TEST: to use with wasmtime
+// zig build run -fwasmtime
+
 const std = @import("std");
 const lib = @import("dotviz_lib");
 

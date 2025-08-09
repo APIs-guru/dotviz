@@ -33,4 +33,17 @@ pub const Graph = struct {
     nodes: ?[]Node = null,
     edges: ?[]Edge = null,
     subgraphs: ?[]Subgraph = null,
+
+    pub fn initFromJson(
+        allocator: std.mem.Allocator,
+        json_string: []const u8,
+    ) !Graph {
+        const res = try std.json.parseFromSliceLeaky(
+            Graph,
+            allocator,
+            json_string,
+            .{ .ignore_unknown_fields = true },
+        );
+        return res;
+    }
 };

@@ -1,6 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
-const core = @import("core.zig");
+const vizjs_types = @import("vizjs_types.zig");
 
 pub const c = @cImport({
     @cInclude("gvc.h");
@@ -17,7 +17,7 @@ pub export fn viz_dot_to_graph(dot_string: [*:0]const u8) Agrw_t {
 }
 
 pub export fn viz_json_to_graph(json: [*c]const u8) Agrw_t {
-    const parsed = core.parse_json_to_graph(
+    const parsed = vizjs_types.Graph.initFromJson(
         allocator,
         std.mem.span(json),
     ) catch unreachable;
