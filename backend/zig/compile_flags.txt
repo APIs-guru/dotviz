@@ -34,3 +34,5 @@
 -I/home/vitalii/Documents/my/dotviz_clean/graphviz-fork/lib/vmalloc
 -I/home/vitalii/Documents/my/dotviz_clean/graphviz-fork/lib/vpsc
 -I/home/vitalii/Documents/my/dotviz_clean/graphviz-fork/lib/xdot
+-I/home/vitalii/Documents/my/dotviz_clean/graphviz-fork/lib/
+-I/home/vitalii/Documents/my/dotviz_clean/graphviz-build/inc/common/

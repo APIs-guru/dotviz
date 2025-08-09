@@ -97,6 +97,9 @@ pub fn build(b: *std.Build) void {
     lib.linkSystemLibrary("wasi-emulated-signal");
     lib.addIncludePath(b.path("src"));
     exe.addIncludePath(b.path("src"));
+    // FIXME
+    lib.addIncludePath(b.path("../../../graphviz-fork/lib/util"));
+    lib.addIncludePath(b.path("../../../graphviz-fork/lib"));
     lib.addCSourceFile(.{
         .file = b.path("src/agrw.c"),
     });
