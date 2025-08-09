@@ -37,8 +37,9 @@
     // internet connectivity.
     .dependencies = .{
         .graphviz_build = .{
-            .url = "git+https://github.com/dotviz/graphviz-build#06b64bcb032a7a0b329ee7dfe910972d716afbcd",
-            .hash = "graphviz_build-0.0.0-_A--pRM1BgDXAy-K3UBB3gCyAY5SRIZbQU-dwDCnFdTq",
+            // .url = "git+https://github.com/dotviz/graphviz-build#06b64bcb032a7a0b329ee7dfe910972d716afbcd",
+            // .hash = "graphviz_build-0.0.0-_A--pRM1BgDXAy-K3UBB3gCyAY5SRIZbQU-dwDCnFdTq",
+            .path = "../../../graphviz-build/",
         },
     },
     .paths = .{
