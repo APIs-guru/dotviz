@@ -36,10 +36,14 @@
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
     .dependencies = .{
-        .graphviz_build = .{
-            // .url = "git+https://github.com/dotviz/graphviz-build#06b64bcb032a7a0b329ee7dfe910972d716afbcd",
-            // .hash = "graphviz_build-0.0.0-_A--pRM1BgDXAy-K3UBB3gCyAY5SRIZbQU-dwDCnFdTq",
-            .path = "../../../graphviz-build/",
+        .graphviz = .{
+            // .url = "https://gitlab.com/graphviz/graphviz/-/archive/13.1.0/graphviz-13.1.0.tar.gz",
+            // .hash = "N-V-__8AAD8krQVqFN-VjR9FyDR0N4PYXiwwAvtf_CTD03jK",
+            .path = "../../../graphviz-fork/",
+        },
+        .libexpat = .{
+            .url = "git+https://github.com/allyourcodebase/libexpat.git?ref=2.7.1#917dcfdf644814a73b6a25eac6b2d434f9f1f99f",
+            .hash = "libexpat-2.7.1-y_akI1M7AAA1huPJVegH4dosRVA-lMRgzMuX9vC7aB1s",
         },
     },
     .paths = .{
