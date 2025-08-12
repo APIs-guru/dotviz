@@ -10,6 +10,8 @@ pub fn main() !void {
     const dot = "digraph {a -> b}";
     const graphptr = lib.viz_dot_to_graph(dot);
     _ = lib.viz_layout_graph(graphptr);
+    defer lib.viz_free_graph(graphptr);
     const svg = lib.viz_graph_to_svg(graphptr).?;
+    defer lib.viz_free_svg(svg);
     std.debug.print("{s}\n", .{@as([*c]u8, @ptrCast(svg))});
 }
