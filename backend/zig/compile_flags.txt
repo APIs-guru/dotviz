@@ -36,3 +36,4 @@
 -I/home/vitalii/Documents/my/dotviz_clean/graphviz-fork/lib/xdot
 -I/home/vitalii/Documents/my/dotviz_clean/graphviz-fork/lib/
 -I/home/vitalii/Documents/my/dotviz_clean/graphviz-build/inc/common/
+-I/home/vitalii/Documents/my/dotviz_clean/dotviz/backend/zig/src/graphviz_build/inc/clangd/
