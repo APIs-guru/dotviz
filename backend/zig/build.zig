@@ -1,70 +1,32 @@
 const std = @import("std");
 
-// Although this function looks imperative, note that its job is to
-// declaratively construct a build graph that will be executed by an external
-// runner.
 pub fn build(b: *std.Build) void {
-    // Standard target options allows the person running zig build to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
     const target = b.standardTargetOptions(.{
         .default_target = .{
             .cpu_arch = .wasm32,
             .os_tag = .wasi,
-            // .cpu_features_add = std.Target.wasm.featureSet(&.{
-            //     .simd128,
-            //     .relaxed_simd,
-            //     .bulk_memory,
-            //     .tail_call,
-            //     .reference_types,
-            //     .mutable_globals,
-            //     .multimemory,
-            // }),
         },
     });
 
-    // Standard optimization options allow the person running zig build to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
-    // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .ReleaseSmall,
     });
     const graphviz_build_mode = std.builtin.OptimizeMode.ReleaseFast;
 
-    // This creates a "module", which represents a collection of source files alongside
-    // some compilation options, such as optimization mode and linked system libraries.
-    // Every executable or library we compile will be based on one or more modules.
     const lib_mod = b.createModule(.{
-        // root_source_file is the Zig "entry point" of the module. If a module
-        // only contains e.g. external object files, you can make this null.
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
         .root_source_file = b.path("src/wasm_module.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    // We will also create a module for our other entry point, 'main.zig'.
     const exe_mod = b.createModule(.{
-        // root_source_file is the Zig "entry point" of the module. If a module
-        // only contains e.g. external object files, you can make this null.
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    // Modules can depend on one another using the std.Build.Module.addImport function.
-    // This is what allows Zig source code to use @import("foo") where 'foo' is not a
-    // file path. In this case, we set up exe_mod to import lib_mod.
     exe_mod.addImport("dotviz_lib", lib_mod);
 
-    // Now, we will create a static library based on the module we created above.
-    // This creates a std.Build.Step.Compile, which is the build step responsible
-    // for actually invoking the compiler.
-    var lib = b.addLibrary(.{
-        .linkage = .static,
+    var lib = b.addStaticLibrary(.{
         .name = "dotviz",
         .root_module = lib_mod,
     });
@@ -74,41 +36,10 @@ pub fn build(b: *std.Build) void {
         target,
         graphviz_build_mode,
     );
-    const artifact = graphviz_build;
-    // This declares intent for the library to be installed into the standard
-    // location when the user invokes the "install" step (the default step when
-    // running zig build).
-    // b.installArtifact(lib);
+    lib.linkLibrary(graphviz_build);
 
-    // This creates another std.Build.Step.Compile, but this one builds an executable
-    // rather than a static library.
-    const exe = b.addExecutable(.{
-        .name = "dotviz",
-        .root_module = exe_mod,
-    });
-
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running zig build).
-    exe.addIncludePath(b.path(
-        "src",
-    ));
-    lib.linkLibrary(artifact);
-    lib.root_module.addCMacro("_WASI_EMULATED_SIGNAL", "");
-    lib.linkSystemLibrary("wasi-emulated-signal");
     lib.addIncludePath(b.path("src"));
-    exe.addIncludePath(b.path("src"));
-    // FIXME
-    lib.addIncludePath(b.path("../../../graphviz-fork/lib/util"));
-    lib.addIncludePath(b.path("../../../graphviz-fork/lib"));
-    lib.addCSourceFile(.{
-        .file = b.path("src/agrw.c"),
-    });
-    exe.want_lto = true;
-    exe.import_symbols = true;
-    exe.export_table = true;
-    exe.bundle_ubsan_rt = false;
-    exe.root_module.strip = true;
+    lib.addCSourceFile(.{ .file = b.path("src/agrw.c") });
     lib.root_module.export_symbol_names = &.{
         "viz_dot_to_graph",
         "viz_json_to_graph",
@@ -122,52 +53,28 @@ pub fn build(b: *std.Build) void {
         "viz_free",
     };
     lib.export_table = true;
+    applyWasiEmulation(lib);
+
+    const exe = b.addExecutable(.{
+        .name = "dotviz",
+        .root_module = exe_mod,
+    });
+    exe.addIncludePath(b.path("src"));
+    exe.want_lto = true;
+    exe.import_symbols = true;
+    exe.export_table = true;
+    exe.bundle_ubsan_rt = false;
+    exe.root_module.strip = true;
+    applyWasiEmulation(exe);
 
     b.installArtifact(exe);
 
-    // This *creates* a Run step in the build graph, to be executed when another
-    // step is evaluated that depends on it. The next line below will establish
-    // such a dependency.
     const run_cmd = b.addRunArtifact(exe);
-
-    // By making the run step depend on the install step, it will be run from the
-    // installation directory rather than directly from within the cache directory.
-    // This is not necessary, however, if the application depends on other installed
-    // files, this ensures they will be present and in the expected location.
     run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| run_cmd.addArgs(args);
 
-    // This allows the user to pass arguments to the application in the build
-    // command itself, like this: zig build run -- arg1 arg2 etc
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    // This creates a build step. It will be visible in the zig build --help menu,
-    // and can be selected like this: zig build run
-    // This will evaluate the run step rather than the default, which is "install".
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
-
-    // Creates a step for unit testing. This only builds the test executable
-    // but does not run it.
-    const lib_unit_tests = b.addTest(.{
-        .root_module = lib_mod,
-    });
-
-    const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
-
-    const exe_unit_tests = b.addTest(.{
-        .root_module = exe_mod,
-    });
-
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-
-    // Similar to creating the run step earlier, this exposes a test step to
-    // the zig build --help menu, providing a way for the user to request
-    // running the unit tests.
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_lib_unit_tests.step);
-    test_step.dependOn(&run_exe_unit_tests.step);
 }
 
 pub fn buildGraphviz(
@@ -185,9 +92,9 @@ pub fn buildGraphviz(
         .target = target,
         .optimize = optimize,
     });
-    lib.addCSourceFile(.{
-        .file = b.path("src/graphviz_build/src/dummy.c"),
-    });
+    lib.addCSourceFile(.{ .file = b.path(
+        "src/graphviz_build/src/dummy.c",
+    ) });
     lib.addIncludePath(graphviz_dep.path("lib/cdt"));
     lib.addIncludePath(graphviz_dep.path("lib/cgraph"));
     lib.linkLibC();
@@ -243,7 +150,10 @@ pub fn buildGraphviz(
     lib_cgraph.addIncludePath(b.path("inc/cgraph"));
     lib.addCSourceFiles(.{
         .root = b.path("src/graphviz_build/src/cgraph/"),
-        .files = &.{ "grammar.c", "scan.c" },
+        .files = &.{
+            "grammar.c",
+            "scan.c",
+        },
     });
     lib.addConfigHeader(config_h);
     lib.addIncludePath(graphviz_dep.path("lib"));
@@ -269,9 +179,7 @@ pub fn buildGraphviz(
     });
     lib.addCSourceFiles(.{
         .root = b.path("src/graphviz_build/src/common/"),
-        .files = &.{
-            "htmlparse.c",
-        },
+        .files = &.{"htmlparse.c"},
     });
     addInclude(lib, graphviz_dep);
     lib.addIncludePath(b.path("src/graphviz_build/inc/common/"));
@@ -324,14 +232,12 @@ pub fn buildGraphviz(
         .target = target,
         .optimize = optimize,
     });
-    lib_xdot.addCSourceFile(.{
-        .file = .{
-            .dependency = .{
-                .dependency = graphviz_dep,
-                .sub_path = "lib/xdot/xdot.c",
-            },
+    lib_xdot.addCSourceFile(.{ .file = .{
+        .dependency = .{
+            .dependency = graphviz_dep,
+            .sub_path = "lib/xdot/xdot.c",
         },
-    });
+    } });
     lib_xdot.addIncludePath(graphviz_dep.path("lib"));
     lib_xdot.linkLibC();
     lib.linkLibrary(lib_xdot);
@@ -369,22 +275,18 @@ pub fn buildGraphviz(
         .target = target,
         .optimize = optimize,
     });
-    lib_plugin_dot_layout.addCSourceFile(.{
-        .file = .{
-            .dependency = .{
-                .dependency = graphviz_dep,
-                .sub_path = "plugin/dot_layout/gvlayout_dot_layout.c",
-            },
+    lib_plugin_dot_layout.addCSourceFile(.{ .file = .{
+        .dependency = .{
+            .dependency = graphviz_dep,
+            .sub_path = "plugin/dot_layout/gvlayout_dot_layout.c",
         },
-    });
-    lib_plugin_dot_layout.addCSourceFile(.{
-        .file = .{
-            .dependency = .{
-                .dependency = graphviz_dep,
-                .sub_path = "plugin/dot_layout/gvplugin_dot_layout.c",
-            },
+    } });
+    lib_plugin_dot_layout.addCSourceFile(.{ .file = .{
+        .dependency = .{
+            .dependency = graphviz_dep,
+            .sub_path = "plugin/dot_layout/gvplugin_dot_layout.c",
         },
-    });
+    } });
     addInclude(lib_plugin_dot_layout, graphviz_dep);
     lib_plugin_dot_layout.addConfigHeader(config_h);
     lib_plugin_dot_layout.linkLibC();
@@ -397,7 +299,10 @@ pub fn buildGraphviz(
     });
     lib_pack.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/pack"),
-        .files = &.{ "ccomps.c", "pack.c" },
+        .files = &.{
+            "ccomps.c",
+            "pack.c",
+        },
     });
     addInclude(lib_pack, graphviz_dep);
     lib_pack.addConfigHeader(config_h);
@@ -431,49 +336,47 @@ pub fn buildGraphviz(
     lib_plugin_core.addConfigHeader(config_h);
     lib_plugin_core.linkLibC();
     lib.linkLibrary(lib_plugin_core);
-    const h = std.Build.Step.Compile.HeaderInstallation.Directory.Options{
-        .include_extensions = &.{".h"},
-    };
+
+    inline for (&.{
+        lib,          lib_cdt,         lib_cgraph,            lib_common,
+        lib_dotgen,   lib_gvc,         lib_label,             lib_pack,
+        lib_pathplan, lib_plugin_core, lib_plugin_dot_layout, lib_util,
+        lib_xdot,
+    }) |library| {
+        applyWasiEmulation(library);
+    }
+
+    const h = std.Build.Step.Compile.HeaderInstallation.Directory.Options{ .include_extensions = &.{".h"} };
     lib.installHeadersDirectory(graphviz_dep.path("lib"), "lib", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/common"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/common"), ".", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/pathplan"), "", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/gvc"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/gvc"), ".", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/cdt"), "", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/cgraph"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/cgraph"), ".", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/util/"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/util/"), ".", h);
+    lib.installHeadersDirectory(graphviz_dep.path("lib/util"), "", h);
+    lib.installHeadersDirectory(graphviz_dep.path("lib/util"), "util/", h);
     lib.installHeader(graphviz_dep.path("lib/gvc/gvc.h"), "gvc.h");
-    // lib.installHeader(graphviz_dep.path("lib/util/agxbuf.h"), "agxbuf.h");
-    lib.installHeadersDirectory(
-        b.path("src/graphviz_build/inc/common"),
-        "",
-        .{},
-    );
+    lib.installHeadersDirectory(b.path("src/graphviz_build/inc/common"), "", .{});
 
     b.installArtifact(lib);
     return lib;
 }
 
-fn addInclude(
-    step: *std.Build.Step.Compile,
-    graphviz_dep: *std.Build.Dependency,
-) void {
+fn addInclude(step: *std.Build.Step.Compile, graphviz_dep: *std.Build.Dependency) void {
     step.addIncludePath(graphviz_dep.path("lib"));
     step.addIncludePath(graphviz_dep.path("lib/common"));
     step.addIncludePath(graphviz_dep.path("lib/pathplan"));
     step.addIncludePath(graphviz_dep.path("lib/gvc"));
     step.addIncludePath(graphviz_dep.path("lib/cgraph"));
     step.addIncludePath(graphviz_dep.path("lib/cdt"));
+}
+
+fn applyWasiEmulation(step: *std.Build.Step.Compile) void {
     if (step.root_module.resolved_target.?.result.os.tag == .wasi) {
         step.root_module.addCMacro("_WASI_EMULATED_SIGNAL", "");
         step.linkSystemLibrary("wasi-emulated-signal");
         step.root_module.addCMacro("_WASI_EMULATED_PROCESS_CLOCKS", "");
         step.linkSystemLibrary("wasi-emulated-process-clocks");
-        step.root_module.addCMacro("_WASI_EMULATED_MMAN", "");
-        step.linkSystemLibrary("wasi-emulated-mman");
         step.root_module.addCMacro("_WASI_EMULATED_MMAN", "");
         step.linkSystemLibrary("wasi-emulated-mman");
         step.root_module.addCMacro("_WASI_EMULATED_GETPID", "");
@@ -488,10 +391,10 @@ const src_cdt = [_][]const u8{
 };
 
 const src_cgraph = [_][]const u8{
-    "imap.c",    "rec.c",         "subg.c",    "ingraphs.c", "apply.c",
-    "agerror.c", "graph.c",       "id.c",      "edge.c",     "utils.c",
-    "obj.c",     "unflatten.c",   "acyclic.c", "refstr.c",   "tred.c",
-    "node.c",    "node_induce.c", "attr.c",    "write.c",    "io.c",
+    "imap.c",    "rec.c",    "subg.c", "ingraphs.c", "apply.c",       "agerror.c",
+    "graph.c",   "id.c",     "edge.c", "utils.c",    "obj.c",         "unflatten.c",
+    "acyclic.c", "refstr.c", "tred.c", "node.c",     "node_induce.c", "attr.c",
+    "write.c",   "io.c",
 };
 
 const src_gvc = [_][]const u8{
@@ -530,10 +433,8 @@ const src_label = [_][]const u8{
 };
 
 const src_plugin_core = [_][]const u8{
-    "gvrender_core_fig.c",  "gvplugin_core.c",
-    "gvrender_core_tk.c",   "gvrender_core_ps.c",
-    "gvrender_core_map.c",  "gvrender_core_dot.c",
-    "gvloadimage_core.c",   "gvrender_core_pic.c",
-    "gvrender_core_pov.c",  "gvrender_core_svg.c",
-    "gvrender_core_json.c",
+    "gvrender_core_fig.c", "gvplugin_core.c",      "gvrender_core_tk.c",
+    "gvrender_core_ps.c",  "gvrender_core_map.c",  "gvrender_core_dot.c",
+    "gvloadimage_core.c",  "gvrender_core_pic.c",  "gvrender_core_pov.c",
+    "gvrender_core_svg.c", "gvrender_core_json.c",
 };
