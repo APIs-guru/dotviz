@@ -56,7 +56,6 @@ Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 #include "entities.h"
 #include "gvcproc.h"
 #include "streq.h"
-#include "strview.h"
 
 extern char *Gvfilepath;  /* Per-process path of files allowed in image
                              attributes (also ps libs) */
@@ -147,52 +146,7 @@ static void gvplugin_activate(GVC_t *gvc, api_t api, const char *typestr,
 
 */
 gvplugin_available_t *load_dot_layout(GVC_t *gvc) {
-  gvplugin_available_t *pnext, *rv;
-  gvplugin_library_t *library;
-  gvplugin_api_t *apis;
-  gvplugin_installed_t *types;
-  int i;
-
-  strview_t reqdep = {0};
-
-  strview_t reqpkg = {0};
-
-  agxbuf diag = {0}; // diagnostic messages
-
-  rv = gvc->apis[API_layout];
-
-  if (rv && rv->typeptr == NULL) {
-    library = gvplugin_library_load(gvc, rv->package->path);
-    if (library) {
-
-      /* Now activate the library with real type ptrs */
-      for (apis = library->apis; (types = apis->types); apis++) {
-        for (i = 0; types[i].type; i++) {
-          /* NB. quality is not checked or replaced
-           *   in case user has manually edited quality in config */
-          gvplugin_activate(gvc, apis->api, types[i].type, library->packagename,
-                            rv->package->path, &types[i]);
-        }
-      }
-      if (gvc->common.verbose >= 1)
-        fprintf(stderr, "Activated plugin library: %s\n",
-                rv->package->path ? rv->package->path : "<builtin>");
-    }
-  }
-
-  /* one last check for successful load */
-  if (rv && rv->typeptr == NULL) {
-    agxbprint(&diag, "# unsuccessful plugin load\n");
-    rv = NULL;
-  }
-
-  if (rv && gvc->common.verbose >= 1)
-    fprintf(stderr, "Using %s: %s:%s\n", api_names[API_layout], rv->typestr,
-            rv->package->name);
-
-  agxbfree(&diag);
-
-  gvc->api[API_layout] = rv;
+  gvplugin_available_t *rv = gvc->apis[API_layout];
   return rv;
 }
 
