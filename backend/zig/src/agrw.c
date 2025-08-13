@@ -176,42 +176,7 @@ gvplugin_available_t *my_gvplugin_load(GVC_t *gvc, api_t api, const char *str,
 
   agxbuf diag = {0}; // diagnostic messages
 
-  /* iterate the linked list of plugins for this api */
-  for (pnext = gvc->apis[api]; pnext; pnext = pnext->next) {
-    const strview_t typ = strview(pnext->typestr, ':');
-
-    strview_t dep = {0};
-    if (typ.data[typ.size] == ':') {
-      dep = strview(typ.data + typ.size + strlen(":"), '\0');
-    }
-
-    if (!strview_eq(typ, reqtyp)) {
-      agxbprint(&diag, "# type \"%.*s\" did not match \"%.*s\"\n",
-                (int)typ.size, typ.data, (int)reqtyp.size, reqtyp.data);
-      continue; /* types empty or mismatched */
-    }
-    if (dep.data && reqdep.data) {
-      if (!strview_eq(dep, reqdep)) {
-        agxbprint(&diag, "# dependencies \"%.*s\" did not match \"%.*s\"\n",
-                  (int)dep.size, dep.data, (int)reqdep.size, reqdep.data);
-        continue; /* dependencies not empty, but mismatched */
-      }
-    }
-    if (!reqpkg.data || strview_str_eq(reqpkg, pnext->package->name)) {
-      // found with no packagename constraints, or with required matching
-      // packagename
-
-      if (dep.data &&
-          apidep != api) // load dependency if needed, continue if can't find
-        if (!my_gvplugin_load(gvc, apidep, dep.data, debug)) {
-          agxbprint(&diag, "# plugin loading of dependency \"%.*s\" failed\n",
-                    (int)dep.size, dep.data);
-          continue;
-        }
-      break;
-    }
-  }
-  rv = pnext;
+  rv = gvc->apis[api];
 
   if (rv && rv->typeptr == NULL) {
     library = gvplugin_library_load(gvc, rv->package->path);
