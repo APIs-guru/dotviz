@@ -146,21 +146,15 @@ static void gvplugin_activate(GVC_t *gvc, api_t api, const char *typestr,
                 png:gd:gd
 
 */
-gvplugin_available_t *my_gvplugin_load(GVC_t *gvc, api_t api, const char *str,
-                                       FILE *debug) {
+gvplugin_available_t *load_dot_layout(GVC_t *gvc) {
   gvplugin_available_t *pnext, *rv;
   gvplugin_library_t *library;
   gvplugin_api_t *apis;
   gvplugin_installed_t *types;
   int i;
-  api_t apidep;
-
-  if (api == API_device || api == API_loadimage)
-    /* api dependencies - FIXME - find better way to code these *s */
-    apidep = API_render;
-  else
-    apidep = api;
-
+  api_t api = API_layout;
+  const char *str = "dot";
+  FILE *debug = NULL;
   const strview_t reqtyp = strview(str, ':');
 
   strview_t reqdep = {0};
@@ -558,7 +552,7 @@ int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
   gvplugin_available_t *plugin;
   gvplugin_installed_t *typeptr;
 
-  plugin = my_gvplugin_load(gvc, API_layout, "dot", NULL);
+  plugin = load_dot_layout(gvc);
   if (plugin) {
     typeptr = plugin->typeptr;
     gvc->layout.type = typeptr->type;
