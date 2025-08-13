@@ -152,23 +152,14 @@ gvplugin_available_t *load_dot_layout(GVC_t *gvc) {
   gvplugin_api_t *apis;
   gvplugin_installed_t *types;
   int i;
-  api_t api = API_layout;
-  const strview_t reqtyp = strview("dot", ':');
 
   strview_t reqdep = {0};
 
   strview_t reqpkg = {0};
 
-  if (reqtyp.data[reqtyp.size] == ':') {
-    reqdep = strview(reqtyp.data + reqtyp.size + strlen(":"), ':');
-    if (reqdep.data[reqdep.size] == ':') {
-      reqpkg = strview(reqdep.data + reqdep.size + strlen(":"), '\0');
-    }
-  }
-
   agxbuf diag = {0}; // diagnostic messages
 
-  rv = gvc->apis[api];
+  rv = gvc->apis[API_layout];
 
   if (rv && rv->typeptr == NULL) {
     library = gvplugin_library_load(gvc, rv->package->path);
@@ -196,12 +187,12 @@ gvplugin_available_t *load_dot_layout(GVC_t *gvc) {
   }
 
   if (rv && gvc->common.verbose >= 1)
-    fprintf(stderr, "Using %s: %s:%s\n", api_names[api], rv->typestr,
+    fprintf(stderr, "Using %s: %s:%s\n", api_names[API_layout], rv->typestr,
             rv->package->name);
 
   agxbfree(&diag);
 
-  gvc->api[api] = rv;
+  gvc->api[API_layout] = rv;
   return rv;
 }
 
