@@ -210,19 +210,6 @@ void my_graph_init(graph_t *g, bool use_rankdir) {
     agxbfree(&buf);
   }
 
-  /* set this up fairly early in case any string sizes are needed */
-  if ((p = agget(g, "fontpath")) || (p = getenv("DOTFONTPATH"))) {
-    /* overide GDFONTPATH in local environment if dot
-     * wants its own */
-#ifdef HAVE_SETENV
-    setenv("GDFONTPATH", p, 1);
-#else
-    static agxbuf buf;
-    agxbprint(&buf, "GDFONTPATH=%s", p);
-    putenv(agxbuse(&buf));
-#endif
-  }
-
   GD_charset(g) = findCharset(g);
 
   Gvimagepath = agget(g, "imagepath");
