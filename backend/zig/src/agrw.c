@@ -153,9 +153,7 @@ gvplugin_available_t *load_dot_layout(GVC_t *gvc) {
   gvplugin_installed_t *types;
   int i;
   api_t api = API_layout;
-  const char *str = "dot";
-  FILE *debug = NULL;
-  const strview_t reqtyp = strview(str, ':');
+  const strview_t reqtyp = strview("dot", ':');
 
   strview_t reqdep = {0};
 
@@ -201,9 +199,6 @@ gvplugin_available_t *load_dot_layout(GVC_t *gvc) {
     fprintf(stderr, "Using %s: %s:%s\n", api_names[api], rv->typestr,
             rv->package->name);
 
-  if (debug != NULL) {
-    fputs(agxbuse(&diag), debug);
-  }
   agxbfree(&diag);
 
   gvc->api[api] = rv;
