@@ -103,16 +103,9 @@ extern void do_graph_label(graph_t *sg);
 
 extern void *init_xdot(Agraph_t *g);
 
-/*
- * Define an apis array of name strings using an enumerated api_t as index.
- * The enumerated type is defined gvplugin.h.  The apis array is
- * initialized here by redefining ELEM and reinvoking APIS.
- */
-#define ELEM(x) #x,
-
-static char *api_names[] = {APIS}; /* "render", "layout", ... */
-
-#undef ELEM
+static char *api_names[] = {
+    "render", "layout", "textlayout", "device", "loadimage",
+};
 
 /* Activate a plugin description in the list of available plugins.
  * This is used when a plugin-library loaded because of demand for
