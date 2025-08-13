@@ -1,9 +1,9 @@
-#include <stdbool.h>
 #include "agrw.h"
 #include "cgraph.h"
 #include "gvc.h"
 #include <locale.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 extern gvplugin_library_t gvplugin_core_LTX_library;
@@ -47,8 +47,8 @@ int gw_gvFreeLayout(GVC_t *gvc, Agrw_t graph) {
 Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 
 // undirected
-#include "const.h"  // IWYU pragma: keep
-#include "gvcint.h" // IWYU pragma: keep
+#include "const.h"           // IWYU pragma: keep
+#include "gvcint.h"          // IWYU pragma: keep
 #include "gvplugin_layout.h" // IWYU pragma: keep
 // undirected
 
@@ -58,37 +58,29 @@ Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 #include "streq.h"
 #include "strview.h"
 
-extern char *Gvfilepath;  /* Per-process path of files allowed in image attributes (also ps libs) */
-extern char *Gvimagepath; /* Per-graph path of files allowed in image attributes  (also ps libs) */
-extern int CL_type;		/* NONE, LOCAL, GLOBAL */
-extern bool Concentrate; /// if parallel edges should be merged
-extern int State;		/* last finished phase */
-extern int EdgeLabelsDone;	/* true if edge labels have been positioned */
+extern char *Gvfilepath;  /* Per-process path of files allowed in image
+                             attributes (also ps libs) */
+extern char *Gvimagepath; /* Per-graph path of files allowed in image attributes
+                             (also ps libs) */
+extern int CL_type;       /* NONE, LOCAL, GLOBAL */
+extern bool Concentrate;  /// if parallel edges should be merged
+extern int State;         /* last finished phase */
+extern int EdgeLabelsDone; /* true if edge labels have been positioned */
 extern double Initial_dist;
-extern Agsym_t
-	*G_ordering, *G_peripheries, *G_penwidth,
-	*G_gradientangle, *G_margin;
-extern Agsym_t
-	*N_height, *N_width, *N_shape, *N_color, *N_fillcolor,
-	*N_fontsize, *N_fontname, *N_fontcolor,
-	*N_label, *N_xlabel, *N_nojustify, *N_style, *N_showboxes,
-	*N_sides, *N_peripheries, *N_ordering, *N_orientation,
-	*N_skew, *N_distortion, *N_fixed, *N_imagescale, *N_imagepos, *N_layer,
-	*N_group, *N_comment, *N_vertices, *N_z,
-	*N_penwidth, *N_gradientangle;
-extern Agsym_t
-	*E_weight, *E_minlen, *E_color, *E_fillcolor,
-	*E_fontsize, *E_fontname, *E_fontcolor,
-	*E_label, *E_xlabel, *E_dir, *E_style, *E_decorate,
-	*E_showboxes, *E_arrowsz, *E_constr, *E_layer,
-	*E_comment, *E_label_float,
-	*E_samehead, *E_sametail,
-	*E_headlabel, *E_taillabel,
-	*E_labelfontsize, *E_labelfontname, *E_labelfontcolor,
-	*E_labeldistance, *E_labelangle,
-	*E_tailclip, *E_headclip,
-	*E_penwidth;
-
+extern Agsym_t *G_ordering, *G_peripheries, *G_penwidth, *G_gradientangle,
+    *G_margin;
+extern Agsym_t *N_height, *N_width, *N_shape, *N_color, *N_fillcolor,
+    *N_fontsize, *N_fontname, *N_fontcolor, *N_label, *N_xlabel, *N_nojustify,
+    *N_style, *N_showboxes, *N_sides, *N_peripheries, *N_ordering,
+    *N_orientation, *N_skew, *N_distortion, *N_fixed, *N_imagescale,
+    *N_imagepos, *N_layer, *N_group, *N_comment, *N_vertices, *N_z, *N_penwidth,
+    *N_gradientangle;
+extern Agsym_t *E_weight, *E_minlen, *E_color, *E_fillcolor, *E_fontsize,
+    *E_fontname, *E_fontcolor, *E_label, *E_xlabel, *E_dir, *E_style,
+    *E_decorate, *E_showboxes, *E_arrowsz, *E_constr, *E_layer, *E_comment,
+    *E_label_float, *E_samehead, *E_sametail, *E_headlabel, *E_taillabel,
+    *E_labelfontsize, *E_labelfontname, *E_labelfontcolor, *E_labeldistance,
+    *E_labelangle, *E_tailclip, *E_headclip, *E_penwidth;
 
 extern char *my_strdup_and_subst_obj0(char *str, void *obj, int escBackslash);
 
@@ -101,15 +93,15 @@ extern int maptoken(char *p, char **name, int *val);
 extern int late_int(void *obj, attrsym_t *attr, int defaultValue, int minimum);
 
 extern double late_double(void *obj, attrsym_t *attr, double defaultValue,
-                   double minimum);
+                          double minimum);
 
 extern char *late_string(void *obj, attrsym_t *attr, char *defaultValue);
 
 extern char *late_nnstring(void *obj, attrsym_t *attr, char *defaultValue);
 
-extern void do_graph_label(graph_t * sg);
+extern void do_graph_label(graph_t *sg);
 
-extern void* init_xdot (Agraph_t* g);
+extern void *init_xdot(Agraph_t *g);
 
 /*
  * Define an apis array of name strings using an enumerated api_t as index.
@@ -118,10 +110,9 @@ extern void* init_xdot (Agraph_t* g);
  */
 #define ELEM(x) #x,
 
-static char *api_names[] = { APIS };    /* "render", "layout", ... */
+static char *api_names[] = {APIS}; /* "render", "layout", ... */
 
 #undef ELEM
-
 
 /* Activate a plugin description in the list of available plugins.
  * This is used when a plugin-library loaded because of demand for
@@ -130,143 +121,142 @@ static char *api_names[] = { APIS };    /* "render", "layout", ... */
  * NB the quality value is not replaced as it might have been
  * manually changed in the config file.
  */
-static void gvplugin_activate(GVC_t * gvc, api_t api, const char *typestr,
+static void gvplugin_activate(GVC_t *gvc, api_t api, const char *typestr,
                               const char *name, const char *plugin_path,
-                              gvplugin_installed_t * typeptr)
-{
-    gvplugin_available_t *pnext;
+                              gvplugin_installed_t *typeptr) {
+  gvplugin_available_t *pnext;
 
-    /* point to the beginning of the linked list of plugins for this api */
-    pnext = gvc->apis[api];
+  /* point to the beginning of the linked list of plugins for this api */
+  pnext = gvc->apis[api];
 
-    while (pnext) {
-        if (strcasecmp(typestr, pnext->typestr) == 0
-            && strcasecmp(name, pnext->package->name) == 0
-            && pnext->package->path != 0
-            && strcasecmp(plugin_path, pnext->package->path) == 0) {
-            pnext->typeptr = typeptr;
-            return;
-        }
-        pnext = pnext->next;
+  while (pnext) {
+    if (strcasecmp(typestr, pnext->typestr) == 0 &&
+        strcasecmp(name, pnext->package->name) == 0 &&
+        pnext->package->path != 0 &&
+        strcasecmp(plugin_path, pnext->package->path) == 0) {
+      pnext->typeptr = typeptr;
+      return;
     }
+    pnext = pnext->next;
+  }
 }
-
 
 /* load a plugin of type=str
-	the str can optionally contain one or more ":dependencies" 
+        the str can optionally contain one or more ":dependencies"
 
-	examples:
-	        png
-		png:cairo
+        examples:
+                png
+                png:cairo
         fully qualified:
-		png:cairo:cairo
-		png:cairo:gd
-		png:gd:gd
-      
+                png:cairo:cairo
+                png:cairo:gd
+                png:gd:gd
+
 */
 gvplugin_available_t *my_gvplugin_load(GVC_t *gvc, api_t api, const char *str,
-                                    FILE *debug) {
-    gvplugin_available_t *pnext, *rv;
-    gvplugin_library_t *library;
-    gvplugin_api_t *apis;
-    gvplugin_installed_t *types;
-    int i;
-    api_t apidep;
+                                       FILE *debug) {
+  gvplugin_available_t *pnext, *rv;
+  gvplugin_library_t *library;
+  gvplugin_api_t *apis;
+  gvplugin_installed_t *types;
+  int i;
+  api_t apidep;
 
-    if (api == API_device || api == API_loadimage)
-        /* api dependencies - FIXME - find better way to code these *s */
-        apidep = API_render;
-    else
-        apidep = api;
+  if (api == API_device || api == API_loadimage)
+    /* api dependencies - FIXME - find better way to code these *s */
+    apidep = API_render;
+  else
+    apidep = api;
 
-    const strview_t reqtyp = strview(str, ':');
+  const strview_t reqtyp = strview(str, ':');
 
-    strview_t reqdep = {0};
+  strview_t reqdep = {0};
 
-    strview_t reqpkg = {0};
+  strview_t reqpkg = {0};
 
-    if (reqtyp.data[reqtyp.size] == ':') {
-        reqdep = strview(reqtyp.data + reqtyp.size + strlen(":"), ':');
-        if (reqdep.data[reqdep.size] == ':') {
-            reqpkg = strview(reqdep.data + reqdep.size + strlen(":"), '\0');
-        }
+  if (reqtyp.data[reqtyp.size] == ':') {
+    reqdep = strview(reqtyp.data + reqtyp.size + strlen(":"), ':');
+    if (reqdep.data[reqdep.size] == ':') {
+      reqpkg = strview(reqdep.data + reqdep.size + strlen(":"), '\0');
+    }
+  }
+
+  agxbuf diag = {0}; // diagnostic messages
+
+  /* iterate the linked list of plugins for this api */
+  for (pnext = gvc->apis[api]; pnext; pnext = pnext->next) {
+    const strview_t typ = strview(pnext->typestr, ':');
+
+    strview_t dep = {0};
+    if (typ.data[typ.size] == ':') {
+      dep = strview(typ.data + typ.size + strlen(":"), '\0');
     }
 
-    agxbuf diag = {0}; // diagnostic messages
-
-    /* iterate the linked list of plugins for this api */
-    for (pnext = gvc->apis[api]; pnext; pnext = pnext->next) {
-        const strview_t typ = strview(pnext->typestr, ':');
-
-        strview_t dep = {0};
-        if (typ.data[typ.size] == ':') {
-            dep = strview(typ.data + typ.size + strlen(":"), '\0');
-        }
-
-        if (!strview_eq(typ, reqtyp)) {
-            agxbprint(&diag, "# type \"%.*s\" did not match \"%.*s\"\n",
-                      (int)typ.size, typ.data, (int)reqtyp.size, reqtyp.data);
-            continue;           /* types empty or mismatched */
-        }
-        if (dep.data && reqdep.data) {
-            if (!strview_eq(dep, reqdep)) {
-                agxbprint(&diag,
-                          "# dependencies \"%.*s\" did not match \"%.*s\"\n",
-                          (int)dep.size, dep.data, (int)reqdep.size,
-                          reqdep.data);
-                continue;           /* dependencies not empty, but mismatched */
-            }
-        }
-        if (!reqpkg.data || strview_str_eq(reqpkg, pnext->package->name)) {
-            // found with no packagename constraints, or with required matching packagename
-
-            if (dep.data && apidep != api) // load dependency if needed, continue if can't find
-                if (!my_gvplugin_load(gvc, apidep, dep.data, debug)) {
-                    agxbprint(&diag,
-                              "# plugin loading of dependency \"%.*s\" failed\n",
-                              (int)dep.size, dep.data);
-                    continue;
-                }
-            break;
-        }
+    if (!strview_eq(typ, reqtyp)) {
+      agxbprint(&diag, "# type \"%.*s\" did not match \"%.*s\"\n",
+                (int)typ.size, typ.data, (int)reqtyp.size, reqtyp.data);
+      continue; /* types empty or mismatched */
     }
-    rv = pnext;
+    if (dep.data && reqdep.data) {
+      if (!strview_eq(dep, reqdep)) {
+        agxbprint(&diag, "# dependencies \"%.*s\" did not match \"%.*s\"\n",
+                  (int)dep.size, dep.data, (int)reqdep.size, reqdep.data);
+        continue; /* dependencies not empty, but mismatched */
+      }
+    }
+    if (!reqpkg.data || strview_str_eq(reqpkg, pnext->package->name)) {
+      // found with no packagename constraints, or with required matching
+      // packagename
 
-    if (rv && rv->typeptr == NULL) {
-        library = gvplugin_library_load(gvc, rv->package->path);
-        if (library) {
-
-            /* Now activate the library with real type ptrs */
-            for (apis = library->apis; (types = apis->types); apis++) {
-                for (i = 0; types[i].type; i++) {
-                    /* NB. quality is not checked or replaced
-                     *   in case user has manually edited quality in config */
-                    gvplugin_activate(gvc, apis->api, types[i].type, library->packagename, rv->package->path, &types[i]);
-                }
-            }
-            if (gvc->common.verbose >= 1)
-                fprintf(stderr, "Activated plugin library: %s\n", rv->package->path ? rv->package->path : "<builtin>");
+      if (dep.data &&
+          apidep != api) // load dependency if needed, continue if can't find
+        if (!my_gvplugin_load(gvc, apidep, dep.data, debug)) {
+          agxbprint(&diag, "# plugin loading of dependency \"%.*s\" failed\n",
+                    (int)dep.size, dep.data);
+          continue;
         }
+      break;
     }
+  }
+  rv = pnext;
 
-    /* one last check for successful load */
-    if (rv && rv->typeptr == NULL) {
-        agxbprint(&diag, "# unsuccessful plugin load\n");
-        rv = NULL;
+  if (rv && rv->typeptr == NULL) {
+    library = gvplugin_library_load(gvc, rv->package->path);
+    if (library) {
+
+      /* Now activate the library with real type ptrs */
+      for (apis = library->apis; (types = apis->types); apis++) {
+        for (i = 0; types[i].type; i++) {
+          /* NB. quality is not checked or replaced
+           *   in case user has manually edited quality in config */
+          gvplugin_activate(gvc, apis->api, types[i].type, library->packagename,
+                            rv->package->path, &types[i]);
+        }
+      }
+      if (gvc->common.verbose >= 1)
+        fprintf(stderr, "Activated plugin library: %s\n",
+                rv->package->path ? rv->package->path : "<builtin>");
     }
+  }
 
-    if (rv && gvc->common.verbose >= 1)
-        fprintf(stderr, "Using %s: %s:%s\n", api_names[api], rv->typestr, rv->package->name);
+  /* one last check for successful load */
+  if (rv && rv->typeptr == NULL) {
+    agxbprint(&diag, "# unsuccessful plugin load\n");
+    rv = NULL;
+  }
 
-    if (debug != NULL) {
-        fputs(agxbuse(&diag), debug);
-    }
-    agxbfree(&diag);
+  if (rv && gvc->common.verbose >= 1)
+    fprintf(stderr, "Using %s: %s:%s\n", api_names[api], rv->typestr,
+            rv->package->name);
 
-    gvc->api[api] = rv;
-    return rv;
+  if (debug != NULL) {
+    fputs(agxbuse(&diag), debug);
+  }
+  agxbfree(&diag);
+
+  gvc->api[api] = rv;
+  return rv;
 }
-
 
 /* converts a graph attribute in inches to a pointf in points.
  * If only one number is given, it is used for both x and y.
