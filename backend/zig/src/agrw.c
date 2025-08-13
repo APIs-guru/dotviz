@@ -133,23 +133,6 @@ static void gvplugin_activate(GVC_t *gvc, api_t api, const char *typestr,
   }
 }
 
-/* load a plugin of type=str
-        the str can optionally contain one or more ":dependencies"
-
-        examples:
-                png
-                png:cairo
-        fully qualified:
-                png:cairo:cairo
-                png:cairo:gd
-                png:gd:gd
-
-*/
-gvplugin_available_t *load_dot_layout(GVC_t *gvc) {
-  gvplugin_available_t *rv = gvc->apis[API_layout];
-  return rv;
-}
-
 /* converts a graph attribute in inches to a pointf in points.
  * If only one number is given, it is used for both x and y.
  * Returns true if the attribute ends in '!'.
@@ -492,7 +475,7 @@ int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
   gvplugin_available_t *plugin;
   gvplugin_installed_t *typeptr;
 
-  plugin = load_dot_layout(gvc);
+  plugin = gvc->apis[API_layout];
   if (plugin) {
     typeptr = plugin->typeptr;
     gvc->layout.type = typeptr->type;
