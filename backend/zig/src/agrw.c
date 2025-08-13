@@ -95,6 +95,21 @@ extern char *strdup_and_subst_obj(char *str, void *obj);
 
 extern bool mapbool(const char *p);
 
+extern int maptoken(char *p, char **name, int *val);
+
+extern int late_int(void *obj, attrsym_t *attr, int defaultValue, int minimum);
+
+extern double late_double(void *obj, attrsym_t *attr, double defaultValue,
+                   double minimum);
+
+extern char *late_string(void *obj, attrsym_t *attr, char *defaultValue);
+
+extern char *late_nnstring(void *obj, attrsym_t *attr, char *defaultValue);
+
+extern void do_graph_label(graph_t * sg);
+
+extern void* init_xdot (Agraph_t* g);
+
 /* converts a graph attribute in inches to a pointf in points.
  * If only one number is given, it is used for both x and y.
  * Returns true if the attribute ends in '!'.
@@ -150,17 +165,6 @@ static void setRatio(graph_t *g) {
   }
 }
 
-extern int maptoken(char *p, char **name, int *val);
-
-extern int late_int(void *obj, attrsym_t *attr, int defaultValue, int minimum);
-
-extern double late_double(void *obj, attrsym_t *attr, double defaultValue,
-                   double minimum);
-
-extern char *late_string(void *obj, attrsym_t *attr, char *defaultValue);
-
-extern char *late_nnstring(void *obj, attrsym_t *attr, char *defaultValue);
-
 /* Check if the charset attribute is defined for the graph and, if
  * so, return the corresponding internal value. If undefined, return
  * CHAR_UTF8
@@ -188,13 +192,6 @@ static inline void *my_gv_calloc(size_t nmemb, size_t size) {
   return p;
 }
 
-static inline void *my_gv_alloc(size_t size) { return gv_calloc(1, size); }
-
-extern void do_graph_label(graph_t * sg);
-
-extern void* init_xdot (Agraph_t* g);
-
-
 void my_graph_init(graph_t *g, bool use_rankdir) {
   char *p;
   double xf;
@@ -203,7 +200,7 @@ void my_graph_init(graph_t *g, bool use_rankdir) {
   static char *fontnamenames[] = {"gd", "ps", "svg", NULL};
   static int fontnamecodes[] = {NATIVEFONTS, PSFONTS, SVGFONTS, -1};
   int rankdir;
-  GD_drawing(g) = my_gv_alloc(sizeof(layout_t));
+  GD_drawing(g) = my_gv_calloc(1, sizeof(layout_t));
 
   /* reparseable input */
   if ((p = agget(g, "postaction"))) { /* requires a graph wrapper for yyparse */
