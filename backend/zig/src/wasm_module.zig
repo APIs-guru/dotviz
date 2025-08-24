@@ -10,8 +10,6 @@ pub const c = @cImport({
 const allocator = std.heap.wasm_allocator;
 pub const Agrw_t = usize;
 
-extern var GVC: ?*c.GVC_t;
-
 pub export fn viz_dot_to_graph(dot_string: [*:0]const u8) Agrw_t {
     return c.gw_agmemread(dot_string);
 }
@@ -59,26 +57,94 @@ pub export fn viz_json_to_graph(json: [*c]const u8) Agrw_t {
     return agrw;
 }
 
-pub export fn viz_free_graph(graph: Agrw_t) void {
-    _ = c.gw_gvFreeLayout(GVC, graph);
-    _ = c.gw_agclose(graph);
+// pub export fn viz_free_graph(graph: Agrw_t) void {
+//     _ = c.gw_gvFreeLayout(GVC, graph);
+//     _ = c.gw_agclose(graph);
+// }
+
+// pub export fn viz_layout_graph(graph: Agrw_t) c_int {
+//     return c.gw_gvLayoutDot(GVC, graph);
+// }
+
+// pub export fn viz_layout_done(graph: Agrw_t) bool {
+//     return c.gw_gvLayoutDone(GVC, graph);
+// }
+
+// pub export fn viz_graph_to_svg(
+//     graph: Agrw_t,
+// ) ?[*]u8 {
+//     if (GVC == null or graph == 0) return null;
+//     var buf: ?[*]u8 = null;
+//     var buf_len: usize = 0;
+//     const err = c.gw_gvRenderDataSvg(GVC, graph, &buf, &buf_len);
+//     if (err != 0) {
+//         std.debug.print("{d}\n", .{err});
+//         c.gw_gvFreeRenderData(buf);
+//         return null;
+//     }
+//     return buf;
+// }
+
+// pub export fn viz_free_svg(buf: ?[*]u8) void {
+//     c.gw_gvFreeRenderData(buf);
+// }
+
+///////////////////////////////////////////////// new functions
+
+extern var Y_invert: bool;
+pub export fn viz_set_y_invert(value: bool) void {
+    Y_invert = value;
 }
 
-pub export fn viz_layout_graph(graph: Agrw_t) c_int {
-    return c.gw_gvLayoutDot(GVC, graph);
+extern var Reduce: bool;
+pub export fn viz_set_reduce(value: bool) void {
+    Reduce = value;
 }
 
-pub export fn viz_layout_done(graph: Agrw_t) bool {
-    return c.gw_gvLayoutDone(GVC, graph);
+var agerrMessages: ?std.ArrayList([]const u8) = null;
+
+pub export fn viz_create_context() ?*c.GVC_t {
+    return c.gw_create_context();
 }
 
-pub export fn viz_graph_to_svg(
+fn viz_errorf(text: []const u8) void {
+    if (agerrMessages) |errors| {
+        // FIXME: check if it is valid UTF8
+        errors.append(text) catch unreachable;
+    }
+}
+
+pub export fn viz_reset_errors() void {
+    if (agerrMessages) |errors| {
+        errors.deinit();
+    }
+    agerrMessages = std.ArrayList([]const u8).init(allocator);
+
+    c.agseterrf(viz_errorf);
+    c.agseterr(c.AGWARN);
+    c.agreseterrors();
+}
+
+const GVC = ?*c.GVC_t;
+
+pub export fn viz_layout(
+    gvc: GVC,
+    graph: Agrw_t,
+) c_int {
+    std.debug.assert(gvc != null);
+    std.debug.assert(gvc != 0);
+    return c.gw_gvLayoutDot(gvc, graph);
+}
+
+pub export fn viz_render(
+    gvc: GVC,
     graph: Agrw_t,
 ) ?[*]u8 {
-    if (GVC == null or graph == 0) return null;
+    std.debug.assert(gvc != null);
+    std.debug.assert(graph != 0);
     var buf: ?[*]u8 = null;
     var buf_len: usize = 0;
-    const err = c.gw_gvRenderDataSvg(GVC, graph, &buf, &buf_len);
+    const err = c.gw_gvRenderDataSvg(gvc, graph, &buf, &buf_len);
     if (err != 0) {
         std.debug.print("{d}\n", .{err});
         c.gw_gvFreeRenderData(buf);
@@ -91,16 +157,29 @@ pub export fn viz_free_svg(buf: ?[*]u8) void {
     c.gw_gvFreeRenderData(buf);
 }
 
-pub export fn viz_create_context() void {
-    GVC = c.gw_create_context();
+pub export fn viz_free_layout(gvc: GVC, graph: Agrw_t) void {
+    std.debug.assert(gvc != null);
+    std.debug.assert(graph != 0);
+    _ = c.gw_gvFreeLayout(gvc, graph);
 }
 
-pub export fn viz_alloc(len: usize) ?[*]u8 {
+pub export fn viz_free_graph(graph: Agrw_t) void {
+    std.debug.assert(graph != 0);
+    _ = c.gw_agclose(graph);
+}
+
+pub export fn viz_free_context(gvc: GVC) void {
+    std.debug.assert(gvc != 0);
+    _ = c.gvFinalize(gvc);
+    _ = c.gvFreeContext(gvc);
+}
+
+pub export fn wasm_alloc(len: usize) ?[*]u8 {
     const mem = allocator.alloc(u8, len) catch return null;
     return mem.ptr;
 }
 
-pub export fn viz_free(ptr: [*]u8, len: usize) void {
+pub export fn wasm_free(ptr: [*]u8, len: usize) void {
     const slice = ptr[0..len];
     allocator.free(slice);
 }

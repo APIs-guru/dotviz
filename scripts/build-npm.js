@@ -6,7 +6,8 @@ import { spawn, writeGeneratedFile } from './utils.js';
 
 fs.rmSync('lib', { recursive: true, force: true });
 fs.mkdirSync('lib');
-spawn('docker', ['build', '--progress=plain', '-o', 'lib', 'backend']);
+spawn('zig', ['build'], { cwd: 'backend/zig' });
+fs.copyFileSync('backend/zig/zig-out/bin/dotviz.wasm', 'lib/module.wasm');
 
 const wasm = fs.readFileSync('lib/module.wasm');
 const encoded_js = `const encoded = "${wasm.toString('base64')}";
@@ -21,14 +22,6 @@ export function decode() {
 }
 `;
 await writeGeneratedFile('lib/encoded.js', encoded_js);
-
-const { default: Module } = await import('../lib/module.mjs');
-const viz = new Viz(await Module({ wasm }));
-const metadata_js = `export const graphvizVersion = ${JSON.stringify(viz.graphvizVersion)};
-export const formats = ${JSON.stringify(viz.formats)};
-export const engines = ${JSON.stringify(viz.engines)};
-`;
-await writeGeneratedFile('lib/metadata.js', metadata_js);
 
 fs.rmSync('npmDist', { recursive: true, force: true });
 fs.mkdirSync('npmDist');

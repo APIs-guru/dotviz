@@ -51,6 +51,9 @@ pub fn build(b: *std.Build) void {
         "viz_create_context",
         "viz_alloc",
         "viz_free",
+        "viz_set_y_invert",
+        "viz_set_reduce",
+        "viz_reset_errors",
     };
     lib.export_table = true;
     applyWasiEmulation(lib);

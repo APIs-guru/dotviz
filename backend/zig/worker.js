@@ -183,7 +183,7 @@ self.onmessage = async function (e) {
       return;
     }
 
-    function readCString(ptr) { // максимум 1МБ
+    function readCString(ptr) {
       const buf = new Uint8Array(memory.buffer);
       let end = ptr;
       while (buf[end] !== 0) {

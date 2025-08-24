@@ -1,20 +1,10 @@
-import { getGraphvizVersion, getPluginList, renderInput } from './wrapper.js';
+import { renderInput } from './wrapper.js';
 
 class Viz {
-  constructor(module) {
+  constructor(module, stderrMessages) {
     this.module = module;
-  }
-
-  get graphvizVersion() {
-    return getGraphvizVersion(this.module);
-  }
-
-  get formats() {
-    return getPluginList(this.module, 'device');
-  }
-
-  get engines() {
-    return getPluginList(this.module, 'layout');
+    this._stderrMessages = stderrMessages;
+    this._agerrMessages = []; // FIXME: put graphviz errors here
   }
 
   renderFormats(input, formats, options = {}) {
@@ -45,7 +35,7 @@ class Viz {
     if (result.status !== 'success') {
       throw new Error(
         result.errors.find((e) => e.level == 'error')?.message ||
-          'render failed',
+        'render failed',
       );
     }
 

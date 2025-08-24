@@ -1,50 +1,14 @@
 import { parseAgerrMessages, parseStderrMessages } from './errors.js';
 
-export function getGraphvizVersion(module) {
-  const resultPointer = module.ccall(
-    'viz_get_graphviz_version',
-    'number',
-    [],
-    [],
-  );
-  return module.UTF8ToString(resultPointer);
-}
-
-export function getPluginList(module, kind) {
-  const resultPointer = module.ccall(
-    'viz_get_plugin_list',
-    'number',
-    ['string'],
-    [kind],
-  );
-
-  if (resultPointer == 0) {
-    throw new Error(`couldn't get plugin list: ${kind}`);
-  }
-
-  const list = [];
-  let itemPointer = resultPointer;
-  let stringPointer;
-
-  while ((stringPointer = module.getValue(itemPointer, '*'))) {
-    list.push(module.UTF8ToString(stringPointer));
-    module.ccall('free', 'number', ['number'], [stringPointer]);
-    itemPointer += 4;
-  }
-
-  module.ccall('free', 'number', ['number'], [resultPointer]);
-
-  return list;
-}
-
+/**
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ */
 export function renderInput(module, input, formats, options) {
-  let graphPointer, contextPointer, resultPointer, imageFilePaths;
+  const { exports: wasm } = module.instance;
+  let graphPointer, contextPointer, resultPointer;
 
   try {
-    module['agerrMessages'] = [];
-    module['stderrMessages'] = [];
-
-    imageFilePaths = createImageFiles(module, options.images);
+    // this.stderrMessages = [];
 
     if (typeof input === 'string') {
       graphPointer = readStringInput(module, input);
@@ -63,30 +27,14 @@ export function renderInput(module, input, formats, options) {
     }
 
     setDefaultAttributes(module, graphPointer, options);
+    wasm.viz_set_y_invert(options.yInvert); //FIXME: test
+    wasm.viz_set_reduce(options.reduce); //FIXME: test
 
-    module.ccall(
-      'viz_set_y_invert',
-      'number',
-      ['number'],
-      [options.yInvert ? 1 : 0],
-    );
-    module.ccall(
-      'viz_set_reduce',
-      'number',
-      ['number'],
-      [options.reduce ? 1 : 0],
-    );
+    contextPointer = wasm.viz_create_context();
 
-    contextPointer = module.ccall('viz_create_context');
+    wasm.viz_reset_errors();
 
-    module.ccall('viz_reset_errors');
-
-    let layoutError = module.ccall(
-      'viz_layout',
-      'number',
-      ['number', 'number', 'string'],
-      [contextPointer, graphPointer, options.engine],
-    );
+    let layoutError = wasm.viz_layout(contextPointer, graphPointer);
 
     if (layoutError !== 0) {
       return {
@@ -96,29 +44,18 @@ export function renderInput(module, input, formats, options) {
       };
     }
 
-    let output = {};
-
-    for (let format of formats) {
-      resultPointer = module.ccall(
-        'viz_render',
-        'number',
-        ['number', 'number', 'string'],
-        [contextPointer, graphPointer, format],
-      );
-
-      if (resultPointer === 0) {
-        return {
-          status: 'failure',
-          output: undefined,
-          errors: parseErrorMessages(module),
-        };
-      } else {
-        output[format] = module.UTF8ToString(resultPointer);
-
-        module.ccall('free', 'number', ['number'], [resultPointer]);
-        resultPointer = 0;
-      }
+    const resultPointer = wasm.viz_render(contextPointer, graphPointer);
+    if (resultPointer === 0) {
+      return {
+        status: 'failure',
+        output: undefined,
+        errors: parseErrorMessages(module),
+      };
     }
+
+    const output = readCString(resultPointer);
+    wasm.viz_free_svg(resultPointer);
+    resultPointer = 0;
 
     return {
       status: 'success',
@@ -126,7 +63,7 @@ export function renderInput(module, input, formats, options) {
       errors: parseErrorMessages(module),
     };
   } catch (error) {
-    if (/^exit\(\d+\)/.test(error)) {
+    if (/^exit\(\d+\)/.test(error)) { // FIXME: check if needed
       return {
         status: 'failure',
         output: undefined,
@@ -137,32 +74,22 @@ export function renderInput(module, input, formats, options) {
     }
   } finally {
     if (contextPointer && graphPointer) {
-      module.ccall(
-        'viz_free_layout',
-        'number',
-        ['number'],
-        [contextPointer, graphPointer],
-      );
+      wasm.viz_free_layout(contextPointer, graphPointer);
     }
 
     if (graphPointer) {
-      module.ccall('viz_free_graph', 'number', ['number'], [graphPointer]);
+      wasm.viz_free_graph(graphPointer);
     }
 
     if (contextPointer) {
-      module.ccall('viz_free_context', 'number', ['number'], [contextPointer]);
-    }
-
-    if (resultPointer) {
-      module.ccall('free', 'number', ['number'], [resultPointer]);
-    }
-
-    if (imageFilePaths) {
-      removeImageFiles(module, imageFilePaths);
+      wasm.viz_free_context(contextPointer);
     }
   }
 }
 
+/**
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ */
 function parseErrorMessages(module) {
   return [
     ...parseAgerrMessages(module['agerrMessages']),
@@ -170,51 +97,19 @@ function parseErrorMessages(module) {
   ];
 }
 
-function createImageFiles(module, images) {
-  if (!images) {
-    return [];
-  }
-
-  return images.map((image) => {
-    if (typeof image.name !== 'string') {
-      throw new TypeError('image name must be a string');
-    } else if (
-      typeof image.width !== 'number' &&
-      typeof image.width !== 'string'
-    ) {
-      throw new TypeError('image width must be a number or string');
-    } else if (
-      typeof image.height !== 'number' &&
-      typeof image.height !== 'string'
-    ) {
-      throw new TypeError('image height must be a number or string');
-    }
-
-    const path = module.PATH.join('/', image.name);
-    const data = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${image.width}" height="${image.height}"></svg>
-`;
-
-    module.FS.createPath('/', module.PATH.dirname(path));
-    module.FS.writeFile(path, data);
-
-    return path;
-  });
-}
-
-function removeImageFiles(module, imageFilePaths) {
-  for (const path of imageFilePaths) {
-    if (module.FS.analyzePath(path).exists) {
-      module.FS.unlink(path);
-    }
-  }
-}
-
+/**
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ */
 function readStringInput(module, src) {
   let srcPointer;
 
   try {
+    const cString = writeCString(src);
+    //////////// Finished here!!!!! 
+    /// FIXME: can we just put cString into WASM without copy
+    const inputPtr = wasm.wasm_alloc(cString);
     const srcLength = module.lengthBytesUTF8(src);
+
     srcPointer = module.ccall('malloc', 'number', ['number'], [srcLength + 1]);
     module.stringToUTF8(src, srcPointer, srcLength + 1);
 
@@ -231,6 +126,9 @@ function readStringInput(module, src) {
   }
 }
 
+/**
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ */
 function readObjectInput(module, object) {
   const graphPointer = module.ccall(
     'viz_create_graph',
@@ -244,6 +142,9 @@ function readObjectInput(module, object) {
   return graphPointer;
 }
 
+/**
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ */
 function readGraph(module, graphPointer, graphData) {
   setDefaultAttributes(module, graphPointer, graphData);
 
@@ -291,6 +192,9 @@ function readGraph(module, graphPointer, graphData) {
   }
 }
 
+/**
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ */
 function setDefaultAttributes(module, graphPointer, data) {
   if (data.graphAttributes) {
     for (const [name, value] of Object.entries(data.graphAttributes)) {
@@ -332,6 +236,9 @@ function setDefaultAttributes(module, graphPointer, data) {
   }
 }
 
+/**
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ */
 function setAttributes(module, graphPointer, objectPointer, attributes) {
   for (const [key, value] of Object.entries(attributes)) {
     withStringPointer(module, graphPointer, value, (stringPointer) => {
@@ -345,6 +252,9 @@ function setAttributes(module, graphPointer, objectPointer, attributes) {
   }
 }
 
+/**
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ */
 function withStringPointer(module, graphPointer, value, callbackFn) {
   const isHTML = typeof value === 'object' && 'html' in value;
   const stringPointer = module.ccall(
@@ -366,4 +276,17 @@ function withStringPointer(module, graphPointer, value, callbackFn) {
     ['number', 'number'],
     [graphPointer, stringPointer],
   );
+}
+
+function readCString(ptr) {
+  const buf = new Uint8Array(memory.buffer);
+  let end = ptr;
+  while (buf[end] !== 0) {
+    end++;
+  }
+  return new TextDecoder("utf-8").decode(buf.subarray(ptr, end));
+}
+
+function writeCString(string) {
+  return new TextEncoder("utf-8").encode(string + '\0');
 }

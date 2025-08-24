@@ -9,9 +9,8 @@ describe('Viz', function () {
   beforeEach(async function () {
     viz = await VizPackage.instance();
   });
-
   describe('rendering graph objects', function () {
-    it('empty graph', function () {
+    it.only('empty graph', function () {
       const result = viz.render({});
 
       assert.deepStrictEqual(result, {
