@@ -101,28 +101,28 @@ pub export fn viz_set_reduce(value: bool) void {
     Reduce = value;
 }
 
-var agerrMessages: ?std.ArrayList([]const u8) = null;
+var agerrMessages: ?std.ArrayList([*c]u8) = null;
 
 pub export fn viz_create_context() ?*c.GVC_t {
     return c.gw_create_context();
 }
 
-fn viz_errorf(text: []const u8) void {
-    if (agerrMessages) |errors| {
-        // FIXME: check if it is valid UTF8
-        errors.append(text) catch unreachable;
-    }
+extern fn jsHandleGraphvizError(ptr: [*]const u8) void;
+
+fn viz_errorf(text: [*c]u8) callconv(.c) c_int {
+    jsHandleGraphvizError(text);
+    return 0;
 }
 
 pub export fn viz_reset_errors() void {
     if (agerrMessages) |errors| {
         errors.deinit();
     }
-    agerrMessages = std.ArrayList([]const u8).init(allocator);
+    agerrMessages = std.ArrayList([*c]u8).init(allocator);
 
-    c.agseterrf(viz_errorf);
-    c.agseterr(c.AGWARN);
-    c.agreseterrors();
+    _ = c.agseterrf(&viz_errorf);
+    _ = c.agseterr(c.AGWARN);
+    _ = c.agreseterrors();
 }
 
 const GVC = ?*c.GVC_t;
@@ -132,7 +132,6 @@ pub export fn viz_layout(
     graph: Agrw_t,
 ) c_int {
     std.debug.assert(gvc != null);
-    std.debug.assert(gvc != 0);
     return c.gw_gvLayoutDot(gvc, graph);
 }
 
@@ -146,7 +145,6 @@ pub export fn viz_render(
     var buf_len: usize = 0;
     const err = c.gw_gvRenderDataSvg(gvc, graph, &buf, &buf_len);
     if (err != 0) {
-        std.debug.print("{d}\n", .{err});
         c.gw_gvFreeRenderData(buf);
         return null;
     }
@@ -169,7 +167,7 @@ pub export fn viz_free_graph(graph: Agrw_t) void {
 }
 
 pub export fn viz_free_context(gvc: GVC) void {
-    std.debug.assert(gvc != 0);
+    std.debug.assert(gvc != null);
     _ = c.gvFinalize(gvc);
     _ = c.gvFreeContext(gvc);
 }
@@ -182,4 +180,33 @@ pub export fn wasm_alloc(len: usize) ?[*]u8 {
 pub export fn wasm_free(ptr: [*]u8, len: usize) void {
     const slice = ptr[0..len];
     allocator.free(slice);
+}
+
+pub export fn viz_read_one_graph_from_dot(string: [*c]u8) Agrw_t {
+    // _ = string;
+    // @panic("viz_read_one_graph_from_dot");
+    var graph: Agrw_t = 0;
+
+    // Reset errors
+
+    _ = c.agseterrf(viz_errorf);
+    _ = c.agseterr(c.AGWARN);
+    _ = c.agreseterrors();
+
+    // Try to read one graph
+    graph = c.gw_agmemread(string);
+
+    // Consume the rest of the input
+    // while (true) {
+    //     // FIXME: figure out why it is here
+    //     var other_graph: ?Agrw_t = null;
+    //     other_graph = c.gw_agmemread(null);
+    //     if (other_graph) |g| {
+    //         _ = c.gw_agclose(g);
+    //     } else {
+    //         break;
+    //     }
+    // }
+
+    return graph;
 }

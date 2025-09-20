@@ -2,7 +2,11 @@ import { decode } from '../lib/encoded.js';
 import Viz from './viz.js';
 
 export async function instance() {
+  let vizInstance;
+  let wasm;
+  let memory;
   const stderrMessages = [];
+  const decoder = new TextDecoder('utf8');
 
   const fdBuffers = {
     1: "", // stdout
@@ -34,6 +38,9 @@ export async function instance() {
     env: {
       __indirect_function_table: new WebAssembly.Table({ initial: 0, element: "anyfunc" }),
       __stack_pointer: new WebAssembly.Global({ value: "i32", mutable: true }, 1024),
+      jsHandleGraphvizError(ptr) {
+        vizInstance._jsHandleGraphvizError(ptr);
+      }
     },
     wasi_snapshot_preview1: {
       proc_exit() {
@@ -131,7 +138,11 @@ export async function instance() {
     },
   });
 
-  return new Viz(instance, stderrMessages);
+  wasm = instance.instance.exports;
+  memory = wasm.memory;
+
+  vizInstance = new Viz(instance, stderrMessages);
+  return vizInstance;
 }
 
 // let wasm;

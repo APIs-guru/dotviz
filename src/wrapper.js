@@ -1,127 +1,21 @@
-import { parseAgerrMessages, parseStderrMessages } from './errors.js';
-
 /**
  * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
  */
-export function renderInput(module, input, formats, options) {
+export function readStringInput(module, src) {
   const { exports: wasm } = module.instance;
-  let graphPointer, contextPointer, resultPointer;
-
-  try {
-    // this.stderrMessages = [];
-
-    if (typeof input === 'string') {
-      graphPointer = readStringInput(module, input);
-    } else if (typeof input === 'object') {
-      graphPointer = readObjectInput(module, input);
-    } else {
-      throw new TypeError('input must be a string or object');
-    }
-
-    if (graphPointer === 0) {
-      return {
-        status: 'failure',
-        output: undefined,
-        errors: parseErrorMessages(module),
-      };
-    }
-
-    setDefaultAttributes(module, graphPointer, options);
-    wasm.viz_set_y_invert(options.yInvert); //FIXME: test
-    wasm.viz_set_reduce(options.reduce); //FIXME: test
-
-    contextPointer = wasm.viz_create_context();
-
-    wasm.viz_reset_errors();
-
-    let layoutError = wasm.viz_layout(contextPointer, graphPointer);
-
-    if (layoutError !== 0) {
-      return {
-        status: 'failure',
-        output: undefined,
-        errors: parseErrorMessages(module),
-      };
-    }
-
-    const resultPointer = wasm.viz_render(contextPointer, graphPointer);
-    if (resultPointer === 0) {
-      return {
-        status: 'failure',
-        output: undefined,
-        errors: parseErrorMessages(module),
-      };
-    }
-
-    const output = readCString(resultPointer);
-    wasm.viz_free_svg(resultPointer);
-    resultPointer = 0;
-
-    return {
-      status: 'success',
-      output: output,
-      errors: parseErrorMessages(module),
-    };
-  } catch (error) {
-    if (/^exit\(\d+\)/.test(error)) { // FIXME: check if needed
-      return {
-        status: 'failure',
-        output: undefined,
-        errors: parseErrorMessages(module),
-      };
-    } else {
-      throw error;
-    }
-  } finally {
-    if (contextPointer && graphPointer) {
-      wasm.viz_free_layout(contextPointer, graphPointer);
-    }
-
-    if (graphPointer) {
-      wasm.viz_free_graph(graphPointer);
-    }
-
-    if (contextPointer) {
-      wasm.viz_free_context(contextPointer);
-    }
-  }
-}
-
-/**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
- */
-function parseErrorMessages(module) {
-  return [
-    ...parseAgerrMessages(module['agerrMessages']),
-    ...parseStderrMessages(module['stderrMessages']),
-  ];
-}
-
-/**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
- */
-function readStringInput(module, src) {
-  let srcPointer;
+  let inputBuf;
 
   try {
     const cString = writeCString(src);
-    //////////// Finished here!!!!! 
     /// FIXME: can we just put cString into WASM without copy
-    const inputPtr = wasm.wasm_alloc(cString);
-    const srcLength = module.lengthBytesUTF8(src);
+    const inputPtr = wasm.wasm_alloc(cString.length);
+    inputBuf = new Uint8Array(wasm.memory.buffer, inputPtr, cString.length);
+    inputBuf.set(cString);
 
-    srcPointer = module.ccall('malloc', 'number', ['number'], [srcLength + 1]);
-    module.stringToUTF8(src, srcPointer, srcLength + 1);
-
-    return module.ccall(
-      'viz_read_one_graph',
-      'number',
-      ['number'],
-      [srcPointer],
-    );
+    return wasm.viz_read_one_graph_from_dot(inputBuf.byteOffset);
   } finally {
-    if (srcPointer) {
-      module.ccall('free', 'number', ['number'], [srcPointer]);
+    if (inputBuf) {
+      wasm.wasm_free(inputBuf.byteOffset, inputBuf.length);
     }
   }
 }
@@ -129,7 +23,7 @@ function readStringInput(module, src) {
 /**
  * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
  */
-function readObjectInput(module, object) {
+export function readObjectInput(module, object) {
   const graphPointer = module.ccall(
     'viz_create_graph',
     'number',
@@ -195,7 +89,7 @@ function readGraph(module, graphPointer, graphData) {
 /**
  * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
  */
-function setDefaultAttributes(module, graphPointer, data) {
+export function setDefaultAttributes(module, graphPointer, data) {
   if (data.graphAttributes) {
     for (const [name, value] of Object.entries(data.graphAttributes)) {
       withStringPointer(module, graphPointer, value, (stringPointer) => {
@@ -278,14 +172,6 @@ function withStringPointer(module, graphPointer, value, callbackFn) {
   );
 }
 
-function readCString(ptr) {
-  const buf = new Uint8Array(memory.buffer);
-  let end = ptr;
-  while (buf[end] !== 0) {
-    end++;
-  }
-  return new TextDecoder("utf-8").decode(buf.subarray(ptr, end));
-}
 
 function writeCString(string) {
   return new TextEncoder("utf-8").encode(string + '\0');

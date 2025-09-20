@@ -45,6 +45,10 @@ pub fn build(b: *std.Build) void {
         "viz_json_to_graph",
         "viz_free_graph",
         "viz_layout_graph",
+        "viz_layout",
+        "viz_render",
+        "viz_free_layout",
+        "viz_free_context",
         "viz_layout_done",
         "viz_graph_to_svg",
         "viz_free_svg",
@@ -54,6 +58,9 @@ pub fn build(b: *std.Build) void {
         "viz_set_y_invert",
         "viz_set_reduce",
         "viz_reset_errors",
+        "wasm_alloc",
+        "wasm_free",
+        "viz_read_one_graph_from_dot",
     };
     lib.export_table = true;
     applyWasiEmulation(lib);
@@ -67,7 +74,7 @@ pub fn build(b: *std.Build) void {
     exe.import_symbols = true;
     exe.export_table = true;
     exe.bundle_ubsan_rt = false;
-    exe.root_module.strip = true;
+    exe.root_module.strip = false;
     applyWasiEmulation(exe);
 
     b.installArtifact(exe);
