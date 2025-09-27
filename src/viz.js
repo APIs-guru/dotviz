@@ -1,4 +1,8 @@
-import { readStringInput, readObjectInput, setDefaultAttributes } from './wrapper.js';
+import {
+  readStringInput,
+  readObjectInput,
+  setDefaultAttributes,
+} from './wrapper.js';
 import { parseAgerrMessages, parseStderrMessages } from './errors.js';
 
 class Viz {
@@ -37,7 +41,7 @@ class Viz {
     if (result.status !== 'success') {
       throw new Error(
         result.errors.find((e) => e.level == 'error')?.message ||
-        'render failed',
+          'render failed',
       );
     }
 
@@ -54,7 +58,6 @@ class Viz {
     const str = this.renderString(src, { ...options, format: 'json' });
     return JSON.parse(str);
   }
-
 
   _parseErrorMessages() {
     return [
@@ -122,7 +125,8 @@ class Viz {
         errors: this._parseErrorMessages(),
       };
     } catch (error) {
-      if (/^exit\(\d+\)/.test(error)) { // FIXME: check if needed
+      if (/^exit\(\d+\)/.test(error)) {
+        // FIXME: check if needed
         return {
           status: 'failure',
           output: undefined,
@@ -160,5 +164,5 @@ function readCString(memory, ptr) {
   while (buf[end] !== 0) {
     end++;
   }
-  return new TextDecoder("utf-8").decode(buf.subarray(ptr, end));
+  return new TextDecoder('utf-8').decode(buf.subarray(ptr, end));
 }

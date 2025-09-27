@@ -6,8 +6,8 @@ import { spawn, writeGeneratedFile } from './utils.js';
 
 fs.rmSync('lib', { recursive: true, force: true });
 fs.mkdirSync('lib');
-spawn('zig', ['build'], { cwd: 'backend/zig' });
-fs.copyFileSync('backend/zig/zig-out/bin/dotviz.wasm', 'lib/module.wasm');
+spawn('zig', ['build'], { cwd: 'backend/' });
+fs.copyFileSync('backend/zig-out/bin/dotviz.wasm', 'lib/module.wasm');
 
 const wasm = fs.readFileSync('lib/module.wasm');
 const encoded_js = `const encoded = "${wasm.toString('base64')}";

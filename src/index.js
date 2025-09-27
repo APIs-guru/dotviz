@@ -9,8 +9,8 @@ export async function instance() {
   const decoder = new TextDecoder('utf8');
 
   const fdBuffers = {
-    1: "", // stdout
-    2: "", // stderr
+    1: '', // stdout
+    2: '', // stderr
   };
 
   const flush = (fd) => {
@@ -21,7 +21,7 @@ export async function instance() {
       console.error(output.trimEnd());
       stderrMessages.push(output.trimEnd()); // FIXME: check if trimEnd needed
     }
-    fdBuffers[fd] = "";
+    fdBuffers[fd] = '';
   };
 
   let flushTimer = null;
@@ -36,11 +36,17 @@ export async function instance() {
   const buffer = decode();
   const instance = await WebAssembly.instantiate(buffer, {
     env: {
-      __indirect_function_table: new WebAssembly.Table({ initial: 0, element: "anyfunc" }),
-      __stack_pointer: new WebAssembly.Global({ value: "i32", mutable: true }, 1024),
+      __indirect_function_table: new WebAssembly.Table({
+        initial: 0,
+        element: 'anyfunc',
+      }),
+      __stack_pointer: new WebAssembly.Global(
+        { value: 'i32', mutable: true },
+        1024,
+      ),
       jsHandleGraphvizError(ptr) {
         vizInstance._jsHandleGraphvizError(ptr);
-      }
+      },
     },
     wasi_snapshot_preview1: {
       proc_exit() {
@@ -102,14 +108,24 @@ export async function instance() {
         return 44; // __WASI_ERRNO_NOENT
       },
 
-      path_open(fd, dirflags, path_ptr, path_len, oflags, fs_rights_base, fs_rights_inheriting, fdflags, opened_fd_ptr) {
+      path_open(
+        fd,
+        dirflags,
+        path_ptr,
+        path_len,
+        oflags,
+        fs_rights_base,
+        fs_rights_inheriting,
+        fdflags,
+        opened_fd_ptr,
+      ) {
         return 52;
       },
       fd_write(fd, iovs_ptr, iovs_len, nwritten_ptr) {
         if (!memory) return 52; // WASI_ERRNO_NOTSUP
         const mem = new Uint8Array(memory.buffer);
         const view = new DataView(memory.buffer);
-        const decoder = new TextDecoder("utf-8");
+        const decoder = new TextDecoder('utf-8');
 
         let totalWritten = 0;
 

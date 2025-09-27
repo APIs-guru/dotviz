@@ -12,3 +12,6 @@ lib/
 npmDist/
 docs/
 reports/
+
+.zig-cache
+zig-out

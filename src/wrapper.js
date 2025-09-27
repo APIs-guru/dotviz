@@ -1,5 +1,5 @@
 /**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module
  */
 export function readStringInput(module, src) {
   const { exports: wasm } = module.instance;
@@ -21,7 +21,7 @@ export function readStringInput(module, src) {
 }
 
 /**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module
  */
 export function readObjectInput(module, object) {
   const graphPointer = module.ccall(
@@ -37,7 +37,7 @@ export function readObjectInput(module, object) {
 }
 
 /**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module
  */
 function readGraph(module, graphPointer, graphData) {
   setDefaultAttributes(module, graphPointer, graphData);
@@ -87,7 +87,7 @@ function readGraph(module, graphPointer, graphData) {
 }
 
 /**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module
  */
 export function setDefaultAttributes(module, graphPointer, data) {
   if (data.graphAttributes) {
@@ -131,7 +131,7 @@ export function setDefaultAttributes(module, graphPointer, data) {
 }
 
 /**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module
  */
 function setAttributes(module, graphPointer, objectPointer, attributes) {
   for (const [key, value] of Object.entries(attributes)) {
@@ -147,7 +147,7 @@ function setAttributes(module, graphPointer, objectPointer, attributes) {
 }
 
 /**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module 
+ * @param {WebAssembly.WebAssemblyInstantiatedSource} module
  */
 function withStringPointer(module, graphPointer, value, callbackFn) {
   const isHTML = typeof value === 'object' && 'html' in value;
@@ -172,7 +172,6 @@ function withStringPointer(module, graphPointer, value, callbackFn) {
   );
 }
 
-
 function writeCString(string) {
-  return new TextEncoder("utf-8").encode(string + '\0');
+  return new TextEncoder('utf-8').encode(string + '\0');
 }

@@ -11,7 +11,7 @@ describe('Viz', function () {
   });
   describe('rendering graph objects', function () {
     it.only('empty graph', function () {
-      const result = viz.render("digraph {a -> b");
+      const result = viz.render('digraph {a -> b');
 
       assert.deepStrictEqual(result, {
         status: 'success',

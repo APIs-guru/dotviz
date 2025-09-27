@@ -39,7 +39,7 @@
         .graphviz = .{
             // .url = "https://gitlab.com/graphviz/graphviz/-/archive/13.1.0/graphviz-13.1.0.tar.gz",
             // .hash = "N-V-__8AAD8krQVqFN-VjR9FyDR0N4PYXiwwAvtf_CTD03jK",
-            .path = "../../../graphviz-fork/",
+            .path = "../../graphviz-fork/",
         },
         .libexpat = .{
             .url = "git+https://github.com/allyourcodebase/libexpat.git?ref=2.7.1#917dcfdf644814a73b6a25eac6b2d434f9f1f99f",
