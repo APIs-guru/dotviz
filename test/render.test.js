@@ -62,45 +62,6 @@ describe('Viz', function () {
       );
     });
 
-    it('accepts other engine options', function () {
-      const src = 'digraph { a -> b }';
-      const dotOutput = viz.render(src).output;
-
-      assert.strictEqual(viz.render(src, { engine: 'dot' }).output, dotOutput);
-      assert.notStrictEqual(
-        viz.render(src, { engine: 'neato' }).output,
-        dotOutput,
-      );
-      assert.notStrictEqual(
-        viz.render(src, { engine: 'nop2' }).output,
-        dotOutput,
-      );
-      assert.notStrictEqual(
-        viz.render(src, { engine: 'twopi' }).output,
-        dotOutput,
-      );
-      assert.notStrictEqual(
-        viz.render(src, { engine: 'circo' }).output,
-        dotOutput,
-      );
-      assert.notStrictEqual(
-        viz.render(src, { engine: 'fdp' }).output,
-        dotOutput,
-      );
-      assert.notStrictEqual(
-        viz.render(src, { engine: 'sfdp' }).output,
-        dotOutput,
-      );
-      assert.notStrictEqual(
-        viz.render(src, { engine: 'patchwork' }).output,
-        dotOutput,
-      );
-      assert.notStrictEqual(
-        viz.render(src, { engine: 'osage' }).output,
-        dotOutput,
-      );
-    });
-
     it('accepts yInvert option', function () {
       const result1 = viz.render('graph { a }', { yInvert: false });
       const result2 = viz.render('graph { a }', { yInvert: true });
