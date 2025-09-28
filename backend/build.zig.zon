@@ -42,8 +42,8 @@
             .path = "../../graphviz-fork/",
         },
         .libexpat = .{
-            .url = "git+https://github.com/allyourcodebase/libexpat.git?ref=2.7.1#917dcfdf644814a73b6a25eac6b2d434f9f1f99f",
-            .hash = "libexpat-2.7.1-y_akI1M7AAA1huPJVegH4dosRVA-lMRgzMuX9vC7aB1s",
+            .url = "git+https://github.com/allyourcodebase/libexpat.git?ref=2.7.1-1#472c1db660c813a952f235cb394f5997d2e83fe1",
+            .hash = "libexpat-2.7.1-1-y_akI-w7AABhqRN54g--MNNIR-zA1X2WZ36ZPriY84sb",
         },
     },
     .paths = .{

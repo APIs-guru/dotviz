@@ -84,6 +84,8 @@ export async function instance() {
       path_filestat_get() {
         return 44; // __WASI_ERRNO_NOENT
       },
+      fd_pread: wasiErrnoBadF,
+      fd_pwrite: wasiErrnoBadF,
       fd_close: wasiErrnoBadF,
       fd_fdstat_set_flags: wasiErrnoBadF,
       fd_filestat_get: wasiErrnoBadF,

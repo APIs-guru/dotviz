@@ -23,12 +23,14 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .sanitize_c = .off,
     });
     exe_mod.addImport("dotviz_lib", lib_mod);
 
-    var lib = b.addStaticLibrary(.{
+    var lib = b.addLibrary(.{
         .name = "dotviz",
         .root_module = lib_mod,
+        .linkage = .static,
     });
 
     const graphviz_build = try buildGraphviz(
@@ -62,7 +64,9 @@ pub fn build(b: *std.Build) void {
         "wasm_free",
         "viz_read_one_graph_from_dot",
     };
+    lib.root_module.strip = true;
     lib.export_table = true;
+    lib.bundle_ubsan_rt = false;
     applyWasiEmulation(lib);
 
     const exe = b.addExecutable(.{
@@ -74,7 +78,8 @@ pub fn build(b: *std.Build) void {
     exe.import_symbols = true;
     exe.export_table = true;
     exe.bundle_ubsan_rt = false;
-    exe.root_module.strip = false;
+    exe.root_module.strip = true;
+    exe.bundle_ubsan_rt = false;
     applyWasiEmulation(exe);
 
     b.installArtifact(exe);
@@ -97,18 +102,24 @@ pub fn buildGraphviz(
         .optimize = optimize,
     });
 
-    const lib = b.addStaticLibrary(.{
-        .name = "graphvizstatic",
+    const lib_mod = b.createModule(.{
+        .root_source_file = null,
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
+        .sanitize_c = .off,
+    });
+
+    const lib = b.addLibrary(.{
+        .name = "graphvizstatic",
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib.addCSourceFile(.{ .file = b.path(
         "src/graphviz_build/src/dummy.c",
     ) });
     lib.addIncludePath(graphviz_dep.path("lib/cdt"));
     lib.addIncludePath(graphviz_dep.path("lib/cgraph"));
-    lib.linkLibC();
-
     const expat_dep = b.dependency("libexpat", .{
         .target = target,
         .optimize = optimize,
@@ -134,10 +145,10 @@ pub fn buildGraphviz(
     });
     lib.installConfigHeader(builddate_h);
 
-    const lib_cdt = b.addStaticLibrary(.{
+    const lib_cdt = b.addLibrary(.{
         .name = "cdt",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_cdt.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/cdt"),
@@ -145,13 +156,11 @@ pub fn buildGraphviz(
     });
     lib_cdt.addIncludePath(graphviz_dep.path("lib"));
     lib_cdt.addIncludePath(graphviz_dep.path("lib/cdt"));
-    lib_cdt.linkLibC();
-    lib.linkLibrary(lib_cdt);
 
-    const lib_cgraph = b.addStaticLibrary(.{
+    const lib_cgraph = b.addLibrary(.{
         .name = "cgraph",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_cgraph.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/cgraph"),
@@ -173,13 +182,11 @@ pub fn buildGraphviz(
     lib_cgraph.addIncludePath(graphviz_dep.path("lib"));
     lib_cgraph.addIncludePath(graphviz_dep.path("lib/cdt"));
     lib_cgraph.addIncludePath(graphviz_dep.path("lib/cgraph"));
-    lib_cgraph.linkLibC();
-    lib.linkLibrary(lib_cgraph);
 
-    const lib_common = b.addStaticLibrary(.{
+    const lib_common = b.addLibrary(.{
         .name = "gvc",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_common.addIncludePath(b.path("src/graphviz_build/inc/"));
     lib_common.addIncludePath(b.path("src/graphviz_build/inc/common/"));
@@ -204,12 +211,11 @@ pub fn buildGraphviz(
     });
     lib_common.addConfigHeader(config_h);
     lib_common.addConfigHeader(builddate_h);
-    lib_common.linkLibC();
 
-    const lib_util = b.addStaticLibrary(.{
+    const lib_util = b.addLibrary(.{
         .name = "util",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_util.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/util"),
@@ -217,12 +223,11 @@ pub fn buildGraphviz(
     });
     lib_util.addIncludePath(graphviz_dep.path("lib"));
     lib_util.addIncludePath(graphviz_dep.path("lib/util"));
-    lib_util.linkLibC();
 
-    const lib_gvc = b.addStaticLibrary(.{
+    const lib_gvc = b.addLibrary(.{
         .name = "gvc",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_gvc.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/gvc"),
@@ -232,15 +237,11 @@ pub fn buildGraphviz(
     addInclude(lib_gvc, graphviz_dep);
     lib_gvc.addConfigHeader(config_h);
     lib_gvc.addConfigHeader(builddate_h);
-    lib_gvc.linkLibC();
-    lib_gvc.linkLibrary(lib_common);
-    lib_gvc.linkLibrary(lib_util);
-    lib.linkLibrary(lib_gvc);
 
-    const lib_xdot = b.addStaticLibrary(.{
+    const lib_xdot = b.addLibrary(.{
         .name = "xdot",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_xdot.addCSourceFile(.{ .file = .{
         .dependency = .{
@@ -249,13 +250,11 @@ pub fn buildGraphviz(
         },
     } });
     lib_xdot.addIncludePath(graphviz_dep.path("lib"));
-    lib_xdot.linkLibC();
-    lib.linkLibrary(lib_xdot);
 
-    const lib_pathplan = b.addStaticLibrary(.{
+    const lib_pathplan = b.addLibrary(.{
         .name = "pathplan",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_pathplan.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/pathplan"),
@@ -263,13 +262,11 @@ pub fn buildGraphviz(
     });
     lib_pathplan.addIncludePath(graphviz_dep.path("lib"));
     lib_pathplan.addIncludePath(graphviz_dep.path("lib/pathplan"));
-    lib_pathplan.linkLibC();
-    lib.linkLibrary(lib_pathplan);
 
-    const lib_dotgen = b.addStaticLibrary(.{
+    const lib_dotgen = b.addLibrary(.{
         .name = "dotgen",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_dotgen.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/dotgen"),
@@ -277,13 +274,11 @@ pub fn buildGraphviz(
     });
     addInclude(lib_dotgen, graphviz_dep);
     lib_dotgen.addConfigHeader(config_h);
-    lib_dotgen.linkLibC();
-    lib.linkLibrary(lib_dotgen);
 
-    const lib_plugin_dot_layout = b.addStaticLibrary(.{
+    const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_plugin_dot_layout.addCSourceFile(.{ .file = .{
         .dependency = .{
@@ -299,13 +294,11 @@ pub fn buildGraphviz(
     } });
     addInclude(lib_plugin_dot_layout, graphviz_dep);
     lib_plugin_dot_layout.addConfigHeader(config_h);
-    lib_plugin_dot_layout.linkLibC();
-    lib.linkLibrary(lib_plugin_dot_layout);
 
-    const lib_pack = b.addStaticLibrary(.{
+    const lib_pack = b.addLibrary(.{
         .name = "pack",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_pack.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/pack"),
@@ -316,13 +309,11 @@ pub fn buildGraphviz(
     });
     addInclude(lib_pack, graphviz_dep);
     lib_pack.addConfigHeader(config_h);
-    lib_pack.linkLibC();
-    lib.linkLibrary(lib_pack);
 
-    const lib_label = b.addStaticLibrary(.{
+    const lib_label = b.addLibrary(.{
         .name = "label",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_label.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/label"),
@@ -330,13 +321,11 @@ pub fn buildGraphviz(
     });
     addInclude(lib_label, graphviz_dep);
     lib_label.addConfigHeader(config_h);
-    lib_label.linkLibC();
-    lib.linkLibrary(lib_label);
 
-    const lib_plugin_core = b.addStaticLibrary(.{
+    const lib_plugin_core = b.addLibrary(.{
         .name = "plugin_core",
-        .target = target,
-        .optimize = optimize,
+        .root_module = lib_mod,
+        .linkage = .static,
     });
     lib_plugin_core.addCSourceFiles(.{
         .root = graphviz_dep.path("plugin/core"),
@@ -344,8 +333,6 @@ pub fn buildGraphviz(
     });
     addInclude(lib_plugin_core, graphviz_dep);
     lib_plugin_core.addConfigHeader(config_h);
-    lib_plugin_core.linkLibC();
-    lib.linkLibrary(lib_plugin_core);
 
     inline for (&.{
         lib,          lib_cdt,         lib_cgraph,            lib_common,
