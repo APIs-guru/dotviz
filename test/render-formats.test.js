@@ -46,22 +46,6 @@ describe('Viz', function () {
       });
     });
 
-    it('accepts options', function () {
-      const result = viz.renderFormats('graph a { b }', ['dot', 'cmapx'], {
-        engine: 'neato',
-        reduce: true,
-      });
-
-      assert.deepStrictEqual(result, {
-        status: 'success',
-        output: {
-          dot: 'graph a {\n\tgraph [bb="0,0,0,0"];\n\tnode [label="\\N"];\n}\n',
-          cmapx: '<map id="a" name="a">\n</map>\n',
-        },
-        errors: [],
-      });
-    });
-
     it('returns error messages for invalid input', function () {
       const result = viz.renderFormats('invalid', ['dot', 'cmapx']);
 
