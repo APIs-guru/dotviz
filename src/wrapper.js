@@ -173,5 +173,5 @@ function withStringPointer(module, graphPointer, value, callbackFn) {
 }
 
 function writeCString(string) {
-  return new TextEncoder('utf-8').encode(string + '\0');
+  return new TextEncoder('utf8').encode(string + '\0');
 }

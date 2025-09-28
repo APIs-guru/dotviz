@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 
 import packageJSON from '../package.json' with { type: 'json' };
-import Viz from '../src/viz.js';
 import { spawn, writeGeneratedFile } from './utils.js';
 
 fs.rmSync('lib', { recursive: true, force: true });

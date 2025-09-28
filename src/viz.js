@@ -1,9 +1,9 @@
+import { parseAgerrMessages, parseStderrMessages } from './errors.js';
 import {
-  readStringInput,
   readObjectInput,
+  readStringInput,
   setDefaultAttributes,
 } from './wrapper.js';
-import { parseAgerrMessages, parseStderrMessages } from './errors.js';
 
 class Viz {
   constructor(module, stderrMessages) {
@@ -68,7 +68,7 @@ class Viz {
 
   _renderInput(input, formats, options) {
     const { exports: wasm } = this.module.instance;
-    let graphPointer, contextPointer, resultPointer;
+    let graphPointer, contextPointer;
 
     try {
       // this.stderrMessages = [];
@@ -164,5 +164,5 @@ function readCString(memory, ptr) {
   while (buf[end] !== 0) {
     end++;
   }
-  return new TextDecoder('utf-8').decode(buf.subarray(ptr, end));
+  return new TextDecoder('utf8').decode(buf.subarray(ptr, end));
 }
