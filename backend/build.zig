@@ -63,6 +63,9 @@ pub fn build(b: *std.Build) void {
         "wasm_alloc",
         "wasm_free",
         "viz_read_one_graph_from_dot",
+        "viz_set_default_graph_attribute",
+        "viz_set_default_node_attribute",
+        "viz_set_default_edge_attribute",
     };
     lib.root_module.strip = true;
     lib.export_table = true;

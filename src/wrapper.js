@@ -89,50 +89,6 @@ function readGraph(module, graphPointer, graphData) {
 /**
  * @param {WebAssembly.WebAssemblyInstantiatedSource} module
  */
-export function setDefaultAttributes(module, graphPointer, data) {
-  if (data.graphAttributes) {
-    for (const [name, value] of Object.entries(data.graphAttributes)) {
-      withStringPointer(module, graphPointer, value, (stringPointer) => {
-        module.ccall(
-          'viz_set_default_graph_attribute',
-          'number',
-          ['number', 'string', 'number'],
-          [graphPointer, name, stringPointer],
-        );
-      });
-    }
-  }
-
-  if (data.nodeAttributes) {
-    for (const [name, value] of Object.entries(data.nodeAttributes)) {
-      withStringPointer(module, graphPointer, value, (stringPointer) => {
-        module.ccall(
-          'viz_set_default_node_attribute',
-          'number',
-          ['number', 'string', 'number'],
-          [graphPointer, name, stringPointer],
-        );
-      });
-    }
-  }
-
-  if (data.edgeAttributes) {
-    for (const [name, value] of Object.entries(data.edgeAttributes)) {
-      withStringPointer(module, graphPointer, value, (stringPointer) => {
-        module.ccall(
-          'viz_set_default_edge_attribute',
-          'number',
-          ['number', 'string', 'number'],
-          [graphPointer, name, stringPointer],
-        );
-      });
-    }
-  }
-}
-
-/**
- * @param {WebAssembly.WebAssemblyInstantiatedSource} module
- */
 function setAttributes(module, graphPointer, objectPointer, attributes) {
   for (const [key, value] of Object.entries(attributes)) {
     withStringPointer(module, graphPointer, value, (stringPointer) => {

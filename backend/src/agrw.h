@@ -20,13 +20,15 @@ enum Agrw_graph_type {
 GVC_t *gw_create_context(void);
 Agrw_t gw_agopen(const char *name, enum Agrw_graph_type graph_type);
 int gw_agclose(Agrw_t graph);
-int gw_gvFreeLayout(GVC_t* gvc, Agrw_t graph);
+int gw_gvFreeLayout(GVC_t *gvc, Agrw_t graph);
 Agrw_t gw_agmemread(const char *cp);
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph);
 bool gw_gvLayoutDone(GVC_t *gvc, Agrw_t graph);
-int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char* format, char **result, size_t *length);
-void gw_gvFreeRenderData(char* data);
+int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char *format, char **result,
+                    size_t *length);
+void gw_gvFreeRenderData(char *data);
 
+void gw_agattr(Agrw_t graph, int kind, char *name, char *value);
 Agrw_node_t gw_agnode(Agrw_t graph, const char *name);
 Agrw_node_t gw_agfstnode(Agrw_t graph);
 Agrw_node_t gw_agnxtnode(Agrw_t graph, Agrw_node_t node);

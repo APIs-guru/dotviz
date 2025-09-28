@@ -204,3 +204,15 @@ pub export fn viz_read_one_graph_from_dot(string: [*c]u8) Agrw_t {
 
     return graph;
 }
+
+pub export fn viz_set_default_graph_attribute(graph: Agrw_t, name: [*c]u8, value: [*c]u8) void {
+    c.gw_agattr(graph, c.AGRAPH, name, value);
+}
+
+pub export fn viz_set_default_node_attribute(graph: Agrw_t, name: [*c]u8, value: [*c]u8) void {
+    c.gw_agattr(graph, c.AGNODE, name, value);
+}
+
+pub export fn viz_set_default_edge_attribute(graph: Agrw_t, name: [*c]u8, value: [*c]u8) void {
+    c.gw_agattr(graph, c.AGEDGE, name, value);
+}

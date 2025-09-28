@@ -1,5 +1,5 @@
 import { parseAgerrMessages, parseStderrMessages } from './errors.js';
-import { readObjectInput, setDefaultAttributes } from './wrapper.js';
+import { readObjectInput } from './wrapper.js';
 
 class Viz {
   constructor(module, stderrMessages) {
@@ -90,7 +90,7 @@ class Viz {
         };
       }
 
-      setDefaultAttributes(this.module, graphPointer, options);
+      this._setDefaultAttributes(graphPointer, options);
       wasm.viz_set_y_invert(options.yInvert); //FIXME: test
       wasm.viz_set_reduce(options.reduce); //FIXME: test
 
@@ -160,6 +160,7 @@ class Viz {
     this._agerrMessages.push(this._readCString(ptr));
   }
 
+  // FIXME: handle HTML strings separately
   _withCString(src, fn) {
     const { exports: wasm } = this.module.instance;
     let inputBuf;
@@ -186,6 +187,40 @@ class Viz {
       end++;
     }
     return this._utf8Decoder.decode(buf.subarray(ptr, end));
+  }
+
+  _setDefaultAttributes(graphPointer, data) {
+    const { exports: wasm } = this.module.instance;
+
+    if (data.graphAttributes) {
+      for (const [name, value] of Object.entries(data.graphAttributes)) {
+        this._withCString(name, (cName) => {
+          this._withCString(value, (cValue) => {
+            wasm.viz_set_default_graph_attribute(graphPointer, cName, cValue);
+          });
+        });
+      }
+    }
+
+    if (data.nodeAttributes) {
+      for (const [name, value] of Object.entries(data.nodeAttributes)) {
+        this._withCString(name, (cName) => {
+          this._withCString(value, (cValue) => {
+            wasm.viz_set_default_node_attribute(graphPointer, cName, cValue);
+          });
+        });
+      }
+    }
+
+    if (data.edgeAttributes) {
+      for (const [name, value] of Object.entries(data.edgeAttributes)) {
+        this._withCString(name, (cName) => {
+          this._withCString(value, (cValue) => {
+            wasm.viz_set_default_edge_attribute(graphPointer, cName, cValue);
+          });
+        });
+      }
+    }
   }
 }
 

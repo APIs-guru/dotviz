@@ -509,9 +509,13 @@ bool gw_gvLayoutDone(GVC_t *gvc, Agrw_t graph) {
   return gvLayoutDone((Agraph_t *)graph);
 }
 
-int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char* format, char **result,
-                       size_t *length) {
+int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char *format, char **result,
+                    size_t *length) {
   return gvRenderData(gvc, (Agraph_t *)graph, format, result, length);
+}
+
+void gw_agattr(Agrw_t graph, int kind, char *name, char *value) {
+  agattr((Agraph_t *)graph, kind, name, value);
 }
 
 void gw_gvFreeRenderData(char *data) { gvFreeRenderData(data); }
