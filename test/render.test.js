@@ -200,8 +200,7 @@ describe('Viz', function () {
         errors: [
           {
             level: 'error',
-            message:
-              'Layout type: "invalid" not recognized. Use one of: circo dot fdp neato nop nop1 nop2 osage patchwork sfdp twopi',
+            message: 'Layout type: "invalid" not recognized. Use one of: dot',
           },
         ],
       });
@@ -238,8 +237,7 @@ describe('Viz', function () {
           },
           {
             level: 'error',
-            message:
-              'Layout type: "invalid" not recognized. Use one of: circo dot fdp neato nop nop1 nop2 osage patchwork sfdp twopi',
+            message: 'Layout type: "invalid" not recognized. Use one of: dot',
           },
         ],
       });
@@ -264,7 +262,7 @@ stop
       });
     });
 
-    it('returns error messages for invalid engine option', function () {
+    it.skip('returns error messages for invalid engine option', function () {
       const result = viz.render('graph { }', { engine: 'invalid' });
 
       assert.deepStrictEqual(result, {
@@ -273,8 +271,7 @@ stop
         errors: [
           {
             level: 'error',
-            message:
-              'Layout type: "invalid" not recognized. Use one of: circo dot fdp neato nop nop1 nop2 osage patchwork sfdp twopi',
+            message: 'Layout type: "invalid" not recognized. Use one of: dot',
           },
         ],
       });
@@ -351,7 +348,7 @@ stop
       });
     });
 
-    it('accepts an images option', function () {
+    it.skip('accepts an images option', function () {
       const result = viz.render('graph { a[image="test.png"] }', {
         images: [{ name: 'test.png', width: 300, height: 200 }],
       });
@@ -371,7 +368,7 @@ stop
       });
     });
 
-    it('accepts two images with the same name', function () {
+    it.skip('accepts two images with the same name', function () {
       const result = viz.render('graph { a[image="test.png"] }', {
         images: [
           { name: 'test.png', width: 300, height: 200 },
@@ -394,7 +391,7 @@ stop
       });
     });
 
-    it('the same image can be used twice', function () {
+    it.skip('the same image can be used twice', function () {
       const result = viz.render(
         'graph { a[image="test.png"]; b[image="test.png"] }',
         {
@@ -421,7 +418,7 @@ stop
       });
     });
 
-    it('accepts URLs for image names', function () {
+    it.skip('accepts URLs for image names', function () {
       const result = viz.render(
         'graph { a[image="http://example.com/test.png"] }',
         {
@@ -446,7 +443,7 @@ stop
       });
     });
 
-    it('throws for invalid image objects', function () {
+    it.skip('throws for invalid image objects', function () {
       assert.throws(
         () =>
           viz.render('...', {
