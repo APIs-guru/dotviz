@@ -69,9 +69,10 @@ class Viz {
     const { exports: wasm } = this.module.instance;
     let graphPointer, contextPointer;
 
-    try {
-      // this.stderrMessages = [];
+    this._agerrMessages = [];
+    this._stderrMessages = [];
 
+    try {
       if (typeof input === 'string') {
         graphPointer = this._withCString(input, (cInput) =>
           wasm.viz_read_one_graph_from_dot(cInput),
