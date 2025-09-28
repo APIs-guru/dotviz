@@ -24,7 +24,7 @@ int gw_gvFreeLayout(GVC_t* gvc, Agrw_t graph);
 Agrw_t gw_agmemread(const char *cp);
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph);
 bool gw_gvLayoutDone(GVC_t *gvc, Agrw_t graph);
-int gw_gvRenderDataSvg(GVC_t *gvc, Agrw_t graph, char **result, size_t *length);
+int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char* format, char **result, size_t *length);
 void gw_gvFreeRenderData(char* data);
 
 Agrw_node_t gw_agnode(Agrw_t graph, const char *name);

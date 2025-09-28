@@ -509,9 +509,9 @@ bool gw_gvLayoutDone(GVC_t *gvc, Agrw_t graph) {
   return gvLayoutDone((Agraph_t *)graph);
 }
 
-int gw_gvRenderDataSvg(GVC_t *gvc, Agrw_t graph, char **result,
+int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char* format, char **result,
                        size_t *length) {
-  return gvRenderData(gvc, (Agraph_t *)graph, "svg", result, length);
+  return gvRenderData(gvc, (Agraph_t *)graph, format, result, length);
 }
 
 void gw_gvFreeRenderData(char *data) { gvFreeRenderData(data); }

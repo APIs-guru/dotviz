@@ -131,12 +131,13 @@ pub export fn viz_layout(
 pub export fn viz_render(
     gvc: GVC,
     graph: Agrw_t,
+    format: [*c]u8,
 ) ?[*]u8 {
     std.debug.assert(gvc != null);
     std.debug.assert(graph != 0);
     var buf: ?[*]u8 = null;
     var buf_len: usize = 0;
-    const err = c.gw_gvRenderDataSvg(gvc, graph, &buf, &buf_len);
+    const err = c.gw_gvRenderData(gvc, graph, format, &buf, &buf_len);
     if (err != 0) {
         c.gw_gvFreeRenderData(buf);
         return null;

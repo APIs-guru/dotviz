@@ -1,9 +1,5 @@
 import { parseAgerrMessages, parseStderrMessages } from './errors.js';
-import {
-  readObjectInput,
-  readStringInput,
-  setDefaultAttributes,
-} from './wrapper.js';
+import { readObjectInput, setDefaultAttributes } from './wrapper.js';
 
 class Viz {
   constructor(module, stderrMessages) {
@@ -11,6 +7,8 @@ class Viz {
 
     this._stderrMessages = stderrMessages;
     this._agerrMessages = [];
+    this._utf8Encoder = new TextEncoder('utf8');
+    this._utf8Decoder = new TextDecoder('utf8');
   }
 
   renderFormats(input, formats, options = {}) {
@@ -23,16 +21,17 @@ class Viz {
   render(input, options = {}) {
     const format = options.format ?? 'dot';
 
-    let result = this._renderInput(input, [format], {
+    const result = this._renderInput(input, [format], {
       engine: 'dot',
       ...options,
     });
 
-    if (result.status === 'success') {
-      result.output = result.output[format];
-    }
-
-    return result;
+    return result.status === 'success'
+      ? {
+          ...result,
+          output: result.output[format],
+        }
+      : result;
   }
 
   renderString(src, options = {}) {
@@ -74,7 +73,9 @@ class Viz {
       // this.stderrMessages = [];
 
       if (typeof input === 'string') {
-        graphPointer = readStringInput(this.module, input);
+        graphPointer = this._withCString(input, (cInput) =>
+          wasm.viz_read_one_graph_from_dot(cInput),
+        );
       } else if (typeof input === 'object') {
         graphPointer = readObjectInput(this.module, input);
       } else {
@@ -107,18 +108,23 @@ class Viz {
         };
       }
 
-      let resultPointer = wasm.viz_render(contextPointer, graphPointer);
-      if (resultPointer === 0) {
-        return {
-          status: 'failure',
-          output: undefined,
-          errors: this._parseErrorMessages(),
-        };
+      const output = {};
+
+      for (let format of formats) {
+        let resultPointer = this._withCString(format, (cFormat) =>
+          wasm.viz_render(contextPointer, graphPointer, cFormat),
+        );
+        if (resultPointer === 0) {
+          return {
+            status: 'failure',
+            output: undefined,
+            errors: this._parseErrorMessages(),
+          };
+        }
+        output[format] = this._readCString(resultPointer);
+        wasm.viz_free_svg(resultPointer);
       }
 
-      const output = readCString(wasm.memory, resultPointer);
-      wasm.viz_free_svg(resultPointer);
-      resultPointer = 0;
       return {
         status: 'success',
         output: output,
@@ -151,18 +157,36 @@ class Viz {
   }
 
   _jsHandleGraphvizError(ptr) {
+    this._agerrMessages.push(this._readCString(ptr));
+  }
+
+  _withCString(src, fn) {
     const { exports: wasm } = this.module.instance;
-    this._agerrMessages.push(readCString(wasm.memory, ptr));
+    let inputBuf;
+
+    try {
+      const cString = this._utf8Encoder.encode(src + '\0');
+      const inputPtr = wasm.wasm_alloc(cString.length);
+      inputBuf = new Uint8Array(wasm.memory.buffer, inputPtr, cString.length);
+      inputBuf.set(cString);
+      return fn(inputBuf.byteOffset);
+    } finally {
+      if (inputBuf) {
+        wasm.wasm_free(inputBuf.byteOffset, inputBuf.length);
+      }
+    }
+  }
+
+  _readCString(ptr) {
+    const { exports: wasm } = this.module.instance;
+
+    const buf = new Uint8Array(wasm.memory.buffer);
+    let end = ptr;
+    while (buf[end] !== 0) {
+      end++;
+    }
+    return this._utf8Decoder.decode(buf.subarray(ptr, end));
   }
 }
 
 export default Viz;
-
-function readCString(memory, ptr) {
-  const buf = new Uint8Array(memory.buffer);
-  let end = ptr;
-  while (buf[end] !== 0) {
-    end++;
-  }
-  return new TextDecoder('utf8').decode(buf.subarray(ptr, end));
-}
