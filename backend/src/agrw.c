@@ -514,8 +514,12 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char *format, char **result,
   return gvRenderData(gvc, (Agraph_t *)graph, format, result, length);
 }
 
-void gw_agattr(Agrw_t graph, int kind, char *name, char *value) {
-  agattr((Agraph_t *)graph, kind, name, value);
+void gw_agattr_text(Agrw_t graph, int kind, char *name, char *value) {
+  agattr_text((Agraph_t *)graph, kind, name, value);
+}
+
+void gw_agattr_html(Agrw_t graph, int kind, char *name, char *value) {
+  agattr_html((Agraph_t *)graph, kind, name, value);
 }
 
 void gw_gvFreeRenderData(char *data) { gvFreeRenderData(data); }

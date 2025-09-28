@@ -28,7 +28,8 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char *format, char **result,
                     size_t *length);
 void gw_gvFreeRenderData(char *data);
 
-void gw_agattr(Agrw_t graph, int kind, char *name, char *value);
+void gw_agattr_text(Agrw_t graph, int kind, char *name, char *value);
+void gw_agattr_html(Agrw_t graph, int kind, char *name, char *value);
 Agrw_node_t gw_agnode(Agrw_t graph, const char *name);
 Agrw_node_t gw_agfstnode(Agrw_t graph);
 Agrw_node_t gw_agnxtnode(Agrw_t graph, Agrw_node_t node);

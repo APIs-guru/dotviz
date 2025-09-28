@@ -164,7 +164,6 @@ class Viz {
   _withCString(src, fn) {
     const { exports: wasm } = this.module.instance;
     let inputBuf;
-
     try {
       const cString = this._utf8Encoder.encode(src + '\0');
       const inputPtr = wasm.wasm_alloc(cString.length);
@@ -195,8 +194,14 @@ class Viz {
     if (data.graphAttributes) {
       for (const [name, value] of Object.entries(data.graphAttributes)) {
         this._withCString(name, (cName) => {
-          this._withCString(value, (cValue) => {
-            wasm.viz_set_default_graph_attribute(graphPointer, cName, cValue);
+          const isHTML = typeof value === 'object' && 'html' in value;
+          this._withCString(isHTML ? value.html : value, (cValue) => {
+            wasm.viz_set_default_graph_attribute(
+              graphPointer,
+              cName,
+              cValue,
+              isHTML,
+            );
           });
         });
       }
@@ -205,8 +210,14 @@ class Viz {
     if (data.nodeAttributes) {
       for (const [name, value] of Object.entries(data.nodeAttributes)) {
         this._withCString(name, (cName) => {
-          this._withCString(value, (cValue) => {
-            wasm.viz_set_default_node_attribute(graphPointer, cName, cValue);
+          const isHTML = typeof value === 'object' && 'html' in value;
+          this._withCString(isHTML ? value.html : value, (cValue) => {
+            wasm.viz_set_default_node_attribute(
+              graphPointer,
+              cName,
+              cValue,
+              isHTML,
+            );
           });
         });
       }
@@ -215,8 +226,14 @@ class Viz {
     if (data.edgeAttributes) {
       for (const [name, value] of Object.entries(data.edgeAttributes)) {
         this._withCString(name, (cName) => {
-          this._withCString(value, (cValue) => {
-            wasm.viz_set_default_edge_attribute(graphPointer, cName, cValue);
+          const isHTML = typeof value === 'object' && 'html' in value;
+          this._withCString(isHTML ? value.html : value, (cValue) => {
+            wasm.viz_set_default_edge_attribute(
+              graphPointer,
+              cName,
+              cValue,
+              isHTML,
+            );
           });
         });
       }
