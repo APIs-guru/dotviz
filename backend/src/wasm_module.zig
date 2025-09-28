@@ -101,8 +101,6 @@ pub export fn viz_set_reduce(value: bool) void {
     Reduce = value;
 }
 
-var agerrMessages: ?std.ArrayList([*c]u8) = null;
-
 pub export fn viz_create_context() ?*c.GVC_t {
     return c.gw_create_context();
 }
@@ -115,11 +113,6 @@ fn viz_errorf(text: [*c]u8) callconv(.c) c_int {
 }
 
 pub export fn viz_reset_errors() void {
-    if (agerrMessages) |errors| {
-        errors.deinit();
-    }
-    agerrMessages = std.ArrayList([*c]u8).init(allocator);
-
     _ = c.agseterrf(&viz_errorf);
     _ = c.agseterr(c.AGWARN);
     _ = c.agreseterrors();
