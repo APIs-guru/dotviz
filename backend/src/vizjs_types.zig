@@ -1,32 +1,83 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+const ParseOptions = std.json.ParseOptions;
+const json = std.json;
 
-pub const Attributes = std.json.Value;
+pub const AttributeValue = union(enum) {
+    text: [:0]const u8,
+    html: [:0]const u8,
+
+    const Self = @This();
+
+    pub fn jsonParse(allocator: Allocator, source: anytype, options: ParseOptions) !Self {
+        // FIXME: check. if needed
+        _ = options.max_value_len.?;
+
+        const next_type = try source.peekNextTokenType();
+
+        switch (next_type) {
+            .string => {
+                const s = try json.innerParse([:0]u8, allocator, source, options);
+                return Self{ .text = s };
+            },
+            .number => {
+                const f = try json.innerParse(f64, allocator, source, options);
+                const s = try std.fmt.allocPrintSentinel(allocator, "{d}", .{f}, 0);
+                return Self{ .text = s };
+            },
+            .true, .false => {
+                const b = try json.innerParse(bool, allocator, source, options);
+                return Self{ .text = if (b) "true" else "false" };
+            },
+            .object_begin => {
+                const h = try json.innerParse(struct {
+                    html: [:0]const u8,
+                }, allocator, source, options);
+                return Self{ .html = h.html };
+            },
+            else => return error.UnexpectedToken,
+        }
+    }
+};
+
+const CString = struct {
+    cstring: [:0]u8,
+
+    const Self = @This();
+
+    pub fn jsonParse(allocator: Allocator, source: anytype, options: ParseOptions) !Self {
+        const s = try json.innerParse([:0]u8, allocator, source, options);
+        return Self{ .string = s };
+    }
+};
+
+pub const Attributes = std.json.ArrayHashMap(AttributeValue);
 
 pub const Node = struct {
-    name: []const u8,
+    name: [:0]const u8,
     attributes: ?*Attributes = null,
 };
 
 pub const Edge = struct {
-    tail: []const u8,
-    head: []const u8,
+    tail: [:0]const u8,
+    head: [:0]const u8,
     attributes: ?*Attributes = null,
 };
 
 pub const Subgraph = struct {
-    name: ?[]const u8 = null,
+    name: ?[:0]const u8 = null,
     graphAttributes: ?*Attributes = null,
     nodeAttributes: ?*Attributes = null,
     edgeAttributes: ?*Attributes = null,
     nodes: ?[]Node = null,
     edges: ?[]Edge = null,
-    subgraphs: ?*[]Subgraph = null,
+    subgraphs: ?[]Subgraph = null,
 };
 
 pub const Graph = struct {
-    name: ?[]const u8 = null,
-    strict: ?bool = null,
-    directed: ?bool = null,
+    name: ?[:0]const u8 = null,
+    directed: bool = true,
+    strict: bool = false,
     graphAttributes: ?*Attributes = null,
     nodeAttributes: ?*Attributes = null,
     edgeAttributes: ?*Attributes = null,

@@ -1,5 +1,4 @@
 import { parseAgerrMessages, parseStderrMessages } from './errors.js';
-import { readObjectInput } from './wrapper.js';
 
 class Viz {
   constructor(module, stderrMessages) {
@@ -78,7 +77,7 @@ class Viz {
           wasm.viz_read_one_graph_from_dot(cInput),
         );
       } else if (typeof input === 'object') {
-        graphPointer = readObjectInput(this.module, input);
+        graphPointer = this._readObjectInput(input);
       } else {
         throw new TypeError('input must be a string or object');
       }
@@ -153,6 +152,24 @@ class Viz {
 
       if (contextPointer) {
         wasm.viz_free_context(contextPointer);
+      }
+    }
+  }
+
+  _readObjectInput(object) {
+    const { exports: wasm } = this.module.instance;
+
+    const json = JSON.stringify(object);
+    let jsonBuf;
+    try {
+      const cJson = this._utf8Encoder.encode(json);
+      const jsonPtr = wasm.wasm_alloc(cJson.length);
+      jsonBuf = new Uint8Array(wasm.memory.buffer, jsonPtr, cJson.length);
+      jsonBuf.set(cJson);
+      return wasm.viz_json_to_graph(jsonBuf.byteOffset, jsonBuf.length);
+    } finally {
+      if (jsonBuf) {
+        wasm.wasm_free(jsonBuf.byteOffset, jsonBuf.length);
       }
     }
   }

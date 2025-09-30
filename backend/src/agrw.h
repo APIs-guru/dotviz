@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef uintptr_t Agrw_t;
+typedef void *Agrw_t;
 typedef uintptr_t Agrw_node_t;
 typedef uintptr_t Agrw_edge_t;
 
@@ -18,7 +18,7 @@ enum Agrw_graph_type {
 };
 
 GVC_t *gw_create_context(void);
-Agrw_t gw_agopen(const char *name, enum Agrw_graph_type graph_type);
+Agrw_t gw_agopen(const char *name, bool directed, bool stricted);
 int gw_agclose(Agrw_t graph);
 int gw_gvFreeLayout(GVC_t *gvc, Agrw_t graph);
 Agrw_t gw_agmemread(const char *cp);
@@ -28,13 +28,16 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char *format, char **result,
                     size_t *length);
 void gw_gvFreeRenderData(char *data);
 
-void gw_agattr_text(Agrw_t graph, int kind, char *name, char *value);
-void gw_agattr_html(Agrw_t graph, int kind, char *name, char *value);
-Agrw_node_t gw_agnode(Agrw_t graph, const char *name);
+void gw_agattr_text(Agrw_t graph, int kind, char *name, const char *value);
+void gw_agattr_html(Agrw_t graph, int kind, char *name, const char *value);
+void gw_agsafeset_text(void *object, char *name, const char *value);
+void gw_agsafeset_html(void *object, char *name, const char *value);
+void *gw_agnode(Agrw_t graph, const char *name);
 Agrw_node_t gw_agfstnode(Agrw_t graph);
 Agrw_node_t gw_agnxtnode(Agrw_t graph, Agrw_node_t node);
 
-Agrw_edge_t gw_agedge(Agrw_t graph, Agrw_node_t tail, Agrw_node_t head);
+void *gw_agedge(Agrw_t graph, void *tail, void *head);
+void *gw_agsubg(Agrw_t graph, const char *name);
 
 const char *gw_agnameof_graph(Agrw_t graph);
 const char *gw_agnameof_node(Agrw_node_t node);

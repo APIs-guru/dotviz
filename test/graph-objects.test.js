@@ -10,8 +10,8 @@ describe('Viz', function () {
     viz = await VizPackage.instance();
   });
   describe('rendering graph objects', function () {
-    it.only('empty graph', function () {
-      const result = viz.render('digraph {a -> b');
+    it('empty graph', function () {
+      const result = viz.render({});
 
       assert.deepStrictEqual(result, {
         status: 'success',

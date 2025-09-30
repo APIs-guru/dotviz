@@ -18,24 +18,9 @@ GVC_t *gw_create_context(void) {
   return gvContextPlugins(lt_preloaded_symbols, 0);
 }
 
-Agrw_t gw_agopen(const char *name, enum Agrw_graph_type graph_type) {
-  Agdesc_t type = Agdirected;
-  switch (graph_type) {
-  case Agrw_directed:
-    type = Agdirected;
-    break;
-  case Agrw_strictdirected:
-    type = Agstrictdirected;
-    break;
-  case Agrw_undirected:
-    type = Agundirected;
-    break;
-  case Agrw_strictundirected:
-    type = Agstrictundirected;
-    break;
-  }
-
-  return (Agrw_t)agopen((char *)name, type, 0);
+Agrw_t gw_agopen(const char *name, bool directed, bool strict) {
+  Agdesc_t desc = {.directed = directed, .strict = strict};
+  return (Agrw_t)agopen((char *)name, desc, NULL);
 }
 
 int gw_agclose(Agrw_t graph) { return agclose((Agraph_t *)graph); }
@@ -52,10 +37,10 @@ Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 #include "gvplugin_layout.h" // IWYU pragma: keep
 // undirected
 
-#include "agxbuf.h"
 #include "entities.h"
 #include "gvcproc.h"
 #include "streq.h"
+#include "util/agxbuf.h"
 
 extern char *Gvfilepath;  /* Per-process path of files allowed in image
                              attributes (also ps libs) */
@@ -514,18 +499,18 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char *format, char **result,
   return gvRenderData(gvc, (Agraph_t *)graph, format, result, length);
 }
 
-void gw_agattr_text(Agrw_t graph, int kind, char *name, char *value) {
+void gw_agattr_text(Agrw_t graph, int kind, char *name, const char *value) {
   agattr_text((Agraph_t *)graph, kind, name, value);
 }
 
-void gw_agattr_html(Agrw_t graph, int kind, char *name, char *value) {
+void gw_agattr_html(Agrw_t graph, int kind, char *name, const char *value) {
   agattr_html((Agraph_t *)graph, kind, name, value);
 }
 
 void gw_gvFreeRenderData(char *data) { gvFreeRenderData(data); }
 
-Agrw_node_t gw_agnode(Agrw_t graph, const char *name) {
-  return (Agrw_node_t)agnode((Agraph_t *)graph, (char *)name, 1);
+void *gw_agnode(Agrw_t graph, const char *name) {
+  return (void *)agnode((Agraph_t *)graph, (char *)name, true);
 }
 
 Agrw_node_t gw_agfstnode(Agrw_t graph) {
@@ -536,9 +521,13 @@ Agrw_node_t gw_agnxtnode(Agrw_t graph, Agrw_node_t node) {
   return (Agrw_node_t)agnxtnode((Agraph_t *)graph, (Agnode_t *)node);
 }
 
-Agrw_edge_t gw_agedge(Agrw_t graph, Agrw_node_t tail, Agrw_node_t head) {
-  return (Agrw_edge_t)agedge((Agraph_t *)graph, (Agnode_t *)tail,
-                             (Agnode_t *)head, NULL, 1);
+void *gw_agedge(Agrw_t graph, void *tail, void *head) {
+  return (void *)agedge((Agraph_t *)graph, (Agnode_t *)tail, (Agnode_t *)head,
+                        NULL, 1);
+}
+
+void *gw_agsubg(Agrw_t graph, const char *name) {
+  return agsubg((Agraph_t *)graph, (char *)name, true);
 }
 
 const char *gw_agnameof_graph(Agrw_t graph) {
@@ -551,4 +540,12 @@ const char *gw_agnameof_node(Agrw_node_t node) {
 
 const char *gw_agnameof_edge(Agrw_edge_t edge) {
   return agnameof((Agedge_t *)edge);
+}
+
+void gw_agsafeset_text(void *object, char *name, const char *value) {
+  agsafeset_text(object, name, value, "");
+}
+
+void gw_agsafeset_html(void *object, char *name, const char *value) {
+  agsafeset_html(object, name, value, "");
 }
