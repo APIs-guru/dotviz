@@ -13,7 +13,6 @@
 // undirected
 
 #include "entities.h"
-#include "gvcproc.h"
 #include "streq.h"
 #include "util/agxbuf.h"
 
@@ -384,13 +383,14 @@ void my_gv_fixLocale(int set) {
   }
 }
 
+extern void dot_layout(graph_t *g);
+extern void dot_cleanup(graph_t *g);
 /* gvLayoutJobs:
  * Layout input graph g based on layout engine attached to gvc.
  * Check that the root graph has been initialized. If not, initialize it.
  * Return 0 on success.
  */
 int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g) {
-  gvlayout_engine_t *gvle;
   char *p;
   int rc;
 
@@ -401,37 +401,30 @@ int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g) {
     GD_gvc(agroot(g)) = gvc;
   }
 
-  if ((p = agget(g, "layout"))) {
-    gvc->layout.engine = NULL;
-    rc = gvlayout_select(gvc, p);
-    if (rc == NO_SUPPORT) {
-      agerrorf("Layout type: \"%s\" not recognized. Use one of:%s\n", p,
-               gvplugin_list(gvc, API_layout, p));
-      return -1;
-    }
-  }
-
-  gvle = gvc->layout.engine;
-  if (!gvle)
-    return -1;
-
   my_gv_fixLocale(1);
   my_graph_init(g, !!(gvc->layout.features->flags & LAYOUT_USES_RANKDIR));
   GD_drawing(agroot(g)) = GD_drawing(g);
-  if (gvle && gvle->layout) {
-    gvle->layout(g);
+  dot_layout(g);
 
-    if (gvle->cleanup)
-      GD_cleanup(g) = gvle->cleanup;
-  }
+  GD_cleanup(g) = dot_cleanup;
+
   my_gv_fixLocale(0);
   return 0;
 }
 
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
   graph_t *g = (graph_t *)graph;
-  int rc;
 
+  // FIXME: handle "layout" attribute on graph
+  char *p;
+  if ((p = agget(g, "layout"))) {
+    if (strncmp(p, "dot", 3)) {
+      agerrorf("Layout type: \"%s\" not recognized. Use one of: dot\n", p);
+      return -1;
+    }
+  }
+
+  int rc;
   gvplugin_available_t *plugin;
   gvplugin_installed_t *typeptr;
 
