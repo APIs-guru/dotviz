@@ -61,37 +61,6 @@ extern void do_graph_label(graph_t *sg);
 
 extern void *init_xdot(Agraph_t *g);
 
-static char *api_names[] = {
-    "render", "layout", "textlayout", "device", "loadimage",
-};
-
-/* Activate a plugin description in the list of available plugins.
- * This is used when a plugin-library loaded because of demand for
- * one of its plugins. It updates the available plugin data with
- * pointers into the loaded library.
- * NB the quality value is not replaced as it might have been
- * manually changed in the config file.
- */
-static void gvplugin_activate(GVC_t *gvc, api_t api, const char *typestr,
-                              const char *name, const char *plugin_path,
-                              gvplugin_installed_t *typeptr) {
-  gvplugin_available_t *pnext;
-
-  /* point to the beginning of the linked list of plugins for this api */
-  pnext = gvc->apis[api];
-
-  while (pnext) {
-    if (strcasecmp(typestr, pnext->typestr) == 0 &&
-        strcasecmp(name, pnext->package->name) == 0 &&
-        pnext->package->path != 0 &&
-        strcasecmp(plugin_path, pnext->package->path) == 0) {
-      pnext->typeptr = typeptr;
-      return;
-    }
-    pnext = pnext->next;
-  }
-}
-
 /* converts a graph attribute in inches to a pointf in points.
  * If only one number is given, it is used for both x and y.
  * Returns true if the attribute ends in '!'.
@@ -426,20 +395,6 @@ int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
   }
 
   int rc;
-  gvplugin_available_t *plugin;
-  gvplugin_installed_t *typeptr;
-
-  plugin = gvc->apis[API_layout];
-  if (plugin) {
-    typeptr = plugin->typeptr;
-    gvc->layout.type = typeptr->type;
-    gvc->layout.engine = typeptr->engine;
-    gvc->layout.id = typeptr->id;
-    gvc->layout.features = typeptr->features;
-    rc = GVRENDER_PLUGIN; /* FIXME - need better return code */
-  } else {
-    return NO_SUPPORT;
-  }
 
   if (my_gvLayoutJobs(gvc, g) == -1)
     return -1;

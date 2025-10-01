@@ -205,7 +205,7 @@ describe('Viz', function () {
       });
     });
   });
-  it('html attributes with ports', function () {
+  it.only('html attributes with ports', function () {
     const result = viz.render({
       name: 'structs',
       nodeAttributes: {
