@@ -4,5 +4,6 @@
 #include "agrw.h"
 
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph);
+int gw_gvFreeLayout(Agrw_t graph);
 
 #endif

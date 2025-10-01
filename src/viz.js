@@ -143,7 +143,7 @@ class Viz {
       }
     } finally {
       if (contextPointer && graphPointer) {
-        wasm.viz_free_layout(contextPointer, graphPointer);
+        wasm.viz_free_layout(graphPointer);
       }
 
       if (graphPointer) {

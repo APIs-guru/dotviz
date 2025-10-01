@@ -190,10 +190,9 @@ pub export fn viz_free_svg(buf: ?[*]u8) void {
     c.gw_gvFreeRenderData(buf);
 }
 
-pub export fn viz_free_layout(gvc: GVC, graph: Agrw_t) void {
-    std.debug.assert(gvc != null);
+pub export fn viz_free_layout(graph: Agrw_t) void {
     std.debug.assert(graph != null);
-    _ = c.gw_gvFreeLayout(gvc, graph);
+    _ = c.gw_gvFreeLayout(graph);
 }
 
 pub export fn viz_free_graph(graph: Agrw_t) void {

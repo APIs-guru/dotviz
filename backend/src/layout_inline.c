@@ -385,6 +385,7 @@ void my_gv_fixLocale(int set) {
 
 extern void dot_layout(graph_t *g);
 extern void dot_cleanup(graph_t *g);
+extern gvlayout_features_t dotgen_features;
 /* gvLayoutJobs:
  * Layout input graph g based on layout engine attached to gvc.
  * Check that the root graph has been initialized. If not, initialize it.
@@ -402,7 +403,7 @@ int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g) {
   }
 
   my_gv_fixLocale(1);
-  my_graph_init(g, !!(gvc->layout.features->flags & LAYOUT_USES_RANKDIR));
+  my_graph_init(g, !!(dotgen_features.flags & LAYOUT_USES_RANKDIR));
   GD_drawing(agroot(g)) = GD_drawing(g);
   dot_layout(g);
 
@@ -455,5 +456,19 @@ int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
              round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
   agsafeset(g, "bb", buf, "");
 
+  return 0;
+}
+
+extern void graph_cleanup(graph_t *g);
+int gw_gvFreeLayout(Agrw_t graph) {
+  graph_t *g = (graph_t *)graph;
+
+  /* skip if no Agraphinfo_t yet */
+  if (!agbindrec(g, "Agraphinfo_t", 0, true))
+    return 0;
+
+  dot_cleanup(g);
+
+  graph_cleanup(g);
   return 0;
 }

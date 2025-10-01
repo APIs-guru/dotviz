@@ -20,7 +20,6 @@ enum Agrw_graph_type {
 GVC_t *gw_create_context(void);
 Agrw_t gw_agopen(const char *name, bool directed, bool stricted);
 int gw_agclose(Agrw_t graph);
-int gw_gvFreeLayout(GVC_t *gvc, Agrw_t graph);
 Agrw_t gw_agmemread(const char *cp);
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph);
 bool gw_gvLayoutDone(GVC_t *gvc, Agrw_t graph);

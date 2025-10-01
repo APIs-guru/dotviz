@@ -20,10 +20,6 @@ Agrw_t gw_agopen(const char *name, bool directed, bool strict) {
 
 int gw_agclose(Agrw_t graph) { return agclose((Agraph_t *)graph); }
 
-int gw_gvFreeLayout(GVC_t *gvc, Agrw_t graph) {
-  return gvFreeLayout(gvc, (Agraph_t *)graph);
-}
-
 Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 
 bool gw_gvLayoutDone(GVC_t *gvc, Agrw_t graph) {
