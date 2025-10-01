@@ -205,4 +205,113 @@ describe('Viz', function () {
       });
     });
   });
+  it('html attributes with ports', function () {
+    const result = viz.render({
+      name: 'structs',
+      nodeAttributes: {
+        shape: 'plaintext',
+      },
+      nodes: [
+        {
+          name: 'struct1',
+          attributes: {
+            label: {
+              html: `
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD>left</TD><TD PORT="f1">mid dle</TD><TD PORT="f2">right</TD></TR>
+</TABLE>`,
+            },
+          },
+        },
+        {
+          name: 'struct2',
+          attributes: {
+            label: {
+              html: `
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD PORT="f0">one</TD><TD>two</TD></TR>
+</TABLE>`,
+            },
+          },
+        },
+        {
+          name: 'struct3',
+          attributes: {
+            label: {
+              html: `
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+  <TR>
+    <TD ROWSPAN="3">hello<BR/>world</TD>
+    <TD COLSPAN="3">b</TD>
+    <TD ROWSPAN="3">g</TD>
+    <TD ROWSPAN="3">h</TD>
+  </TR>
+  <TR>
+    <TD>c</TD><TD PORT="here">d</TD><TD>e</TD>
+  </TR>
+  <TR>
+    <TD COLSPAN="3">f</TD>
+  </TR>
+</TABLE>`,
+            },
+          },
+        },
+      ],
+      edges: [
+        {
+          head: 'struct2',
+          tail: 'struct1',
+          attributes: { headport: 'f0', tailport: 'f1' },
+        },
+        {
+          head: 'struct3',
+          tail: 'struct1',
+          attributes: { headport: 'here', tailport: 'f2' },
+        },
+      ],
+    });
+    assert.deepStrictEqual(result, {
+      status: 'success',
+      output: `digraph structs {
+	graph [bb="0,0,229.65,160.4"];
+	node [shape=plaintext];
+	struct1	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD>left</TD><TD PORT="f1">mid dle</TD><TD PORT="f2">right</TD></TR>
+</TABLE>>,
+		pos="75.607,142.4",
+		width=1.6872];
+	struct2	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD PORT="f0">one</TD><TD>two</TD></TR>
+</TABLE>>,
+		pos="34.607,44.2",
+		width=0.9613];
+	struct1:f1 -> struct2:f0	[pos="e,21.107,56.6 71.714,130 71.714,94.555 31.219,95.497 22.677,67.727"];
+	struct3	[height=1.2278,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+  <TR>
+    <TD ROWSPAN="3">hello<BR/>world</TD>
+    <TD COLSPAN="3">b</TD>
+    <TD ROWSPAN="3">g</TD>
+    <TD ROWSPAN="3">h</TD>
+  </TR>
+  <TR>
+    <TD>c</TD><TD PORT="here">d</TD><TD>e</TD>
+  </TR>
+  <TR>
+    <TD COLSPAN="3">f</TD>
+  </TR>
+</TABLE>>,
+		pos="158.61,44.2",
+		width=1.9735];
+	struct1:f2 -> struct3:here	[pos="e,154.55,52.701 112.13,130 112.13,102.74 131.68,76.664 146.53,60.796"];
+}
+`,
+      errors: [],
+    });
+  });
 });
