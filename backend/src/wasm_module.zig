@@ -6,6 +6,7 @@ const wasm_allocator = std.heap.wasm_allocator;
 pub const c = @cImport({
     @cInclude("gvc.h");
     @cInclude("agrw.h");
+    @cInclude("layout_inline.h");
 });
 
 pub const Agrw_t = ?*anyopaque;

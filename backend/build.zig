@@ -42,6 +42,7 @@ pub fn build(b: *std.Build) void {
 
     lib.addIncludePath(b.path("src"));
     lib.addCSourceFile(.{ .file = b.path("src/agrw.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/layout_inline.c") });
     lib.root_module.export_symbol_names = &.{
         "viz_dot_to_graph",
         "viz_json_to_graph",
