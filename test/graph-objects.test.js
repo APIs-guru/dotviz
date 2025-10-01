@@ -314,4 +314,31 @@ describe('Viz', function () {
       errors: [],
     });
   });
+  it('override default attributes', function () {
+    const result = viz.render({
+      nodeAttributes: {
+        color: 'blue',
+      },
+      nodes: [{ name: 'a', attributes: { color: 'red' } }, { name: 'b' }],
+    });
+
+    assert.deepStrictEqual(result, {
+      status: 'success',
+      output: `digraph {
+	graph [bb="0,0,126,36"];
+	node [color=blue,
+		label="\\N"
+	];
+	a	[color=red,
+		height=0.5,
+		pos="27,18",
+		width=0.75];
+	b	[height=0.5,
+		pos="99,18",
+		width=0.75];
+}
+`,
+      errors: [],
+    });
+  });
 });
