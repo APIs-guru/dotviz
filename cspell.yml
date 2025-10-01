@@ -4,6 +4,8 @@ validateDirectives: true
 ignorePaths:
   # Excluded from spelling check
   - cspell.yml
+  # FIXME
+  - backend
 dictionaries:
   - html
 
@@ -61,3 +63,16 @@ words:
   - Agerr
   - AGPREV
   - autoinstall
+  - tailport
+  - CELLBORDER
+  - iovs
+  - fdstat
+  - filestat
+  - prestat
+  - pwrite
+  - nwritten
+  - NOTSUP
+  - NOENT
+  - pread
+  - BADF
+  - NOSYS
