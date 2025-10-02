@@ -7,6 +7,7 @@ pub const c = @cImport({
     @cInclude("gvc.h");
     @cInclude("agrw.h");
     @cInclude("layout_inline.h");
+    @cInclude("render_inline.h");
 });
 
 pub const Agrw_t = ?*anyopaque;
@@ -172,7 +173,7 @@ pub export fn viz_layout(
 pub export fn viz_render(
     gvc: GVC,
     graph: Agrw_t,
-    format: [*c]u8,
+    format: [*c]const u8,
 ) ?[*]u8 {
     std.debug.assert(gvc != null);
     std.debug.assert(graph != null);

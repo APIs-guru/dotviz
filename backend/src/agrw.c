@@ -26,11 +26,6 @@ bool gw_gvLayoutDone(GVC_t *gvc, Agrw_t graph) {
   return gvLayoutDone((Agraph_t *)graph);
 }
 
-int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char *format, char **result,
-                    size_t *length) {
-  return gvRenderData(gvc, (Agraph_t *)graph, format, result, length);
-}
-
 void gw_agattr_text(Agrw_t graph, int kind, char *name, const char *value) {
   agattr_text((Agraph_t *)graph, kind, name, value);
 }
@@ -38,8 +33,6 @@ void gw_agattr_text(Agrw_t graph, int kind, char *name, const char *value) {
 void gw_agattr_html(Agrw_t graph, int kind, char *name, const char *value) {
   agattr_html((Agraph_t *)graph, kind, name, value);
 }
-
-void gw_gvFreeRenderData(char *data) { gvFreeRenderData(data); }
 
 void *gw_agnode(Agrw_t graph, const char *name) {
   return (void *)agnode((Agraph_t *)graph, (char *)name, true);
