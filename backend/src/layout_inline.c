@@ -13,7 +13,6 @@
 
 #include "entities.h"
 #include "streq.h"
-#include "util/agxbuf.h"
 
 extern char *Gvfilepath;  /* Per-process path of files allowed in image
                              attributes (also ps libs) */
@@ -151,14 +150,6 @@ void my_graph_init(graph_t *g, bool use_rankdir) {
   static int fontnamecodes[] = {NATIVEFONTS, PSFONTS, SVGFONTS, -1};
   int rankdir;
   GD_drawing(g) = my_gv_calloc(1, sizeof(layout_t));
-
-  /* reparseable input */
-  if ((p = agget(g, "postaction"))) { /* requires a graph wrapper for yyparse */
-    agxbuf buf = {0};
-    agxbprint(&buf, "%s { %s }", agisdirected(g) ? "digraph" : "graph", p);
-    agmemconcat(g, agxbuse(&buf));
-    agxbfree(&buf);
-  }
 
   GD_charset(g) = findCharset(g);
 
