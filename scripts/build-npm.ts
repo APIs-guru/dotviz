@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 import packageJSON from '../package.json' with { type: 'json' };
-import { spawn, writeGeneratedFile } from './utils.js';
+import { spawn, writeGeneratedFile } from './utils.ts';
 
 fs.rmSync('lib', { recursive: true, force: true });
 fs.mkdirSync('lib');
@@ -31,18 +31,21 @@ fs.copyFileSync('./types/index.d.ts', './npmDist/index.d.ts');
 
 spawn('rollup', ['-c']);
 
-delete packageJSON.private;
-delete packageJSON.scripts;
-delete packageJSON.devDependencies;
-packageJSON.main = './viz.js';
-packageJSON.exports = {
-  types: './index.d.ts',
-  require: './viz.cjs',
-  default: './viz.js',
+const releasePackageJSON = {
+  ...packageJSON,
+  private: undefined,
+  scripts: undefined,
+  devDependencies: undefined,
+  main: './viz.js',
+  exports: {
+    types: './index.d.ts',
+    require: './viz.cjs',
+    default: './viz.js',
+  },
 };
 
 // Should be done as the last step so only valid packages can be published
 await writeGeneratedFile(
   './npmDist/package.json',
-  JSON.stringify(packageJSON, undefined, 2),
+  JSON.stringify(releasePackageJSON, undefined, 2),
 );

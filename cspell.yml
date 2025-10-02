@@ -8,6 +8,7 @@ ignorePaths:
   - backend
 dictionaries:
   - html
+  - typescript
 
 overrides:
   - filename: '**/*.svg'

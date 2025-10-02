@@ -9,16 +9,14 @@ import {
   makeTmpDir,
   npm,
   writeGeneratedFile,
-} from './utils.js';
+} from './utils.ts';
 
 const LOCAL = 'local';
 const { tmpDirPath } = makeTmpDir('graphql-js-npm-diff');
 
 const args = process.argv.slice(2);
-let [fromRevision, toRevision] = args;
+let [fromRevision = 'HEAD', toRevision = LOCAL] = args;
 if (args.length < 2) {
-  fromRevision ??= 'HEAD';
-  toRevision ??= LOCAL;
   console.warn(
     `Assuming you meant: diff-npm-package ${fromRevision} ${toRevision}`,
   );
@@ -41,7 +39,7 @@ if (diff === '') {
   console.log(`Report saved to: file://${reportPath}`);
 }
 
-function generateReport(diffString) {
+function generateReport(diffString: string): string {
   return `
     <!DOCTYPE html>
     <html lang="en-us">
@@ -80,7 +78,7 @@ function generateReport(diffString) {
   `;
 }
 
-function prepareNPMPackage(revision) {
+function prepareNPMPackage(revision: string): string {
   if (revision === LOCAL) {
     npm({ cwd: localRepoPath(), quiet: true }).run('build:npm');
     return localRepoPath('npmDist');
