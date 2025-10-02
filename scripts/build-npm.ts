@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 
-import packageJSON from '../package.json' with { type: 'json' };
-import { showDirStats, spawn, writeGeneratedFile } from './utils.ts';
+import {
+  packageJSON,
+  showDirStats,
+  spawn,
+  writeGeneratedFile,
+} from './utils.ts';
 
 fs.rmSync('lib', { recursive: true, force: true });
 fs.mkdirSync('lib');

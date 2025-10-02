@@ -7,6 +7,9 @@ import url from 'node:url';
 import { format } from 'prettier';
 
 import prettierConfig from '../.prettierrc.json' with { type: 'json' };
+import packageJSON from '../package.json' with { type: 'json' };
+
+export { packageJSON };
 
 export function localRepoPath(...paths: ReadonlyArray<string>): string {
   const resourcesDir = path.dirname(url.fileURLToPath(import.meta.url));
@@ -19,9 +22,9 @@ interface MakeTmpDirReturn {
 }
 
 export function makeTmpDir(name: string): MakeTmpDirReturn {
-  const tmpDir = path.join(os.tmpdir(), name);
+  const tmpDir = path.join(os.tmpdir(), packageJSON.name, name);
   fs.rmSync(tmpDir, { recursive: true, force: true });
-  fs.mkdirSync(tmpDir);
+  fs.mkdirSync(tmpDir, { recursive: true });
 
   return {
     tmpDirPath: (...paths) => path.join(tmpDir, ...paths),
