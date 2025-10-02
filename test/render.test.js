@@ -49,16 +49,12 @@ describe('Viz', function () {
         /pos="/,
       );
       assert.match(
-        viz.render('digraph { a -> b }', { format: 'xdot' }).output,
-        /_draw_="/,
+        viz.render('digraph { a -> b }', { format: 'gv' }).output,
+        /pos="/,
       );
       assert.match(
         viz.render('digraph { a -> b }', { format: 'svg' }).output,
         /<svg/,
-      );
-      assert.match(
-        viz.render('digraph { a -> b }', { format: 'json' }).output,
-        /"name": "a"/,
       );
     });
 
@@ -244,14 +240,19 @@ describe('Viz', function () {
     });
 
     it('returns error messages printed to stderr', function () {
-      const result = viz.render('graph { a [label=図] }', { format: 'plain' });
+      const result = viz.render('graph { a [label=図] }', { format: 'dot' });
 
       assert.deepStrictEqual(result, {
         status: 'success',
-        output: `graph 1 0.75 0.5
-node a 0.375 0.25 0.75 0.5 図 solid ellipse black lightgrey
-stop
-`,
+        output:
+          'graph {\n' +
+          '\tgraph [bb="0,0,54,36"];\n' +
+          '\tnode [label="\\N"];\n' +
+          '\ta\t[height=0.5,\n' +
+          '\t\tlabel=図,\n' +
+          '\t\tpos="27,18",\n' +
+          '\t\twidth=0.75];\n' +
+          '}\n',
         errors: [
           {
             level: 'warning',
@@ -286,8 +287,7 @@ stop
         errors: [
           {
             level: 'error',
-            message:
-              'Format: "invalid" not recognized. Use one of: canon cmap cmapx cmapx_np dot dot_json eps fig gv imap imap_np ismap json json0 pic plain plain-ext pov ps ps2 svg svg_inline tk xdot xdot1.2 xdot1.4 xdot_json',
+            message: 'Format: "invalid" not recognized. Use one of: dot gv svg',
           },
         ],
       });

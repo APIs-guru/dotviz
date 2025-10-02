@@ -74,11 +74,6 @@ declare class Viz {
     input: string | Graph,
     options?: RenderOptions,
   ): SVGSVGElement;
-
-  /**
-   * Convenience method that renders the input, parses the output, and returns a JSON object. The `format` option is ignored. Throws an error if rendering failed.
-   */
-  renderJSON(input: string | Graph, options?: RenderOptions): object;
 }
 
 export { type Viz };

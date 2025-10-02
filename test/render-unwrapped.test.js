@@ -58,8 +58,7 @@ describe('Viz', function () {
         () => viz.renderString('graph { }', { format: 'invalid' }),
         {
           name: 'Error',
-          message:
-            'Format: "invalid" not recognized. Use one of: canon cmap cmapx cmapx_np dot dot_json eps fig gv imap imap_np ismap json json0 pic plain plain-ext pov ps ps2 svg svg_inline tk xdot xdot1.2 xdot1.4 xdot_json',
+          message: 'Format: "invalid" not recognized. Use one of: dot gv svg',
         },
       );
     });
@@ -118,26 +117,6 @@ describe('Viz', function () {
 
     it('throws an error if there are no graphs in the input', function () {
       assert.throws(() => viz.renderSVGElement(''), {
-        name: 'Error',
-        message: 'render failed',
-      });
-    });
-  });
-
-  describe('renderJSON', function () {
-    it('returns an object', function () {
-      assert.deepStrictEqual(viz.renderJSON('digraph a { }').name, 'a');
-    });
-
-    it('throws an error for syntax errors', function () {
-      assert.throws(() => viz.renderJSON(`graph {`), {
-        name: 'Error',
-        message: 'syntax error in line 1',
-      });
-    });
-
-    it('throws an error if there are no graphs in the input', function () {
-      assert.throws(() => viz.renderJSON(''), {
         name: 'Error',
         message: 'render failed',
       });

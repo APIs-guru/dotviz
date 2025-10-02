@@ -1,9 +1,26 @@
 #include "render_inline.h"
+#include "alloc.h"
 #include "gvc.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "gvcproc.h"
 #include <stdlib.h>
+
+static GVJ_t *output_langname_job;
+
+/* -T switches */
+bool my_gvjobs_output_langname(GVC_t *gvc, const char *name) {
+  fprintf(stderr, "\npointer=[%p]\n", gvc->jobs);
+  output_langname_job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
+
+  output_langname_job->output_langname = name;
+  output_langname_job->gvc = gvc;
+
+  /* load it now to check that it exists */
+  if (gvplugin_load(gvc, API_device, name, NULL))
+    return true;
+  return false;
+}
 
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
@@ -12,14 +29,20 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   int rc;
   GVJ_t *job;
 
-  /* create a job for the required format */
-  bool r = gvjobs_output_langname(gvc, format);
-  job = gvc->job;
-  if (!r) {
-    agerrorf("Format: \"%s\" not recognized. Use one of:%s\n", format,
-             gvplugin_list(gvc, API_device, format));
+  if (strncmp(format, "dot", 3) && strncmp(format, "gv", 2) &&
+      strncmp(format, "svg", 3)) {
+    agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
     return -1;
   }
+
+  /* create a job for the required format */
+  output_langname_job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
+  output_langname_job->output_langname = format;
+  output_langname_job->gvc = gvc;
+
+  gvplugin_load(gvc, API_device, format, NULL);
+
+  job = gvc->job;
 
   job->output_lang = gvrender_select(job, job->output_langname);
   if (!LAYOUT_DONE(g) && !(job->flags & LAYOUT_NOT_REQUIRED)) {
@@ -51,4 +74,4 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   return rc;
 }
 
-void gw_gvFreeRenderData(char *data) { gvFreeRenderData(data); }
+void gw_gvFreeRenderData(char *data) { free(data); }
