@@ -1,7 +1,6 @@
 #include "agrw.h"
 #include "cgraph.h"
 #include "gvc.h" // IWYU pragma: keep
-#include <locale.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -324,34 +323,6 @@ void my_graph_init(graph_t *g, bool use_rankdir) {
     GD_drawing(g)->id = strdup_and_subst_obj(p, g);
 }
 
-/* Set LC_NUMERIC to "C" to get expected interpretation of %f
- * in printf functions. Languages like postscript and dot expect
- * floating point numbers to use a decimal point.
- *
- * If set is non-zero, the "C" locale set;
- * if set is zero, the original locale is reset.
- * Calls to the function can nest.
- */
-void my_gv_fixLocale(int set) {
-  static char *save_locale;
-  static int cnt;
-
-  if (set) {
-    cnt++;
-    if (cnt == 1) {
-      save_locale = strdup(setlocale(LC_NUMERIC, NULL));
-      assert(save_locale != NULL);
-      setlocale(LC_NUMERIC, "C");
-    }
-  } else if (cnt > 0) {
-    cnt--;
-    if (cnt == 0) {
-      setlocale(LC_NUMERIC, save_locale);
-      free(save_locale);
-    }
-  }
-}
-
 extern void dot_layout(graph_t *g);
 extern void dot_cleanup(graph_t *g);
 extern gvlayout_features_t dotgen_features;
@@ -371,14 +342,12 @@ int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g) {
     GD_gvc(agroot(g)) = gvc;
   }
 
-  my_gv_fixLocale(1);
   my_graph_init(g, !!(dotgen_features.flags & LAYOUT_USES_RANKDIR));
   GD_drawing(agroot(g)) = GD_drawing(g);
   dot_layout(g);
 
   GD_cleanup(g) = dot_cleanup;
 
-  my_gv_fixLocale(0);
   return 0;
 }
 
