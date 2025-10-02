@@ -114,27 +114,6 @@ static void setRatio(graph_t *g) {
   }
 }
 
-/* Check if the charset attribute is defined for the graph and, if
- * so, return the corresponding internal value. If undefined, return
- * CHAR_UTF8
- */
-static unsigned char findCharset(graph_t *g) {
-  char *p;
-
-  p = late_nnstring(g, agfindgraphattr(g, "charset"), "utf-8");
-  if (!strcasecmp(p, "latin-1") || !strcasecmp(p, "latin1") ||
-      !strcasecmp(p, "l1") || !strcasecmp(p, "ISO-8859-1") ||
-      !strcasecmp(p, "ISO_8859-1") || !strcasecmp(p, "ISO8859-1") ||
-      !strcasecmp(p, "ISO-IR-100"))
-    return CHAR_LATIN1;
-  if (!strcasecmp(p, "big-5") || !strcasecmp(p, "big5"))
-    return CHAR_BIG5;
-  if (!strcasecmp(p, "utf-8") || !strcasecmp(p, "utf8"))
-    return CHAR_UTF8;
-  agwarningf("Unsupported charset \"%s\" - assuming utf-8\n", p);
-  return CHAR_UTF8;
-}
-
 static inline void *my_gv_calloc(size_t nmemb, size_t size) {
   void *p = calloc(nmemb, size);
   assert(p != NULL);
@@ -151,7 +130,13 @@ void my_graph_init(graph_t *g, bool use_rankdir) {
   int rankdir;
   GD_drawing(g) = my_gv_calloc(1, sizeof(layout_t));
 
-  GD_charset(g) = findCharset(g);
+  p = agget(g, "charset");
+  if (p != NULL) {
+    if (!strncmp(p, "utf-8", 5) && !strncmp(p, "utf8", 4)) {
+      agwarningf("Unsupported charset \"%s\" - assuming utf-8\n", p);
+    }
+  }
+  GD_charset(g) = CHAR_UTF8;
 
   Gvimagepath = agget(g, "imagepath");
   if (!Gvimagepath) {
