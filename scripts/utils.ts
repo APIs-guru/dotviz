@@ -125,6 +125,73 @@ export function spawn(
   }
 }
 
+function* readdirRecursive(dirPath: string): Generator<{
+  name: string;
+  filepath: string;
+  stats: fs.Stats;
+}> {
+  for (const name of fs.readdirSync(dirPath)) {
+    const filepath = path.join(dirPath, name);
+    const stats = fs.lstatSync(filepath);
+
+    if (stats.isDirectory()) {
+      yield* readdirRecursive(filepath);
+    } else {
+      yield { name, filepath, stats };
+    }
+  }
+}
+
+export function showDirStats(dirPath: string): void {
+  const fileTypes: {
+    [filetype: string]: { filepaths: Array<string>; size: number };
+  } = {};
+  let totalSize = 0;
+
+  for (const { name, filepath, stats } of readdirRecursive(dirPath)) {
+    const ext = name.split('.').slice(1).join('.');
+    const filetype = ext ? '*.' + ext : name;
+
+    fileTypes[filetype] ??= { filepaths: [], size: 0 };
+
+    totalSize += stats.size;
+    fileTypes[filetype].size += stats.size;
+    fileTypes[filetype].filepaths.push(filepath);
+  }
+
+  const stats: Array<[string, number]> = [];
+  for (const [filetype, typeStats] of Object.entries(fileTypes)) {
+    const numFiles = typeStats.filepaths.length;
+
+    if (numFiles > 1) {
+      stats.push([filetype + ' x' + numFiles, typeStats.size]);
+    } else {
+      const relativePath = path.relative(dirPath, typeStats.filepaths[0]);
+      stats.push([relativePath, typeStats.size]);
+    }
+  }
+  stats.sort((a, b) => b[1] - a[1]);
+
+  const prettyStats = stats.map(([type, size]) => [
+    type,
+    (size / 1024).toFixed(2) + ' KB',
+  ]);
+
+  const typeMaxLength = Math.max(...prettyStats.map((x) => x[0].length));
+  const sizeMaxLength = Math.max(...prettyStats.map((x) => x[1].length));
+  for (const [type, size] of prettyStats) {
+    console.log(
+      type.padStart(typeMaxLength) + ' | ' + size.padStart(sizeMaxLength),
+    );
+  }
+
+  console.log('-'.repeat(typeMaxLength + 3 + sizeMaxLength));
+  const totalMB = (totalSize / 1024 / 1024).toFixed(2) + ' MB';
+  console.log(
+    'Total'.padStart(typeMaxLength) + ' | ' + totalMB.padStart(sizeMaxLength),
+  );
+}
+
 export async function writeGeneratedFile(
   filepath: string,
   body: string,

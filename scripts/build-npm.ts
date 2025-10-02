@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 import packageJSON from '../package.json' with { type: 'json' };
-import { spawn, writeGeneratedFile } from './utils.ts';
+import { showDirStats, spawn, writeGeneratedFile } from './utils.ts';
 
 fs.rmSync('lib', { recursive: true, force: true });
 fs.mkdirSync('lib');
@@ -49,3 +49,5 @@ await writeGeneratedFile(
   './npmDist/package.json',
   JSON.stringify(releasePackageJSON, undefined, 2),
 );
+
+showDirStats('./npmDist');
