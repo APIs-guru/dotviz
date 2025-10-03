@@ -1,9 +1,9 @@
 #include "render_inline.h"
-#include "alloc.h"
 #include "gvc.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "gvcproc.h"
+#include "strview.h" // IWYU pragma: keep
 #include <stdlib.h>
 
 /* Render layout in a specified format to a malloc'ed string */
@@ -22,9 +22,6 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
   job->output_langname = format;
   job->gvc = gvc;
-
-  gvplugin_load(gvc, API_device, format, NULL);
-
   job = gvc->job;
 
   job->output_lang = gvrender_select(job, job->output_langname);
