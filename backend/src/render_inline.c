@@ -751,33 +751,6 @@ int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
   return 0;
 }
 
-/* Activate a plugin description in the list of available plugins.
- * This is used when a plugin-library loaded because of demand for
- * one of its plugins. It updates the available plugin data with
- * pointers into the loaded library.
- * NB the quality value is not replaced as it might have been
- * manually changed in the config file.
- */
-static void gvplugin_activate(GVC_t *gvc, api_t api, const char *typestr,
-                              const char *name, const char *plugin_path,
-                              gvplugin_installed_t *typeptr) {
-  gvplugin_available_t *pnext;
-
-  /* point to the beginning of the linked list of plugins for this api */
-  pnext = gvc->apis[api];
-
-  while (pnext) {
-    if (strcasecmp(typestr, pnext->typestr) == 0 &&
-        strcasecmp(name, pnext->package->name) == 0 &&
-        pnext->package->path != 0 &&
-        strcasecmp(plugin_path, pnext->package->path) == 0) {
-      pnext->typeptr = typeptr;
-      return;
-    }
-    pnext = pnext->next;
-  }
-}
-
 /* load a plugin of type=str
         the str can optionally contain one or more ":dependencies"
 
@@ -790,30 +763,13 @@ static void gvplugin_activate(GVC_t *gvc, api_t api, const char *typestr,
                 png:gd:gd
 
 */
-gvplugin_available_t *my_gvplugin_load(GVC_t *gvc, api_t api, const char *str,
-                                       FILE *debug) {
-  gvplugin_available_t *pnext, *rv;
-  gvplugin_library_t *library;
-  gvplugin_api_t *apis;
-  gvplugin_installed_t *types;
-  int i;
-  api_t apidep;
-
-  if (api == API_device)
-    apidep = API_render;
-  else
-    apidep = api;
-
+void my_gvplugin_load(GVC_t *gvc, const char *str) {
   const strview_t reqtyp = strview(str, ':');
-
   /* iterate the linked list of plugins for this api */
-  for (pnext = gvc->apis[api]; pnext; pnext = pnext->next) {
-    // if (strcmp(pnext->typestr, "dot") && strcmp(pnext->typestr, "gv") &&
-    //     strcmp(pnext->typestr, "svg")) {
-    //   continue;
-    // }
+  for (gvplugin_available_t *pnext = gvc->apis[API_device]; pnext;
+       pnext = pnext->next) {
     const strview_t typ = strview(pnext->typestr, ':');
-
+    fprintf(stderr, "str=[%s]\n", pnext->typestr);
     if (!strview_eq(typ, reqtyp)) {
       continue; /* types empty or mismatched */
     }
@@ -823,33 +779,15 @@ gvplugin_available_t *my_gvplugin_load(GVC_t *gvc, api_t api, const char *str,
       dep = strview(typ.data + typ.size + strlen(":"), '\0');
     }
 
-    if (dep.data &&
-        apidep != api) // load dependency if needed, continue if can't find
-      if (!my_gvplugin_load(gvc, apidep, dep.data, debug)) {
-        continue;
-      }
-    break;
-  }
-  rv = pnext;
-
-  if (rv && rv->typeptr == NULL) {
-    library = gvplugin_library_load(gvc, rv->package->path);
-    if (library) {
-
-      /* Now activate the library with real type ptrs */
-      for (apis = library->apis; (types = apis->types); apis++) {
-        for (i = 0; types[i].type; i++) {
-          /* NB. quality is not checked or replaced
-           *   in case user has manually edited quality in config */
-          gvplugin_activate(gvc, apis->api, types[i].type, library->packagename,
-                            rv->package->path, &types[i]);
-        }
+    for (gvplugin_available_t *pnext = gvc->apis[API_render]; pnext;
+         pnext = pnext->next) {
+      if (!strcmp(dep.data, pnext->typestr)) {
+        gvc->api[API_render] = pnext;
       }
     }
-  }
 
-  gvc->api[api] = rv;
-  return rv;
+    gvc->api[API_device] = pnext;
+  }
 }
 
 int my_gvrender_select(GVJ_t *job, const char *str) {
@@ -857,7 +795,7 @@ int my_gvrender_select(GVJ_t *job, const char *str) {
   gvplugin_available_t *plugin;
   gvplugin_installed_t *typeptr;
 
-  my_gvplugin_load(gvc, API_device, str, NULL);
+  my_gvplugin_load(gvc, str);
 
   /* When job is created, it is zeroed out.
    * Some flags, such as OUTPUT_NOT_REQUIRED, may already be set,
