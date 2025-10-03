@@ -6,28 +6,11 @@
 #include "gvcproc.h"
 #include <stdlib.h>
 
-static GVJ_t *output_langname_job;
-
-/* -T switches */
-bool my_gvjobs_output_langname(GVC_t *gvc, const char *name) {
-  fprintf(stderr, "\npointer=[%p]\n", gvc->jobs);
-  output_langname_job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
-
-  output_langname_job->output_langname = name;
-  output_langname_job->gvc = gvc;
-
-  /* load it now to check that it exists */
-  if (gvplugin_load(gvc, API_device, name, NULL))
-    return true;
-  return false;
-}
-
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
   Agraph_t *g = graph;
   int rc;
-  GVJ_t *job;
 
   if (strncmp(format, "dot", 3) && strncmp(format, "gv", 2) &&
       strncmp(format, "svg", 3)) {
@@ -36,9 +19,9 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   }
 
   /* create a job for the required format */
-  output_langname_job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
-  output_langname_job->output_langname = format;
-  output_langname_job->gvc = gvc;
+  GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
+  job->output_langname = format;
+  job->gvc = gvc;
 
   gvplugin_load(gvc, API_device, format, NULL);
 
