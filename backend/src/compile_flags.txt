@@ -1,1 +1,2 @@
 -Isrc/graphviz_build/inc/common
+-Isrc/graphviz_build/inc/clangd
