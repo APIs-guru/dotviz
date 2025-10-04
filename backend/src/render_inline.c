@@ -814,59 +814,6 @@ int my_gvrender_select(GVJ_t *job, const char *str) {
   return NO_SUPPORT; /* FIXME - should differentiate problem */
 }
 
-int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
-  GVJ_t *job;
-
-  init_bb(g);
-  init_gvc(gvc, g);
-  init_layering(gvc, g);
-
-  int i = 0;
-  for (job = gvjobs_first(gvc); job; job = gvjobs_next(gvc)) {
-
-    if (gvc->gvg) {
-      job->input_filename = gvc->gvg->input_filename;
-      job->graph_index = gvc->gvg->graph_index;
-    } else {
-      job->input_filename = NULL;
-      job->graph_index = 0;
-    }
-    job->common = &gvc->common;
-    job->layout_type = gvc->layout.type;
-    job->keybindings = gvevent_key_binding;
-    job->numkeys = gvevent_key_binding_size;
-    if (!GD_drawing(g)) {
-      agerrorf("layout was not done\n");
-      return -1;
-    }
-
-    job->output_lang = my_gvrender_select(job, job->output_langname);
-    if (job->output_lang == NO_SUPPORT) {
-      agerrorf("renderer for %s is unavailable\n", job->output_langname);
-      return -1;
-    }
-
-    job->flags |= chkOrder(g);
-
-    if (gvrender_begin_job(job))
-      continue;
-    gvc->active_jobs = job;  /* first job of new list */
-    job->next_active = NULL; /* terminate active list */
-    job->callbacks = &gvdevice_callbacks;
-
-    init_job_pad(job);
-    init_job_margin(job);
-    init_job_dpi(job, g);
-    init_job_viewport(job, g);
-    init_job_pagination(job, g);
-
-    if (!(job->flags & GVDEVICE_EVENTS)) {
-      emit_graph(job, g);
-    }
-  }
-  return 0;
-}
-
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
@@ -897,7 +844,50 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
   job->output_data_position = 0;
 
-  rc = my_gvRenderJobs(gvc, g);
+  init_bb(g);
+  init_gvc(gvc, g);
+  init_layering(gvc, g);
+
+  if (gvc->gvg) {
+    job->input_filename = gvc->gvg->input_filename;
+    job->graph_index = gvc->gvg->graph_index;
+  } else {
+    job->input_filename = NULL;
+    job->graph_index = 0;
+  }
+  job->common = &gvc->common;
+  job->layout_type = gvc->layout.type;
+  job->keybindings = gvevent_key_binding;
+  job->numkeys = gvevent_key_binding_size;
+  if (!GD_drawing(g)) {
+    agerrorf("layout was not done\n");
+    return -1;
+  }
+
+  job->output_lang = my_gvrender_select(job, job->output_langname);
+  if (job->output_lang == NO_SUPPORT) {
+    agerrorf("renderer for %s is unavailable\n", job->output_langname);
+    return -1;
+  }
+
+  job->flags |= chkOrder(g);
+
+  if (gvrender_begin_job(job))
+    return 0;
+  gvc->active_jobs = job;  /* first job of new list */
+  job->next_active = NULL; /* terminate active list */
+  job->callbacks = &gvdevice_callbacks;
+
+  init_job_pad(job);
+  init_job_margin(job);
+  init_job_dpi(job, g);
+  init_job_viewport(job, g);
+  init_job_pagination(job, g);
+
+  if (!(job->flags & GVDEVICE_EVENTS)) {
+    emit_graph(job, g);
+  }
+
   gvrender_end_job(job);
 
   if (rc == 0) {
