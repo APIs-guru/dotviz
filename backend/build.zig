@@ -436,8 +436,6 @@ const src_label = [_][]const u8{
 };
 
 const src_plugin_core = [_][]const u8{
-    "gvrender_core_fig.c", "gvplugin_core.c",      "gvrender_core_tk.c",
-    "gvrender_core_ps.c",  "gvrender_core_map.c",  "gvrender_core_dot.c",
-    "gvloadimage_core.c",  "gvrender_core_pic.c",  "gvrender_core_pov.c",
-    "gvrender_core_svg.c", "gvrender_core_json.c",
+    "gvrender_core_dot.c",
+    "gvrender_core_svg.c",
 };
