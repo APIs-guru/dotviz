@@ -8,12 +8,14 @@
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "gvcproc.h"
+#include "gvplugin.h"
 #include "streq.h"
 #include "strview.h" // IWYU pragma: keep
 #include "util/list.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int my_gvrender_select(GVJ_t *job, const char *str);
 
@@ -765,7 +767,98 @@ int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
                 png:gd:gd
 
 */
+
+gvplugin_available_t *available_from_install(gvplugin_installed_t *lib) {
+  gvplugin_available_t *plugin = gv_alloc(sizeof(gvplugin_available_t));
+  plugin->next = NULL;
+  plugin->typestr = (char *)lib->type;
+  plugin->quality = 1;
+  plugin->package = NULL;
+  plugin->typeptr = lib; /* null if not loaded */
+}
+
+typedef enum {
+  FORMAT_DOT,
+  FORMAT_CANON,
+  FORMAT_PLAIN,
+  FORMAT_PLAIN_EXT,
+  FORMAT_XDOT,
+  FORMAT_XDOT12,
+  FORMAT_XDOT14,
+} format_type;
+
+extern gvdevice_features_t device_features_dot;
+
+gvplugin_installed_t dot_installed = {FORMAT_DOT, "dot:dot", 1, NULL,
+                                      &device_features_dot};
+gvplugin_installed_t gv_installed = {FORMAT_DOT, "gv:dot", 1, NULL,
+                                     &device_features_dot};
+gvplugin_available_t dot_device_available = {
+    .next = NULL,
+    .package = NULL,
+    .quality = 1,
+    .typeptr = &dot_installed,
+    .typestr = "dot:dot",
+};
+gvplugin_available_t gv_device_available = {
+    .next = NULL,
+    .package = NULL,
+    .quality = 1,
+    .typeptr = &gv_installed,
+    .typestr = "gv:dot",
+};
+
+extern gvrender_engine_t dot_engine;
+extern gvrender_features_t render_features_dot;
+gvplugin_installed_t gvrender_dot_installed = {
+    FORMAT_DOT, "dot", 1, &dot_engine, &render_features_dot};
+gvplugin_available_t gvrender_dot_available = {
+    .next = NULL,
+    .package = NULL,
+    .quality = 1,
+    .typeptr = &gvrender_dot_installed,
+    .typestr = "dot",
+};
+
+enum { FORMAT_SVG, FORMAT_SVGZ, FORMAT_SVG_INLINE };
+extern gvrender_engine_t svg_engine;
+extern gvrender_features_t render_features_svg;
+
+gvplugin_installed_t gvrender_svg_installed = {
+    FORMAT_SVG, "svg", 1, &svg_engine, &render_features_svg};
+gvplugin_available_t gvrender_svg_available = {
+    .next = NULL,
+    .package = NULL,
+    .quality = 1,
+    .typeptr = &gvrender_svg_installed,
+    .typestr = "svg",
+};
+
+extern gvdevice_features_t device_features_svg;
+gvplugin_installed_t svg_installed = {FORMAT_SVG, "svg:svg", 1, NULL,
+                                      &device_features_svg};
+gvplugin_available_t svg_device_available = {
+    .next = NULL,
+    .package = NULL,
+    .quality = 1,
+    .typeptr = &svg_installed,
+    .typestr = "svg:svg",
+};
+
 void my_gvplugin_load(GVC_t *gvc, const char *str) {
+  if (!strcmp(str, "dot")) {
+    gvc->api[API_device] = &dot_device_available;
+    gvc->api[API_render] = &gvrender_dot_available;
+  } else if (!strcmp(str, "gv")) {
+    gvc->api[API_device] = &gv_device_available;
+    gvc->api[API_render] = &gvrender_dot_available;
+  } else if (!strcmp(str, "svg")) {
+    gvc->api[API_device] = &svg_device_available;
+    gvc->api[API_render] = &gvrender_svg_available;
+  }
+
+  return;
+
   const strview_t reqtyp = strview(str, ':');
   /* iterate the linked list of plugins for this api */
   for (gvplugin_available_t *pnext = gvc->apis[API_device]; pnext;
