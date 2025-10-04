@@ -4,6 +4,7 @@
 #include "gv_ctype.h"
 #include "gv_math.h"
 #include "gvc.h"
+#include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "gvcproc.h"
@@ -11,6 +12,7 @@
 #include "strview.h" // IWYU pragma: keep
 #include "util/list.h"
 #include "utils.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 int my_gvrender_select(GVJ_t *job, const char *str);
@@ -802,6 +804,7 @@ int my_gvrender_select(GVJ_t *job, const char *str) {
    * so don't reset.
    */
   /* job->flags = 0; */
+
   plugin = gvc->api[API_device];
   if (plugin) {
     typeptr = plugin->typeptr;
@@ -811,9 +814,9 @@ int my_gvrender_select(GVJ_t *job, const char *str) {
     job->device.type = plugin->typestr;
 
     job->flags |= job->device.features->flags;
-  } else
+  } else {
     return NO_SUPPORT; /* FIXME - should differentiate problem */
-
+  }
   /* The device plugin has a dependency on a render plugin,
    * so the render plugin should be available as well now */
   plugin = gvc->api[API_render];
