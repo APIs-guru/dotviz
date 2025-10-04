@@ -21,6 +21,23 @@ static char *LibInfo[] = {
     "a"         /* Build Date */
 };
 
+extern void gvconfig_plugin_install_from_library(GVC_t *gvc, char *package_path,
+                                                 gvplugin_library_t *library);
+
+static void gvconfig_plugin_install_builtins(GVC_t *gvc) {
+  const lt_symlist_t *s;
+  const char *name;
+
+  if (gvc->common.builtins == NULL)
+    return;
+
+  for (s = gvc->common.builtins; (name = s->name); s++)
+    if (name[0] == 'g' && strstr(name, "_LTX_library"))
+      gvconfig_plugin_install_from_library(gvc, NULL, s->address);
+}
+
+extern void textfont_dict_open(GVC_t *gvc);
+
 GVC_t *gw_create_context(void) {
   agattr_text(NULL, AGNODE, "label", NODENAME_ESC);
   GVC_t *gvc = gv_alloc(sizeof(GVC_t));
@@ -29,6 +46,12 @@ GVC_t *gw_create_context(void) {
   gvc->common.errorfn = agerrorf;
   gvc->common.builtins = lt_preloaded_symbols;
   gvc->common.demand_loading = 0;
-  gvconfig(gvc, false); /* configure for available plugins */
+
+  /* builtins don't require LTDL */
+  gvconfig_plugin_install_builtins(gvc);
+  gvc->config_found = false;
+  gvtextlayout_select(
+      gvc); /* choose best available textlayout plugin immediately */
+  textfont_dict_open(gvc); /* initialize font dict */
   return gvc;
 }
