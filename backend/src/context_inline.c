@@ -16,7 +16,72 @@ static char *LibInfo[] = {
     "a"         /* Build Date */
 };
 
-extern void textfont_dict_open(GVC_t *gvc);
+static void *textfont_makef(void *obj, Dtdisc_t *disc) {
+  (void)disc;
+
+  textfont_t *f1 = obj;
+  textfont_t *f2 = gv_alloc(sizeof(textfont_t));
+
+  /* key */
+  if (f1->name)
+    f2->name = gv_strdup(f1->name);
+  if (f1->color)
+    f2->color = gv_strdup(f1->color);
+  f2->flags = f1->flags;
+  f2->size = f1->size;
+
+  /* non key */
+  f2->postscript_alias = f1->postscript_alias;
+
+  return f2;
+}
+
+static void textfont_freef(void *obj) {
+  textfont_t *f = obj;
+
+  free(f->name);
+  free(f->color);
+  free(f);
+}
+
+static int textfont_comparf(void *key1, void *key2) {
+  int rc;
+  textfont_t *f1 = key1, *f2 = key2;
+
+  if (f1->name || f2->name) {
+    if (!f1->name)
+      return -1;
+    if (!f2->name)
+      return 1;
+    rc = strcmp(f1->name, f2->name);
+    if (rc)
+      return rc;
+  }
+  if (f1->color || f2->color) {
+    if (!f1->color)
+      return -1;
+    if (!f2->color)
+      return 1;
+    rc = strcmp(f1->color, f2->color);
+    if (rc)
+      return rc;
+  }
+  if (f1->flags < f2->flags)
+    return -1;
+  if (f1->flags > f2->flags)
+    return 1;
+  if (f1->size < f2->size)
+    return -1;
+  if (f1->size > f2->size)
+    return 1;
+  return 0;
+}
+
+void my_textfont_dict_open(GVC_t *gvc) {
+  DTDISC(&gvc->textfont_disc, 0, sizeof(textfont_t), -1, textfont_makef,
+         textfont_freef, textfont_comparf);
+  gvc->textfont_dt = dtopen(&(gvc->textfont_disc), Dtoset);
+}
 
 GVC_t *gw_create_context(void) {
   agattr_text(NULL, AGNODE, "label", NODENAME_ESC);
@@ -28,6 +93,6 @@ GVC_t *gw_create_context(void) {
 
   gvc->packages = NULL;
   gvc->config_found = false;
-  textfont_dict_open(gvc); /* initialize font dict */
+  my_textfont_dict_open(gvc); /* initialize font dict */
   return gvc;
 }
