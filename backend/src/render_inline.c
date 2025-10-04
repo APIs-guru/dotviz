@@ -769,7 +769,7 @@ void my_gvplugin_load(GVC_t *gvc, const char *str) {
   for (gvplugin_available_t *pnext = gvc->apis[API_device]; pnext;
        pnext = pnext->next) {
     const strview_t typ = strview(pnext->typestr, ':');
-    fprintf(stderr, "str=[%s]\n", pnext->typestr);
+    // fprintf(stderr, "str=[%s]\n", pnext->typestr);
     if (!strview_eq(typ, reqtyp)) {
       continue; /* types empty or mismatched */
     }
