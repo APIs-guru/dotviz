@@ -16,16 +16,6 @@ static char *LibInfo[] = {
     "a"         /* Build Date */
 };
 
-void my_gvconfig_plugin_install_from_library(GVC_t *gvc) {
-
-  gvplugin_installed_t *types;
-
-  gvplugin_package_t *package = gv_alloc(sizeof(gvplugin_package_t));
-  package->path = NULL;
-  package->name = gv_strdup(gvplugin_core_LTX_library.packagename);
-  package->next = gvc->packages;
-  gvc->packages = package;
-}
 extern void textfont_dict_open(GVC_t *gvc);
 
 GVC_t *gw_create_context(void) {
@@ -36,11 +26,8 @@ GVC_t *gw_create_context(void) {
   gvc->common.errorfn = agerrorf;
   gvc->common.demand_loading = 0;
 
-  /* builtins don't require LTDL */
-  my_gvconfig_plugin_install_from_library(gvc);
+  gvc->packages = NULL;
   gvc->config_found = false;
-  gvtextlayout_select(
-      gvc); /* choose best available textlayout plugin immediately */
   textfont_dict_open(gvc); /* initialize font dict */
   return gvc;
 }
