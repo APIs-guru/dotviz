@@ -815,8 +815,7 @@ int my_gvrender_select(GVJ_t *job, const char *str) {
 }
 
 int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
-  static GVJ_t *prevjob;
-  GVJ_t *job, *firstjob;
+  GVJ_t *job;
 
   init_bb(g);
   init_gvc(gvc, g);
@@ -848,23 +847,6 @@ int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
     }
 
     job->flags |= chkOrder(g);
-    // if we already have an active job list and the device doesn't support
-    // multiple output files, or we are about to write to a different output
-    // device
-    firstjob = gvc->active_jobs;
-    if (firstjob) {
-      if (!(firstjob->flags & GVDEVICE_DOES_PAGES) ||
-          strcmp(job->output_langname, firstjob->output_langname)) {
-
-        gvrender_end_job(firstjob);
-
-        gvc->active_jobs = NULL; /* clear active list */
-        gvc->common.viewNum = 0;
-        prevjob = NULL;
-      }
-    } else {
-      prevjob = NULL;
-    }
 
     if (gvrender_begin_job(job))
       continue;
