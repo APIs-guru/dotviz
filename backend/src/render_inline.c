@@ -856,33 +856,6 @@ void my_gvplugin_load(GVC_t *gvc, const char *str) {
     gvc->api[API_device] = &svg_device_available;
     gvc->api[API_render] = &gvrender_svg_available;
   }
-
-  return;
-
-  const strview_t reqtyp = strview(str, ':');
-  /* iterate the linked list of plugins for this api */
-  for (gvplugin_available_t *pnext = gvc->apis[API_device]; pnext;
-       pnext = pnext->next) {
-    const strview_t typ = strview(pnext->typestr, ':');
-    // fprintf(stderr, "str=[%s]\n", pnext->typestr);
-    if (!strview_eq(typ, reqtyp)) {
-      continue; /* types empty or mismatched */
-    }
-
-    strview_t dep = {0};
-    if (typ.data[typ.size] == ':') {
-      dep = strview(typ.data + typ.size + strlen(":"), '\0');
-    }
-
-    for (gvplugin_available_t *pnext = gvc->apis[API_render]; pnext;
-         pnext = pnext->next) {
-      if (!strcmp(dep.data, pnext->typestr)) {
-        gvc->api[API_render] = pnext;
-      }
-    }
-
-    gvc->api[API_device] = pnext;
-  }
 }
 
 int my_gvrender_select(GVJ_t *job, const char *str) {
