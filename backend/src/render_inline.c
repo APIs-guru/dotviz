@@ -662,82 +662,6 @@ extern const size_t gvevent_key_binding_size;
 extern gvdevice_callbacks_t gvdevice_callbacks;
 extern void emit_graph(GVJ_t *job, graph_t *g);
 
-int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
-  static GVJ_t *prevjob;
-  GVJ_t *job, *firstjob;
-
-  if (!LAYOUT_DONE(g)) {
-    agerrorf("Layout was not done.  Missing layout plugins? \n");
-    return -1;
-  }
-
-  init_bb(g);
-  init_gvc(gvc, g);
-  init_layering(gvc, g);
-
-  int i = 0;
-  for (job = gvjobs_first(gvc); job; job = gvjobs_next(gvc)) {
-
-    if (gvc->gvg) {
-      job->input_filename = gvc->gvg->input_filename;
-      job->graph_index = gvc->gvg->graph_index;
-    } else {
-      job->input_filename = NULL;
-      job->graph_index = 0;
-    }
-    job->common = &gvc->common;
-    job->layout_type = gvc->layout.type;
-    job->keybindings = gvevent_key_binding;
-    job->numkeys = gvevent_key_binding_size;
-    if (!GD_drawing(g)) {
-      agerrorf("layout was not done\n");
-      return -1;
-    }
-
-    job->output_lang = my_gvrender_select(job, job->output_langname);
-    if (job->output_lang == NO_SUPPORT) {
-      agerrorf("renderer for %s is unavailable\n", job->output_langname);
-      return -1;
-    }
-
-    job->flags |= chkOrder(g);
-    // if we already have an active job list and the device doesn't support
-    // multiple output files, or we are about to write to a different output
-    // device
-    firstjob = gvc->active_jobs;
-    if (firstjob) {
-      if (!(firstjob->flags & GVDEVICE_DOES_PAGES) ||
-          strcmp(job->output_langname, firstjob->output_langname)) {
-
-        gvrender_end_job(firstjob);
-
-        gvc->active_jobs = NULL; /* clear active list */
-        gvc->common.viewNum = 0;
-        prevjob = NULL;
-      }
-    } else {
-      prevjob = NULL;
-    }
-
-    if (gvrender_begin_job(job))
-      continue;
-    gvc->active_jobs = job;  /* first job of new list */
-    job->next_active = NULL; /* terminate active list */
-    job->callbacks = &gvdevice_callbacks;
-
-    init_job_pad(job);
-    init_job_margin(job);
-    init_job_dpi(job, g);
-    init_job_viewport(job, g);
-    init_job_pagination(job, g);
-
-    if (!(job->flags & GVDEVICE_EVENTS)) {
-      emit_graph(job, g);
-    }
-  }
-  return 0;
-}
-
 /* load a plugin of type=str
         the str can optionally contain one or more ":dependencies"
 
@@ -888,6 +812,77 @@ int my_gvrender_select(GVJ_t *job, const char *str) {
   }
   job->render.engine = NULL;
   return NO_SUPPORT; /* FIXME - should differentiate problem */
+}
+
+int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
+  static GVJ_t *prevjob;
+  GVJ_t *job, *firstjob;
+
+  init_bb(g);
+  init_gvc(gvc, g);
+  init_layering(gvc, g);
+
+  int i = 0;
+  for (job = gvjobs_first(gvc); job; job = gvjobs_next(gvc)) {
+
+    if (gvc->gvg) {
+      job->input_filename = gvc->gvg->input_filename;
+      job->graph_index = gvc->gvg->graph_index;
+    } else {
+      job->input_filename = NULL;
+      job->graph_index = 0;
+    }
+    job->common = &gvc->common;
+    job->layout_type = gvc->layout.type;
+    job->keybindings = gvevent_key_binding;
+    job->numkeys = gvevent_key_binding_size;
+    if (!GD_drawing(g)) {
+      agerrorf("layout was not done\n");
+      return -1;
+    }
+
+    job->output_lang = my_gvrender_select(job, job->output_langname);
+    if (job->output_lang == NO_SUPPORT) {
+      agerrorf("renderer for %s is unavailable\n", job->output_langname);
+      return -1;
+    }
+
+    job->flags |= chkOrder(g);
+    // if we already have an active job list and the device doesn't support
+    // multiple output files, or we are about to write to a different output
+    // device
+    firstjob = gvc->active_jobs;
+    if (firstjob) {
+      if (!(firstjob->flags & GVDEVICE_DOES_PAGES) ||
+          strcmp(job->output_langname, firstjob->output_langname)) {
+
+        gvrender_end_job(firstjob);
+
+        gvc->active_jobs = NULL; /* clear active list */
+        gvc->common.viewNum = 0;
+        prevjob = NULL;
+      }
+    } else {
+      prevjob = NULL;
+    }
+
+    if (gvrender_begin_job(job))
+      continue;
+    gvc->active_jobs = job;  /* first job of new list */
+    job->next_active = NULL; /* terminate active list */
+    job->callbacks = &gvdevice_callbacks;
+
+    init_job_pad(job);
+    init_job_margin(job);
+    init_job_dpi(job, g);
+    init_job_viewport(job, g);
+    init_job_pagination(job, g);
+
+    if (!(job->flags & GVDEVICE_EVENTS)) {
+      emit_graph(job, g);
+    }
+  }
+  return 0;
 }
 
 /* Render layout in a specified format to a malloc'ed string */
