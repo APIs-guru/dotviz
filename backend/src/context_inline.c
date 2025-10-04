@@ -21,22 +21,14 @@ static char *LibInfo[] = {
     "a"         /* Build Date */
 };
 
-GVC_t *my_gvNEWcontext(const lt_symlist_t *builtins, int demand_loading) {
+GVC_t *gw_create_context(void) {
+  agattr_text(NULL, AGNODE, "label", NODENAME_ESC);
   GVC_t *gvc = gv_alloc(sizeof(GVC_t));
 
   gvc->common.info = LibInfo;
   gvc->common.errorfn = agerrorf;
-  gvc->common.builtins = builtins;
-  gvc->common.demand_loading = demand_loading;
-
-  return gvc;
-}
-
-GVC_t *gw_create_context(void) {
-  GVC_t *gvc;
-
-  agattr_text(NULL, AGNODE, "label", NODENAME_ESC);
-  gvc = my_gvNEWcontext(lt_preloaded_symbols, 0);
+  gvc->common.builtins = lt_preloaded_symbols;
+  gvc->common.demand_loading = 0;
   gvconfig(gvc, false); /* configure for available plugins */
   return gvc;
 }
