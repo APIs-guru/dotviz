@@ -17,8 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-int my_gvrender_select(GVJ_t *job, const char *str);
-
 extern Agsym_t *G_ordering, *G_peripheries, *G_penwidth, *G_gradientangle,
     *G_margin;
 extern Agsym_t *N_height, *N_width, *N_shape, *N_color, *N_fillcolor,
@@ -752,66 +750,47 @@ gvplugin_available_t svg_device_available = {
     .typestr = "svg:svg",
 };
 
-void my_gvplugin_load(GVC_t *gvc, const char *str) {
-  if (!strcmp(str, "dot")) {
-    gvc->api[API_device] = &dot_device_available;
-    gvc->api[API_render] = &gvrender_dot_available;
-  } else if (!strcmp(str, "gv")) {
-    gvc->api[API_device] = &gv_device_available;
-    gvc->api[API_render] = &gvrender_dot_available;
-  } else if (!strcmp(str, "svg")) {
-    gvc->api[API_device] = &svg_device_available;
-    gvc->api[API_render] = &gvrender_svg_available;
-  }
-}
-
-int my_gvrender_select(GVJ_t *job, const char *str) {
+void my_gvrender_select(GVJ_t *job, const char *str) {
   GVC_t *gvc = job->gvc;
   gvplugin_available_t *plugin;
   gvplugin_installed_t *typeptr;
 
-  my_gvplugin_load(gvc, str);
-
-  /* When job is created, it is zeroed out.
-   * Some flags, such as OUTPUT_NOT_REQUIRED, may already be set,
-   * so don't reset.
-   */
-  /* job->flags = 0; */
-
-  plugin = gvc->api[API_device];
-  if (plugin) {
-    typeptr = plugin->typeptr;
-    job->device.engine = typeptr->engine;
-    job->device.features = typeptr->features;
-    job->device.id = typeptr->id;
-    job->device.type = plugin->typestr;
-
-    job->flags |= job->device.features->flags;
-  } else {
-    return NO_SUPPORT; /* FIXME - should differentiate problem */
+  if (!strcmp(str, "dot")) {
+    plugin = gvc->api[API_device] = &dot_device_available;
+    gvc->api[API_render] = &gvrender_dot_available;
+  } else if (!strcmp(str, "gv")) {
+    plugin = gvc->api[API_device] = &gv_device_available;
+    gvc->api[API_render] = &gvrender_dot_available;
+  } else if (!strcmp(str, "svg")) {
+    plugin = gvc->api[API_device] = &svg_device_available;
+    gvc->api[API_render] = &gvrender_svg_available;
   }
+
+  typeptr = plugin->typeptr;
+  job->device.engine = typeptr->engine;
+  job->device.features = typeptr->features;
+  job->device.id = typeptr->id;
+  job->device.type = plugin->typestr;
+
+  job->flags |= job->device.features->flags;
+
   /* The device plugin has a dependency on a render plugin,
    * so the render plugin should be available as well now */
   plugin = gvc->api[API_render];
-  if (plugin) {
-    typeptr = plugin->typeptr;
-    job->render.engine = typeptr->engine;
-    job->render.features = typeptr->features;
-    job->render.type = plugin->typestr;
+  typeptr = plugin->typeptr;
+  job->render.engine = typeptr->engine;
+  job->render.features = typeptr->features;
+  job->render.type = plugin->typestr;
 
-    job->flags |= job->render.features->flags;
+  job->flags |= job->render.features->flags;
 
-    if (job->device.engine)
-      job->render.id = typeptr->id;
-    else
-      /* A null device engine indicates that the device id is also the renderer
-       * id and that the renderer doesn't need "device" functions. Device
-       * "features" settings are still available */
-      job->render.id = job->device.id;
-    return GVRENDER_PLUGIN;
-  }
-  job->render.engine = NULL;
-  return NO_SUPPORT; /* FIXME - should differentiate problem */
+  if (job->device.engine)
+    job->render.id = typeptr->id;
+  else
+    /* A null device engine indicates that the device id is also the renderer
+     * id and that the renderer doesn't need "device" functions. Device
+     * "features" settings are still available */
+    job->render.id = job->device.id;
 }
 
 /* Render layout in a specified format to a malloc'ed string */
@@ -855,11 +834,8 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->keybindings = gvevent_key_binding;
   job->numkeys = gvevent_key_binding_size;
 
-  job->output_lang = my_gvrender_select(job, job->output_langname);
-  if (job->output_lang == NO_SUPPORT) {
-    agerrorf("renderer for %s is unavailable\n", job->output_langname);
-    return -1;
-  }
+  my_gvrender_select(job, job->output_langname);
+  job->output_lang = GVRENDER_PLUGIN;
 
   job->flags |= chkOrder(g);
 
