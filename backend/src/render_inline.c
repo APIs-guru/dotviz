@@ -848,21 +848,12 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   init_gvc(gvc, g);
   init_layering(gvc, g);
 
-  if (gvc->gvg) {
-    job->input_filename = gvc->gvg->input_filename;
-    job->graph_index = gvc->gvg->graph_index;
-  } else {
-    job->input_filename = NULL;
-    job->graph_index = 0;
-  }
+  job->input_filename = NULL;
+  job->graph_index = 0;
   job->common = &gvc->common;
   job->layout_type = gvc->layout.type;
   job->keybindings = gvevent_key_binding;
   job->numkeys = gvevent_key_binding_size;
-  if (!GD_drawing(g)) {
-    agerrorf("layout was not done\n");
-    return -1;
-  }
 
   job->output_lang = my_gvrender_select(job, job->output_langname);
   if (job->output_lang == NO_SUPPORT) {
