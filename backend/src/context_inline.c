@@ -77,12 +77,6 @@ static int textfont_comparf(void *key1, void *key2) {
   return 0;
 }
 
-void my_textfont_dict_open(GVC_t *gvc) {
-  DTDISC(&gvc->textfont_disc, 0, sizeof(textfont_t), -1, textfont_makef,
-         textfont_freef, textfont_comparf);
-  gvc->textfont_dt = dtopen(&(gvc->textfont_disc), Dtoset);
-}
-
 GVC_t *gw_create_context(void) {
   agattr_text(NULL, AGNODE, "label", NODENAME_ESC);
   GVC_t *gvc = gv_alloc(sizeof(GVC_t));
@@ -93,6 +87,13 @@ GVC_t *gw_create_context(void) {
 
   gvc->packages = NULL;
   gvc->config_found = false;
-  my_textfont_dict_open(gvc); /* initialize font dict */
+
+  (gvc->textfont_disc).key = 0;
+  (gvc->textfont_disc).size = sizeof(textfont_t);
+  (gvc->textfont_disc).link = -1;
+  (gvc->textfont_disc).makef = textfont_makef;
+  (gvc->textfont_disc).freef = textfont_freef;
+  (gvc->textfont_disc).comparf = textfont_comparf;
+  gvc->textfont_dt = dtopen(&(gvc->textfont_disc), Dtoset);
   return gvc;
 }
