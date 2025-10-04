@@ -675,7 +675,9 @@ int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
   init_gvc(gvc, g);
   init_layering(gvc, g);
 
+  int i = 0;
   for (job = gvjobs_first(gvc); job; job = gvjobs_next(gvc)) {
+
     if (gvc->gvg) {
       job->input_filename = gvc->gvg->input_filename;
       job->graph_index = gvc->gvg->graph_index;
@@ -698,16 +700,7 @@ int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
       return -1;
     }
 
-    switch (job->output_lang) {
-    case VTX:
-      /* output sorted, i.e. all nodes then all edges */
-      job->flags |= EMIT_SORTED;
-      break;
-    default:
-      job->flags |= chkOrder(g);
-      break;
-    }
-
+    job->flags |= chkOrder(g);
     // if we already have an active job list and the device doesn't support
     // multiple output files, or we are about to write to a different output
     // device
@@ -726,14 +719,9 @@ int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
       prevjob = NULL;
     }
 
-    if (prevjob) {
-      prevjob->next_active = job;              /* insert job in active list */
-      job->output_file = prevjob->output_file; /* FIXME - this is dumb ! */
-    } else {
-      if (gvrender_begin_job(job))
-        continue;
-      gvc->active_jobs = job; /* first job of new list */
-    }
+    if (gvrender_begin_job(job))
+      continue;
+    gvc->active_jobs = job;  /* first job of new list */
     job->next_active = NULL; /* terminate active list */
     job->callbacks = &gvdevice_callbacks;
 
@@ -746,11 +734,6 @@ int my_gvRenderJobs(GVC_t *gvc, graph_t *g) {
     if (!(job->flags & GVDEVICE_EVENTS)) {
       emit_graph(job, g);
     }
-
-    /* the last job, after all input graphs are processed,
-     *      is finalized from gvFinalize()
-     */
-    prevjob = job;
   }
   return 0;
 }
