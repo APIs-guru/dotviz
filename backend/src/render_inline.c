@@ -908,15 +908,10 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->gvc = gvc;
   job = gvc->job;
 
-  if (!LAYOUT_DONE(g) && !(job->flags & LAYOUT_NOT_REQUIRED)) {
-    agerrorf("Layout was not done\n");
-    return -1;
-  }
+  /* page size on Linux, Mac OS X and Windows */
+  const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
 
-/* page size on Linux, Mac OS X and Windows */
-#define OUTPUT_DATA_INITIAL_ALLOCATION 4096
-
-  if (!result || !(*result = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
+  if (!(*result = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
     agerrorf("failure malloc'ing for result string");
     return -1;
   }
