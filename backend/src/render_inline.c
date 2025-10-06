@@ -850,9 +850,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   init_job_viewport(job, g);
   init_job_pagination(job, g);
 
-  if (!(job->flags & GVDEVICE_EVENTS)) {
-    emit_graph(job, g);
-  }
+  emit_graph(job, g);
 
   if (render_engine) {
     if (render_engine->end_job)
