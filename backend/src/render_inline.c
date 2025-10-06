@@ -2,16 +2,15 @@
 #include "const.h"
 #include "geomprocs.h"
 #include "gv_ctype.h"
-#include "gv_fopen.h"
 #include "gv_math.h"
-#include "gvc.h"
+#include "gvc.h" // IWYU pragma: keep
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "gvcproc.h"
 #include "gvplugin.h"
-#include "gvplugin_device.h"
-#include "gvplugin_render.h"
+#include "gvplugin_device.h" // IWYU pragma: keep
+#include "gvplugin_render.h" // IWYU pragma: keep
 #include "streq.h"
 #include "strview.h" // IWYU pragma: keep
 #include "util/list.h"
@@ -744,103 +743,6 @@ gvplugin_available_t svg_device_available = {
     .typestr = "svg:svg",
 };
 
-static GVJ_t *output_filename_job;
-static GVJ_t *output_langname_job;
-
-static void auto_output_filename(GVJ_t *job) {
-  static agxbuf buf;
-  char *fn;
-
-  if (!(fn = job->input_filename))
-    fn = "noname.gv";
-  agxbput(&buf, fn);
-  if (job->graph_index)
-    agxbprint(&buf, ".%d", job->graph_index + 1);
-  agxbputc(&buf, '.');
-
-  {
-    const char *src = job->output_langname;
-    const char *src_end = src + strlen(src);
-    for (const char *q = src_end;; --q) {
-      if (*q == ':') {
-        agxbprint(&buf, "%.*s.", (int)(src_end - q - 1), q + 1);
-        src_end = q;
-      }
-      if (q == src) {
-        agxbprint(&buf, "%.*s", (int)(src_end - src), src);
-        break;
-      }
-    }
-  }
-
-  job->output_filename = agxbuse(&buf);
-}
-
-/* gvdevice_initialize:
- * Return 0 on success, non-zero on failure
- */
-int my_gvdevice_initialize(GVJ_t *job) {
-  gvdevice_engine_t *gvde = job->device.engine;
-  GVC_t *gvc = job->gvc;
-
-  if (gvde && gvde->initialize) {
-    gvde->initialize(job);
-  } else if (job->output_data) {
-  }
-  /* if the device has no initialization then it uses file output */
-  else if (!job->output_file) { /* if not yet opened */
-    if (gvc->common.auto_outfile_names)
-      auto_output_filename(job);
-    if (job->output_filename) {
-      job->output_file = gv_fopen(job->output_filename, "w");
-      if (job->output_file == NULL) {
-        job->common->errorfn("Could not open \"%s\" for writing : %s\n",
-                             job->output_filename, strerror(errno));
-        /* perror(job->output_filename); */
-        return 1;
-      }
-    } else
-      job->output_file = stdout;
-
-#ifdef HAVE_SETMODE
-#ifdef O_BINARY
-    if (job->flags & GVDEVICE_BINARY_FORMAT)
-#ifdef _WIN32
-      _setmode(fileno(job->output_file), O_BINARY);
-#else
-      setmode(fileno(job->output_file), O_BINARY);
-#endif
-#endif
-#endif
-  }
-
-  if (job->flags & GVDEVICE_COMPRESSED_FORMAT) {
-#ifdef HAVE_LIBZ
-    z_stream *z = &z_strm;
-
-    z->zalloc = 0;
-    z->zfree = 0;
-    z->opaque = 0;
-    z->next_in = NULL;
-    z->next_out = NULL;
-    z->avail_in = 0;
-
-    crc = crc32(0L, Z_NULL, 0);
-
-    if (deflateInit2(z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -MAX_WBITS,
-                     MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY) != Z_OK) {
-      job->common->errorfn("Error initializing for deflation\n");
-      return 1;
-    }
-    gvwrite_no_z(job, z_file_header, sizeof(z_file_header));
-#else
-    job->common->errorfn("No libz support.\n");
-    return 1;
-#endif
-  }
-  return 0;
-}
-
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
@@ -924,8 +826,6 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   gvrender_engine_t *render_engine = render_plugin->typeptr->engine;
 
-  if (my_gvdevice_initialize(job))
-    return 1;
   if (render_engine) {
     if (render_engine->begin_job)
       render_engine->begin_job(job);
@@ -954,8 +854,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   free(job->active_tooltip);
   free(job->selected_href);
   free(job);
-  gvc->jobs = gvc->job = gvc->active_jobs = output_filename_job =
-      output_langname_job = NULL;
+  gvc->jobs = gvc->job = gvc->active_jobs = NULL;
   gvc->common.viewNum = 0;
 
   return rc;
