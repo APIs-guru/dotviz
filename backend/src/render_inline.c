@@ -844,7 +844,12 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     emit_graph(job, g);
   }
 
-  gvrender_end_job(job);
+  if (render_engine) {
+    if (render_engine->end_job)
+      render_engine->end_job(job);
+  }
+  job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
+  gvdevice_finalize(job);
 
   if (rc == 0) {
     *result = job->output_data;
