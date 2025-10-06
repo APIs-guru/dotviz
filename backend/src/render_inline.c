@@ -742,17 +742,6 @@ gvplugin_available_t svg_device_available = {
     .typestr = "svg:svg",
 };
 
-static void gvdevice_close(GVJ_t *job) {
-  if (job->output_filename && job->output_file != stdout &&
-      !job->external_context) {
-    if (job->output_file) {
-      fclose(job->output_file);
-      job->output_file = NULL;
-    }
-    job->output_filename = NULL;
-  }
-}
-
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
