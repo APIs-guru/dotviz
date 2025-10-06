@@ -811,15 +811,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   job->flags |= job->render.features->flags;
 
-  if (job->device.engine) {
-    fprintf(stderr, "it is not null!!!\n");
-    job->render.id = typeptr->id;
-  } else {
-    /* A null device engine indicates that the device id is also the renderer
-     * id and that the renderer doesn't need "device" functions. Device
-     * "features" settings are still available */
-    job->render.id = job->device.id;
-  }
+  job->render.id = job->device.id;
 
   job->output_lang = GVRENDER_PLUGIN;
 
