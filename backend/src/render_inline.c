@@ -2,6 +2,7 @@
 #include "const.h"
 #include "geomprocs.h"
 #include "gv_ctype.h"
+#include "gv_fopen.h"
 #include "gv_math.h"
 #include "gvc.h"
 #include "gvcext.h"
@@ -9,6 +10,7 @@
 #include "gvcjob.h"
 #include "gvcproc.h"
 #include "gvplugin.h"
+#include "gvplugin_device.h"
 #include "gvplugin_render.h"
 #include "streq.h"
 #include "strview.h" // IWYU pragma: keep
@@ -674,15 +676,6 @@ extern void emit_graph(GVJ_t *job, graph_t *g);
 
 */
 
-gvplugin_available_t *available_from_install(gvplugin_installed_t *lib) {
-  gvplugin_available_t *plugin = gv_alloc(sizeof(gvplugin_available_t));
-  plugin->next = NULL;
-  plugin->typestr = (char *)lib->type;
-  plugin->quality = 1;
-  plugin->package = NULL;
-  plugin->typeptr = lib; /* null if not loaded */
-}
-
 typedef enum {
   FORMAT_DOT,
   FORMAT_CANON,
@@ -754,14 +747,96 @@ gvplugin_available_t svg_device_available = {
 static GVJ_t *output_filename_job;
 static GVJ_t *output_langname_job;
 
-int my_gvrender_begin_job(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+static void auto_output_filename(GVJ_t *job) {
+  static agxbuf buf;
+  char *fn;
 
-  if (gvdevice_initialize(job))
+  if (!(fn = job->input_filename))
+    fn = "noname.gv";
+  agxbput(&buf, fn);
+  if (job->graph_index)
+    agxbprint(&buf, ".%d", job->graph_index + 1);
+  agxbputc(&buf, '.');
+
+  {
+    const char *src = job->output_langname;
+    const char *src_end = src + strlen(src);
+    for (const char *q = src_end;; --q) {
+      if (*q == ':') {
+        agxbprint(&buf, "%.*s.", (int)(src_end - q - 1), q + 1);
+        src_end = q;
+      }
+      if (q == src) {
+        agxbprint(&buf, "%.*s", (int)(src_end - src), src);
+        break;
+      }
+    }
+  }
+
+  job->output_filename = agxbuse(&buf);
+}
+
+/* gvdevice_initialize:
+ * Return 0 on success, non-zero on failure
+ */
+int my_gvdevice_initialize(GVJ_t *job) {
+  gvdevice_engine_t *gvde = job->device.engine;
+  GVC_t *gvc = job->gvc;
+
+  if (gvde && gvde->initialize) {
+    gvde->initialize(job);
+  } else if (job->output_data) {
+  }
+  /* if the device has no initialization then it uses file output */
+  else if (!job->output_file) { /* if not yet opened */
+    if (gvc->common.auto_outfile_names)
+      auto_output_filename(job);
+    if (job->output_filename) {
+      job->output_file = gv_fopen(job->output_filename, "w");
+      if (job->output_file == NULL) {
+        job->common->errorfn("Could not open \"%s\" for writing : %s\n",
+                             job->output_filename, strerror(errno));
+        /* perror(job->output_filename); */
+        return 1;
+      }
+    } else
+      job->output_file = stdout;
+
+#ifdef HAVE_SETMODE
+#ifdef O_BINARY
+    if (job->flags & GVDEVICE_BINARY_FORMAT)
+#ifdef _WIN32
+      _setmode(fileno(job->output_file), O_BINARY);
+#else
+      setmode(fileno(job->output_file), O_BINARY);
+#endif
+#endif
+#endif
+  }
+
+  if (job->flags & GVDEVICE_COMPRESSED_FORMAT) {
+#ifdef HAVE_LIBZ
+    z_stream *z = &z_strm;
+
+    z->zalloc = 0;
+    z->zfree = 0;
+    z->opaque = 0;
+    z->next_in = NULL;
+    z->next_out = NULL;
+    z->avail_in = 0;
+
+    crc = crc32(0L, Z_NULL, 0);
+
+    if (deflateInit2(z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -MAX_WBITS,
+                     MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY) != Z_OK) {
+      job->common->errorfn("Error initializing for deflation\n");
+      return 1;
+    }
+    gvwrite_no_z(job, z_file_header, sizeof(z_file_header));
+#else
+    job->common->errorfn("No libz support.\n");
     return 1;
-  if (gvre) {
-    if (gvre->begin_job)
-      gvre->begin_job(job);
+#endif
   }
   return 0;
 }
@@ -847,8 +922,14 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   job->flags |= chkOrder(g);
 
-  if (my_gvrender_begin_job(job))
-    return 0;
+  gvrender_engine_t *render_engine = render_plugin->typeptr->engine;
+
+  if (my_gvdevice_initialize(job))
+    return 1;
+  if (render_engine) {
+    if (render_engine->begin_job)
+      render_engine->begin_job(job);
+  }
   gvc->active_jobs = job;  /* first job of new list */
   job->next_active = NULL; /* terminate active list */
   job->callbacks = &gvdevice_callbacks;
