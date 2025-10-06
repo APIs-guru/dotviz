@@ -772,12 +772,11 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   job->flags |= chkOrder(g);
 
-  gvplugin_available_t *device_plugin;
-  gvplugin_available_t *render_plugin;
+  gvrender_engine_t *render_engine;
 
   if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
-    device_plugin = gvc->api[API_device] = &dot_device_available;
-    render_plugin = gvc->api[API_render] = &dot_render_available;
+    gvc->api[API_device] = &dot_device_available;
+    gvc->api[API_render] = &dot_render_available;
 
     job->device.engine = NULL;
     job->device.features = &device_features_dot;
@@ -793,9 +792,11 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     job->flags |= render_features_dot.flags;
 
     job->render.id = FORMAT_DOT;
+
+    render_engine = &dot_engine;
   } else if (!strcmp(format, "svg")) {
-    device_plugin = gvc->api[API_device] = &svg_device_available;
-    render_plugin = gvc->api[API_render] = &svg_render_available;
+    gvc->api[API_device] = &svg_device_available;
+    gvc->api[API_render] = &svg_render_available;
 
     job->device.engine = NULL;
     job->device.features = &device_features_svg;
@@ -811,17 +812,16 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     job->flags |= render_features_svg.flags;
 
     job->render.id = FORMAT_SVG;
+
+    render_engine = &svg_engine;
   } else {
     agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
     return -1;
   }
 
-  gvrender_engine_t *render_engine = render_plugin->typeptr->engine;
+  if (render_engine->begin_job)
+    render_engine->begin_job(job);
 
-  if (render_engine) {
-    if (render_engine->begin_job)
-      render_engine->begin_job(job);
-  }
   gvc->active_jobs = job;  /* first job of new list */
   job->next_active = NULL; /* terminate active list */
   job->callbacks = &gvdevice_callbacks;
@@ -834,10 +834,9 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   emit_graph(job, g);
 
-  if (render_engine) {
-    if (render_engine->end_job)
-      render_engine->end_job(job);
-  }
+  if (render_engine->end_job)
+    render_engine->end_job(job);
+
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 
   if (rc == 0) {
