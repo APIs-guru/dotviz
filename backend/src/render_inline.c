@@ -748,23 +748,6 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   Agraph_t *g = graph;
   int rc;
 
-  gvplugin_available_t *device_plugin;
-  gvplugin_available_t *render_plugin;
-
-  if (!strcmp(format, "dot")) {
-    device_plugin = gvc->api[API_device] = &dot_device_available;
-    render_plugin = gvc->api[API_render] = &gvrender_dot_available;
-  } else if (!strcmp(format, "gv")) {
-    device_plugin = gvc->api[API_device] = &gv_device_available;
-    render_plugin = gvc->api[API_render] = &gvrender_dot_available;
-  } else if (!strcmp(format, "svg")) {
-    device_plugin = gvc->api[API_device] = &svg_device_available;
-    render_plugin = gvc->api[API_render] = &gvrender_svg_available;
-  } else {
-    agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
-    return -1;
-  }
-
   /* create a job for the required format */
   GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
   job->output_langname = format;
@@ -793,6 +776,23 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->layout_type = gvc->layout.type;
   job->keybindings = gvevent_key_binding;
   job->numkeys = gvevent_key_binding_size;
+
+  gvplugin_available_t *device_plugin;
+  gvplugin_available_t *render_plugin;
+
+  if (!strcmp(format, "dot")) {
+    device_plugin = gvc->api[API_device] = &dot_device_available;
+    render_plugin = gvc->api[API_render] = &gvrender_dot_available;
+  } else if (!strcmp(format, "gv")) {
+    device_plugin = gvc->api[API_device] = &gv_device_available;
+    render_plugin = gvc->api[API_render] = &gvrender_dot_available;
+  } else if (!strcmp(format, "svg")) {
+    device_plugin = gvc->api[API_device] = &svg_device_available;
+    render_plugin = gvc->api[API_render] = &gvrender_svg_available;
+  } else {
+    agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
+    return -1;
+  }
 
   gvplugin_installed_t *typeptr = device_plugin->typeptr;
   job->device.engine = typeptr->engine;
