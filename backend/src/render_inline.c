@@ -778,32 +778,43 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
     device_plugin = gvc->api[API_device] = &dot_device_available;
     render_plugin = gvc->api[API_render] = &dot_render_available;
+
+    job->device.engine = NULL;
+    job->device.features = &device_features_dot;
+    job->device.id = FORMAT_DOT;
+    job->device.type = "dot:dot";
+
+    job->flags |= device_features_dot.flags;
+
+    job->render.engine = &dot_engine;
+    job->render.features = &render_features_dot;
+    job->render.type = "dot";
+
+    job->flags |= render_features_dot.flags;
+
+    job->render.id = FORMAT_DOT;
   } else if (!strcmp(format, "svg")) {
     device_plugin = gvc->api[API_device] = &svg_device_available;
     render_plugin = gvc->api[API_render] = &svg_render_available;
+
+    job->device.engine = NULL;
+    job->device.features = &device_features_svg;
+    job->device.id = FORMAT_SVG;
+    job->device.type = "svg:svg";
+
+    job->flags |= device_features_svg.flags;
+
+    job->render.engine = &svg_engine;
+    job->render.features = &render_features_svg;
+    job->render.type = "svg";
+
+    job->flags |= render_features_svg.flags;
+
+    job->render.id = FORMAT_SVG;
   } else {
     agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
     return -1;
   }
-
-  gvplugin_installed_t *typeptr = device_plugin->typeptr;
-  job->device.engine = typeptr->engine;
-  job->device.features = typeptr->features;
-  job->device.id = typeptr->id;
-  job->device.type = device_plugin->typestr;
-
-  job->flags |= job->device.features->flags;
-
-  /* The device plugin has a dependency on a render plugin,
-   * so the render plugin should be available as well now */
-  typeptr = render_plugin->typeptr;
-  job->render.engine = typeptr->engine;
-  job->render.features = typeptr->features;
-  job->render.type = render_plugin->typestr;
-
-  job->flags |= job->render.features->flags;
-
-  job->render.id = job->device.id;
 
   gvrender_engine_t *render_engine = render_plugin->typeptr->engine;
 
