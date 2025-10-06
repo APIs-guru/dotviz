@@ -9,6 +9,7 @@
 #include "gvcjob.h"
 #include "gvcproc.h"
 #include "gvplugin.h"
+#include "gvplugin_render.h"
 #include "streq.h"
 #include "strview.h" // IWYU pragma: keep
 #include "util/list.h"
@@ -753,6 +754,18 @@ gvplugin_available_t svg_device_available = {
 static GVJ_t *output_filename_job;
 static GVJ_t *output_langname_job;
 
+int my_gvrender_begin_job(GVJ_t *job) {
+  gvrender_engine_t *gvre = job->render.engine;
+
+  if (gvdevice_initialize(job))
+    return 1;
+  if (gvre) {
+    if (gvre->begin_job)
+      gvre->begin_job(job);
+  }
+  return 0;
+}
+
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
@@ -834,7 +847,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   job->flags |= chkOrder(g);
 
-  if (gvrender_begin_job(job))
+  if (my_gvrender_begin_job(job))
     return 0;
   gvc->active_jobs = job;  /* first job of new list */
   job->next_active = NULL; /* terminate active list */
