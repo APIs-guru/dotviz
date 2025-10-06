@@ -756,17 +756,18 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   Agraph_t *g = graph;
   int rc;
 
-  gvplugin_available_t *plugin;
+  gvplugin_available_t *device_plugin;
+  gvplugin_available_t *render_plugin;
 
   if (!strcmp(format, "dot")) {
-    plugin = gvc->api[API_device] = &dot_device_available;
-    gvc->api[API_render] = &gvrender_dot_available;
+    device_plugin = gvc->api[API_device] = &dot_device_available;
+    render_plugin = gvc->api[API_render] = &gvrender_dot_available;
   } else if (!strcmp(format, "gv")) {
-    plugin = gvc->api[API_device] = &gv_device_available;
-    gvc->api[API_render] = &gvrender_dot_available;
+    device_plugin = gvc->api[API_device] = &gv_device_available;
+    render_plugin = gvc->api[API_render] = &gvrender_dot_available;
   } else if (!strcmp(format, "svg")) {
-    plugin = gvc->api[API_device] = &svg_device_available;
-    gvc->api[API_render] = &gvrender_svg_available;
+    device_plugin = gvc->api[API_device] = &svg_device_available;
+    render_plugin = gvc->api[API_render] = &gvrender_svg_available;
   } else {
     agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
     return -1;
@@ -801,21 +802,20 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->keybindings = gvevent_key_binding;
   job->numkeys = gvevent_key_binding_size;
 
-  gvplugin_installed_t *typeptr = plugin->typeptr;
+  gvplugin_installed_t *typeptr = device_plugin->typeptr;
   job->device.engine = typeptr->engine;
   job->device.features = typeptr->features;
   job->device.id = typeptr->id;
-  job->device.type = plugin->typestr;
+  job->device.type = device_plugin->typestr;
 
   job->flags |= job->device.features->flags;
 
   /* The device plugin has a dependency on a render plugin,
    * so the render plugin should be available as well now */
-  plugin = gvc->api[API_render];
-  typeptr = plugin->typeptr;
+  typeptr = render_plugin->typeptr;
   job->render.engine = typeptr->engine;
   job->render.features = typeptr->features;
-  job->render.type = plugin->typestr;
+  job->render.type = render_plugin->typestr;
 
   job->flags |= job->render.features->flags;
 
