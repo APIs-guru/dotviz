@@ -684,62 +684,62 @@ typedef enum {
   FORMAT_XDOT14,
 } format_type;
 
+enum { FORMAT_SVG, FORMAT_SVGZ, FORMAT_SVG_INLINE };
+
+extern gvrender_engine_t dot_engine;
+extern gvrender_features_t render_features_dot;
+extern gvdevice_features_t device_features_svg;
+extern gvrender_engine_t svg_engine;
+extern gvrender_features_t render_features_svg;
+
 extern gvdevice_features_t device_features_dot;
 
-gvplugin_installed_t dot_installed = {FORMAT_DOT, "dot:dot", 1, NULL,
-                                      &device_features_dot};
-gvplugin_installed_t gv_installed = {FORMAT_DOT, "gv:dot", 1, NULL,
-                                     &device_features_dot};
+gvplugin_installed_t dot_device_installed = {FORMAT_DOT, "dot:dot", 1, NULL,
+                                             &device_features_dot};
+gvplugin_installed_t gv_device_installed = {FORMAT_DOT, "gv:dot", 1, NULL,
+                                            &device_features_dot};
 gvplugin_available_t dot_device_available = {
     .next = NULL,
     .package = NULL,
     .quality = 1,
-    .typeptr = &dot_installed,
+    .typeptr = &dot_device_installed,
     .typestr = "dot:dot",
 };
 gvplugin_available_t gv_device_available = {
     .next = NULL,
     .package = NULL,
     .quality = 1,
-    .typeptr = &gv_installed,
+    .typeptr = &gv_device_installed,
     .typestr = "gv:dot",
 };
 
-extern gvrender_engine_t dot_engine;
-extern gvrender_features_t render_features_dot;
-gvplugin_installed_t gvrender_dot_installed = {
-    FORMAT_DOT, "dot", 1, &dot_engine, &render_features_dot};
-gvplugin_available_t gvrender_dot_available = {
+gvplugin_installed_t dot_render_installed = {FORMAT_DOT, "dot", 1, &dot_engine,
+                                             &render_features_dot};
+gvplugin_available_t dot_render_available = {
     .next = NULL,
     .package = NULL,
     .quality = 1,
-    .typeptr = &gvrender_dot_installed,
+    .typeptr = &dot_render_installed,
     .typestr = "dot",
 };
-
-enum { FORMAT_SVG, FORMAT_SVGZ, FORMAT_SVG_INLINE };
-extern gvrender_engine_t svg_engine;
-extern gvrender_features_t render_features_svg;
-
-gvplugin_installed_t gvrender_svg_installed = {
-    FORMAT_SVG, "svg", 1, &svg_engine, &render_features_svg};
-gvplugin_available_t gvrender_svg_available = {
-    .next = NULL,
-    .package = NULL,
-    .quality = 1,
-    .typeptr = &gvrender_svg_installed,
-    .typestr = "svg",
-};
-
-extern gvdevice_features_t device_features_svg;
-gvplugin_installed_t svg_installed = {FORMAT_SVG, "svg:svg", 1, NULL,
-                                      &device_features_svg};
+gvplugin_installed_t svg_device_installed = {FORMAT_SVG, "svg:svg", 1, NULL,
+                                             &device_features_svg};
 gvplugin_available_t svg_device_available = {
     .next = NULL,
     .package = NULL,
     .quality = 1,
-    .typeptr = &svg_installed,
+    .typeptr = &svg_device_installed,
     .typestr = "svg:svg",
+};
+
+gvplugin_installed_t svg_render_installed = {FORMAT_SVG, "svg", 1, &svg_engine,
+                                             &render_features_svg};
+gvplugin_available_t svg_render_available = {
+    .next = NULL,
+    .package = NULL,
+    .quality = 1,
+    .typeptr = &svg_render_installed,
+    .typestr = "svg",
 };
 
 /* Render layout in a specified format to a malloc'ed string */
@@ -782,13 +782,13 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   if (!strcmp(format, "dot")) {
     device_plugin = gvc->api[API_device] = &dot_device_available;
-    render_plugin = gvc->api[API_render] = &gvrender_dot_available;
+    render_plugin = gvc->api[API_render] = &dot_render_available;
   } else if (!strcmp(format, "gv")) {
     device_plugin = gvc->api[API_device] = &gv_device_available;
-    render_plugin = gvc->api[API_render] = &gvrender_dot_available;
+    render_plugin = gvc->api[API_render] = &dot_render_available;
   } else if (!strcmp(format, "svg")) {
     device_plugin = gvc->api[API_device] = &svg_device_available;
-    render_plugin = gvc->api[API_render] = &gvrender_svg_available;
+    render_plugin = gvc->api[API_render] = &svg_render_available;
   } else {
     agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
     return -1;
@@ -811,13 +811,15 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   job->flags |= job->render.features->flags;
 
-  if (job->device.engine)
+  if (job->device.engine) {
+    fprintf(stderr, "it is not null!!!\n");
     job->render.id = typeptr->id;
-  else
+  } else {
     /* A null device engine indicates that the device id is also the renderer
      * id and that the renderer doesn't need "device" functions. Device
      * "features" settings are still available */
     job->render.id = job->device.id;
+  }
 
   job->output_lang = GVRENDER_PLUGIN;
 
