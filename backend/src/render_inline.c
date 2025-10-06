@@ -750,6 +750,24 @@ gvplugin_available_t svg_device_available = {
     .typestr = "svg:svg",
 };
 
+static GVJ_t *output_filename_job;
+static GVJ_t *output_langname_job;
+
+void my_gvjobs_delete(GVC_t *gvc) {
+  GVJ_t *job, *j;
+
+  job = gvc->jobs;
+  while ((j = job)) {
+    job = job->next;
+    free(j->active_tooltip);
+    free(j->selected_href);
+    free(j);
+  }
+  gvc->jobs = gvc->job = gvc->active_jobs = output_filename_job =
+      output_langname_job = NULL;
+  gvc->common.viewNum = 0;
+}
+
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
@@ -853,7 +871,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     *result = job->output_data;
     *length = job->output_data_position;
   }
-  gvjobs_delete(gvc);
+  my_gvjobs_delete(gvc);
 
   return rc;
 }
