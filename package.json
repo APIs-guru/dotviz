@@ -34,7 +34,8 @@
     "rollup": "4.52.3",
     "typedoc": "0.28.13",
     "typedoc-plugin-mdn-links": "5.0.9",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.45.0"
   },
   "scripts": {
     "preversion": "bash ./scripts/check-git.sh && npm ci --ignore-scripts",

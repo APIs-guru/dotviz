@@ -11,14 +11,14 @@ import packageJSON from '../package.json' with { type: 'json' };
 
 export { packageJSON };
 
-export function localRepoPath(...paths: ReadonlyArray<string>): string {
+export function localRepoPath(...paths: readonly string[]): string {
   const resourcesDir = path.dirname(url.fileURLToPath(import.meta.url));
   const repoDir = path.join(resourcesDir, '..');
   return path.join(repoDir, ...paths);
 }
 
 interface MakeTmpDirReturn {
-  tmpDirPath: (...paths: ReadonlyArray<string>) => string;
+  tmpDirPath: (...paths: readonly string[]) => string;
 }
 
 export function makeTmpDir(name: string): MakeTmpDirReturn {
@@ -39,22 +39,22 @@ export function npm(options?: NPMOptions) {
   const globalOptions = options?.quiet === true ? ['--quiet'] : [];
 
   return {
-    run(...args: ReadonlyArray<string>): void {
+    run(...args: readonly string[]): void {
       spawn('npm', [...globalOptions, 'run', ...args], options);
     },
-    install(...args: ReadonlyArray<string>): void {
+    install(...args: readonly string[]): void {
       spawn('npm', [...globalOptions, 'install', ...args], options);
     },
-    ci(...args: ReadonlyArray<string>): void {
+    ci(...args: readonly string[]): void {
       spawn('npm', [...globalOptions, 'ci', ...args], options);
     },
-    exec(...args: ReadonlyArray<string>): void {
+    exec(...args: readonly string[]): void {
       spawn('npm', [...globalOptions, 'exec', ...args], options);
     },
-    pack(...args: ReadonlyArray<string>): string {
+    pack(...args: readonly string[]): string {
       return spawnOutput('npm', [...globalOptions, 'pack', ...args], options);
     },
-    diff(...args: ReadonlyArray<string>): string {
+    diff(...args: readonly string[]): string {
       return spawnOutput('npm', [...globalOptions, 'diff', ...args], options);
     },
   };
@@ -67,24 +67,24 @@ interface GITOptions extends SpawnOptions {
 export function git(options?: GITOptions) {
   const cmdOptions = options?.quiet === true ? ['--quiet'] : [];
   return {
-    clone(...args: ReadonlyArray<string>): void {
+    clone(...args: readonly string[]): void {
       spawn('git', ['clone', ...cmdOptions, ...args], options);
     },
-    checkout(...args: ReadonlyArray<string>): void {
+    checkout(...args: readonly string[]): void {
       spawn('git', ['checkout', ...cmdOptions, ...args], options);
     },
-    revParse(...args: ReadonlyArray<string>): string {
+    revParse(...args: readonly string[]): string {
       return spawnOutput('git', ['rev-parse', ...cmdOptions, ...args], options);
     },
-    revList(...args: ReadonlyArray<string>): Array<string> {
+    revList(...args: readonly string[]): string[] {
       const allArgs = ['rev-list', ...cmdOptions, ...args];
       const result = spawnOutput('git', allArgs, options);
       return result === '' ? [] : result.split('\n');
     },
-    catFile(...args: ReadonlyArray<string>): string {
+    catFile(...args: readonly string[]): string {
       return spawnOutput('git', ['cat-file', ...cmdOptions, ...args], options);
     },
-    log(...args: ReadonlyArray<string>): string {
+    log(...args: readonly string[]): string {
       return spawnOutput('git', ['log', ...cmdOptions, ...args], options);
     },
   };
@@ -97,7 +97,7 @@ interface SpawnOptions {
 
 function spawnOutput(
   command: string,
-  args: ReadonlyArray<string>,
+  args: readonly string[],
   options?: SpawnOptions,
 ): string {
   const result = childProcess.spawnSync(command, args, {
@@ -111,12 +111,12 @@ function spawnOutput(
     throw new Error(`Command failed: ${command} ${args.join(' ')}`);
   }
 
-  return result.stdout.toString().trimEnd();
+  return result.stdout.trimEnd();
 }
 
 export function spawn(
   command: string,
-  args: ReadonlyArray<string>,
+  args: readonly string[],
   options?: SpawnOptions,
 ): void {
   const result = childProcess.spawnSync(command, args, {
@@ -146,9 +146,7 @@ function* readdirRecursive(dirPath: string): Generator<{
 }
 
 export function showDirStats(dirPath: string): void {
-  const fileTypes: {
-    [filetype: string]: { filepaths: Array<string>; size: number };
-  } = {};
+  const fileTypes: Record<string, { filepaths: string[]; size: number }> = {};
   let totalSize = 0;
 
   for (const { name, filepath, stats } of readdirRecursive(dirPath)) {
@@ -162,12 +160,12 @@ export function showDirStats(dirPath: string): void {
     fileTypes[filetype].filepaths.push(filepath);
   }
 
-  const stats: Array<[string, number]> = [];
+  const stats: [string, number][] = [];
   for (const [filetype, typeStats] of Object.entries(fileTypes)) {
     const numFiles = typeStats.filepaths.length;
 
     if (numFiles > 1) {
-      stats.push([filetype + ' x' + numFiles, typeStats.size]);
+      stats.push([filetype + ' x' + numFiles.toString(), typeStats.size]);
     } else {
       const relativePath = path.relative(dirPath, typeStats.filepaths[0]);
       stats.push([relativePath, typeStats.size]);

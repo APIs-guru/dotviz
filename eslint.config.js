@@ -6,10 +6,11 @@ import { createNodeResolver, importX } from 'eslint-plugin-import-x';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import eslintPluginUnicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   {
-    ignores: ['npmDist/', 'lib/'],
+    ignores: ['npmDist/', 'lib/', 'test/types/'],
   },
   {
     linterOptions: {
@@ -26,16 +27,45 @@ export default defineConfig([
   {
     files: ['**/*.{js,mjs,cjs}'],
     plugins: {
-      js,
-      'import-x': importX,
       'simple-import-sort': simpleImportSort,
     },
     languageOptions: { globals: globals['shared-node-browser'] },
     extends: [
-      'js/recommended',
-      'import-x/flat/recommended',
+      js.configs.recommended,
+      importX.flatConfigs.recommended,
       eslintPluginUnicorn.configs.recommended,
     ],
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'import-x/first': 'error',
+      'import-x/newline-after-import': 'error',
+      'import-x/no-duplicates': 'error',
+
+      'unicorn/prevent-abbreviations': 'off',
+      'unicorn/prefer-query-selector': 'off',
+      'unicorn/prefer-export-from': ['error', { ignoreUsedVariables: true }],
+    },
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+    },
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.strictTypeChecked,
+      tseslint.configs.stylisticTypeChecked,
+      importX.flatConfigs.recommended,
+      importX.flatConfigs.typescript,
+      eslintPluginUnicorn.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',

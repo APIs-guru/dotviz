@@ -1,4 +1,3 @@
-import assert from 'node:assert';
 import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,7 +14,7 @@ const LOCAL = 'local';
 const { tmpDirPath } = makeTmpDir('graphql-js-npm-diff');
 
 const args = process.argv.slice(2);
-let [fromRevision = 'HEAD', toRevision = LOCAL] = args;
+const [fromRevision = 'HEAD', toRevision = LOCAL] = args;
 if (args.length < 2) {
   console.warn(
     `Assuming you meant: diff-npm-package ${fromRevision} ${toRevision}`,
@@ -86,7 +85,6 @@ function prepareNPMPackage(revision: string): string {
 
   // Returns the complete git hash for a given git revision reference.
   const hash = git().revParse(revision);
-  assert.ok(hash != undefined);
 
   const repoDir = tmpDirPath(hash);
   fs.rmSync(repoDir, { recursive: true, force: true });

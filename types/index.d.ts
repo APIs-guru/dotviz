@@ -1,5 +1,3 @@
-export {};
-
 /**
  * The version of Graphviz used for this build.
  */
@@ -157,7 +155,7 @@ export type MultipleRenderResult = MultipleSuccessResult | FailureResult;
  */
 export interface MultipleSuccessResult {
   status: 'success';
-  output: { [format: string]: string };
+  output: Record<string, string>;
   errors: RenderError[];
 }
 
@@ -266,9 +264,7 @@ export interface Graph {
   subgraphs?: Subgraph[];
 }
 
-export interface Attributes {
-  [name: string]: string | number | boolean | HTMLString;
-}
+export type Attributes = Record<string, string | number | boolean | HTMLString>;
 
 export interface HTMLString {
   html: string;
