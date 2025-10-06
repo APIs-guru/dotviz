@@ -696,21 +696,12 @@ extern gvdevice_features_t device_features_dot;
 
 gvplugin_installed_t dot_device_installed = {FORMAT_DOT, "dot:dot", 1, NULL,
                                              &device_features_dot};
-gvplugin_installed_t gv_device_installed = {FORMAT_DOT, "gv:dot", 1, NULL,
-                                            &device_features_dot};
 gvplugin_available_t dot_device_available = {
     .next = NULL,
     .package = NULL,
     .quality = 1,
     .typeptr = &dot_device_installed,
     .typestr = "dot:dot",
-};
-gvplugin_available_t gv_device_available = {
-    .next = NULL,
-    .package = NULL,
-    .quality = 1,
-    .typeptr = &gv_device_installed,
-    .typestr = "gv:dot",
 };
 
 gvplugin_installed_t dot_render_installed = {FORMAT_DOT, "dot", 1, &dot_engine,
@@ -777,14 +768,15 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->keybindings = gvevent_key_binding;
   job->numkeys = gvevent_key_binding_size;
 
+  job->output_lang = GVRENDER_PLUGIN;
+
+  job->flags |= chkOrder(g);
+
   gvplugin_available_t *device_plugin;
   gvplugin_available_t *render_plugin;
 
-  if (!strcmp(format, "dot")) {
+  if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
     device_plugin = gvc->api[API_device] = &dot_device_available;
-    render_plugin = gvc->api[API_render] = &dot_render_available;
-  } else if (!strcmp(format, "gv")) {
-    device_plugin = gvc->api[API_device] = &gv_device_available;
     render_plugin = gvc->api[API_render] = &dot_render_available;
   } else if (!strcmp(format, "svg")) {
     device_plugin = gvc->api[API_device] = &svg_device_available;
@@ -812,10 +804,6 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->flags |= job->render.features->flags;
 
   job->render.id = job->device.id;
-
-  job->output_lang = GVRENDER_PLUGIN;
-
-  job->flags |= chkOrder(g);
 
   gvrender_engine_t *render_engine = render_plugin->typeptr->engine;
 
