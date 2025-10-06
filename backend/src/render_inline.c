@@ -750,57 +750,24 @@ gvplugin_available_t svg_device_available = {
     .typestr = "svg:svg",
 };
 
-void my_gvrender_select(GVJ_t *job, const char *str) {
-  GVC_t *gvc = job->gvc;
-  gvplugin_available_t *plugin;
-  gvplugin_installed_t *typeptr;
-
-  if (!strcmp(str, "dot")) {
-    plugin = gvc->api[API_device] = &dot_device_available;
-    gvc->api[API_render] = &gvrender_dot_available;
-  } else if (!strcmp(str, "gv")) {
-    plugin = gvc->api[API_device] = &gv_device_available;
-    gvc->api[API_render] = &gvrender_dot_available;
-  } else if (!strcmp(str, "svg")) {
-    plugin = gvc->api[API_device] = &svg_device_available;
-    gvc->api[API_render] = &gvrender_svg_available;
-  }
-
-  typeptr = plugin->typeptr;
-  job->device.engine = typeptr->engine;
-  job->device.features = typeptr->features;
-  job->device.id = typeptr->id;
-  job->device.type = plugin->typestr;
-
-  job->flags |= job->device.features->flags;
-
-  /* The device plugin has a dependency on a render plugin,
-   * so the render plugin should be available as well now */
-  plugin = gvc->api[API_render];
-  typeptr = plugin->typeptr;
-  job->render.engine = typeptr->engine;
-  job->render.features = typeptr->features;
-  job->render.type = plugin->typestr;
-
-  job->flags |= job->render.features->flags;
-
-  if (job->device.engine)
-    job->render.id = typeptr->id;
-  else
-    /* A null device engine indicates that the device id is also the renderer
-     * id and that the renderer doesn't need "device" functions. Device
-     * "features" settings are still available */
-    job->render.id = job->device.id;
-}
-
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
   Agraph_t *g = graph;
   int rc;
 
-  if (strncmp(format, "dot", 3) && strncmp(format, "gv", 2) &&
-      strncmp(format, "svg", 3)) {
+  gvplugin_available_t *plugin;
+
+  if (!strcmp(format, "dot")) {
+    plugin = gvc->api[API_device] = &dot_device_available;
+    gvc->api[API_render] = &gvrender_dot_available;
+  } else if (!strcmp(format, "gv")) {
+    plugin = gvc->api[API_device] = &gv_device_available;
+    gvc->api[API_render] = &gvrender_dot_available;
+  } else if (!strcmp(format, "svg")) {
+    plugin = gvc->api[API_device] = &svg_device_available;
+    gvc->api[API_render] = &gvrender_svg_available;
+  } else {
     agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
     return -1;
   }
@@ -834,7 +801,32 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->keybindings = gvevent_key_binding;
   job->numkeys = gvevent_key_binding_size;
 
-  my_gvrender_select(job, job->output_langname);
+  gvplugin_installed_t *typeptr = plugin->typeptr;
+  job->device.engine = typeptr->engine;
+  job->device.features = typeptr->features;
+  job->device.id = typeptr->id;
+  job->device.type = plugin->typestr;
+
+  job->flags |= job->device.features->flags;
+
+  /* The device plugin has a dependency on a render plugin,
+   * so the render plugin should be available as well now */
+  plugin = gvc->api[API_render];
+  typeptr = plugin->typeptr;
+  job->render.engine = typeptr->engine;
+  job->render.features = typeptr->features;
+  job->render.type = plugin->typestr;
+
+  job->flags |= job->render.features->flags;
+
+  if (job->device.engine)
+    job->render.id = typeptr->id;
+  else
+    /* A null device engine indicates that the device id is also the renderer
+     * id and that the renderer doesn't need "device" functions. Device
+     * "features" settings are still available */
+    job->render.id = job->device.id;
+
   job->output_lang = GVRENDER_PLUGIN;
 
   job->flags |= chkOrder(g);
