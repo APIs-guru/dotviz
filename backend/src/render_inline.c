@@ -7,7 +7,7 @@
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
-#include "gvcproc.h"
+#include "gvio.h"
 #include "gvplugin.h"
 #include "gvplugin_device.h" // IWYU pragma: keep
 #include "gvplugin_render.h" // IWYU pragma: keep
@@ -743,6 +743,77 @@ gvplugin_available_t svg_device_available = {
     .typestr = "svg:svg",
 };
 
+static void gvdevice_close(GVJ_t *job) {
+  if (job->output_filename && job->output_file != stdout &&
+      !job->external_context) {
+    if (job->output_file) {
+      fclose(job->output_file);
+      job->output_file = NULL;
+    }
+    job->output_filename = NULL;
+  }
+}
+
+void my_gvdevice_finalize(GVJ_t *job) {
+  gvdevice_engine_t *gvde = job->device.engine;
+  bool finalized_p = false;
+
+  if (job->flags & GVDEVICE_COMPRESSED_FORMAT) {
+#ifdef HAVE_LIBZ
+    z_streamp z = &z_strm;
+    unsigned char out[8] = "";
+    int ret;
+    int cnt = 0;
+
+    z->next_in = out;
+    z->avail_in = 0;
+    z->next_out = df;
+    z->avail_out = dfallocated;
+    while ((ret = deflate(z, Z_FINISH)) == Z_OK && (cnt++ <= 100)) {
+      gvwrite_no_z(job, df, (size_t)(z->next_out - df));
+      z->next_out = df;
+      z->avail_out = dfallocated;
+    }
+    if (ret != Z_STREAM_END) {
+      job->common->errorfn("deflation finish problem %d cnt=%d\n", ret, cnt);
+      graphviz_exit(1);
+    }
+    gvwrite_no_z(job, df, (size_t)(z->next_out - df));
+
+    ret = deflateEnd(z);
+    if (ret != Z_OK) {
+      job->common->errorfn("deflation end problem %d\n", ret);
+      graphviz_exit(1);
+    }
+    out[0] = (unsigned char)crc;
+    out[1] = (unsigned char)(crc >> 8);
+    out[2] = (unsigned char)(crc >> 16);
+    out[3] = (unsigned char)(crc >> 24);
+    out[4] = (unsigned char)z->total_in;
+    out[5] = (unsigned char)(z->total_in >> 8);
+    out[6] = (unsigned char)(z->total_in >> 16);
+    out[7] = (unsigned char)(z->total_in >> 24);
+    gvwrite_no_z(job, out, sizeof(out));
+#else
+    job->common->errorfn("No libz support\n");
+    graphviz_exit(1);
+#endif
+  }
+
+  if (gvde) {
+    if (gvde->finalize) {
+      gvde->finalize(job);
+      finalized_p = true;
+    }
+  }
+
+  if (!finalized_p) {
+    /* if the device has no finalization then it uses file output */
+    gvflush(job);
+    gvdevice_close(job);
+  }
+}
+
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
@@ -849,7 +920,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
       render_engine->end_job(job);
   }
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
-  gvdevice_finalize(job);
+  my_gvdevice_finalize(job);
 
   if (rc == 0) {
     *result = job->output_data;
