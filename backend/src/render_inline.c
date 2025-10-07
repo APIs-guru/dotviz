@@ -676,42 +676,15 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 
 */
 
-typedef enum {
-  FORMAT_DOT,
-  FORMAT_CANON,
-  FORMAT_PLAIN,
-  FORMAT_PLAIN_EXT,
-  FORMAT_XDOT,
-  FORMAT_XDOT12,
-  FORMAT_XDOT14,
-} format_type;
-
 enum { FORMAT_SVG, FORMAT_SVGZ, FORMAT_SVG_INLINE };
 
-extern gvrender_engine_t dot_engine;
 extern gvrender_engine_t svg_engine;
-
-gvdevice_features_t my_device_features_dot = {
-    0,          /* flags */
-    {0., 0.},   /* default margin - points */
-    {0., 0.},   /* default page width, height - points */
-    {72., 72.}, /* default dpi */
-};
 
 gvdevice_features_t my_device_features_svg = {
     GVDEVICE_DOES_TRUECOLOR | GVDEVICE_DOES_LAYERS, /* flags */
     {0., 0.},   /* default margin - points */
     {0., 0.},   /* default page width, height - points */
     {72., 72.}, /* default dpi */
-};
-
-gvrender_features_t my_render_features_dot = {
-    GVRENDER_DOES_TRANSFORM,
-    /* not really - uses raw graph coords */ /* flags */
-    0.,                                      /* default pad - graph units */
-    NULL,                                    /* knowncolors */
-    0,                                       /* sizeof knowncolors */
-    COLOR_STRING,                            /* color_type */
 };
 
 gvrender_features_t my_render_features_svg = {
@@ -724,25 +697,6 @@ gvrender_features_t my_render_features_svg = {
     RGBA_BYTE,                                   /* color_type */
 };
 
-gvplugin_installed_t dot_device_installed = {FORMAT_DOT, "dot:dot", 1, NULL,
-                                             &my_device_features_dot};
-gvplugin_available_t dot_device_available = {
-    .next = NULL,
-    .package = NULL,
-    .quality = 1,
-    .typeptr = &dot_device_installed,
-    .typestr = "dot:dot",
-};
-
-gvplugin_installed_t dot_render_installed = {FORMAT_DOT, "dot", 1, &dot_engine,
-                                             &my_render_features_dot};
-gvplugin_available_t dot_render_available = {
-    .next = NULL,
-    .package = NULL,
-    .quality = 1,
-    .typeptr = &dot_render_installed,
-    .typestr = "dot",
-};
 gvplugin_installed_t svg_device_installed = {FORMAT_SVG, "svg:svg", 1, NULL,
                                              &my_device_features_svg};
 gvplugin_available_t svg_device_available = {
@@ -775,7 +729,8 @@ extern void nextpage(GVJ_t *job);
 extern void emit_page(GVJ_t *job, graph_t *g);
 extern void emit_end_graph(GVJ_t *job);
 
-void my_emit_graph(GVJ_t *job, graph_t *g, gvrender_engine_t *render_engine) {
+static void my_emit_graph(GVJ_t *job, graph_t *g,
+                          gvrender_engine_t *render_engine) {
   node_t *n;
   char *s;
   int flags = job->flags;
@@ -828,6 +783,8 @@ void my_emit_graph(GVJ_t *job, graph_t *g, gvrender_engine_t *render_engine) {
   emit_end_graph(job);
 }
 
+extern int render_dot(GVC_t *gvc, GVJ_t *job, Agrw_t graph, char **result,
+                      size_t *length);
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
@@ -870,25 +827,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   gvrender_engine_t *render_engine;
 
   if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
-    gvc->api[API_device] = &dot_device_available;
-    gvc->api[API_render] = &dot_render_available;
-
-    job->device.engine = NULL;
-    job->device.features = &my_device_features_dot;
-    job->device.id = FORMAT_DOT;
-    job->device.type = "dot:dot";
-
-    job->flags |= my_device_features_dot.flags;
-
-    job->render.engine = &dot_engine;
-    job->render.features = &my_render_features_dot;
-    job->render.type = "dot";
-
-    job->flags |= my_render_features_dot.flags;
-
-    job->render.id = FORMAT_DOT;
-
-    render_engine = &dot_engine;
+    return render_dot(gvc, job, g, result, length);
   } else if (!strcmp(format, "svg")) {
     gvc->api[API_device] = &svg_device_available;
     gvc->api[API_render] = &svg_render_available;
