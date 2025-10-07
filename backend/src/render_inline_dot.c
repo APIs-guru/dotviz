@@ -356,8 +356,22 @@ static void init_job_viewport(GVJ_t *job, graph_t *g) {
   job->zoom = Z; /* scaling factor */
   job->focus = xy;
 }
+extern obj_state_t *push_obj_state(GVJ_t *job);
+extern void initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj);
 
-extern void emit_begin_graph(GVJ_t *job, graph_t *g);
+void my_emit_begin_graph(GVJ_t *job, graph_t *g) {
+  obj_state_t *obj;
+
+  obj = push_obj_state(job);
+  obj->type = ROOTGRAPH_OBJTYPE;
+  obj->u.g = g;
+  obj->emit_state = EMIT_GDRAW;
+
+  initObjMapData(job, GD_label(g), g);
+
+  dot_engine.begin_graph(job);
+}
+
 extern void emit_colors(GVJ_t *job, graph_t *g);
 extern void firstlayer(GVJ_t *job, int **listp);
 extern bool validlayer(GVJ_t *job);
@@ -394,7 +408,7 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
   }
 
   job->layerNum = 0;
-  emit_begin_graph(job, g);
+  my_emit_begin_graph(job, g);
 
   if (flags & EMIT_COLORS)
     emit_colors(job, g);
