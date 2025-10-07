@@ -13,6 +13,7 @@
 #include "gvplugin_render.h" // IWYU pragma: keep
 #include "streq.h"
 #include "strview.h" // IWYU pragma: keep
+#include "svg.h"
 #include "util/list.h"
 #include "utils.h"
 #include <stdio.h>
@@ -688,15 +689,43 @@ typedef enum {
 enum { FORMAT_SVG, FORMAT_SVGZ, FORMAT_SVG_INLINE };
 
 extern gvrender_engine_t dot_engine;
-extern gvrender_features_t render_features_dot;
-extern gvdevice_features_t device_features_svg;
 extern gvrender_engine_t svg_engine;
-extern gvrender_features_t render_features_svg;
 
-extern gvdevice_features_t device_features_dot;
+gvdevice_features_t my_device_features_dot = {
+    0,          /* flags */
+    {0., 0.},   /* default margin - points */
+    {0., 0.},   /* default page width, height - points */
+    {72., 72.}, /* default dpi */
+};
+
+gvdevice_features_t my_device_features_svg = {
+    GVDEVICE_DOES_TRUECOLOR | GVDEVICE_DOES_LAYERS, /* flags */
+    {0., 0.},   /* default margin - points */
+    {0., 0.},   /* default page width, height - points */
+    {72., 72.}, /* default dpi */
+};
+
+gvrender_features_t my_render_features_dot = {
+    GVRENDER_DOES_TRANSFORM,
+    /* not really - uses raw graph coords */ /* flags */
+    0.,                                      /* default pad - graph units */
+    NULL,                                    /* knowncolors */
+    0,                                       /* sizeof knowncolors */
+    COLOR_STRING,                            /* color_type */
+};
+
+gvrender_features_t my_render_features_svg = {
+    GVRENDER_Y_GOES_DOWN | GVRENDER_DOES_TRANSFORM | GVRENDER_DOES_LABELS |
+        GVRENDER_DOES_MAPS | GVRENDER_DOES_TARGETS |
+        GVRENDER_DOES_TOOLTIPS,                  /* flags */
+    4.,                                          /* default pad - graph units */
+    my_svg_knowncolors,                          /* knowncolors */
+    sizeof(my_svg_knowncolors) / sizeof(char *), /* sizeof knowncolors */
+    RGBA_BYTE,                                   /* color_type */
+};
 
 gvplugin_installed_t dot_device_installed = {FORMAT_DOT, "dot:dot", 1, NULL,
-                                             &device_features_dot};
+                                             &my_device_features_dot};
 gvplugin_available_t dot_device_available = {
     .next = NULL,
     .package = NULL,
@@ -706,7 +735,7 @@ gvplugin_available_t dot_device_available = {
 };
 
 gvplugin_installed_t dot_render_installed = {FORMAT_DOT, "dot", 1, &dot_engine,
-                                             &render_features_dot};
+                                             &my_render_features_dot};
 gvplugin_available_t dot_render_available = {
     .next = NULL,
     .package = NULL,
@@ -715,7 +744,7 @@ gvplugin_available_t dot_render_available = {
     .typestr = "dot",
 };
 gvplugin_installed_t svg_device_installed = {FORMAT_SVG, "svg:svg", 1, NULL,
-                                             &device_features_svg};
+                                             &my_device_features_svg};
 gvplugin_available_t svg_device_available = {
     .next = NULL,
     .package = NULL,
@@ -725,7 +754,7 @@ gvplugin_available_t svg_device_available = {
 };
 
 gvplugin_installed_t svg_render_installed = {FORMAT_SVG, "svg", 1, &svg_engine,
-                                             &render_features_svg};
+                                             &my_render_features_svg};
 gvplugin_available_t svg_render_available = {
     .next = NULL,
     .package = NULL,
@@ -843,17 +872,17 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     gvc->api[API_render] = &dot_render_available;
 
     job->device.engine = NULL;
-    job->device.features = &device_features_dot;
+    job->device.features = &my_device_features_dot;
     job->device.id = FORMAT_DOT;
     job->device.type = "dot:dot";
 
-    job->flags |= device_features_dot.flags;
+    job->flags |= my_device_features_dot.flags;
 
     job->render.engine = &dot_engine;
-    job->render.features = &render_features_dot;
+    job->render.features = &my_render_features_dot;
     job->render.type = "dot";
 
-    job->flags |= render_features_dot.flags;
+    job->flags |= my_render_features_dot.flags;
 
     job->render.id = FORMAT_DOT;
 
@@ -863,17 +892,17 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     gvc->api[API_render] = &svg_render_available;
 
     job->device.engine = NULL;
-    job->device.features = &device_features_svg;
+    job->device.features = &my_device_features_svg;
     job->device.id = FORMAT_SVG;
     job->device.type = "svg:svg";
 
-    job->flags |= device_features_svg.flags;
+    job->flags |= my_device_features_svg.flags;
 
     job->render.engine = &svg_engine;
-    job->render.features = &render_features_svg;
+    job->render.features = &my_render_features_svg;
     job->render.type = "svg";
 
-    job->flags |= render_features_svg.flags;
+    job->flags |= my_render_features_svg.flags;
 
     job->render.id = FORMAT_SVG;
 
