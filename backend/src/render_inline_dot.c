@@ -369,8 +369,7 @@ extern void nextpage(GVJ_t *job);
 extern void emit_page(GVJ_t *job, graph_t *g);
 extern void emit_end_graph(GVJ_t *job);
 
-static void my_emit_graph(GVJ_t *job, graph_t *g,
-                          gvrender_engine_t *render_engine) {
+static void my_emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
   char *s;
   int flags = job->flags;
@@ -392,11 +391,6 @@ static void my_emit_graph(GVJ_t *job, graph_t *g,
   } else {
     job->view.x = job->width / job->scale.x;
     job->view.y = job->height / job->scale.y;
-  }
-
-  s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
-  if (s && s[0] != '\0' && render_engine->comment) {
-    render_engine->comment(job, s);
   }
 
   job->layerNum = 0;
@@ -444,11 +438,6 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
 
   job->render.id = FORMAT_DOT;
 
-  gvrender_engine_t *render_engine = &dot_engine;
-
-  if (render_engine->begin_job)
-    render_engine->begin_job(job);
-
   gvc->active_jobs = job;  /* first job of new list */
   job->next_active = NULL; /* terminate active list */
   job->callbacks = &gvdevice_callbacks;
@@ -459,10 +448,7 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
   init_job_viewport(job, g);
   init_job_pagination(job, g);
 
-  my_emit_graph(job, g, render_engine);
-
-  if (render_engine->end_job)
-    render_engine->end_job(job);
+  my_emit_graph(job, g);
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 
