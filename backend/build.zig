@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{
         .preferred_optimize_mode = .ReleaseSmall,
     });
-    const graphviz_build_mode = std.builtin.OptimizeMode.ReleaseFast;
+    const graphviz_build_mode = std.builtin.OptimizeMode.ReleaseSmall;
 
     const lib_mod = b.createModule(.{
         .root_source_file = b.path("src/wasm_module.zig"),
