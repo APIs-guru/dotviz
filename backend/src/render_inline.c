@@ -775,7 +775,7 @@ extern void nextpage(GVJ_t *job);
 extern void emit_page(GVJ_t *job, graph_t *g);
 extern void emit_end_graph(GVJ_t *job);
 
-void my_emit_graph(GVJ_t *job, graph_t *g) {
+void my_emit_graph(GVJ_t *job, graph_t *g, gvrender_engine_t *render_engine) {
   node_t *n;
   char *s;
   int flags = job->flags;
@@ -800,7 +800,9 @@ void my_emit_graph(GVJ_t *job, graph_t *g) {
   }
 
   s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
-  gvrender_comment(job, s);
+  if (s && s[0] != '\0' && render_engine->comment) {
+    render_engine->comment(job, s);
+  }
 
   job->layerNum = 0;
   emit_begin_graph(job, g);
@@ -925,7 +927,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   init_job_viewport(job, g);
   init_job_pagination(job, g);
 
-  my_emit_graph(job, g);
+  my_emit_graph(job, g, render_engine);
 
   if (render_engine->end_job)
     render_engine->end_job(job);
