@@ -442,13 +442,11 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
   job->device.id = FORMAT_DOT;
   job->device.type = "dot:dot";
 
-  job->flags |= my_device_features_dot.flags;
-
   job->render.engine = &dot_engine;
   job->render.features = &my_render_features_dot;
   job->render.type = "dot";
 
-  job->flags |= my_render_features_dot.flags;
+  job->flags |= GVRENDER_DOES_TRANSFORM;
 
   job->render.id = FORMAT_DOT;
 
