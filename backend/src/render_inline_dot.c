@@ -1,6 +1,7 @@
 #include "agrw.h"
 #include "cgraph.h"
 #include "const.h"
+#include "geom.h"
 #include "geomprocs.h"
 #include "gv_ctype.h"
 #include "gv_math.h"
@@ -224,14 +225,7 @@ static void init_job_pad(GVJ_t *job) {
   if (gvc->graph_sets_pad) {
     job->pad = gvc->pad;
   } else {
-    switch (job->output_lang) {
-    case GVRENDER_PLUGIN:
-      job->pad.x = job->pad.y = job->render.features->default_pad;
-      break;
-    default:
-      job->pad.x = job->pad.y = DEFAULT_GRAPH_PAD;
-      break;
-    }
+    job->pad.x = job->pad.y = 0;
   }
 }
 
@@ -241,42 +235,15 @@ static void init_job_margin(GVJ_t *job) {
   if (gvc->graph_sets_margin) {
     job->margin = gvc->margin;
   } else {
-    /* set default margins depending on format */
-    switch (job->output_lang) {
-    case GVRENDER_PLUGIN:
-      job->margin = job->device.features->default_margin;
-      break;
-    case PCL:
-    case MIF:
-    case METAPOST:
-    case VTX:
-    case QPDF:
-      job->margin.x = job->margin.y = DEFAULT_PRINT_MARGIN;
-      break;
-    default:
-      job->margin.x = job->margin.y = DEFAULT_EMBED_MARGIN;
-      break;
-    }
+    job->margin.x = job->margin.y = 0;
   }
 }
 
 static void init_job_dpi(GVJ_t *job, graph_t *g) {
-  GVJ_t *firstjob = job->gvc->active_jobs;
-
   if (GD_drawing(g)->dpi != 0) {
     job->dpi.x = job->dpi.y = GD_drawing(g)->dpi;
-  } else if (firstjob && firstjob->device_sets_dpi) {
-    job->dpi = firstjob->device_dpi; /* some devices set dpi in initialize() */
   } else {
-    /* set default margins depending on format */
-    switch (job->output_lang) {
-    case GVRENDER_PLUGIN:
-      job->dpi = job->device.features->default_dpi;
-      break;
-    default:
-      job->dpi.x = job->dpi.y = DEFAULT_DPI;
-      break;
-    }
+    job->dpi.x = job->dpi.y = 72;
   }
 }
 
