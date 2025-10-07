@@ -399,6 +399,10 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   Agraph_t *g = graph;
   int rc;
 
+  init_bb(g);
+  init_gvc(gvc, g);
+  init_layering(gvc, g);
+
   /* create a job for the required format */
   GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
   job->output_langname = format;
@@ -416,10 +420,6 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->output_data = *result;
   job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
   job->output_data_position = 0;
-
-  init_bb(g);
-  init_gvc(gvc, g);
-  init_layering(gvc, g);
 
   job->input_filename = NULL;
   job->graph_index = 0;
