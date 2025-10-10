@@ -352,19 +352,6 @@ static void init_job_viewport(GVJ_t *job, graph_t *g) {
 extern obj_state_t *push_obj_state(GVJ_t *job);
 extern void initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj);
 
-void my_emit_begin_graph(GVJ_t *job, graph_t *g) {
-  obj_state_t *obj;
-
-  obj = push_obj_state(job);
-  obj->type = ROOTGRAPH_OBJTYPE;
-  obj->u.g = g;
-  obj->emit_state = EMIT_GDRAW;
-
-  initObjMapData(job, GD_label(g), g);
-
-  dot_begin_graph(job);
-}
-
 extern void firstlayer(GVJ_t *job, int **listp);
 extern bool validlayer(GVJ_t *job);
 extern void nextlayer(GVJ_t *job, int **listp);
@@ -376,10 +363,6 @@ extern void emit_page(GVJ_t *job, graph_t *g);
 extern void emit_end_graph(GVJ_t *job);
 
 extern void pop_obj_state(GVJ_t *job);
-void my_emit_end_graph(GVJ_t *job) {
-  gvrender_end_graph(job);
-  pop_obj_state(job);
-}
 
 static void my_emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
@@ -405,8 +388,16 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
     job->view.y = job->height / job->scale.y;
   }
 
-  job->layerNum = 0;
-  my_emit_begin_graph(job, g);
+  obj_state_t *obj;
+
+  obj = push_obj_state(job);
+  obj->type = ROOTGRAPH_OBJTYPE;
+  obj->u.g = g;
+  obj->emit_state = EMIT_GDRAW;
+
+  initObjMapData(job, GD_label(g), g);
+
+  dot_begin_graph(job);
 
   /* reset node state */
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
@@ -414,7 +405,9 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
   if (job->gvc->numLayers > 1) {
     agwarningf("layers not supported in dot output\n");
   }
-  my_emit_end_graph(job);
+  dot_end_graph(job);
+
+  pop_obj_state(job);
 }
 
 int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
