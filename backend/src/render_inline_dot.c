@@ -375,6 +375,12 @@ extern void nextpage(GVJ_t *job);
 extern void emit_page(GVJ_t *job, graph_t *g);
 extern void emit_end_graph(GVJ_t *job);
 
+extern void pop_obj_state(GVJ_t *job);
+void my_emit_end_graph(GVJ_t *job) {
+  gvrender_end_graph(job);
+  pop_obj_state(job);
+}
+
 static void my_emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
   char *s;
@@ -408,7 +414,7 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
   if (job->gvc->numLayers > 1) {
     agwarningf("layers not supported in dot output\n");
   }
-  emit_end_graph(job);
+  my_emit_end_graph(job);
 }
 
 int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
