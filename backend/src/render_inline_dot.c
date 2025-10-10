@@ -1,10 +1,7 @@
-#include "agrw.h"
+
 #include "cgraph.h"
-#include "const.h"
 #include "geom.h"
 #include "geomprocs.h"
-#include "gv_ctype.h"
-#include "gv_math.h"
 #include "gvc.h" // IWYU pragma: keep
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
@@ -14,10 +11,7 @@
 #include "gvplugin.h"
 #include "gvplugin_device.h" // IWYU pragma: keep
 #include "gvplugin_render.h" // IWYU pragma: keep
-#include "render_inline.h"
-#include "streq.h"
-#include "strview.h" // IWYU pragma: keep
-#include "util/list.h"
+#include "strview.h"         // IWYU pragma: keep
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +29,7 @@ typedef enum {
 
 static void dot_begin_graph(GVJ_t *job) {
   graph_t *g = job->obj->u.g;
-  attach_attrs(g);
+  (void)attach_attrs_and_arrows(g, NULL, NULL);
 }
 
 typedef int (*putstrfn)(void *chan, const char *str);
@@ -367,7 +361,7 @@ void my_emit_begin_graph(GVJ_t *job, graph_t *g) {
 
   initObjMapData(job, GD_label(g), g);
 
-  dot_engine.begin_graph(job);
+  dot_begin_graph(job);
 }
 
 extern void emit_colors(GVJ_t *job, graph_t *g);
