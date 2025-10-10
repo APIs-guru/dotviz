@@ -393,8 +393,7 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
 
   io_save = g->clos->disc.io;
   g->clos->disc.io = &io;
-  if (!(job->flags & OUTPUT_NOT_REQUIRED))
-    agwrite(g, job);
+  agwrite(g, job);
   g->clos->disc.io = io_save;
 
   pop_obj_state(job);
