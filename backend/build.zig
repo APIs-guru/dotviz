@@ -48,6 +48,7 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/render_inline_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/render_inline_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/output_dot.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/write_c_inline.c") });
     lib.root_module.export_symbol_names = &.{
         "viz_dot_to_graph",
         "viz_json_to_graph",
@@ -400,7 +401,8 @@ const src_cgraph = [_][]const u8{
     "imap.c",    "rec.c",    "subg.c", "ingraphs.c", "apply.c",       "agerror.c",
     "graph.c",   "id.c",     "edge.c", "utils.c",    "obj.c",         "unflatten.c",
     "acyclic.c", "refstr.c", "tred.c", "node.c",     "node_induce.c", "attr.c",
-    "write.c",   "io.c",
+    // "write.c",
+    "io.c",
 };
 
 const src_gvc = [_][]const u8{
