@@ -365,7 +365,6 @@ void my_emit_begin_graph(GVJ_t *job, graph_t *g) {
   dot_begin_graph(job);
 }
 
-extern void emit_colors(GVJ_t *job, graph_t *g);
 extern void firstlayer(GVJ_t *job, int **listp);
 extern bool validlayer(GVJ_t *job);
 extern void nextlayer(GVJ_t *job, int **listp);
@@ -403,23 +402,14 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
   job->layerNum = 0;
   my_emit_begin_graph(job, g);
 
-  if (flags & EMIT_COLORS)
-    emit_colors(job, g);
-
   /* reset node state */
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
   /* iterate layers */
   for (firstlayer(job, &lp); validlayer(job); nextlayer(job, &lp)) {
-    if (numPhysicalLayers(job) > 1)
-      gvrender_begin_layer(job);
-
     /* iterate pages */
     for (firstpage(job); validpage(job); nextpage(job))
       emit_page(job, g);
-
-    if (numPhysicalLayers(job) > 1)
-      gvrender_end_layer(job);
   }
   emit_end_graph(job);
 }

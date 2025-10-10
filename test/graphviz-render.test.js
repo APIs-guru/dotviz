@@ -31,5 +31,54 @@ describe('Viz', function () {
         errors: [],
       });
     });
+    it('layers support', function () {
+      const result = viz.render(
+        `digraph G {
+	layers="local:pvt:test:new:ofc";
+
+	node1  [layer="pvt"];
+	node2  [layer="all"];
+	node3  [layer="pvt:ofc"];		/* pvt, test, new, and ofc */
+	node2 -> node3  [layer="pvt:all"];	/* same as pvt:ofc */
+	node2 -> node4 [layer=3];		/* same as test */
+}`,
+      );
+
+      assert.deepStrictEqual(result, {
+        status: 'success',
+        output: String.raw`digraph G {
+	graph [bb="0,0,199.27,108",
+		layers="local:pvt:test:new:ofc"
+	];
+	node [label="\N"];
+	node1	[height=0.5,
+		layer=pvt,
+		pos="34.637,90",
+		width=0.96213];
+	node2	[height=0.5,
+		layer=all,
+		pos="121.64,90",
+		width=0.96213];
+	node3	[height=0.5,
+		layer="pvt:ofc",
+		pos="77.637,18",
+		width=0.96213];
+	node2 -> node3	[layer="pvt:all",
+		pos="e,87.989,35.47 111.21,72.411 106.06,64.216 99.724,54.14 93.951,44.955"];
+	node4	[height=0.5,
+		pos="164.64,18",
+		width=0.96213];
+	node2 -> node4	[layer=3,
+		pos="e,154.52,35.47 131.83,72.411 136.81,64.304 142.92,54.354 148.51,45.248"];
+}
+`,
+        errors: [
+          {
+            level: 'warning',
+            message: 'layers not supported in dot output',
+          },
+        ],
+      });
+    });
   });
 });
