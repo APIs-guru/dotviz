@@ -27,9 +27,10 @@ typedef enum {
   FORMAT_XDOT14,
 } format_type;
 
+extern void my_attach_attrs_and_arrows(graph_t *g);
 static void dot_begin_graph(GVJ_t *job) {
   graph_t *g = job->obj->u.g;
-  (void)attach_attrs_and_arrows(g, NULL, NULL);
+  my_attach_attrs_and_arrows(g);
 }
 
 typedef int (*putstrfn)(void *chan, const char *str);

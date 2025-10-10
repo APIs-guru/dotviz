@@ -275,7 +275,7 @@ static void rec_attach_bb(graph_t *g, Agsym_t *bbsym, Agsym_t *lpsym,
   agxbfree(&buf);
 }
 
-double attach_attrs_and_arrows(graph_t *g, bool *sp, bool *ep) {
+void my_attach_attrs_and_arrows(graph_t *g) {
   node_t *n;
   edge_t *e;
   pointf ptf;
@@ -424,12 +424,4 @@ double attach_attrs_and_arrows(graph_t *g, bool *sp, bool *ep) {
 
   if (HAS_CLUST_EDGE(g))
     undoClusterEdges(g);
-
-  if (sp != NULL) {
-    *sp = s_arrows;
-  }
-  if (ep != NULL) {
-    *ep = e_arrows;
-  }
-  return offsets.Y;
 }
