@@ -28,62 +28,39 @@ typedef enum {
 } format_type;
 
 extern void my_attach_attrs_and_arrows(graph_t *g);
-static void dot_begin_graph(GVJ_t *job) {
-  graph_t *g = job->obj->u.g;
-  my_attach_attrs_and_arrows(g);
-}
 
 typedef int (*putstrfn)(void *chan, const char *str);
 typedef int (*flushfn)(void *chan);
-static void dot_end_graph(GVJ_t *job) {
-  graph_t *g = job->obj->u.g;
-  Agiodisc_t *io_save;
-  static Agiodisc_t io;
-
-  if (io.afread == NULL) {
-    io.afread = AgIoDisc.afread;
-    io.putstr = (putstrfn)gvputs;
-    io.flush = (flushfn)gvflush;
-  }
-
-  io_save = g->clos->disc.io;
-  g->clos->disc.io = &io;
-  if (!(job->flags & OUTPUT_NOT_REQUIRED))
-    agwrite(g, job);
-  g->clos->disc.io = io_save;
-}
 
 static gvrender_engine_t dot_engine = {
-    0, /* dot_begin_job */
-    0, /* dot_end_job */
-    dot_begin_graph,
-    dot_end_graph,
-    0, /* dot_begin_layer */
-    0, /* dot_end_layer */
-    0, /* dot_begin_page */
-    0, /* dot_end_page */
-    0, /* dot_begin_cluster */
-    0, /* dot_end_cluster */
-    0, /* dot_begin_nodes */
-    0, /* dot_end_nodes */
-    0, /* dot_begin_edges */
-    0, /* dot_end_edges */
-    0, /* dot_begin_node */
-    0, /* dot_end_node */
-    0, /* dot_begin_edge */
-    0, /* dot_end_edge */
-    0, /* dot_begin_anchor */
-    0, /* dot_end_anchor */
-    0, /* dot_begin_label */
-    0, /* dot_end_label */
-    0, /* dot_textspan */
-    0, /* dot_resolve_color */
-    0, /* dot_ellipse */
-    0, /* dot_polygon */
-    0, /* dot_bezier */
-    0, /* dot_polyline */
-    0, /* dot_comment */
-    0, /* dot_library_shape */
+    0,       /* dot_begin_job */
+    0,       /* dot_end_job */
+    0, 0, 0, /* dot_begin_layer */
+    0,       /* dot_end_layer */
+    0,       /* dot_begin_page */
+    0,       /* dot_end_page */
+    0,       /* dot_begin_cluster */
+    0,       /* dot_end_cluster */
+    0,       /* dot_begin_nodes */
+    0,       /* dot_end_nodes */
+    0,       /* dot_begin_edges */
+    0,       /* dot_end_edges */
+    0,       /* dot_begin_node */
+    0,       /* dot_end_node */
+    0,       /* dot_begin_edge */
+    0,       /* dot_end_edge */
+    0,       /* dot_begin_anchor */
+    0,       /* dot_end_anchor */
+    0,       /* dot_begin_label */
+    0,       /* dot_end_label */
+    0,       /* dot_textspan */
+    0,       /* dot_resolve_color */
+    0,       /* dot_ellipse */
+    0,       /* dot_polygon */
+    0,       /* dot_bezier */
+    0,       /* dot_polyline */
+    0,       /* dot_comment */
+    0,       /* dot_library_shape */
 };
 extern bool Y_invert;
 
@@ -397,7 +374,7 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
 
   initObjMapData(job, GD_label(g), g);
 
-  dot_begin_graph(job);
+  my_attach_attrs_and_arrows(g);
 
   /* reset node state */
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
@@ -405,7 +382,20 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
   if (job->gvc->numLayers > 1) {
     agwarningf("layers not supported in dot output\n");
   }
-  dot_end_graph(job);
+  Agiodisc_t *io_save;
+  static Agiodisc_t io;
+
+  if (io.afread == NULL) {
+    io.afread = AgIoDisc.afread;
+    io.putstr = (putstrfn)gvputs;
+    io.flush = (flushfn)gvflush;
+  }
+
+  io_save = g->clos->disc.io;
+  g->clos->disc.io = &io;
+  if (!(job->flags & OUTPUT_NOT_REQUIRED))
+    agwrite(g, job);
+  g->clos->disc.io = io_save;
 
   pop_obj_state(job);
 }
