@@ -10,6 +10,7 @@
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "gvcproc.h"
+#include "gvio.h"
 #include "gvplugin.h"
 #include "gvplugin_device.h" // IWYU pragma: keep
 #include "gvplugin_render.h" // IWYU pragma: keep
@@ -31,7 +32,64 @@ typedef enum {
   FORMAT_XDOT12,
   FORMAT_XDOT14,
 } format_type;
-extern gvrender_engine_t dot_engine;
+
+static void dot_begin_graph(GVJ_t *job) {
+  graph_t *g = job->obj->u.g;
+  attach_attrs(g);
+}
+
+typedef int (*putstrfn)(void *chan, const char *str);
+typedef int (*flushfn)(void *chan);
+static void dot_end_graph(GVJ_t *job) {
+  graph_t *g = job->obj->u.g;
+  Agiodisc_t *io_save;
+  static Agiodisc_t io;
+
+  if (io.afread == NULL) {
+    io.afread = AgIoDisc.afread;
+    io.putstr = (putstrfn)gvputs;
+    io.flush = (flushfn)gvflush;
+  }
+
+  io_save = g->clos->disc.io;
+  g->clos->disc.io = &io;
+  if (!(job->flags & OUTPUT_NOT_REQUIRED))
+    agwrite(g, job);
+  g->clos->disc.io = io_save;
+}
+
+static gvrender_engine_t dot_engine = {
+    0, /* dot_begin_job */
+    0, /* dot_end_job */
+    dot_begin_graph,
+    dot_end_graph,
+    0, /* dot_begin_layer */
+    0, /* dot_end_layer */
+    0, /* dot_begin_page */
+    0, /* dot_end_page */
+    0, /* dot_begin_cluster */
+    0, /* dot_end_cluster */
+    0, /* dot_begin_nodes */
+    0, /* dot_end_nodes */
+    0, /* dot_begin_edges */
+    0, /* dot_end_edges */
+    0, /* dot_begin_node */
+    0, /* dot_end_node */
+    0, /* dot_begin_edge */
+    0, /* dot_end_edge */
+    0, /* dot_begin_anchor */
+    0, /* dot_end_anchor */
+    0, /* dot_begin_label */
+    0, /* dot_end_label */
+    0, /* dot_textspan */
+    0, /* dot_resolve_color */
+    0, /* dot_ellipse */
+    0, /* dot_polygon */
+    0, /* dot_bezier */
+    0, /* dot_polyline */
+    0, /* dot_comment */
+    0, /* dot_library_shape */
+};
 extern bool Y_invert;
 
 gvdevice_features_t my_device_features_dot = {
