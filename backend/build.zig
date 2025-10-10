@@ -47,6 +47,7 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/context_inline.c") });
     lib.addCSourceFile(.{ .file = b.path("src/render_inline_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/render_inline_svg.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/output_dot.c") });
     lib.root_module.export_symbol_names = &.{
         "viz_dot_to_graph",
         "viz_json_to_graph",
@@ -414,7 +415,9 @@ const src_common = [_][]const u8{
     "taper.c",    "globals.c", "timing.c",   "psusershape.c",  "emit.c",
     "textspan.c", "utils.c",   "args.c",     "routespl.c",     "shapes.c",
     "pointset.c", "ns.c",      "ellipse.c",  "arrows.c",       "geom.c",
-    "input.c",    "output.c",  "labels.c",   "htmltable.c",
+    "input.c", //"output.c",
+    "labels.c",
+    "htmltable.c",
 };
 
 const src_util = [_][]const u8{
