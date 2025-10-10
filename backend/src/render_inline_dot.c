@@ -405,11 +405,8 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
   /* reset node state */
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
-  /* iterate layers */
-  for (firstlayer(job, &lp); validlayer(job); nextlayer(job, &lp)) {
-    /* iterate pages */
-    for (firstpage(job); validpage(job); nextpage(job))
-      emit_page(job, g);
+  if (job->gvc->numLayers > 1) {
+    agwarningf("layers not supported in dot output\n");
   }
   emit_end_graph(job);
 }
