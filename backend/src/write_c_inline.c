@@ -1,11 +1,3 @@
-/**
- * @file
- * @brief implements @ref agwrite, @ref agcanon, @ref agstrcanon,
- * and @ref agcanonStr
- *
- * @ingroup cgraph_graph
- * @ingroup cgraph_core
- */
 /*************************************************************************
  * Copyright (c) 2011 AT&T Intellectual Property
  * All rights reserved. This program and the accompanying materials
@@ -34,10 +26,9 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 static void ioput(output_string *output, char *str) {
-  // +
-  size_t len = strlen(str);
+  size_t len = str != NULL ? strlen(str) : 0;
 
-  if (!len || !str)
+  if (len == 0)
     return;
 
   if (len > output->data_allocated - (output->data_position + 1)) {
@@ -124,7 +115,7 @@ static bool is_escape(const char *str) {
 /* Canonicalize ordinary strings.
  * Assumes buf is large enough to hold output.
  */
-static char *_agstrcanon(char *arg, char *buf) {
+static char *return_canonstr(char *arg, char *buf) {
   char *s, *p;
   char uc;
   int cnt = 0, dotcnt = 0;
@@ -212,24 +203,10 @@ static char *_agstrcanon(char *arg, char *buf) {
   return arg;
 }
 
-static char *getoutputbuffer(const char *str) {
-  static char *rv;
-  static size_t len = 0;
-  const size_t req = MAX(agstrcanon_bytes(str), BUFSIZ);
-  if (req > len) {
-    char *r = realloc(rv, req);
-    if (r == NULL)
-      return NULL;
-    rv = r;
-    len = req;
-  }
-  return rv;
-}
-
 static void write_canonstr_str(output_string *output, char *str) {
 
   // maximum bytes required for canonicalized string
-  const size_t required = agstrcanon_bytes(str);
+  const size_t required = 2 * strlen(str) + 2;
 
   // allocate space to stage the canonicalized string
   char *const scratch = malloc(required);
@@ -238,33 +215,20 @@ static void write_canonstr_str(output_string *output, char *str) {
     exit(1);
   }
 
-  char *canonicalized = _agstrcanon(str, scratch);
+  char *canonicalized = return_canonstr(str, scratch);
   ioput(output, canonicalized);
 
   free(scratch);
 }
 
 static void write_canonstr_refstr(output_string *output, char *str) {
-
-  // maximum bytes required for canonicalized string
-  const size_t required = agstrcanon_bytes(str);
-
-  // allocate space to stage the canonicalized string
-  char *const scratch = malloc(required);
-  if (scratch == NULL) {
-    agerrorf("memory allocation failure\n");
-    exit(1);
-  }
-
   if (aghtmlstr(str)) {
-    sprintf(scratch, "<%s>", str);
-    ioput(output, scratch);
-
+    ioput(output, "<");
+    ioput(output, str);
+    ioput(output, ">");
   } else {
-    char *canonicalized = _agstrcanon(str, scratch);
-    ioput(output, canonicalized);
+    write_canonstr_str(output, str);
   }
-  free(scratch);
 }
 
 static void write_dict(output_string *output, char *name, Dict_t *dict,
