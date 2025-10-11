@@ -341,9 +341,9 @@ extern void emit_end_graph(GVJ_t *job);
 
 extern void pop_obj_state(GVJ_t *job);
 
-extern void my_agwrite(Agraph_t *g, output_string *output,
-                       unsigned long max_output_linelength);
-static void my_emit_graph(GVJ_t *job, graph_t *g) {
+extern output_string my_agwrite(Agraph_t *g,
+                                unsigned long max_output_linelength);
+static output_string my_emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
   char *s;
   int flags = job->flags;
@@ -395,28 +395,22 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
 
   io_save = g->clos->disc.io;
   g->clos->disc.io = &io;
-  output_string output;
-  output.data = job->output_data;
-  output.data_allocated = job->output_data_allocated;
-  output.data_position = job->output_data_position;
   char *linelength = agget(g, "linelength");
   unsigned long max_len = 0;
   if (linelength != NULL && gv_isdigit(*linelength)) {
     max_len = strtoul(linelength, NULL, 10);
   }
-  my_agwrite(g, &output, max_len);
-  job->output_data = output.data;
-  job->output_data_allocated = output.data_allocated;
-  job->output_data_position = output.data_position;
+
+  output_string output = my_agwrite(g, max_len);
 
   g->clos->disc.io = io_save;
 
   pop_obj_state(job);
+  return output;
 }
 
 int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
                size_t *length) {
-  int rc;
   gvc->api[API_device] = &dot_device_available;
   gvc->api[API_render] = &dot_render_available;
 
@@ -443,14 +437,12 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
   init_job_viewport(job, g);
   init_job_pagination(job, g);
 
-  my_emit_graph(job, g);
+  output_string output = my_emit_graph(job, g);
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 
-  if (rc == 0) {
-    *result = job->output_data;
-    *length = job->output_data_position;
-  }
+  *result = output.data;
+  *length = output.data_position;
 
   free(job->active_tooltip);
   free(job->selected_href);

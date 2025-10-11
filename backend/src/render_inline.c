@@ -407,18 +407,6 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->gvc = gvc;
   job = gvc->job;
 
-  /* page size on Linux, Mac OS X and Windows */
-  const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
-
-  if (!(*result = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
-    agerrorf("failure malloc'ing for result string");
-    return -1;
-  }
-
-  job->output_data = *result;
-  job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
-  job->output_data_position = 0;
-
   job->input_filename = NULL;
   job->graph_index = 0;
   job->common = &gvc->common;
@@ -430,11 +418,19 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
 
   job->flags |= chkOrder(g);
 
-  gvrender_engine_t *render_engine;
-
   if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
     return render_dot(gvc, job, g, result, length);
   } else if (!strcmp(format, "svg")) {
+    /* page size on Linux, Mac OS X and Windows */
+    const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
+
+    if (!(*result = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
+      agerrorf("failure malloc'ing for result string");
+      return -1;
+    }
+    job->output_data = *result;
+    job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
+    job->output_data_position = 0;
     return render_svg(gvc, job, g, result, length);
   } else {
     agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);

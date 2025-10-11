@@ -603,19 +603,30 @@ static void set_attrwf(Agraph_t *g, bool toplevel, bool value) {
 }
 
 /// Return 0 on success, EOF on failure
-void my_agwrite(Agraph_t *g, output_string *output,
-                unsigned long max_output_linelength) {
+output_string my_agwrite(Agraph_t *g, unsigned long max_output_linelength) {
+  /* page size on Linux, Mac OS X and Windows */
+  const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
+  output_string output;
+  if (!(output.data = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
+    agerrorf("failure malloc'ing for result string");
+    exit(-1);
+  }
+  output.data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
+  output.data_position = 0;
+
   Level = 0; /* re-initialize tab level */
   if ((max_output_linelength == 0 || max_output_linelength >= MIN_OUTPUTLINE) &&
       max_output_linelength <= INT_MAX) {
     Max_outputline = (int)max_output_linelength;
   }
   write_info_t wr_info = before_write(g);
-  write_hdr(g, output, true);
-  write_body(g, output, &wr_info);
-  write_trl(output);
+  write_hdr(g, &output, true);
+  write_body(g, &output, &wr_info);
+  write_trl(&output);
   after_write(wr_info);
   Max_outputline = MAX_OUTPUTLINE;
+
+  return output;
 }
 
 static uint64_t subgdfs(Agraph_t *g, uint64_t ix, write_info_t *wr_info) {
