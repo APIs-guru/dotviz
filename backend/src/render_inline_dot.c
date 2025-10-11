@@ -1,4 +1,5 @@
 
+#include "agrw.h"
 #include "cgraph.h"
 #include "geom.h"
 #include "geomprocs.h"
@@ -341,6 +342,7 @@ extern void emit_end_graph(GVJ_t *job);
 
 extern void pop_obj_state(GVJ_t *job);
 
+extern void my_agwrite(Agraph_t *g, output_string *output);
 static void my_emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
   char *s;
@@ -393,7 +395,15 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
 
   io_save = g->clos->disc.io;
   g->clos->disc.io = &io;
-  agwrite(g, job);
+  output_string output;
+  output.data = job->output_data;
+  output.data_allocated = job->output_data_allocated;
+  output.data_position = job->output_data_position;
+  my_agwrite(g, &output);
+  job->output_data = output.data;
+  job->output_data_allocated = output.data_allocated;
+  job->output_data_position = output.data_position;
+
   g->clos->disc.io = io_save;
 
   pop_obj_state(job);

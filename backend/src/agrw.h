@@ -39,4 +39,10 @@ const char *gw_agnameof_graph(Agrw_t graph);
 const char *gw_agnameof_node(Agrw_node_t node);
 const char *gw_agnameof_edge(Agrw_edge_t edge);
 
+typedef struct {
+  char *data;
+  size_t data_allocated;
+  size_t data_position;
+} output_string;
+
 #endif
