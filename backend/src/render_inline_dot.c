@@ -3,17 +3,16 @@
 #include "cgraph.h"
 #include "geom.h"
 #include "geomprocs.h"
+#include "gv_ctype.h"
 #include "gvc.h" // IWYU pragma: keep
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
-#include "gvcproc.h"
 #include "gvio.h"
 #include "gvplugin.h"
 #include "gvplugin_device.h" // IWYU pragma: keep
 #include "gvplugin_render.h" // IWYU pragma: keep
 #include "strview.h"         // IWYU pragma: keep
-#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -342,7 +341,8 @@ extern void emit_end_graph(GVJ_t *job);
 
 extern void pop_obj_state(GVJ_t *job);
 
-extern void my_agwrite(Agraph_t *g, output_string *output);
+extern void my_agwrite(Agraph_t *g, output_string *output,
+                       unsigned long max_output_linelength);
 static void my_emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
   char *s;
@@ -399,7 +399,12 @@ static void my_emit_graph(GVJ_t *job, graph_t *g) {
   output.data = job->output_data;
   output.data_allocated = job->output_data_allocated;
   output.data_position = job->output_data_position;
-  my_agwrite(g, &output);
+  char *linelength = agget(g, "linelength");
+  unsigned long max_len = 0;
+  if (linelength != NULL && gv_isdigit(*linelength)) {
+    max_len = strtoul(linelength, NULL, 10);
+  }
+  my_agwrite(g, &output, max_len);
   job->output_data = output.data;
   job->output_data_allocated = output.data_allocated;
   job->output_data_position = output.data_position;

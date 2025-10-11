@@ -603,15 +603,12 @@ static void set_attrwf(Agraph_t *g, bool toplevel, bool value) {
 }
 
 /// Return 0 on success, EOF on failure
-void my_agwrite(Agraph_t *g, output_string *output) {
-  // +
-  char *s;
+void my_agwrite(Agraph_t *g, output_string *output,
+                unsigned long max_output_linelength) {
   Level = 0; /* re-initialize tab level */
-  s = agget(g, "linelength");
-  if (s != NULL && gv_isdigit(*s)) {
-    unsigned long len = strtoul(s, NULL, 10);
-    if ((len == 0 || len >= MIN_OUTPUTLINE) && len <= INT_MAX)
-      Max_outputline = (int)len;
+  if ((max_output_linelength == 0 || max_output_linelength >= MIN_OUTPUTLINE) &&
+      max_output_linelength <= INT_MAX) {
+    Max_outputline = (int)max_output_linelength;
   }
   write_info_t wr_info = before_write(g);
   write_hdr(g, output, true);
