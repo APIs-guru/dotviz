@@ -8,7 +8,6 @@
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
-#include "gvio.h"
 #include "gvplugin.h"
 #include "gvplugin_device.h" // IWYU pragma: keep
 #include "gvplugin_render.h" // IWYU pragma: keep
@@ -381,17 +380,6 @@ static output_string my_emit_graph(GVJ_t *job, graph_t *g) {
   /* reset node state */
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
-  Agiodisc_t *io_save;
-  static Agiodisc_t io;
-
-  if (io.afread == NULL) {
-    io.afread = AgIoDisc.afread;
-    io.putstr = (putstrfn)gvputs;
-    io.flush = (flushfn)gvflush;
-  }
-
-  io_save = g->clos->disc.io;
-  g->clos->disc.io = &io;
   char *linelength = agget(g, "linelength");
   unsigned long max_len = 0;
   if (linelength != NULL && gv_isdigit(*linelength)) {
@@ -399,8 +387,6 @@ static output_string my_emit_graph(GVJ_t *job, graph_t *g) {
   }
 
   output_string output = my_agwrite(g, max_len);
-
-  g->clos->disc.io = io_save;
 
   pop_obj_state(job);
   return output;
