@@ -381,9 +381,6 @@ static output_string my_emit_graph(GVJ_t *job, graph_t *g) {
   /* reset node state */
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
-  if (job->gvc->numLayers > 1) {
-    agwarningf("layers not supported in dot output\n");
-  }
   Agiodisc_t *io_save;
   static Agiodisc_t io;
 

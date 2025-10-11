@@ -32,7 +32,7 @@ describe('Viz', function () {
       });
     });
     it('layers support', function () {
-      const result = viz.render(
+      const result = viz.renderFormats(
         `digraph G {
 	layers="local:pvt:test:new:ofc";
 
@@ -42,11 +42,9 @@ describe('Viz', function () {
 	node2 -> node3  [layer="pvt:all"];	/* same as pvt:ofc */
 	node2 -> node4 [layer=3];		/* same as test */
 }`,
+        ['dot', 'svg'],
       );
-
-      assert.deepStrictEqual(result, {
-        status: 'success',
-        output: String.raw`digraph G {
+      const dot = String.raw`digraph G {
 	graph [bb="0,0,199.27,108",
 		layers="local:pvt:test:new:ofc"
 	];
@@ -71,7 +69,11 @@ describe('Viz', function () {
 	node2 -> node4	[layer=3,
 		pos="e,154.52,35.47 131.83,72.411 136.81,64.304 142.92,54.354 148.51,45.248"];
 }
-`,
+`;
+      const svg = fs.readFileSync('test/snapshots/layers_support.svg', 'utf8');
+      assert.deepStrictEqual(result, {
+        status: 'success',
+        output: { dot, svg },
         errors: [
           {
             level: 'warning',

@@ -419,6 +419,9 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   job->flags |= chkOrder(g);
 
   if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
+    if (job->gvc->numLayers > 1) {
+      agwarningf("layers not supported in dot output\n");
+    }
     return render_dot(gvc, job, g, result, length);
   } else if (!strcmp(format, "svg")) {
     /* page size on Linux, Mac OS X and Windows */
