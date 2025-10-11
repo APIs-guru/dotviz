@@ -212,25 +212,6 @@ static char *_agstrcanon(char *arg, char *buf) {
   return arg;
 }
 
-/**
- * Canonicalize html strings.
- */
-static char *agcanonhtmlstr(const char *arg, char *buf) {
-  sprintf(buf, "<%s>", arg);
-  return buf;
-}
-
-/**
- * canonicalize a string for printing.
- * Unsafe if buffer is not large enough.
- */
-char *agstrcanon(char *arg, char *buf) {
-  if (aghtmlstr(arg))
-    return agcanonhtmlstr(arg, buf);
-  else
-    return _agstrcanon(arg, buf);
-}
-
 static char *getoutputbuffer(const char *str) {
   static char *rv;
   static size_t len = 0;
@@ -245,18 +226,7 @@ static char *getoutputbuffer(const char *str) {
   return rv;
 }
 
-/**
- * canonicalize a string for printing.
- * Shared static buffer - unsafe.
- */
-char *agcanonStr(char *str) {
-  char *buffer = getoutputbuffer(str);
-  if (buffer == NULL)
-    return NULL;
-  return agstrcanon(str, buffer);
-}
-
-static void _write_canonstr(output_string *output, char *str, bool chk) {
+static void write_canonstr_str(output_string *output, char *str) {
 
   // maximum bytes required for canonicalized string
   const size_t required = agstrcanon_bytes(str);
@@ -268,29 +238,37 @@ static void _write_canonstr(output_string *output, char *str, bool chk) {
     exit(1);
   }
 
-  char *const canonicalized =
-      chk ? agstrcanon(str, scratch) : _agstrcanon(str, scratch);
+  char *canonicalized = _agstrcanon(str, scratch);
   ioput(output, canonicalized);
+
   free(scratch);
 }
 
-/// @param known Is `str` already known to be a reference-counted string?
-static void write_canonstr(Agraph_t *g, output_string *output, char *str,
-                           bool known) {
-  /* str may not have been allocated by agstrdup, so we first need to turn it
-   * into a valid refstr
-   */
-  char *s = known ? str : agstrdup(g, str);
+static void write_canonstr_refstr(output_string *output, char *str) {
 
-  _write_canonstr(output, s, true);
+  // maximum bytes required for canonicalized string
+  const size_t required = agstrcanon_bytes(str);
 
-  if (!known) {
-    agstrfree(g, s, false);
+  // allocate space to stage the canonicalized string
+  char *const scratch = malloc(required);
+  if (scratch == NULL) {
+    agerrorf("memory allocation failure\n");
+    exit(1);
   }
+
+  if (aghtmlstr(str)) {
+    sprintf(scratch, "<%s>", str);
+    ioput(output, scratch);
+
+  } else {
+    char *canonicalized = _agstrcanon(str, scratch);
+    ioput(output, canonicalized);
+  }
+  free(scratch);
 }
 
-static void write_dict(Agraph_t *g, output_string *output, char *name,
-                       Dict_t *dict, bool top) {
+static void write_dict(output_string *output, char *name, Dict_t *dict,
+                       bool top) {
   int cnt = 0;
   Dict_t *view;
   Agsym_t *sym, *psym;
@@ -318,9 +296,9 @@ static void write_dict(Agraph_t *g, output_string *output, char *name,
       ioput(output, ",\n");
       indent(output);
     }
-    write_canonstr(g, output, sym->name, true);
+    write_canonstr_refstr(output, sym->name);
     ioput(output, "=");
-    write_canonstr(g, output, sym->defval, true);
+    write_canonstr_refstr(output, sym->defval);
   }
   if (cnt > 0) {
     Level--;
@@ -337,9 +315,9 @@ static void write_dict(Agraph_t *g, output_string *output, char *name,
 static void write_dicts(Agraph_t *g, output_string *output, bool top) {
   Agdatadict_t *def;
   if ((def = agdatadict(g, false))) {
-    write_dict(g, output, "graph", def->dict.g, top);
-    write_dict(g, output, "node", def->dict.n, top);
-    write_dict(g, output, "edge", def->dict.e, top);
+    write_dict(output, "graph", def->dict.g, top);
+    write_dict(output, "node", def->dict.n, top);
+    write_dict(output, "edge", def->dict.e, top);
   }
 }
 
@@ -377,7 +355,7 @@ static void write_hdr(Agraph_t *g, output_string *output, bool top) {
     ioput(output, "graph ");
   }
   if (hasName)
-    write_canonstr(g, output, name, false);
+    write_canonstr_str(output, name);
   ioput(output, sep);
   ioput(output, "{\n");
   Level++;
@@ -439,11 +417,10 @@ static bool has_no_edges(Agraph_t *g, Agnode_t *n) {
   return agfstin(g, n) == NULL && agfstout(g, n) == NULL;
 }
 
-static bool not_default_attrs(Agraph_t *g, Agnode_t *n) {
+static bool not_default_attrs(Agnode_t *n) {
   Agattr_t *data;
   Agsym_t *sym;
 
-  (void)g;
   if ((data = agattrrec(n))) {
     for (sym = dtfirst(data->dict); sym; sym = dtnext(data->dict, sym)) {
       if (data->str[sym->id] != sym->defval)
@@ -470,13 +447,12 @@ static void write_subgs(Agraph_t *g, output_string *output,
 
 static int write_edge_name(Agedge_t *e, output_string *output, bool terminate) {
   char *p = agnameof(e);
-  Agraph_t *g = agraphof(e);
   if (!EMPTY(p)) {
     if (!terminate) {
       Level++;
     }
     ioput(output, "\t[key=");
-    write_canonstr(g, output, p, false);
+    write_canonstr_str(output, p);
     if (terminate)
       ioput(output, "]");
     return 1;
@@ -488,7 +464,6 @@ static void write_nondefault_attrs(void *obj, output_string *output,
                                    Dict_t *defdict) {
   Agattr_t *data;
   Agsym_t *sym;
-  Agraph_t *g;
   int cnt = 0;
   int rv;
 
@@ -498,7 +473,6 @@ static void write_nondefault_attrs(void *obj, output_string *output,
       cnt++;
   }
   data = agattrrec(obj);
-  g = agraphof(obj);
   if (data)
     for (sym = dtfirst(defdict); sym; sym = dtnext(defdict, sym)) {
       if (AGTYPE(obj) == AGINEDGE || AGTYPE(obj) == AGOUTEDGE) {
@@ -515,9 +489,9 @@ static void write_nondefault_attrs(void *obj, output_string *output,
           ioput(output, ",\n");
           indent(output);
         }
-        write_canonstr(g, output, sym->name, true);
+        write_canonstr_refstr(output, sym->name);
         ioput(output, "=");
-        write_canonstr(g, output, data->str[sym->id], true);
+        write_canonstr_refstr(output, data->str[sym->id]);
       }
     }
   if (cnt > 0) {
@@ -529,12 +503,10 @@ static void write_nondefault_attrs(void *obj, output_string *output,
 
 static void write_nodename(Agnode_t *n, output_string *output) {
   char *name;
-  Agraph_t *g;
 
   name = agnameof(n);
-  g = agraphof(n);
   if (name) {
-    write_canonstr(g, output, name, false);
+    write_canonstr_str(output, name);
   } else {
     char buf[sizeof("__SUSPECT") + 20];
     snprintf(buf, sizeof(buf), "_%" PRIu64 "_SUSPECT",
@@ -547,9 +519,6 @@ static int attrs_written(void *obj) { return AGATTRWF(obj); }
 
 static void write_node(Agraph_t *subg, Agnode_t *n, output_string *output,
                        Dict_t *d, write_info_t *wr_info) {
-  Agraph_t *g;
-
-  g = agraphof(n);
   indent(output);
   write_nodename(n, output);
   if (!attrs_written(n))
@@ -568,35 +537,33 @@ static bool write_node_test(Agraph_t *g, Agnode_t *n, write_info_t *wr_info) {
       wr_info->preorder_number[AGSEQ(g)])
     return false;
 
-  if (has_no_edges(g, n) || not_default_attrs(g, n))
+  if (has_no_edges(g, n) || not_default_attrs(n))
     return true;
   return false;
 }
 
 static void write_port(Agedge_t *e, output_string *output, Agsym_t *port) {
   char *val;
-  Agraph_t *g;
 
   if (!port)
     return;
-  g = agraphof(e);
   val = agxget(e, port);
   if (val[0] == '\0')
     return;
 
   ioput(output, ":");
   if (aghtmlstr(val)) {
-    write_canonstr(g, output, val, true);
+    write_canonstr_refstr(output, val);
   } else {
     char *s = strchr(val, ':');
     if (s) {
       *s = '\0';
-      _write_canonstr(output, val, false);
+      write_canonstr_str(output, val);
       ioput(output, ":");
-      _write_canonstr(output, s + 1, false);
+      write_canonstr_str(output, s + 1);
       *s = ':';
     } else {
-      _write_canonstr(output, val, false);
+      write_canonstr_str(output, val);
     }
   }
 }
@@ -611,11 +578,9 @@ static bool write_edge_test(Agraph_t *g, Agedge_t *e, write_info_t *wr_info) {
 static void write_edge(Agraph_t *subg, Agedge_t *e, output_string *output,
                        Dict_t *d, write_info_t *wr_info) {
   Agnode_t *t, *h;
-  Agraph_t *g;
 
   t = AGTAIL(e);
   h = AGHEAD(e);
-  g = agraphof(t);
   indent(output);
   write_nodename(t, output);
   write_port(e, output, Tailport);
