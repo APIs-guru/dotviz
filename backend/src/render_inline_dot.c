@@ -129,98 +129,6 @@ static point pagecode(GVJ_t *job, char c) {
   return rv;
 }
 
-static void init_job_pagination(GVJ_t *job, graph_t *g) {
-  GVC_t *gvc = job->gvc;
-  pointf pageSize;        /* page size for the graph - points*/
-  pointf centering = {0}; // centering offset - points
-
-  /* unpaginated image size - in points - in graph orientation */
-  pointf imageSize = job->view; // image size on one page of the graph - points
-
-  /* rotate imageSize to page orientation */
-  if (job->rotation)
-    imageSize = exch_xyf(imageSize);
-
-  /* margin - in points - in page orientation */
-  pointf margin = job->margin; // margin for a page of the graph - points
-
-  /* determine pagination */
-
-  /* page not set by user, use default from renderer */
-  if (job->render.features) {
-    pageSize.x = job->device.features->default_pagesize.x - 2 * margin.x;
-    pageSize.x = fmax(pageSize.x, 0);
-    pageSize.y = job->device.features->default_pagesize.y - 2 * margin.y;
-    pageSize.y = fmax(pageSize.y, 0);
-  } else
-    pageSize.x = pageSize.y = 0.;
-  job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
-
-  pageSize.x = fmax(pageSize.x, imageSize.x);
-  pageSize.y = fmax(pageSize.y, imageSize.y);
-
-  /* initial window size */
-  job->width =
-      ROUND((pageSize.x + 2 * margin.x) * job->dpi.x / POINTS_PER_INCH);
-  job->height =
-      ROUND((pageSize.y + 2 * margin.y) * job->dpi.y / POINTS_PER_INCH);
-
-  /* set up pagedir */
-  job->pagesArrayMajor = (point){0};
-  job->pagesArrayMinor = (point){0};
-  job->pagesArrayFirst = (point){0};
-  job->pagesArrayMajor = pagecode(job, gvc->pagedir[0]);
-  job->pagesArrayMinor = pagecode(job, gvc->pagedir[1]);
-  if (abs(job->pagesArrayMajor.x + job->pagesArrayMinor.x) != 1 ||
-      abs(job->pagesArrayMajor.y + job->pagesArrayMinor.y) != 1) {
-    job->pagesArrayMajor = pagecode(job, 'B');
-    job->pagesArrayMinor = pagecode(job, 'L');
-    agwarningf("pagedir=%s ignored\n", gvc->pagedir);
-  }
-
-  /* determine page box including centering */
-  if (GD_drawing(g)->centered) {
-    if (pageSize.x > imageSize.x)
-      centering.x = (pageSize.x - imageSize.x) / 2;
-    if (pageSize.y > imageSize.y)
-      centering.y = (pageSize.y - imageSize.y) / 2;
-  }
-
-  /* rotate back into graph orientation */
-  if (job->rotation) {
-    imageSize = exch_xyf(imageSize);
-    pageSize = exch_xyf(pageSize);
-    margin = exch_xyf(margin);
-    centering = exch_xyf(centering);
-  }
-
-  /* canvas area, centered if necessary */
-  job->canvasBox.LL.x = margin.x + centering.x;
-  job->canvasBox.LL.y = margin.y + centering.y;
-  job->canvasBox.UR.x = margin.x + centering.x + imageSize.x;
-  job->canvasBox.UR.y = margin.y + centering.y + imageSize.y;
-
-  /* size of one page in graph units */
-  job->pageSize.x = imageSize.x / job->zoom;
-  job->pageSize.y = imageSize.y / job->zoom;
-
-  /* pageBoundingBox in device units and page orientation */
-  job->pageBoundingBox.LL.x =
-      ROUND(job->canvasBox.LL.x * job->dpi.x / POINTS_PER_INCH);
-  job->pageBoundingBox.LL.y =
-      ROUND(job->canvasBox.LL.y * job->dpi.y / POINTS_PER_INCH);
-  job->pageBoundingBox.UR.x =
-      ROUND(job->canvasBox.UR.x * job->dpi.x / POINTS_PER_INCH);
-  job->pageBoundingBox.UR.y =
-      ROUND(job->canvasBox.UR.y * job->dpi.y / POINTS_PER_INCH);
-  if (job->rotation) {
-    job->pageBoundingBox.LL = exch_xy(job->pageBoundingBox.LL);
-    job->pageBoundingBox.UR = exch_xy(job->pageBoundingBox.UR);
-    job->canvasBox.LL = exch_xyf(job->canvasBox.LL);
-    job->canvasBox.UR = exch_xyf(job->canvasBox.UR);
-  }
-}
-
 static void init_job_pad(GVJ_t *job) {
   GVC_t *gvc = job->gvc;
 
@@ -328,16 +236,11 @@ static void init_job_viewport(GVJ_t *job, graph_t *g) {
 
 extern output_string my_agwrite(Agraph_t *g,
                                 unsigned long max_output_linelength);
-static output_string my_emit_graph(GVJ_t *job, graph_t *g) {
-  node_t *n;
-  char *s;
-  int flags = job->flags;
-  int *lp;
-
+static output_string my_emit_graph(graph_t *g) {
   my_attach_attrs_and_arrows(g);
 
   /* reset node state */
-  for (n = agfstnode(g); n; n = agnxtnode(g, n))
+  for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
   char *linelength = agget(g, "linelength");
   unsigned long max_len = 0;
@@ -374,9 +277,14 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
   init_job_margin(job);
   init_job_dpi(job, g);
   init_job_viewport(job, g);
-  init_job_pagination(job, g);
 
-  output_string output = my_emit_graph(job, g);
+  // agwarningf("pagedir=%s ignored\n", gvc->pagedir);
+
+
+  // GVC_t* gvc_ = GD_gvc(g);
+  // GD_gvc(g) = NULL;
+  output_string output = my_emit_graph(g);
+  // GD_gvc(g) = gvc_;
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 
