@@ -405,8 +405,48 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     gvc->layerIDs = NULL;
     free(gvc->layerlist);
     gvc->layerlist = NULL;
-    if ((str = agget(g, "layers")) != 0) {
-      int numLayers = parse_layers(gvc, g, str);
+    char *p;
+    if ((p = agget(g, "layers")) != 0) {
+
+      char *tok;
+
+      gvc->layerDelims = agget(g, "layersep");
+      if (!gvc->layerDelims)
+        gvc->layerDelims = DEFAULT_LAYERSEP;
+      gvc->layerListDelims = agget(g, "layerlistsep");
+      if (!gvc->layerListDelims)
+        gvc->layerListDelims = DEFAULT_LAYERLISTSEP;
+      if ((tok = strpbrk(
+               gvc->layerDelims,
+               gvc->layerListDelims))) { /* conflict in delimiter strings */
+        agwarningf("The character \'%c\' appears in both the layersep and "
+                   "layerlistsep attributes - layerlistsep ignored.\n",
+                   *tok);
+        gvc->layerListDelims = "";
+      }
+
+      gvc->layers = gv_strdup(p);
+      layer_names_t layerIDs = {0};
+
+      // inferred entry for the first (unnamed) layer
+      layer_names_append(&layerIDs, NULL);
+
+      for (tok = strtok(gvc->layers, gvc->layerDelims); tok;
+           tok = strtok(NULL, gvc->layerDelims)) {
+        layer_names_append(&layerIDs, tok);
+      }
+
+      assert(layer_names_size(&layerIDs) - 1 <= INT_MAX);
+      int ntok = (int)(layer_names_size(&layerIDs) - 1);
+
+      // if we found layers, save them for later reference
+      if (layer_names_size(&layerIDs) > 1) {
+        layer_names_append(&layerIDs, NULL); // add a terminating entry
+        gvc->layerIDs = layer_names_detach(&layerIDs);
+      }
+      layer_names_free(&layerIDs);
+
+      int numLayers = ntok;
       if (numLayers > 1) {
         agwarningf("layers not supported in dot output\n");
       }
