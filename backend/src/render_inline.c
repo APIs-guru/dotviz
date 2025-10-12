@@ -441,52 +441,42 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 
 */
 
-extern void render_dot(Agrw_t graph, char **result, size_t *length);
-extern int render_svg(GVC_t *gvc, GVJ_t *job, Agrw_t graph, char **result,
-                      size_t *length);
+extern void render_svg(GVC_t *gvc, GVJ_t *job, Agrw_t graph, char **result,
+                       size_t *length);
 /* Render layout in a specified format to a malloc'ed string */
-int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
-                    size_t *length) {
-  if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
-    Agraph_t *g = graph;
-    render_dot(g, result, length);
-    return 0;
-  } else if (!strcmp(format, "svg")) {
-    Agraph_t *g = graph;
-    init_bb(g);
-    init_gvc(gvc, g);
-    init_layering(gvc, g);
-    /* create a job for the required format */
-    GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
-    job->output_langname = format;
-    job->gvc = gvc;
-    job = gvc->job;
+void gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char **result, size_t *length) {
 
-    job->input_filename = NULL;
-    job->graph_index = 0;
-    job->common = &gvc->common;
-    job->layout_type = gvc->layout.type;
-    job->keybindings = gvevent_key_binding;
-    job->numkeys = gvevent_key_binding_size;
+  Agraph_t *g = graph;
+  init_bb(g);
+  init_gvc(gvc, g);
+  init_layering(gvc, g);
+  /* create a job for the required format */
+  GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
+  job->output_langname = "svg";
+  job->gvc = gvc;
+  job = gvc->job;
 
-    job->output_lang = GVRENDER_PLUGIN;
+  job->input_filename = NULL;
+  job->graph_index = 0;
+  job->common = &gvc->common;
+  job->layout_type = gvc->layout.type;
+  job->keybindings = gvevent_key_binding;
+  job->numkeys = gvevent_key_binding_size;
 
-    job->flags |= chkOrder(g);
-    /* page size on Linux, Mac OS X and Windows */
-    const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
+  job->output_lang = GVRENDER_PLUGIN;
 
-    if (!(*result = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
-      agerrorf("failure malloc'ing for result string");
-      return -1;
-    }
-    job->output_data = *result;
-    job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
-    job->output_data_position = 0;
-    return render_svg(gvc, job, g, result, length);
-  } else {
-    agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", format);
-    return -1;
+  job->flags |= chkOrder(g);
+  /* page size on Linux, Mac OS X and Windows */
+  const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
+
+  if (!(*result = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
+    agerrorf("failure malloc'ing for result string");
+    exit(-1);
   }
+  job->output_data = *result;
+  job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
+  job->output_data_position = 0;
+  render_svg(gvc, job, g, result, length);
 }
 
 void gw_gvFreeRenderData(char *data) { free(data); }

@@ -173,15 +173,21 @@ pub export fn viz_layout(
 pub export fn viz_render(
     gvc: GVC,
     graph: Agrw_t,
-    format: [*c]const u8,
+    c_format: [*c]const u8,
 ) ?[*]u8 {
     std.debug.assert(gvc != null);
     std.debug.assert(graph != null);
+    const format = std.mem.span(c_format);
     var buf: ?[*]u8 = null;
     var buf_len: usize = 0;
-    const err = c.gw_gvRenderData(gvc, graph, format, &buf, &buf_len);
-    if (err != 0) {
-        c.gw_gvFreeRenderData(buf);
+    if (std.mem.eql(u8, format, "dot") or std.mem.eql(u8, format, "gv")) {
+        const output = c.render_dot(graph, &buf, &buf_len);
+        buf = output.data;
+        buf_len = output.data_position;
+    } else if (std.mem.eql(u8, format, "svg")) {
+        c.gw_gvRenderData(gvc, graph, &buf, &buf_len);
+    } else {
+        c.agerrorf("Format: \"%s\" not recognized. Use one of: dot gv svg\n", c_format);
         return null;
     }
     return buf;

@@ -423,10 +423,8 @@ gvplugin_available_t svg_render_available = {
     .typestr = "svg",
 };
 
-int render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
-               size_t *length) {
-  int rc;
-
+void render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
+                size_t *length) {
   gvc->api[API_device] = &svg_device_available;
   gvc->api[API_render] = &svg_render_available;
 
@@ -466,16 +464,12 @@ int render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 
-  if (rc == 0) {
-    *result = job->output_data;
-    *length = job->output_data_position;
-  }
+  *result = job->output_data;
+  *length = job->output_data_position;
 
   free(job->active_tooltip);
   free(job->selected_href);
   free(job);
   gvc->jobs = gvc->job = gvc->active_jobs = NULL;
   gvc->common.viewNum = 0;
-
-  return rc;
 }
