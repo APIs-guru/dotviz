@@ -449,10 +449,7 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
   if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
     Agraph_t *g = graph;
-    init_bb(g);
     render_dot(g, result, length);
-    gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
-    gvc->common.viewNum = 0;
     return 0;
   } else if (!strcmp(format, "svg")) {
     Agraph_t *g = graph;
