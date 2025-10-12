@@ -1,5 +1,5 @@
 
-#include "agrw.h"
+#include "output_string.h"
 #include "cgraph.h"
 #include "geom.h"
 #include "geomprocs.h"
@@ -333,24 +333,6 @@ static output_string my_emit_graph(GVJ_t *job, graph_t *g) {
   char *s;
   int flags = job->flags;
   int *lp;
-
-  /* device dpi is now known */
-  job->scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
-  job->scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
-
-  job->devscale.x = job->dpi.x / POINTS_PER_INCH;
-  job->devscale.y = job->dpi.y / POINTS_PER_INCH;
-  if ((job->flags & GVRENDER_Y_GOES_DOWN) || (Y_invert))
-    job->devscale.y *= -1;
-
-  /* compute current view in graph units */
-  if (job->rotation) {
-    job->view.y = job->width / job->scale.y;
-    job->view.x = job->height / job->scale.x;
-  } else {
-    job->view.x = job->width / job->scale.x;
-    job->view.y = job->height / job->scale.y;
-  }
 
   my_attach_attrs_and_arrows(g);
 
