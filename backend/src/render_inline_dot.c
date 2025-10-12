@@ -157,8 +157,48 @@ static void init_job_dpi(GVJ_t *job, graph_t *g) {
   }
 }
 
-static void init_job_viewport(GVJ_t *job, graph_t *g) {
-  GVC_t *gvc = job->gvc;
+extern output_string my_agwrite(Agraph_t *g,
+                                unsigned long max_output_linelength);
+static output_string my_emit_graph(graph_t *g) {
+  my_attach_attrs_and_arrows(g);
+
+  /* reset node state */
+  for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
+    ND_state(n) = 0;
+  char *linelength = agget(g, "linelength");
+  unsigned long max_len = 0;
+  if (linelength != NULL && gv_isdigit(*linelength)) {
+    max_len = strtoul(linelength, NULL, 10);
+  }
+
+  return my_agwrite(g, max_len);
+}
+
+int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
+               size_t *length) {
+  gvc->api[API_device] = &dot_device_available;
+  gvc->api[API_render] = &dot_render_available;
+
+  job->device.engine = NULL;
+  job->device.features = &my_device_features_dot;
+  job->device.id = FORMAT_DOT;
+  job->device.type = "dot:dot";
+
+  job->render.engine = &dot_engine;
+  job->render.features = &my_render_features_dot;
+  job->render.type = "dot";
+
+  job->flags |= GVRENDER_DOES_TRANSFORM;
+
+  job->render.id = FORMAT_DOT;
+
+  gvc->active_jobs = job;  /* first job of new list */
+  job->next_active = NULL; /* terminate active list */
+  job->callbacks = &gvdevice_callbacks;
+
+  init_job_pad(job);
+  init_job_margin(job);
+  init_job_dpi(job, g);
   pointf LL, UR, size, sz;
   double Z;
   int rv;
@@ -232,51 +272,7 @@ static void init_job_viewport(GVJ_t *job, graph_t *g) {
   job->view = XY;
   job->zoom = Z; /* scaling factor */
   job->focus = xy;
-}
 
-extern output_string my_agwrite(Agraph_t *g,
-                                unsigned long max_output_linelength);
-static output_string my_emit_graph(graph_t *g) {
-  my_attach_attrs_and_arrows(g);
-
-  /* reset node state */
-  for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
-    ND_state(n) = 0;
-  char *linelength = agget(g, "linelength");
-  unsigned long max_len = 0;
-  if (linelength != NULL && gv_isdigit(*linelength)) {
-    max_len = strtoul(linelength, NULL, 10);
-  }
-
-  return my_agwrite(g, max_len);
-}
-
-int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
-               size_t *length) {
-  gvc->api[API_device] = &dot_device_available;
-  gvc->api[API_render] = &dot_render_available;
-
-  job->device.engine = NULL;
-  job->device.features = &my_device_features_dot;
-  job->device.id = FORMAT_DOT;
-  job->device.type = "dot:dot";
-
-  job->render.engine = &dot_engine;
-  job->render.features = &my_render_features_dot;
-  job->render.type = "dot";
-
-  job->flags |= GVRENDER_DOES_TRANSFORM;
-
-  job->render.id = FORMAT_DOT;
-
-  gvc->active_jobs = job;  /* first job of new list */
-  job->next_active = NULL; /* terminate active list */
-  job->callbacks = &gvdevice_callbacks;
-
-  init_job_pad(job);
-  init_job_margin(job);
-  init_job_dpi(job, g);
-  init_job_viewport(job, g);
 
   // agwarningf("pagedir=%s ignored\n", gvc->pagedir);
 
