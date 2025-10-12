@@ -393,45 +393,39 @@ extern int render_svg(GVC_t *gvc, GVJ_t *job, Agrw_t graph, char **result,
 /* Render layout in a specified format to a malloc'ed string */
 int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
                     size_t *length) {
-  Agraph_t *g = graph;
-  int rc;
-
-  init_bb(g);
-  init_gvc(gvc, g);
-  init_layering(gvc, g);
-
-  /* create a job for the required format */
-  GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
-  job->output_langname = format;
-  job->gvc = gvc;
-  job = gvc->job;
-
-  job->input_filename = NULL;
-  job->graph_index = 0;
-  job->common = &gvc->common;
-  job->layout_type = gvc->layout.type;
-  job->keybindings = gvevent_key_binding;
-  job->numkeys = gvevent_key_binding_size;
-
-  job->output_lang = GVRENDER_PLUGIN;
-
-  job->flags |= chkOrder(g);
-
   if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
-    if (job->gvc->numLayers > 1) {
+    Agraph_t *g = graph;
+    init_bb(g);
+    init_gvc(gvc, g);
+    init_layering(gvc, g);
+    if (gvc->numLayers > 1) {
       agwarningf("layers not supported in dot output\n");
     }
     render_dot(g, result, length);
-    job->gvc->common.lib =
-        NULL; /* FIXME - minimally this doesn't belong here */
-
-    free(job->active_tooltip);
-    free(job->selected_href);
-    free(job);
-    gvc->jobs = gvc->job = gvc->active_jobs = NULL;
+    gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
     gvc->common.viewNum = 0;
     return 0;
   } else if (!strcmp(format, "svg")) {
+    Agraph_t *g = graph;
+    init_bb(g);
+    init_gvc(gvc, g);
+    init_layering(gvc, g);
+    /* create a job for the required format */
+    GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
+    job->output_langname = format;
+    job->gvc = gvc;
+    job = gvc->job;
+
+    job->input_filename = NULL;
+    job->graph_index = 0;
+    job->common = &gvc->common;
+    job->layout_type = gvc->layout.type;
+    job->keybindings = gvevent_key_binding;
+    job->numkeys = gvevent_key_binding_size;
+
+    job->output_lang = GVRENDER_PLUGIN;
+
+    job->flags |= chkOrder(g);
     /* page size on Linux, Mac OS X and Windows */
     const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
 
