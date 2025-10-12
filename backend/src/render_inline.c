@@ -1,18 +1,11 @@
 #include "render_inline.h"
 #include "const.h"
 #include "geomprocs.h"
-#include "gv_ctype.h"
-#include "gv_math.h"
+#include "gv_char_classes.h"
 #include "gvc.h" // IWYU pragma: keep
-#include "gvcext.h"
-#include "gvcint.h" // IWYU pragma: keep
-#include "gvcjob.h"
-#include "gvplugin_device.h" // IWYU pragma: keep
-#include "gvplugin_render.h" // IWYU pragma: keep
-#include "streq.h"
-#include "strview.h" // IWYU pragma: keep
+#include "gvcint.h"
 #include "util/list.h"
-#include "utils.h"
+// #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +13,79 @@
 extern bool Y_invert;
 extern Agsym_t *G_peripheries, *G_penwidth;
 extern Agsym_t *N_fontsize, *N_fontname;
+
+/// swap data referenced by two pointers
+///
+/// You can think of this macro as having the following C type:
+///
+///   void SWAP(<t1> *a, <t1> *b);
+///
+/// Both `a` and `b` are expected to be pure expressions.
+#define SWAP(a, b)                                                             \
+  do {                                                                         \
+    /* trigger a -Wcompare-distinct-pointer-types compiler warning if `a` */   \
+    /* and `b` have differing types                                       */   \
+    (void)((a) == (b));                                                        \
+                                                                               \
+    /* Swap their targets. Contemporary compilers will optimize the `memcpy`s  \
+     * into direct writes for primitive types.                                 \
+     */                                                                        \
+    char tmp_[sizeof(*(a))];                                                   \
+    memcpy(tmp_, (a), sizeof(*(a)));                                           \
+    *(a) = *(b);                                                               \
+    memcpy((b), tmp_, sizeof(*(b)));                                           \
+  } while (0)
+
+/// are `a` and `b` equal?
+static inline bool streq(const char *a, const char *b) {
+  assert(a != NULL);
+  assert(b != NULL);
+  return strcmp(a, b) == 0;
+}
+
+static double late_double(void *obj, attrsym_t *attr, double defaultValue,
+                          double minimum) {
+  if (!attr || !obj)
+    return defaultValue;
+  char *p = ag_xget(obj, attr);
+  if (!p || p[0] == '\0')
+    return defaultValue;
+  char *endp;
+  double rv = strtod(p, &endp);
+  if (p == endp)
+    return defaultValue; /* invalid double format */
+  if (rv < minimum)
+    return minimum;
+  return rv;
+}
+
+static int late_int(void *obj, attrsym_t *attr, int defaultValue, int minimum) {
+  if (attr == NULL)
+    return defaultValue;
+  char *p = ag_xget(obj, attr);
+  if (!p || p[0] == '\0')
+    return defaultValue;
+  char *endp;
+  long rv = strtol(p, &endp, 10);
+  if (p == endp || rv > INT_MAX)
+    return defaultValue; /* invalid int format */
+  if (rv < minimum)
+    return minimum;
+  return (int)rv;
+}
+
+static char *late_string(void *obj, attrsym_t *attr, char *defaultValue) {
+  if (!attr || !obj)
+    return defaultValue;
+  return agxget(obj, attr);
+}
+
+static char *late_nnstring(void *obj, attrsym_t *attr, char *defaultValue) {
+  char *rv = late_string(obj, attr, defaultValue);
+  if (!rv || (rv[0] == '\0'))
+    return defaultValue;
+  return rv;
+}
 
 static bool is_natural_number(const char *sstr) {
   const char *str = sstr;
