@@ -450,60 +450,6 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
   if (!strcmp(format, "dot") || !strcmp(format, "gv")) {
     Agraph_t *g = graph;
     init_bb(g);
-    double xf, yf;
-    char *p;
-    int i;
-
-    gvc->g = g;
-
-    /* margins */
-    gvc->graph_sets_margin = false;
-    if ((p = agget(g, "margin"))) {
-      i = sscanf(p, "%lf,%lf", &xf, &yf);
-      if (i > 0) {
-        gvc->margin.x = gvc->margin.y = xf * POINTS_PER_INCH;
-        if (i > 1)
-          gvc->margin.y = yf * POINTS_PER_INCH;
-        gvc->graph_sets_margin = true;
-      }
-    }
-
-    /* pad */
-    gvc->graph_sets_pad = false;
-    if ((p = agget(g, "pad"))) {
-      i = sscanf(p, "%lf,%lf", &xf, &yf);
-      if (i > 0) {
-        gvc->pad.x = gvc->pad.y = xf * POINTS_PER_INCH;
-        if (i > 1)
-          gvc->pad.y = yf * POINTS_PER_INCH;
-        gvc->graph_sets_pad = true;
-      }
-    }
-
-    /* pagesize */
-    gvc->graph_sets_pageSize = false;
-    gvc->pageSize = GD_drawing(g)->page;
-    if (GD_drawing(g)->page.x > 0.001 && GD_drawing(g)->page.y > 0.001)
-      gvc->graph_sets_pageSize = true;
-
-    /* rotation */
-    if (GD_drawing(g)->landscape)
-      gvc->rotation = 90;
-    else
-      gvc->rotation = 0;
-
-    /* pagedir */
-    gvc->pagedir = "BL";
-    if ((p = agget(g, "pagedir")) && p[0])
-      gvc->pagedir = p;
-
-    /* bounding box */
-    gvc->bb = GD_bb(g);
-
-    /* clusters have peripheries */
-    G_peripheries = agfindgraphattr(g, "peripheries");
-    G_penwidth = agfindgraphattr(g, "penwidth");
-
     render_dot(g, result, length);
     gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
     gvc->common.viewNum = 0;
