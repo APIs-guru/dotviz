@@ -397,59 +397,8 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     Agraph_t *g = graph;
     init_bb(g);
     init_gvc(gvc, g);
-    char *str;
-    /* free layer strings and pointers from previous graph */
-    free(gvc->layers);
-    gvc->layers = NULL;
-    free(gvc->layerIDs);
-    gvc->layerIDs = NULL;
-    free(gvc->layerlist);
-    gvc->layerlist = NULL;
-    char *p;
-    if ((p = agget(g, "layers")) != 0) {
-
-      char *tok;
-
-      gvc->layerDelims = agget(g, "layersep");
-      if (!gvc->layerDelims)
-        gvc->layerDelims = DEFAULT_LAYERSEP;
-      gvc->layerListDelims = agget(g, "layerlistsep");
-      if (!gvc->layerListDelims)
-        gvc->layerListDelims = DEFAULT_LAYERLISTSEP;
-      if ((tok = strpbrk(
-               gvc->layerDelims,
-               gvc->layerListDelims))) { /* conflict in delimiter strings */
-        agwarningf("The character \'%c\' appears in both the layersep and "
-                   "layerlistsep attributes - layerlistsep ignored.\n",
-                   *tok);
-        gvc->layerListDelims = "";
-      }
-
-      gvc->layers = gv_strdup(p);
-      layer_names_t layerIDs = {0};
-
-      // inferred entry for the first (unnamed) layer
-      layer_names_append(&layerIDs, NULL);
-
-      for (tok = strtok(gvc->layers, gvc->layerDelims); tok;
-           tok = strtok(NULL, gvc->layerDelims)) {
-        layer_names_append(&layerIDs, tok);
-      }
-
-      assert(layer_names_size(&layerIDs) - 1 <= INT_MAX);
-      int ntok = (int)(layer_names_size(&layerIDs) - 1);
-
-      // if we found layers, save them for later reference
-      if (layer_names_size(&layerIDs) > 1) {
-        layer_names_append(&layerIDs, NULL); // add a terminating entry
-        gvc->layerIDs = layer_names_detach(&layerIDs);
-      }
-      layer_names_free(&layerIDs);
-
-      int numLayers = ntok;
-      if (numLayers > 1) {
-        agwarningf("layers not supported in dot output\n");
-      }
+    if (agget(g, "layers") != 0) {
+      agwarningf("layers not supported in dot output\n");
     }
     render_dot(g, result, length);
     gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
