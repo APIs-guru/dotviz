@@ -130,33 +130,12 @@ static point pagecode(GVJ_t *job, char c) {
 
 extern output_string my_agwrite(Agraph_t *g,
                                 unsigned long max_output_linelength);
-int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
-               size_t *length) {
+void render_dot(Agraph_t *g, char **result, size_t *length) {
   char *linelength = agget(g, "linelength");
   unsigned long max_len = 0;
   if (linelength != NULL && gv_isdigit(*linelength)) {
     max_len = strtoul(linelength, NULL, 10);
   }
-
-  gvc->api[API_device] = &dot_device_available;
-  gvc->api[API_render] = &dot_render_available;
-
-  job->device.engine = NULL;
-  job->device.features = &my_device_features_dot;
-  job->device.id = FORMAT_DOT;
-  job->device.type = "dot:dot";
-
-  job->render.engine = &dot_engine;
-  job->render.features = &my_render_features_dot;
-  job->render.type = "dot";
-
-  job->flags |= GVRENDER_DOES_TRANSFORM;
-
-  job->render.id = FORMAT_DOT;
-
-  gvc->active_jobs = job;  /* first job of new list */
-  job->next_active = NULL; /* terminate active list */
-  job->callbacks = &gvdevice_callbacks;
 
   // agwarningf("pagedir=%s ignored\n", gvc->pagedir);
 
@@ -171,16 +150,6 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
   output_string output = my_agwrite(g, max_len);
   // GD_gvc(g) = gvc_;
 
-  job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
-
   *result = output.data;
   *length = output.data_position;
-
-  free(job->active_tooltip);
-  free(job->selected_href);
-  free(job);
-  gvc->jobs = gvc->job = gvc->active_jobs = NULL;
-  gvc->common.viewNum = 0;
-
-  return 0;
 }

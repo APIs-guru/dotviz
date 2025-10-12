@@ -387,8 +387,7 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 
 */
 
-extern int render_dot(GVC_t *gvc, GVJ_t *job, Agrw_t graph, char **result,
-                      size_t *length);
+extern void render_dot(Agrw_t graph, char **result, size_t *length);
 extern int render_svg(GVC_t *gvc, GVJ_t *job, Agrw_t graph, char **result,
                       size_t *length);
 /* Render layout in a specified format to a malloc'ed string */
@@ -422,7 +421,16 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     if (job->gvc->numLayers > 1) {
       agwarningf("layers not supported in dot output\n");
     }
-    return render_dot(gvc, job, g, result, length);
+    render_dot(g, result, length);
+    job->gvc->common.lib =
+        NULL; /* FIXME - minimally this doesn't belong here */
+
+    free(job->active_tooltip);
+    free(job->selected_href);
+    free(job);
+    gvc->jobs = gvc->job = gvc->active_jobs = NULL;
+    gvc->common.viewNum = 0;
+    return 0;
   } else if (!strcmp(format, "svg")) {
     /* page size on Linux, Mac OS X and Windows */
     const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
