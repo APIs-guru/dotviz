@@ -18,20 +18,8 @@
 #include <string.h>
 
 extern bool Y_invert;
-extern Agsym_t *G_ordering, *G_peripheries, *G_penwidth, *G_gradientangle,
-    *G_margin;
-extern Agsym_t *N_height, *N_width, *N_shape, *N_color, *N_fillcolor,
-    *N_fontsize, *N_fontname, *N_fontcolor, *N_label, *N_xlabel, *N_nojustify,
-    *N_style, *N_showboxes, *N_sides, *N_peripheries, *N_ordering,
-    *N_orientation, *N_skew, *N_distortion, *N_fixed, *N_imagescale,
-    *N_imagepos, *N_layer, *N_group, *N_comment, *N_vertices, *N_z, *N_penwidth,
-    *N_gradientangle;
-extern Agsym_t *E_weight, *E_minlen, *E_color, *E_fillcolor, *E_fontsize,
-    *E_fontname, *E_fontcolor, *E_label, *E_xlabel, *E_dir, *E_style,
-    *E_decorate, *E_showboxes, *E_arrowsz, *E_constr, *E_layer, *E_comment,
-    *E_label_float, *E_samehead, *E_sametail, *E_headlabel, *E_taillabel,
-    *E_labelfontsize, *E_labelfontname, *E_labelfontcolor, *E_labeldistance,
-    *E_labelangle, *E_tailclip, *E_headclip, *E_penwidth;
+extern Agsym_t *G_peripheries, *G_penwidth;
+extern Agsym_t *N_fontsize, *N_fontname;
 
 static bool is_natural_number(const char *sstr) {
   const char *str = sstr;
