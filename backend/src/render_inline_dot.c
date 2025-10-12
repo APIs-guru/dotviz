@@ -128,16 +128,6 @@ static point pagecode(GVJ_t *job, char c) {
   return rv;
 }
 
-static void init_job_pad(GVJ_t *job) {
-  GVC_t *gvc = job->gvc;
-
-  if (gvc->graph_sets_pad) {
-    job->pad = gvc->pad;
-  } else {
-    job->pad.x = job->pad.y = 0;
-  }
-}
-
 extern output_string my_agwrite(Agraph_t *g,
                                 unsigned long max_output_linelength);
 int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
@@ -168,7 +158,6 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
   job->next_active = NULL; /* terminate active list */
   job->callbacks = &gvdevice_callbacks;
 
-  init_job_pad(job);
   // agwarningf("pagedir=%s ignored\n", gvc->pagedir);
 
   // GVC_t* gvc_ = GD_gvc(g);
