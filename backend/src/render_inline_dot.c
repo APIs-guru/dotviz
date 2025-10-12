@@ -138,16 +138,6 @@ static void init_job_pad(GVJ_t *job) {
   }
 }
 
-static void init_job_margin(GVJ_t *job) {
-  GVC_t *gvc = job->gvc;
-
-  if (gvc->graph_sets_margin) {
-    job->margin = gvc->margin;
-  } else {
-    job->margin.x = job->margin.y = 0;
-  }
-}
-
 extern output_string my_agwrite(Agraph_t *g,
                                 unsigned long max_output_linelength);
 int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
@@ -179,7 +169,6 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
   job->callbacks = &gvdevice_callbacks;
 
   init_job_pad(job);
-  init_job_margin(job);
   // agwarningf("pagedir=%s ignored\n", gvc->pagedir);
 
   // GVC_t* gvc_ = GD_gvc(g);
