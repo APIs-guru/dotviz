@@ -325,20 +325,6 @@ static void init_job_viewport(GVJ_t *job, graph_t *g) {
   job->zoom = Z; /* scaling factor */
   job->focus = xy;
 }
-extern obj_state_t *push_obj_state(GVJ_t *job);
-extern void initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj);
-
-extern void firstlayer(GVJ_t *job, int **listp);
-extern bool validlayer(GVJ_t *job);
-extern void nextlayer(GVJ_t *job, int **listp);
-extern int numPhysicalLayers(GVJ_t *job);
-extern void firstpage(GVJ_t *job);
-extern bool validpage(GVJ_t *job);
-extern void nextpage(GVJ_t *job);
-extern void emit_page(GVJ_t *job, graph_t *g);
-extern void emit_end_graph(GVJ_t *job);
-
-extern void pop_obj_state(GVJ_t *job);
 
 extern output_string my_agwrite(Agraph_t *g,
                                 unsigned long max_output_linelength);
@@ -366,15 +352,6 @@ static output_string my_emit_graph(GVJ_t *job, graph_t *g) {
     job->view.y = job->height / job->scale.y;
   }
 
-  obj_state_t *obj;
-
-  obj = push_obj_state(job);
-  obj->type = ROOTGRAPH_OBJTYPE;
-  obj->u.g = g;
-  obj->emit_state = EMIT_GDRAW;
-
-  initObjMapData(job, GD_label(g), g);
-
   my_attach_attrs_and_arrows(g);
 
   /* reset node state */
@@ -386,10 +363,7 @@ static output_string my_emit_graph(GVJ_t *job, graph_t *g) {
     max_len = strtoul(linelength, NULL, 10);
   }
 
-  output_string output = my_agwrite(g, max_len);
-
-  pop_obj_state(job);
-  return output;
+  return my_agwrite(g, max_len);
 }
 
 int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,

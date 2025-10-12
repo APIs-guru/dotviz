@@ -10,23 +10,16 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-// #include <agstrcanon.h>
-#include <gvc.h>
-// #include <render.h>
 #include "agstrcanon.h"
 #include "const.h"
 #include "geom.h"
-#include "gvcjob.h"
 #include "macros.h"
-// #include "render.h"
 #include "types.h"
 #include "utils.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-// #include <util/agxbuf.h>
-// #include <util/prisize_t.h>
 
 /// state for offset calculations
 typedef struct {
@@ -149,93 +142,6 @@ static void writenodeandport(int (*putstr)(void *chan, const char *str),
     printstring(putstr, f, ":", agstrcanon(portname, buffer2));
     free(buffer2);
   }
-}
-
-void write_plain(GVJ_t *job, graph_t *g, void *f, bool extend) {
-  char *tport, *hport;
-  node_t *n;
-  edge_t *e;
-  bezier bz;
-  pointf pt;
-  char *lbl;
-  char *fillcolor;
-
-  int (*putstr)(void *chan, const char *str) = g->clos->disc.io->putstr;
-  const offsets_t offsets = setYInvert(g);
-  pt = GD_bb(g).UR;
-  printdouble(putstr, f, "graph ", job->zoom);
-  printdouble(putstr, f, " ", PS2INCH(pt.x));
-  printdouble(putstr, f, " ", PS2INCH(pt.y));
-  agputc(putstr, '\n', f);
-  for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-    if (IS_CLUST_NODE(n))
-      continue;
-    char *const node_buffer = agstrcanon_buffer(agnameof(n));
-    printstring(putstr, f, "node ", agstrcanon(agnameof(n), node_buffer));
-    free(node_buffer);
-    printpoint(putstr, f, ND_coord(n), offsets.Y);
-    // if HTML, get original text
-    char *const value =
-        ND_label(n)->html ? agxget(n, N_label) : ND_label(n)->text;
-    char *const buffer = agstrcanon_buffer(value);
-    if (ND_label(n)->html) {
-      lbl = agstrcanon(value, buffer);
-    } else {
-      lbl = canon(agraphof(n), value, buffer);
-    }
-    printdouble(putstr, f, " ", ND_width(n));
-    printdouble(putstr, f, " ", ND_height(n));
-    printstring(putstr, f, " ", lbl);
-    free(buffer);
-    printstring(putstr, f, " ", late_nnstring(n, N_style, "solid"));
-    printstring(putstr, f, " ", ND_shape(n)->name);
-    printstring(putstr, f, " ", late_nnstring(n, N_color, DEFAULT_COLOR));
-    fillcolor = late_nnstring(n, N_fillcolor, "");
-    if (fillcolor[0] == '\0')
-      fillcolor = late_nnstring(n, N_color, DEFAULT_FILL);
-    printstring(putstr, f, " ", fillcolor);
-    agputc(putstr, '\n', f);
-  }
-  for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-    for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-
-      if (extend) { // assuming these two attrs have already been created by
-                    // cgraph
-        if (!(tport = agget(e, "tailport")))
-          tport = "";
-        if (!(hport = agget(e, "headport")))
-          hport = "";
-      } else
-        tport = hport = "";
-      if (ED_spl(e)) {
-        size_t splinePoints = 0;
-        for (size_t i = 0; i < ED_spl(e)->size; i++) {
-          bz = ED_spl(e)->list[i];
-          splinePoints += bz.size;
-        }
-        printstring(putstr, f, NULL, "edge");
-        writenodeandport(putstr, f, agtail(e), tport);
-        writenodeandport(putstr, f, aghead(e), hport);
-        printint(putstr, f, " ", splinePoints);
-        for (size_t i = 0; i < ED_spl(e)->size; i++) {
-          bz = ED_spl(e)->list[i];
-          for (size_t j = 0; j < bz.size; j++)
-            printpoint(putstr, f, bz.list[j], offsets.Y);
-        }
-      }
-      if (ED_label(e)) {
-        char *const buffer = agstrcanon_buffer(ED_label(e)->text);
-        printstring(putstr, f, " ",
-                    canon(agraphof(agtail(e)), ED_label(e)->text, buffer));
-        free(buffer);
-        printpoint(putstr, f, ED_label(e)->pos, offsets.Y);
-      }
-      printstring(putstr, f, " ", late_nnstring(e, E_style, "solid"));
-      printstring(putstr, f, " ", late_nnstring(e, E_color, DEFAULT_COLOR));
-      agputc(putstr, '\n', f);
-    }
-  }
-  agputs(putstr, "stop\n", f);
 }
 
 static void set_record_rects(node_t *n, field_t *f, agxbuf *xb, double yOff) {
