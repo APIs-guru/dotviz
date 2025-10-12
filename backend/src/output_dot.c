@@ -10,79 +10,53 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-#include "agstrcanon.h"
-#include "const.h"
-#include "geom.h"
-#include "macros.h"
+#include "agxbuf.h"
 #include "types.h"
-#include "utils.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
+extern int State; /* last finished phase */
+extern bool Y_invert;
+extern Agsym_t *N_height, *N_width, *N_vertices;
+
+/* existence of labels */
+#define EDGE_LABEL (1 << 0)
+#define HEAD_LABEL (1 << 1)
+#define TAIL_LABEL (1 << 2)
+#define GRAPH_LABEL (1 << 3)
+#define NODE_XLABEL (1 << 4)
+#define EDGE_XLABEL (1 << 5)
+/* drawing phases */
+#define GVBEGIN 0
+#define GVSPLINES 1
+/*	node,edge types */
+#ifdef NORMAL
+#undef NORMAL
+#endif
+#define NORMAL 0       /* an original input node */
+#define VIRTUAL 1      /* virtual nodes in long edge chains */
+#define SLACKNODE 2    /* encode edges in node position phase */
+#define REVERSED 3     /* reverse of an original edge */
+#define FLATORDER 4    /* for ordered edges */
+#define CLUSTER_EDGE 5 /* for ranking clusters */
+#define IGNORED 6      /* concentrated multi-edges */
+
+#define CL_EDGE_TAG "cl_edge_info"
+#define HAS_CLUST_EDGE(g) (aggetrec(g, CL_EDGE_TAG, 0))
 
 /// state for offset calculations
 typedef struct {
   double Y;  ///< ymin + ymax
   double YF; ///< `Y` in inches
 } offsets_t;
-extern int State; /* last finished phase */
 extern bool isPolygon(node_t *n);
-
-extern bool Y_invert;
-extern Agsym_t *N_height, *N_width, *N_vertices;
-
 static double YFDIR(offsets_t offsets, double y) {
   return Y_invert ? offsets.YF - y : y;
 }
 
 double yDir(double y, double Y_off) { return Y_invert ? Y_off - y : y; }
-
-static void agputs(int (*putstr)(void *chan, const char *str), const char *s,
-                   void *fp) {
-  putstr(fp, s);
-}
-
-static void agputc(int (*putstr)(void *chan, const char *str), char c,
-                   void *fp) {
-  char buf[] = {c, '\0'};
-  putstr(fp, buf);
-}
-
-static void printstring(int (*putstr)(void *chan, const char *str), void *f,
-                        char *prefix, char *s) {
-  if (prefix)
-    agputs(putstr, prefix, f);
-  agputs(putstr, s, f);
-}
-
-static void printint(int (*putstr)(void *chan, const char *str), void *f,
-                     char *prefix, size_t i) {
-  agxbuf buf = {0};
-
-  if (prefix)
-    agputs(putstr, prefix, f);
-  agxbprint(&buf, "%" PRISIZE_T, i);
-  agputs(putstr, agxbuse(&buf), f);
-  agxbfree(&buf);
-}
-
-static void printdouble(int (*putstr)(void *chan, const char *str), void *f,
-                        char *prefix, double v) {
-  agxbuf buf = {0};
-
-  if (prefix)
-    agputs(putstr, prefix, f);
-  agxbprint(&buf, "%.5g", v);
-  agputs(putstr, agxbuse(&buf), f);
-  agxbfree(&buf);
-}
-
-static void printpoint(int (*putstr)(void *chan, const char *str), void *f,
-                       pointf p, double yOff) {
-  printdouble(putstr, f, " ", PS2INCH(p.x));
-  printdouble(putstr, f, " ", PS2INCH(yDir(p.y, yOff)));
-}
 
 /* setYInvert:
  * Set parameters used to flip coordinate system (y=0 at top).
@@ -97,38 +71,6 @@ static offsets_t setYInvert(graph_t *g) {
     rv.YF = PS2INCH(rv.Y);
   }
   return rv;
-}
-
-/* canon:
- * Canonicalize a string which may not have been allocated using agstrdup.
- *
- * @param buffer Scratch space to use during canonicalization. This must be at
- *   least `agstrcanon_bytes(s)` bytes.
- */
-static char *canon(graph_t *g, char *s, char *buffer) {
-  char *ns = agstrdup(g, s);
-  char *const cs = agstrcanon(ns, buffer);
-  agstrfree(g, ns, false);
-  return cs;
-}
-
-static void writenodeandport(int (*putstr)(void *chan, const char *str),
-                             FILE *f, node_t *node, char *portname) {
-  char *name;
-  char *const value =
-      IS_CLUST_NODE(node) ? strchr(agnameof(node), ':') + 1 : agnameof(node);
-  char *const buffer = agstrcanon_buffer(value);
-  if (IS_CLUST_NODE(node)) {
-    name = canon(agraphof(node), value, buffer);
-  } else
-    name = agstrcanon(value, buffer);
-  printstring(putstr, f, " ", name); /* slimey i know */
-  free(buffer);
-  if (portname && *portname) {
-    char *const buffer2 = agstrcanon_buffer(portname);
-    printstring(putstr, f, ":", agstrcanon(portname, buffer2));
-    free(buffer2);
-  }
 }
 
 static void set_record_rects(node_t *n, field_t *f, agxbuf *xb, double yOff) {
@@ -168,6 +110,19 @@ static void rec_attach_bb(graph_t *g, Agsym_t *bbsym, Agsym_t *lpsym,
   agxbfree(&buf);
 }
 
+/** Find the attribute belonging to graph g for objects like obj
+ * with given name. If one does not exist, create it with the
+ * default value defaultValue.
+ */
+static attrsym_t *safe_dcl(graph_t *g, int obj_kind, char *name,
+                           char *defaultValue) {
+  attrsym_t *a = agattr_text(g, obj_kind, name, NULL);
+  if (!a) /* attribute does not exist */
+    a = agattr_text(g, obj_kind, name, defaultValue);
+  return a;
+}
+
+extern void undoClusterEdges(graph_t *g);
 void my_attach_attrs_and_arrows(graph_t *g) {
   node_t *n;
   edge_t *e;
