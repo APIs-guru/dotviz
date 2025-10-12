@@ -397,9 +397,19 @@ int gw_gvRenderData(GVC_t *gvc, Agrw_t graph, const char *format, char **result,
     Agraph_t *g = graph;
     init_bb(g);
     init_gvc(gvc, g);
-    init_layering(gvc, g);
-    if (gvc->numLayers > 1) {
-      agwarningf("layers not supported in dot output\n");
+    char *str;
+    /* free layer strings and pointers from previous graph */
+    free(gvc->layers);
+    gvc->layers = NULL;
+    free(gvc->layerIDs);
+    gvc->layerIDs = NULL;
+    free(gvc->layerlist);
+    gvc->layerlist = NULL;
+    if ((str = agget(g, "layers")) != 0) {
+      int numLayers = parse_layers(gvc, g, str);
+      if (numLayers > 1) {
+        agwarningf("layers not supported in dot output\n");
+      }
     }
     render_dot(g, result, length);
     gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
