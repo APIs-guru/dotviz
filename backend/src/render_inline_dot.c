@@ -1,5 +1,4 @@
 
-#include "output_string.h"
 #include "cgraph.h"
 #include "geom.h"
 #include "geomprocs.h"
@@ -11,7 +10,8 @@
 #include "gvplugin.h"
 #include "gvplugin_device.h" // IWYU pragma: keep
 #include "gvplugin_render.h" // IWYU pragma: keep
-#include "strview.h"         // IWYU pragma: keep
+#include "output_string.h"
+#include "strview.h" // IWYU pragma: keep
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -159,23 +159,14 @@ static void init_job_dpi(GVJ_t *job, graph_t *g) {
 
 extern output_string my_agwrite(Agraph_t *g,
                                 unsigned long max_output_linelength);
-static output_string my_emit_graph(graph_t *g) {
-  my_attach_attrs_and_arrows(g);
-
-  /* reset node state */
-  for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
-    ND_state(n) = 0;
+int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
+               size_t *length) {
   char *linelength = agget(g, "linelength");
   unsigned long max_len = 0;
   if (linelength != NULL && gv_isdigit(*linelength)) {
     max_len = strtoul(linelength, NULL, 10);
   }
 
-  return my_agwrite(g, max_len);
-}
-
-int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
-               size_t *length) {
   gvc->api[API_device] = &dot_device_available;
   gvc->api[API_render] = &dot_render_available;
 
@@ -273,13 +264,17 @@ int render_dot(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
   job->zoom = Z; /* scaling factor */
   job->focus = xy;
 
-
   // agwarningf("pagedir=%s ignored\n", gvc->pagedir);
-
 
   // GVC_t* gvc_ = GD_gvc(g);
   // GD_gvc(g) = NULL;
-  output_string output = my_emit_graph(g);
+  my_attach_attrs_and_arrows(g);
+
+  /* reset node state */
+  for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
+    ND_state(n) = 0;
+
+  output_string output = my_agwrite(g, max_len);
   // GD_gvc(g) = gvc_;
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
