@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <string.h>
 #include "output_string.h"
+#include "gv_char_classes.h"
 
 // graphviz headers
 #include "cghdr.h"
@@ -72,16 +73,6 @@ static void indent(output_string *output) {
   for (int i = Level; i > 0; i--)
     ioput(output, "\t");
 }
-
-static inline bool gv_islower(int c) { return c >= 'a' && c <= 'z'; }
-
-static inline bool gv_isupper(int c) { return c >= 'A' && c <= 'Z'; }
-
-static inline bool gv_isalpha(int c) { return gv_islower(c) || gv_isupper(c); }
-
-static inline bool gv_isdigit(int c) { return c >= '0' && c <= '9'; }
-
-static inline bool gv_isalnum(int c) { return gv_isalpha(c) || gv_isdigit(c); }
 
 // alphanumeric, '.', '-', or non-ascii; basically, chars used in unquoted ids
 static bool is_id_char(char c) {
