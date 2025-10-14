@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 
-import * as VizPackage from '../src/index.js';
+import * as VizPackage from '../src/index.ts';
 
 describe('Viz', function () {
   let viz;

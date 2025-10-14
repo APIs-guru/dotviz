@@ -1,9 +1,13 @@
+import type { RenderError } from './viz.d.ts';
+
 const errorPatterns = [
   [/^Error: (.*)/, 'error'],
   [/^Warning: (.*)/, 'warning'],
-];
+] as const;
 
-export function parseStderrMessages(messages) {
+export function parseStderrMessages(
+  messages: readonly string[],
+): RenderError[] {
   return messages.map((message) => {
     for (const [pattern, level] of errorPatterns) {
       let match;
@@ -13,13 +17,13 @@ export function parseStderrMessages(messages) {
       }
     }
 
-    return { message: message.trimEnd() };
+    return { message: message.trimEnd(), level: undefined };
   });
 }
 
-export function parseAgerrMessages(messages) {
-  const result = [];
-  let level;
+export function parseAgerrMessages(messages: readonly string[]): RenderError[] {
+  const result: RenderError[] = [];
+  let level: 'error' | 'warning' | undefined;
 
   for (let i = 0; i < messages.length; i++) {
     if (messages[i] == 'Error' && messages[i + 1] == ': ') {
@@ -29,7 +33,10 @@ export function parseAgerrMessages(messages) {
       level = 'warning';
       i += 1;
     } else {
-      result.push({ message: messages[i].trimEnd(), level });
+      result.push({
+        message: messages[i].trimEnd(),
+        level: level,
+      });
     }
   }
 

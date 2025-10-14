@@ -1,5 +1,6 @@
-import { babel } from '@rollup/plugin-babel';
 import terser from '@rollup/plugin-terser';
+import typescript from '@rollup/plugin-typescript';
+import { dts } from 'rollup-plugin-dts';
 
 import packageJSON from './package.json' with { type: 'json' };
 
@@ -11,49 +12,27 @@ Graphviz https://www.graphviz.org
 Expat https://libexpat.github.io
 */`;
 
+const tsOptions = {
+  noEmit: false,
+  sourceMap: true,
+  inlineSources: true,
+  declaration: false,
+};
+
 export default [
   {
-    input: 'src/index.js',
+    input: 'src/index.ts',
     output: {
-      file: 'npmDist/viz.js',
+      file: 'npmDist/dotviz.js',
       format: 'es',
+      sourcemap: true,
       banner,
     },
-    plugins: [
-      babel({
-        babelHelpers: 'bundled',
-        ignore: ['./lib/encoded.js'],
-      }),
-    ],
+    plugins: [typescript(tsOptions), terser()],
   },
   {
-    input: 'src/index.js',
-    output: {
-      file: 'npmDist/viz.cjs',
-      format: 'cjs',
-      banner,
-    },
-    plugins: [
-      babel({
-        babelHelpers: 'bundled',
-        ignore: ['./lib/encoded.js'],
-      }),
-    ],
-  },
-  {
-    input: 'src/index.js',
-    output: {
-      name: 'Viz',
-      file: 'npmDist/viz-global.js',
-      format: 'umd',
-      banner,
-      plugins: [terser()],
-    },
-    plugins: [
-      babel({
-        babelHelpers: 'bundled',
-        ignore: ['./lib/encoded.js'],
-      }),
-    ],
+    input: './src/index.ts',
+    output: [{ file: 'npmDist/dotviz.d.ts', format: 'es' }],
+    plugins: [dts()],
   },
 ];

@@ -13,9 +13,9 @@ spawn('zig', ['build'], { cwd: 'backend/' });
 fs.copyFileSync('backend/zig-out/bin/dotviz.wasm', 'lib/module.wasm');
 
 const wasm = fs.readFileSync('lib/module.wasm');
-const encoded_js = `const encoded = "${wasm.toString('base64')}";
+const encoded_ts = `const encoded = "${wasm.toString('base64')}";
 
-export function decode() {
+export function decode(): ArrayBuffer {
   const data = atob(encoded);
   const bytes = new Uint8Array(data.length);
   for (let i = 0; i < data.length; i++) {
@@ -24,14 +24,13 @@ export function decode() {
   return bytes.buffer;
 }
 `;
-await writeGeneratedFile('lib/encoded.js', encoded_js);
+await writeGeneratedFile('lib/encoded.ts', encoded_ts);
 
 fs.rmSync('npmDist', { recursive: true, force: true });
 fs.mkdirSync('npmDist');
 
 fs.copyFileSync('./LICENSE', './npmDist/LICENSE');
 fs.copyFileSync('./README.md', './npmDist/README.md');
-fs.copyFileSync('./types/index.d.ts', './npmDist/index.d.ts');
 
 spawn('rollup', ['-c']);
 
@@ -42,8 +41,7 @@ const releasePackageJSON = {
   devDependencies: undefined,
   main: './viz.js',
   exports: {
-    types: './index.d.ts',
-    require: './viz.cjs',
+    types: './viz.d.ts',
     default: './viz.js',
   },
 };

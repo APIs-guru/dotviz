@@ -11,6 +11,7 @@
     "target": "esnext",
     "types": ["node"],
     "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
 
     // For nodejs:
     // "lib": ["esnext"],
@@ -19,9 +20,6 @@
 
     // Other Outputs
     "noEmit": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
 
     // Stricter Typechecking Options
     // "noUncheckedIndexedAccess": true,

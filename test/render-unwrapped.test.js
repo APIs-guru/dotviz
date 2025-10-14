@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from 'node:test';
 
 import { JSDOM } from 'jsdom';
 
-import * as VizPackage from '../src/index.js';
+import * as VizPackage from '../src/index.ts';
 
 describe('Viz', function () {
   let viz;
