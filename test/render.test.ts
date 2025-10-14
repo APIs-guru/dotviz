@@ -1,17 +1,12 @@
 import assert from 'node:assert/strict';
-import { beforeEach, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 
 import * as VizPackage from '../src/index.ts';
 
-describe('Viz', function () {
-  let viz;
-
-  beforeEach(async function () {
-    viz = await VizPackage.instance();
-  });
-
-  describe('render', function () {
-    it('renders valid input with a single graph', function () {
+describe('Viz', () => {
+  describe('render', () => {
+    it('renders valid input with a single graph', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph a { }');
 
       assert.deepStrictEqual(result, {
@@ -22,7 +17,8 @@ describe('Viz', function () {
       });
     });
 
-    it('renders valid input with multiple graphs', function () {
+    it('renders valid input with multiple graphs', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph a { } graph b { }');
 
       assert.deepStrictEqual(result, {
@@ -33,32 +29,38 @@ describe('Viz', function () {
       });
     });
 
-    it('each call renders the first graph in input', function () {
+    it('each call renders the first graph in input', async () => {
+      const viz = await VizPackage.instance();
       assert.match(
-        viz.render('graph a { } graph b { } graph c { }').output,
+        viz.render('graph a { } graph b { } graph c { }').output ?? '',
         /graph a {/,
       );
-      assert.match(viz.render('graph d { } graph e { }').output, /graph d {/);
-      assert.match(viz.render('graph f { }').output, /graph f {/);
+      assert.match(
+        viz.render('graph d { } graph e { }').output ?? '',
+        /graph d {/,
+      );
+      assert.match(viz.render('graph f { }').output ?? '', /graph f {/);
     });
 
-    it('accepts the format option, defaulting to dot', function () {
-      assert.match(viz.render('digraph { a -> b }').output, /pos="/);
+    it('accepts the format option, defaulting to dot', async () => {
+      const viz = await VizPackage.instance();
+      assert.match(viz.render('digraph { a -> b }').output ?? '', /pos="/);
       assert.match(
-        viz.render('digraph { a -> b }', { format: 'dot' }).output,
+        viz.render('digraph { a -> b }', { format: 'dot' }).output ?? '',
         /pos="/,
       );
       assert.match(
-        viz.render('digraph { a -> b }', { format: 'gv' }).output,
+        viz.render('digraph { a -> b }', { format: 'gv' }).output ?? '',
         /pos="/,
       );
       assert.match(
-        viz.render('digraph { a -> b }', { format: 'svg' }).output,
+        viz.render('digraph { a -> b }', { format: 'svg' }).output ?? '',
         /<svg/,
       );
     });
 
-    it('accepts yInvert option', function () {
+    it('accepts yInvert option', async () => {
+      const viz = await VizPackage.instance();
       const result1 = viz.render('graph { a }', { yInvert: false });
       const result2 = viz.render('graph { a }', { yInvert: true });
 
@@ -77,7 +79,8 @@ describe('Viz', function () {
       });
     });
 
-    it('accepts default attributes', function () {
+    it('accepts default attributes', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph {}', {
         graphAttributes: {
           a: 123,
@@ -106,7 +109,8 @@ describe('Viz', function () {
       });
     });
 
-    it('default attribute values can be html strings', function () {
+    it('default attribute values can be html strings', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph {}', {
         nodeAttributes: {
           label: { html: '<b>test</b>' },
@@ -124,7 +128,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns an error for empty input', function () {
+    it('returns an error for empty input', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('');
 
       assert.deepStrictEqual(result, {
@@ -134,7 +139,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns error messages for invalid input', function () {
+    it('returns error messages for invalid input', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('invalid');
 
       assert.deepStrictEqual(result, {
@@ -146,14 +152,8 @@ describe('Viz', function () {
       });
     });
 
-    it('throws if input is the wrong type', function () {
-      assert.throws(() => viz.render(), {
-        name: 'TypeError',
-        message: 'input must be a string or object',
-      });
-    });
-
-    it('returns only the error messages emitted for the current call', function () {
+    it('returns only the error messages emitted for the current call', async () => {
+      const viz = await VizPackage.instance();
       const result1 = viz.render('invalid1');
       const result2 = viz.render('invalid2');
 
@@ -174,7 +174,8 @@ describe('Viz', function () {
       });
     });
 
-    it('renders valid input and does not include error messages when followed by a graph with a syntax error', function () {
+    it('renders valid input and does not include error messages when followed by a graph with a syntax error', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph a { } graph {');
 
       assert.deepStrictEqual(result, {
@@ -185,7 +186,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns error messages for layout errors', function () {
+    it('returns error messages for layout errors', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render(
         'graph a { layout=invalid } graph b { layout=dot }',
       );
@@ -202,7 +204,8 @@ describe('Viz', function () {
       });
     });
 
-    it('renders graphs with syntax warnings', function () {
+    it('renders graphs with syntax warnings', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph a { x=1.2.3=y } graph b { }');
 
       assert.deepStrictEqual(result, {
@@ -219,7 +222,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns both warnings and errors', function () {
+    it('returns both warnings and errors', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { layout=invalid; x=1.2.3=y }');
 
       assert.deepStrictEqual(result, {
@@ -239,7 +243,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns error messages printed to stderr', function () {
+    it('returns error messages printed to stderr', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { a [label=図] }', { format: 'dot' });
 
       assert.deepStrictEqual(result, {
@@ -263,7 +268,8 @@ describe('Viz', function () {
       });
     });
 
-    it.skip('returns error messages for invalid engine option', function () {
+    it.skip('returns error messages for invalid engine option', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { }', { engine: 'invalid' });
 
       assert.deepStrictEqual(result, {
@@ -278,7 +284,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns error messages for invalid format option', function () {
+    it('returns error messages for invalid format option', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { }', { format: 'invalid' });
 
       assert.deepStrictEqual(result, {
@@ -293,7 +300,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns an error that contains newlines as a single item', function () {
+    it('returns an error that contains newlines as a single item', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { " }');
 
       assert.deepStrictEqual(result, {
@@ -310,7 +318,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns an error that uses AGPREV with the correct level', function () {
+    it('returns an error that uses AGPREV with the correct level', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { _background=123 }');
 
       assert.deepStrictEqual(result, {
@@ -327,7 +336,8 @@ describe('Viz', function () {
       });
     });
 
-    it('the graph is read with the default node label set', function () {
+    it('the graph is read with the default node label set', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { a; b[label=test] }');
 
       assert.deepStrictEqual(result, {
@@ -348,7 +358,8 @@ describe('Viz', function () {
       });
     });
 
-    it.skip('accepts an images option', function () {
+    it.skip('accepts an images option', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { a[image="test.png"] }', {
         images: [{ name: 'test.png', width: 300, height: 200 }],
       });
@@ -368,7 +379,8 @@ describe('Viz', function () {
       });
     });
 
-    it.skip('accepts two images with the same name', function () {
+    it.skip('accepts two images with the same name', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render('graph { a[image="test.png"] }', {
         images: [
           { name: 'test.png', width: 300, height: 200 },
@@ -391,7 +403,8 @@ describe('Viz', function () {
       });
     });
 
-    it.skip('the same image can be used twice', function () {
+    it.skip('the same image can be used twice', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render(
         'graph { a[image="test.png"]; b[image="test.png"] }',
         {
@@ -418,7 +431,8 @@ describe('Viz', function () {
       });
     });
 
-    it.skip('accepts URLs for image names', function () {
+    it.skip('accepts URLs for image names', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render(
         'graph { a[image="http://example.com/test.png"] }',
         {
@@ -440,38 +454,6 @@ describe('Viz', function () {
 }
 `,
         errors: [],
-      });
-    });
-
-    it.skip('throws for invalid image objects', function () {
-      assert.throws(
-        () =>
-          viz.render('...', {
-            images: [{ src: 'test.png', width: 123, height: 456 }],
-          }),
-        {
-          name: 'TypeError',
-          message: 'image name must be a string',
-        },
-      );
-      assert.throws(
-        () =>
-          viz.render('...', { images: [{ name: 'test.png', height: 123 }] }),
-        {
-          name: 'TypeError',
-          message: 'image width must be a number or string',
-        },
-      );
-      assert.throws(
-        () => viz.render('...', { images: [{ name: 'test.png', width: 456 }] }),
-        {
-          name: 'TypeError',
-          message: 'image height must be a number or string',
-        },
-      );
-      assert.throws(() => viz.render('...', { images: ['test.png'] }), {
-        name: 'TypeError',
-        message: 'image name must be a string',
       });
     });
   });

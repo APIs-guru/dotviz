@@ -1,17 +1,12 @@
 import assert from 'node:assert/strict';
-import { beforeEach, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 
 import * as VizPackage from '../src/index.ts';
 
-describe('Viz', function () {
-  let viz;
-
-  beforeEach(async function () {
-    viz = await VizPackage.instance();
-  });
-
-  describe('renderFormats', function () {
-    it('renders multiple output formats', function () {
+describe('Viz', () => {
+  describe('renderFormats', () => {
+    it('renders multiple output formats', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.renderFormats('graph a { }', ['dot', 'svg']);
 
       assert.deepStrictEqual(result, {
@@ -37,7 +32,8 @@ describe('Viz', function () {
       });
     });
 
-    it('renders with the same format twice', function () {
+    it('renders with the same format twice', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.renderFormats('graph a { }', ['dot', 'dot']);
 
       assert.deepStrictEqual(result, {
@@ -49,7 +45,8 @@ describe('Viz', function () {
       });
     });
 
-    it('renders with an empty array of formats', function () {
+    it('renders with an empty array of formats', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.renderFormats('graph a { }', []);
 
       assert.deepStrictEqual(result, {
@@ -59,7 +56,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns error messages for invalid input', function () {
+    it('returns error messages for invalid input', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.renderFormats('invalid', ['dot', 'svg']);
 
       assert.deepStrictEqual(result, {
@@ -71,7 +69,8 @@ describe('Viz', function () {
       });
     });
 
-    it('returns error messages for invalid input and an empty array of formats', function () {
+    it('returns error messages for invalid input and an empty array of formats', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.renderFormats('invalid', []);
 
       assert.deepStrictEqual(result, {

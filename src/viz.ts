@@ -223,19 +223,6 @@ class Viz {
     return result.output;
   }
 
-  /**
-   * Convenience method that renders the input, parses the output, and returns an SVG element. The `format` option is ignored. Throws an error if rendering failed.
-   */
-  renderSVGElement(
-    input: string | Graph,
-    options: RenderOptions = {},
-  ): SVGSVGElement {
-    const str = this.renderString(input, { ...options, format: 'svg' });
-    const parser = new DOMParser();
-    // @ts-expect-error not sure how to properly type it
-    return parser.parseFromString(str, 'image/svg+xml').documentElement;
-  }
-
   _parseErrorMessages(): RenderError[] {
     return [
       ...parseAgerrMessages(this._agerrMessages),
@@ -259,10 +246,8 @@ class Viz {
         graphPointer = this._withCString(input, (cInput) =>
           this._wasm.viz_read_one_graph_from_dot(cInput),
         );
-      } else if (typeof input === 'object') {
-        graphPointer = this._readObjectInput(input);
       } else {
-        throw new TypeError('input must be a string or object');
+        graphPointer = this._readObjectInput(input);
       }
 
       if (graphPointer === 0) {

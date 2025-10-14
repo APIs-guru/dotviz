@@ -1,18 +1,13 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { beforeEach, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 
 import * as VizPackage from '../src/index.ts';
 
-describe('Viz', function () {
-  let viz;
-
-  beforeEach(async function () {
-    viz = await VizPackage.instance();
-  });
-
-  describe('render', function () {
-    it('comment attribute', function () {
+describe('Viz', () => {
+  describe('render', () => {
+    it('comment attribute', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render(
         `digraph {
   comment = "I am a graph"
@@ -31,7 +26,8 @@ describe('Viz', function () {
         errors: [],
       });
     });
-    it('layers support', function () {
+    it('layers support', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.renderFormats(
         `digraph G {
 	layers="local:pvt:test:new:ofc";

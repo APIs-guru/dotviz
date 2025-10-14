@@ -73,9 +73,23 @@ export default defineConfig([
       'import-x/newline-after-import': 'error',
       'import-x/no-duplicates': 'error',
 
+      '@typescript-eslint/no-floating-promises': [
+        'error',
+        {
+          allowForKnownSafeCalls: [
+            {
+              from: 'package',
+              package: 'node:test',
+              name: ['it', 'describe', 'skip', 'only'],
+            },
+          ],
+        },
+      ],
+
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/prefer-query-selector': 'off',
       'unicorn/prefer-export-from': ['error', { ignoreUsedVariables: true }],
+      'unicorn/prefer-ternary': ['error', 'only-single-line'],
     },
   },
   {

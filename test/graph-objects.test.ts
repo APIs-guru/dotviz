@@ -1,16 +1,12 @@
 import assert from 'node:assert/strict';
-import { beforeEach, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 
 import * as VizPackage from '../src/index.ts';
 
-describe('Viz', function () {
-  let viz;
-
-  beforeEach(async function () {
-    viz = await VizPackage.instance();
-  });
-  describe('rendering graph objects', function () {
-    it('empty graph', function () {
+describe('Viz', () => {
+  describe('rendering graph objects', () => {
+    void it('empty graph', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render({});
 
       assert.deepStrictEqual(result, {
@@ -24,7 +20,8 @@ describe('Viz', function () {
       });
     });
 
-    it('attributes in options override options in input', function () {
+    it('attributes in options override options in input', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render(
         {
           nodeAttributes: {
@@ -51,7 +48,8 @@ describe('Viz', function () {
       });
     });
 
-    it('just edges', function () {
+    it('just edges', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render({
         edges: [{ tail: 'a', head: 'b' }],
       });
@@ -74,7 +72,8 @@ describe('Viz', function () {
       });
     });
 
-    it('undirected graph', function () {
+    it('undirected graph', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render({
         directed: false,
         edges: [{ tail: 'a', head: 'b' }],
@@ -98,7 +97,8 @@ describe('Viz', function () {
       });
     });
 
-    it('html attributes', function () {
+    it('html attributes', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render({
         nodes: [
           {
@@ -124,7 +124,8 @@ describe('Viz', function () {
       });
     });
 
-    it('default attributes, nodes, edges, and nested subgraphs', function () {
+    it('default attributes, nodes, edges, and nested subgraphs', async () => {
+      const viz = await VizPackage.instance();
       const result = viz.render({
         graphAttributes: {
           rankdir: 'LR',
@@ -205,7 +206,8 @@ describe('Viz', function () {
       });
     });
   });
-  it.only('html attributes with ports', function () {
+  it('html attributes with ports', async () => {
+    const viz = await VizPackage.instance();
     const result = viz.render({
       name: 'structs',
       nodeAttributes: {
@@ -314,7 +316,8 @@ describe('Viz', function () {
       errors: [],
     });
   });
-  it('override default attributes', function () {
+  it('override default attributes', async () => {
+    const viz = await VizPackage.instance();
     const result = viz.render({
       nodeAttributes: {
         color: 'blue',

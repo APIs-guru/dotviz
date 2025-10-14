@@ -47,7 +47,7 @@
     "prettier": "prettier --write --list-different .",
     "prettier:check": "prettier --check .",
     "check:spelling": "cspell --cache --no-progress \"**/*\"",
-    "testonly": "node --test test/*.test.js",
+    "testonly": "node --test test/*.test.ts",
     "docs": "typedoc types/index.d.ts"
   }
 }
