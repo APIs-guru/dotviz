@@ -98,3 +98,54 @@ pub const Graph = struct {
         return res;
     }
 };
+
+const GraphInput = union(enum) {
+    dot: [:0]const u8,
+    graph: Graph,
+};
+
+pub const ImageDimensions = struct {
+    width: u32,
+    heigth: u32,
+};
+
+pub const ImageDimensionsMap = std.json.ArrayHashMap(ImageDimensions);
+
+pub const RenderRequest = struct {
+    graph: GraphInput,
+    graphAttributes: ?*Attributes,
+    nodeAttributes: ?*Attributes,
+    edgeAttributes: ?*Attributes,
+    renderDot: bool,
+    renderSvg: bool,
+    engine: [:0]const u8,
+    yInvert: bool,
+    reduce: bool,
+    images: ImageDimensionsMap,
+};
+
+const RenderStatus = enum {
+    failure,
+    success,
+};
+
+pub const RenderErrorLevel = enum {
+    @"error",
+    warning,
+};
+
+pub const RenderError = struct {
+    level: RenderErrorLevel,
+    message: []const u8,
+};
+
+const RenderOutput = struct {
+    svg: ?[:0]const u8 = null,
+    dot: ?[:0]const u8 = null,
+};
+
+pub const RenderResponse = struct {
+    status: RenderStatus,
+    errors: []RenderError = &.{},
+    output: ?RenderOutput,
+};

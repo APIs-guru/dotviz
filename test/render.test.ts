@@ -134,7 +134,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [],
       });
     });
@@ -145,7 +145,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           { level: 'error', message: "syntax error in line 1 near 'invalid'" },
         ],
@@ -159,7 +159,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result1, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           { level: 'error', message: "syntax error in line 1 near 'invalid1'" },
         ],
@@ -167,7 +167,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result2, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           { level: 'error', message: "syntax error in line 1 near 'invalid2'" },
         ],
@@ -194,7 +194,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           {
             level: 'error',
@@ -228,7 +228,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           {
             level: 'warning',
@@ -274,7 +274,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           {
             level: 'error',
@@ -290,7 +290,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           {
             level: 'error',
@@ -306,7 +306,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           {
             level: 'error',

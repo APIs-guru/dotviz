@@ -50,29 +50,9 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/output_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/write_c_inline.c") });
     lib.root_module.export_symbol_names = &.{
-        "viz_dot_to_graph",
-        "viz_json_to_graph",
-        "viz_free_graph",
-        "viz_layout_graph",
-        "viz_layout",
-        "viz_render",
-        "viz_free_layout",
-        "viz_free_context",
-        "viz_layout_done",
-        "viz_graph_to_svg",
-        "viz_free_svg",
-        "viz_create_context",
-        "viz_alloc",
-        "viz_free",
-        "viz_set_y_invert",
-        "viz_set_reduce",
-        "viz_reset_errors",
         "wasm_alloc",
         "wasm_free",
-        "viz_read_one_graph_from_dot",
-        "viz_set_default_graph_attribute",
-        "viz_set_default_node_attribute",
-        "viz_set_default_edge_attribute",
+        "render",
     };
     lib.root_module.strip = true;
     lib.export_table = true;

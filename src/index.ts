@@ -18,9 +18,6 @@ export async function instance(): Promise<Viz> {
         { value: 'i32', mutable: true },
         1024,
       ),
-      jsHandleGraphvizError(ptr: number): void {
-        if (vizInstance) vizInstance._jsHandleGraphvizError(ptr);
-      },
     },
     wasi_snapshot_preview1: {
       fd_write(

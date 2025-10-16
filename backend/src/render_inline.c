@@ -478,5 +478,3 @@ void gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char **result, size_t *length) {
   job->output_data_position = 0;
   render_svg(gvc, job, g, result, length);
 }
-
-void gw_gvFreeRenderData(char *data) { free(data); }

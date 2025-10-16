@@ -62,7 +62,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           { level: 'error', message: "syntax error in line 1 near 'invalid'" },
         ],
@@ -75,7 +75,7 @@ describe('Viz', () => {
 
       assert.deepStrictEqual(result, {
         status: 'failure',
-        output: undefined,
+        output: null,
         errors: [
           { level: 'error', message: "syntax error in line 1 near 'invalid'" },
         ],

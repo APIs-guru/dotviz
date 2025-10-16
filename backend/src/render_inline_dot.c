@@ -10,7 +10,7 @@ extern void my_attach_attrs_and_arrows(graph_t *g);
 
 extern output_string my_agwrite(Agraph_t *g,
                                 unsigned long max_output_linelength);
-output_string render_dot(Agraph_t *g, char **result, size_t *length) {
+output_string render_dot(Agraph_t *g) {
   if (agget(g, "layers") != 0) {
     agwarningf("layers not supported in dot output\n");
   }

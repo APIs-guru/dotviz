@@ -1,4 +1,3 @@
-import { parseAgerrMessages, parseStderrMessages } from './errors.ts';
 import type { Attributes, Graph } from './graph.d.ts';
 
 /**
@@ -66,7 +65,7 @@ export interface SuccessResult {
  */
 export interface FailureResult {
   status: 'failure';
-  output: undefined;
+  output: null;
   errors: RenderError[];
 }
 
@@ -121,45 +120,13 @@ export interface ImageSize {
 class Viz {
   _stdoutBuf = '';
   _stderrBuf = '';
-  _stderrMessages: string[] = [];
-  _agerrMessages: string[] = [];
   _utf8Encoder: TextEncoder = new TextEncoder();
   _utf8Decoder: TextDecoder = new TextDecoder('utf8');
   _wasm: {
     memory: Uint8Array;
-    viz_json_to_graph(jsonPtr: number, jsonLength: number): number;
-    viz_set_default_graph_attribute(
-      graphPtr: number,
-      namePtr: number,
-      valuePtr: number,
-      isHTML: boolean,
-    ): void;
-    viz_set_default_node_attribute(
-      graphPtr: number,
-      namePtr: number,
-      valuePtr: number,
-      isHTML: boolean,
-    ): void;
-    viz_set_default_edge_attribute(
-      graphPtr: number,
-      namePtr: number,
-      valuePtr: number,
-      isHTML: boolean,
-    ): void;
-
-    viz_read_one_graph_from_dot(inputPtr: number): number;
-    viz_set_y_invert(value: boolean): void;
-    viz_set_reduce(value: boolean): void;
-    viz_create_context(): number;
-    viz_reset_errors(): void;
-    viz_layout(ctxPtr: number, graphPtr: number): number;
-    viz_render(ctxPtr: number, graphPtr: number, formatPtr: number): number;
-    viz_free_svg(resultPtr: number): void;
-    viz_free_layout(graphPtr: number): void;
-    viz_free_graph(graphPtr: number): void;
-    viz_free_context(ctxPtr: number): void;
     wasm_alloc(length: number): number;
     wasm_free(ptr: number, length: number): void;
+    render(jsonPtr: number, jsonLength: number): bigint;
   };
 
   /**
@@ -223,211 +190,97 @@ class Viz {
     return result.output;
   }
 
-  _parseErrorMessages(): RenderError[] {
-    return [
-      ...parseAgerrMessages(this._agerrMessages),
-      ...parseStderrMessages(this._stderrMessages),
-    ];
-  }
-
   _renderInput(
     input: string | Graph,
     formats: readonly string[],
     options: RenderOptions,
   ): MultipleRenderResult {
-    let graphPointer = 0;
-    let contextPointer = 0;
-
-    this._agerrMessages = [];
-    this._stderrMessages = [];
-
-    try {
-      if (typeof input === 'string') {
-        graphPointer = this._withCString(input, (cInput) =>
-          this._wasm.viz_read_one_graph_from_dot(cInput),
-        );
-      } else {
-        graphPointer = this._readObjectInput(input);
-      }
-
-      if (graphPointer === 0) {
-        return {
-          status: 'failure',
-          output: undefined,
-          errors: this._parseErrorMessages(),
-        };
-      }
-
-      this._setDefaultAttributes(graphPointer, options);
-      this._wasm.viz_set_y_invert(options.yInvert ?? false); //FIXME: test
-      this._wasm.viz_set_reduce(options.reduce ?? false); //FIXME: test
-
-      contextPointer = this._wasm.viz_create_context();
-
-      this._wasm.viz_reset_errors();
-
-      const layoutError = this._wasm.viz_layout(contextPointer, graphPointer);
-
-      if (layoutError !== 0) {
-        return {
-          status: 'failure',
-          output: undefined,
-          errors: this._parseErrorMessages(),
-        };
-      }
-
-      const output: Record<string, string> = {};
-
-      for (const format of formats) {
-        const resultPointer = this._withCString(format, (cFormat) =>
-          this._wasm.viz_render(contextPointer, graphPointer, cFormat),
-        );
-        if (resultPointer === 0) {
+    let renderGv = false;
+    let renderDot = false;
+    let renderSvg = false;
+    for (const name of formats) {
+      switch (name) {
+        case 'gv': {
+          renderGv = true;
+          break;
+        }
+        case 'dot': {
+          renderDot = true;
+          break;
+        }
+        case 'svg': {
+          renderSvg = true;
+          break;
+        }
+        default: {
           return {
             status: 'failure',
-            output: undefined,
-            errors: this._parseErrorMessages(),
+            output: null,
+            errors: [
+              {
+                level: 'error',
+                message:
+                  'Format: "invalid" not recognized. Use one of: dot gv svg',
+              },
+            ],
           };
         }
-        output[format] = this._readCString(resultPointer);
-        this._wasm.viz_free_svg(resultPointer);
-      }
-
-      return {
-        status: 'success',
-        output: output,
-        errors: this._parseErrorMessages(),
-      };
-    } catch (error) {
-      // @ts-expect-error check if this code needed
-      if (/^exit\(\d+\)/.test(error)) {
-        return {
-          status: 'failure',
-          output: undefined,
-          errors: this._parseErrorMessages(),
-        };
-      } else {
-        throw error;
-      }
-    } finally {
-      if (contextPointer != 0 && graphPointer != 0) {
-        this._wasm.viz_free_layout(graphPointer);
-      }
-
-      if (graphPointer != 0) {
-        this._wasm.viz_free_graph(graphPointer);
-      }
-
-      if (contextPointer != 0) {
-        this._wasm.viz_free_context(contextPointer);
       }
     }
-  }
-
-  _readObjectInput(object: Graph): number {
-    const json = JSON.stringify(object);
-    let jsonBuf;
+    const requestJSON = JSON.stringify({
+      graph: typeof input === 'string' ? { dot: input } : { graph: input },
+      graphAttributes: options.graphAttributes ?? null,
+      nodeAttributes: options.nodeAttributes ?? null,
+      edgeAttributes: options.edgeAttributes ?? null,
+      renderDot: renderDot || renderGv,
+      renderSvg,
+      engine: options.engine ?? 'dot',
+      yInvert: options.yInvert ?? false,
+      reduce: options.reduce ?? false,
+      images: options.images ?? {},
+    });
+    let inputJSONBuf;
+    let outputJSONBuf;
     try {
-      const cJson = this._utf8Encoder.encode(json);
+      const cJson = this._utf8Encoder.encode(requestJSON);
       const jsonPtr = this._wasm.wasm_alloc(cJson.length);
-      jsonBuf = new Uint8Array(this._wasm.memory.buffer, jsonPtr, cJson.length);
-      jsonBuf.set(cJson);
-      return this._wasm.viz_json_to_graph(jsonBuf.byteOffset, jsonBuf.length);
-    } finally {
-      if (jsonBuf) {
-        this._wasm.wasm_free(jsonBuf.byteOffset, jsonBuf.length);
-      }
-    }
-  }
-
-  _jsHandleGraphvizError(ptr: number): void {
-    this._agerrMessages.push(this._readCString(ptr));
-  }
-
-  // FIXME: handle HTML strings separately
-  _withCString<T>(src: string, fn: (ptr: number) => T): T {
-    let inputBuf;
-    try {
-      const cString = this._utf8Encoder.encode(src + '\0');
-      const inputPtr = this._wasm.wasm_alloc(cString.length);
-      inputBuf = new Uint8Array(
+      inputJSONBuf = new Uint8Array(
         this._wasm.memory.buffer,
-        inputPtr,
-        cString.length,
+        jsonPtr,
+        cJson.length,
       );
-      inputBuf.set(cString);
-      return fn(inputBuf.byteOffset);
+      inputJSONBuf.set(cJson);
+      const sliceU64 = this._wasm.render(
+        inputJSONBuf.byteOffset,
+        inputJSONBuf.length,
+      );
+      const ptr = Number(BigInt.asUintN(32, sliceU64));
+      const len = Number(BigInt.asUintN(32, sliceU64 >> 32n));
+
+      outputJSONBuf = new Uint8Array(this._wasm.memory.buffer, ptr, len);
+      const str: string = this._utf8Decoder.decode(outputJSONBuf);
+      const response = JSON.parse(str) as MultipleRenderResult;
+      let output: Record<string, string> | null = null;
+      if (response.output) {
+        output = {};
+        if (renderGv) {
+          output.gv = response.output.dot;
+        }
+        if (renderDot) {
+          output.dot = response.output.dot;
+        }
+        if (renderSvg) {
+          output.svg = response.output.svg;
+        }
+      }
+      response.output = output;
+      return response;
     } finally {
-      if (inputBuf) {
-        this._wasm.wasm_free(inputBuf.byteOffset, inputBuf.length);
+      if (inputJSONBuf) {
+        this._wasm.wasm_free(inputJSONBuf.byteOffset, inputJSONBuf.length);
       }
-    }
-  }
-
-  _readCString(ptr: number): string {
-    const buf = new Uint8Array(this._wasm.memory.buffer);
-    let end = ptr;
-    while (buf[end] !== 0) {
-      end++;
-    }
-    return this._utf8Decoder.decode(buf.subarray(ptr, end));
-  }
-
-  _setDefaultAttributes(graphPointer: number, data: Graph): void {
-    if (data.graphAttributes) {
-      for (const [name, value] of Object.entries(data.graphAttributes)) {
-        this._withCString(name, (cName) => {
-          const isHTML = typeof value === 'object' && 'html' in value;
-          this._withCString(
-            isHTML ? value.html : value.toString(),
-            (cValue) => {
-              this._wasm.viz_set_default_graph_attribute(
-                graphPointer,
-                cName,
-                cValue,
-                isHTML,
-              );
-            },
-          );
-        });
-      }
-    }
-
-    if (data.nodeAttributes) {
-      for (const [name, value] of Object.entries(data.nodeAttributes)) {
-        this._withCString(name, (cName) => {
-          const isHTML = typeof value === 'object' && 'html' in value;
-          this._withCString(
-            isHTML ? value.html : value.toString(),
-            (cValue) => {
-              this._wasm.viz_set_default_node_attribute(
-                graphPointer,
-                cName,
-                cValue,
-                isHTML,
-              );
-            },
-          );
-        });
-      }
-    }
-
-    if (data.edgeAttributes) {
-      for (const [name, value] of Object.entries(data.edgeAttributes)) {
-        this._withCString(name, (cName) => {
-          const isHTML = typeof value === 'object' && 'html' in value;
-          this._withCString(
-            isHTML ? value.html : value.toString(),
-            (cValue) => {
-              this._wasm.viz_set_default_edge_attribute(
-                graphPointer,
-                cName,
-                cValue,
-                isHTML,
-              );
-            },
-          );
-        });
+      if (outputJSONBuf) {
+        this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
       }
     }
   }
