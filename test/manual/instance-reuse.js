@@ -1,4 +1,4 @@
-import { instance } from '../../src/index.js';
+import { instance } from '../../src/index.ts';
 import { dotStringify, randomGraph } from './utils.js';
 
 const invalidInput = 'graph {';
