@@ -1,6 +1,7 @@
 #ifndef AGRW_H_
 #define AGRW_H_
 
+#include "geom.h"
 #include "gvcext.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -10,6 +11,7 @@ typedef void *Agrw_t;
 
 GVC_t *gw_create_context(void);
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph);
+point my_gvusershape_size(Agrw_t graph, const char *height, const char *width);
 
 Agrw_t gw_agopen(const char *name, bool directed, bool stricted);
 int gw_agclose(Agrw_t graph);

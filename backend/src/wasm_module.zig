@@ -8,6 +8,7 @@ pub const c = @cImport({
     @cInclude("agrw.h");
     @cInclude("layout_inline.h");
     @cInclude("render_inline.h");
+    @cInclude("geom.h");
 });
 
 extern var Y_invert: bool;
@@ -223,6 +224,8 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     const request = parseRequestJSON(arena_allocator, json_bytes, size);
 
+    g_image_map = request.images;
+
     errors_strings = .{
         .allocator = arena_allocator,
         .array_list = .empty,
@@ -345,4 +348,10 @@ fn freeCString(string: ?[:0]const u8) void {
     if (string) |slice| {
         std.c.free(@ptrCast(@constCast(slice.ptr)));
     }
+}
+
+var g_image_map: vizjs_types.ImageDimensionsMap = undefined;
+export fn gvusershape_size(graph: Agrw_t, name: [*c]u8) c.point {
+    const dimensions = g_image_map.map.get(std.mem.span(name)) orelse @panic("no image found");
+    return c.my_gvusershape_size(graph, dimensions.height, dimensions.width);
 }

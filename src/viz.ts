@@ -236,7 +236,7 @@ class Viz {
       engine: options.engine ?? 'dot',
       yInvert: options.yInvert ?? false,
       reduce: options.reduce ?? false,
-      images: options.images ?? {},
+      images: this._normalizeImages(options.images),
     });
     let inputJSONBuf;
     let outputJSONBuf;
@@ -282,6 +282,17 @@ class Viz {
         this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
       }
     }
+  }
+
+  _normalizeImages(
+    images: Record<string, ImageSize> = {},
+  ): Record<string, ImageSize> {
+    return Object.fromEntries(
+      Object.entries(images).map(([name, { height, width }]) => [
+        name,
+        { height: height.toString(), width: width.toString() },
+      ]),
+    );
   }
 
   _wasi_fd_write(

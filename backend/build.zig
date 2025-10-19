@@ -49,6 +49,7 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/render_inline_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/output_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/write_c_inline.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/gvusershape_size.c") });
     lib.root_module.export_symbol_names = &.{
         "wasm_alloc",
         "wasm_free",

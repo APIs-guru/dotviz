@@ -358,7 +358,7 @@ describe('Viz', () => {
       });
     });
 
-    it.skip('accepts an images option', async () => {
+    it('accepts an images option', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph { a[image="test.png"] }', {
         images: { 'test.png': { width: 300, height: 200 } },
@@ -379,7 +379,7 @@ describe('Viz', () => {
       });
     });
 
-    it.skip('the same image can be used twice', async () => {
+    it('the same image can be used twice', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render(
         'graph { a[image="test.png"]; b[image="test.png"] }',
@@ -405,7 +405,7 @@ describe('Viz', () => {
       });
     });
 
-    it.skip('accepts URLs for image names', async () => {
+    it('accepts URLs for image names', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render(
         'graph { a[image="http://example.com/test.png"] }',
