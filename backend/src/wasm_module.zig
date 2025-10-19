@@ -29,7 +29,9 @@ fn setDefaultAttributes(
 ) void {
     var iterator = attributes.map.iterator();
     while (iterator.next()) |attr| {
-        const name = allocator.dupeZ(u8, attr.key_ptr.*) catch unreachable;
+        const name = allocator.dupeZ(u8, attr.key_ptr.*) catch @panic(
+            "cannot dupeZ in setDefaultAttributes",
+        );
         switch (attr.value_ptr.*) {
             .text => |val| {
                 c.gw_agattr_text(graph, kind, name, @ptrCast(val.ptr));
@@ -48,7 +50,9 @@ fn setAttributes(
 ) void {
     var iterator = attributes.map.iterator();
     while (iterator.next()) |attr| {
-        const name = allocator.dupeZ(u8, attr.key_ptr.*) catch unreachable;
+        const name = allocator.dupeZ(u8, attr.key_ptr.*) catch @panic(
+            "cannot dupeZ in setAttributes",
+        );
         switch (attr.value_ptr.*) {
             .text => |val| {
                 c.gw_agsafeset_text(object, name, @ptrCast(val.ptr));

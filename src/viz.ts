@@ -23,15 +23,24 @@ import type { Attributes, Graph } from './graph.d.ts';
  * Sets the default edge attributes. This corresponds the {@link https://www.graphviz.org/doc/info/command.html#-E | `-E`} Graphviz command-line option</a>.
  *
  * @property images
+ * The name of the image used as a key of the object.
+ * In addition to filenames, names that look like absolute filesystem paths or URLs can be used.
+ * For example:
+ *
+ * - `"example.png"`
+ * - `"/images/example.png"`
+ * - `"http://example.com/image.png"`
+ *
+ * Names that look like relative filesystem paths, such as `"../example.png"`, are not supported.
  * Image sizes to use when rendering nodes with <code>image</code> attributes.
  *
  * For example, to indicate to Graphviz that the image <code>test.png</code> has size 300x200:
  *
  * ```js
- * viz.render("graph { a[image=\"test.png\"] }", {
- *   images: [
- *     { name: "test.png", width: 300, height: 200 }
- *   ]
+ * viz.render('graph { a[image="test.png"] }', {
+ *   images: {
+ *     'test.png': { width: 300, height: 200 },
+ *   },
  * });
  * ```
  */
@@ -43,7 +52,7 @@ export interface RenderOptions {
   graphAttributes?: Attributes;
   nodeAttributes?: Attributes;
   edgeAttributes?: Attributes;
-  images?: ImageSize[];
+  images?: Record<string, ImageSize>;
 }
 
 /**
@@ -93,15 +102,6 @@ export interface RenderError {
  *
  * `width` and `height` may be specified as numbers or strings with units: in, px, pc, pt, cm, or mm. If no units are given or measurements are given as numbers, points (pt) are used.
  *
- * @property name
- * The name of the image. In addition to filenames, names that look like absolute filesystem paths or URLs can be used. For example:
- *
- * - `"example.png"`
- * - `"/images/example.png"`
- * - `"http://example.com/image.png"`
- *
- * Names that look like relative filesystem paths, such as `"../example.png"`, are not supported.
- *
  * @property width
  * The width of the image.
  *
@@ -109,7 +109,6 @@ export interface RenderError {
  * The height of the image.
  */
 export interface ImageSize {
-  name: string;
   width: string | number;
   height: string | number;
 }

@@ -106,7 +106,7 @@ const GraphInput = union(enum) {
 
 pub const ImageDimensions = struct {
     width: u32,
-    heigth: u32,
+    height: u32,
 };
 
 pub const ImageDimensionsMap = std.json.ArrayHashMap(ImageDimensions);

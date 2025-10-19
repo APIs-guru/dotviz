@@ -361,31 +361,7 @@ describe('Viz', () => {
     it.skip('accepts an images option', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph { a[image="test.png"] }', {
-        images: [{ name: 'test.png', width: 300, height: 200 }],
-      });
-
-      assert.deepStrictEqual(result, {
-        status: 'success',
-        output: `graph {
-	graph [bb="0,0,321.03,214.96"];
-	node [label="\\N"];
-	a	[height=2.9856,
-		image="test.png",
-		pos="160.51,107.48",
-		width=4.4587];
-}
-`,
-        errors: [],
-      });
-    });
-
-    it.skip('accepts two images with the same name', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.render('graph { a[image="test.png"] }', {
-        images: [
-          { name: 'test.png', width: 300, height: 200 },
-          { name: 'test.png', width: 300, height: 200 },
-        ],
+        images: { 'test.png': { width: 300, height: 200 } },
       });
 
       assert.deepStrictEqual(result, {
@@ -407,9 +383,7 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render(
         'graph { a[image="test.png"]; b[image="test.png"] }',
-        {
-          images: [{ name: 'test.png', width: 300, height: 200 }],
-        },
+        { images: { 'test.png': { width: 300, height: 200 } } },
       );
 
       assert.deepStrictEqual(result, {
@@ -436,9 +410,9 @@ describe('Viz', () => {
       const result = viz.render(
         'graph { a[image="http://example.com/test.png"] }',
         {
-          images: [
-            { name: 'http://example.com/test.png', width: 300, height: 200 },
-          ],
+          images: {
+            'http://example.com/test.png': { width: 300, height: 200 },
+          },
         },
       );
 
