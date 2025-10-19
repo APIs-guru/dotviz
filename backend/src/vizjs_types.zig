@@ -134,9 +134,54 @@ pub const RenderErrorLevel = enum {
     warning,
 };
 
+pub const JSONParseError = struct {
+    line: u64,
+    column: u64,
+    err: [:0]const u8,
+    json_line: []const u8,
+
+    pub fn init(diagnostics: std.json.Diagnostics, err: anyerror, json_string: []const u8) JSONParseError {
+        const offset: usize = @intCast(diagnostics.getByteOffset());
+        const start = std.mem.lastIndexOfScalar(u8, json_string[0..offset], '\n') orelse 0;
+        const end = std.mem.indexOfScalarPos(u8, json_string, offset, '\n') orelse json_string.len;
+        const json_line = json_string[@max(start, offset -| 40)..@min(end, offset +| 40)];
+
+        return .{
+            .line = diagnostics.getLine(),
+            .column = diagnostics.getColumn(),
+            .err = @errorName(err),
+            .json_line = json_line,
+        };
+    }
+
+    pub fn jsonStringify(self: @This(), jws: anytype) !void {
+        try jws.beginWriteRaw();
+        try jws.writer.print("\"JSON error {s} at {d}:{d}: `", .{ self.err, self.line, self.column });
+        try std.json.Stringify.encodeJsonStringChars(self.json_line, jws.options, jws.writer);
+        try jws.writer.print("`\"", .{});
+        jws.endWriteRaw();
+    }
+};
+
+const RenderErrorMessage = union(enum) {
+    slice: []const u8,
+    err: JSONParseError,
+
+    pub fn jsonStringify(self: @This(), jws: anytype) !void {
+        switch (self) {
+            .slice => {
+                try jws.write(self.slice);
+            },
+            .err => {
+                try self.err.jsonStringify(jws);
+            },
+        }
+    }
+};
+
 pub const RenderError = struct {
     level: RenderErrorLevel,
-    message: []const u8,
+    message: RenderErrorMessage,
 };
 
 const RenderOutput = struct {
@@ -146,6 +191,6 @@ const RenderOutput = struct {
 
 pub const RenderResponse = struct {
     status: RenderStatus,
-    errors: []RenderError = &.{},
+    errors: []const RenderError = &.{},
     output: ?RenderOutput,
 };

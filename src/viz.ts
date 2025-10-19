@@ -226,18 +226,22 @@ class Viz {
         }
       }
     }
-    const requestJSON = JSON.stringify({
-      graph: typeof input === 'string' ? { dot: input } : { graph: input },
-      graphAttributes: options.graphAttributes ?? null,
-      nodeAttributes: options.nodeAttributes ?? null,
-      edgeAttributes: options.edgeAttributes ?? null,
-      renderDot: renderDot || renderGv,
-      renderSvg,
-      engine: options.engine ?? 'dot',
-      yInvert: options.yInvert ?? false,
-      reduce: options.reduce ?? false,
-      images: this._normalizeImages(options.images),
-    });
+    const requestJSON = JSON.stringify(
+      {
+        graph: typeof input === 'string' ? { dot: input } : { graph: input },
+        graphAttributes: options.graphAttributes ?? null,
+        nodeAttributes: options.nodeAttributes ?? null,
+        edgeAttributes: options.edgeAttributes ?? null,
+        renderDot: renderDot || renderGv,
+        renderSvg,
+        engine: options.engine ?? 'dot',
+        yInvert: options.yInvert ?? false,
+        reduce: options.reduce ?? false,
+        images: this._normalizeImages(options.images),
+      },
+      null,
+      2,
+    );
     let inputJSONBuf;
     let outputJSONBuf;
     try {

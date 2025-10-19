@@ -152,6 +152,26 @@ describe('Viz', () => {
       });
     });
 
+    it.only('returns error messages for invalid options', async () => {
+      const viz = await VizPackage.instance();
+      const result = viz.render('digraph {a -> b}', {
+        // @ts-expect-error invalid value for test
+        yInvert: 'bad value',
+      });
+
+      assert.deepStrictEqual(result, {
+        status: 'failure',
+        output: null,
+        errors: [
+          {
+            level: 'error',
+            message:
+              'JSON error UnexpectedToken at 11:25: `\n  "yInvert": "bad value",`',
+          },
+        ],
+      });
+    });
+
     it('returns only the error messages emitted for the current call', async () => {
       const viz = await VizPackage.instance();
       const result1 = viz.render('invalid1');

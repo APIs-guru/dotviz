@@ -172,23 +172,11 @@ fn parseAgerrMessages(
         } else {
             result.append(allocator, .{
                 .level = level orelse @panic("error level should not be null"),
-                .message = std.mem.trimEnd(u8, items[i], " \n"),
+                .message = .{ .slice = std.mem.trimEnd(u8, items[i], " \n") },
             }) catch @panic("cannot allocate");
         }
     }
     return result.toOwnedSlice(allocator) catch @panic("cannot allocate");
-}
-
-fn parseRequestJSON(allocator: std.mem.Allocator, json_bytes: [*]u8, size: usize) vizjs_types.RenderRequest {
-    const json_string = json_bytes[0..size];
-    const request: vizjs_types.RenderRequest = std.json.parseFromSliceLeaky(
-        vizjs_types.RenderRequest,
-        allocator,
-        json_string,
-        .{},
-    ) catch @panic("cannot parse"); // TODO: implement error handling
-    // https://ziggit.dev/t/example-using-diagnostics-for-error-handling-with-std-json/7882/2
-    return request;
 }
 
 const WasmString = packed struct(u64) {
@@ -218,11 +206,38 @@ fn stringifyResponseJSON(allocator: std.mem.Allocator, response: vizjs_types.Ren
 }
 
 pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
+    const json_string = json_bytes[0..size];
+
     var arena = std.heap.ArenaAllocator.init(wasm_allocator);
     const arena_allocator = arena.allocator();
     defer arena.deinit();
 
-    const request = parseRequestJSON(arena_allocator, json_bytes, size);
+    var scanner = std.json.Scanner.initCompleteInput(
+        arena_allocator,
+        json_string,
+    );
+    defer scanner.deinit();
+
+    var diag = std.json.Diagnostics{};
+    scanner.enableDiagnostics(&diag);
+    const request = std.json.parseFromTokenSourceLeaky(
+        vizjs_types.RenderRequest,
+        arena_allocator,
+        &scanner,
+        .{},
+    ) catch |err| {
+        const json_error = vizjs_types.JSONParseError.init(diag, err, json_string);
+        return stringifyResponseJSON(wasm_allocator, .{
+            .status = .failure,
+            .errors = &[1]vizjs_types.RenderError{.{
+                .level = .@"error",
+                .message = .{
+                    .err = json_error,
+                },
+            }},
+            .output = null,
+        });
+    };
 
     g_image_map = request.images;
 
