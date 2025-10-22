@@ -444,7 +444,7 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 extern void inner_render_svg(GVC_t *gvc, GVJ_t *job, Agrw_t graph,
                              char **result, size_t *length);
 /* Render layout in a specified format to a malloc'ed string */
-void render_svg(GVC_t *gvc, Agrw_t graph, char **result, size_t *length) {
+output_string render_svg(GVC_t *gvc, Agrw_t graph) {
 
   Agraph_t *g = graph;
   init_bb(g);
@@ -468,13 +468,14 @@ void render_svg(GVC_t *gvc, Agrw_t graph, char **result, size_t *length) {
   job->flags |= chkOrder(g);
   /* page size on Linux, Mac OS X and Windows */
   const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
-
-  if (!(*result = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
+  output_string output;
+  if (!(output.data = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
     agerrorf("failure malloc'ing for result string");
     exit(-1);
   }
-  job->output_data = *result;
+  job->output_data = output.data;
   job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
   job->output_data_position = 0;
-  inner_render_svg(gvc, job, g, result, length);
+  inner_render_svg(gvc, job, g, &output.data, &output.data_position);
+  return output;
 }

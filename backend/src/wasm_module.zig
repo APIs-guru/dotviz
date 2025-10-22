@@ -325,23 +325,14 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     defer freeCString(responseDot);
     if (request.renderDot) {
         const output = c.render_dot(graphptr);
-        var response: [:0]const u8 = undefined;
-        response.ptr = output.data;
-        response.len = output.data_position;
-        responseDot = response;
+        responseDot = @ptrCast(output.data[0..output.data_position]);
     }
 
     var responseSvg: ?[:0]const u8 = null;
     defer freeCString(responseSvg);
     if (request.renderSvg) {
-        var response: [:0]const u8 = undefined;
-        c.render_svg(
-            gvc,
-            graphptr,
-            @ptrCast(&response.ptr),
-            &response.len,
-        );
-        responseSvg = response;
+        const output = c.render_svg(gvc, graphptr);
+        responseSvg = @ptrCast(output.data[0..output.data_position]);
     }
 
     const responseJSON = stringifyResponseJSON(wasm_allocator, .{
