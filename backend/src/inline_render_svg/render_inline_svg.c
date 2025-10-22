@@ -1,4 +1,4 @@
-#include "agrw.h"
+#include "../agrw.h"
 #include "cgraph.h"
 #include "const.h"
 #include "geom.h"
@@ -13,7 +13,6 @@
 #include "gvplugin.h"
 #include "gvplugin_device.h" // IWYU pragma: keep
 #include "gvplugin_render.h" // IWYU pragma: keep
-#include "render_inline.h"
 #include "streq.h"
 #include "strview.h" // IWYU pragma: keep
 #include "svg.h"

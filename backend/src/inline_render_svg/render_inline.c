@@ -1,7 +1,7 @@
-#include "render_inline.h"
+#include "../agrw.h"
+#include "../gv_char_classes.h"
 #include "const.h"
 #include "geomprocs.h"
-#include "gv_char_classes.h"
 #include "gvc.h" // IWYU pragma: keep
 #include "gvcint.h"
 #include "util/list.h"

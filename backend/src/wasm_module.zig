@@ -7,7 +7,6 @@ pub const c = @cImport({
     @cInclude("gvc.h");
     @cInclude("agrw.h");
     @cInclude("layout_inline.h");
-    @cInclude("render_inline.h");
     @cInclude("geom.h");
 });
 

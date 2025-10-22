@@ -3,6 +3,7 @@
 
 #include "geom.h"
 #include "gvcext.h"
+#include "output_string.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,6 +13,10 @@ typedef void *Agrw_t;
 GVC_t *gw_create_context(void);
 int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph);
 point my_gvusershape_size(Agrw_t graph, const char *height, const char *width);
+
+// FIXME: render svg
+void gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char **result, size_t *length);
+output_string render_dot(Agrw_t g);
 
 Agrw_t gw_agopen(const char *name, bool directed, bool stricted);
 int gw_agclose(Agrw_t graph);

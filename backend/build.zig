@@ -43,12 +43,12 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(b.path("src"));
     lib.addCSourceFile(.{ .file = b.path("src/agrw.c") });
     lib.addCSourceFile(.{ .file = b.path("src/layout_inline.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/render_inline.c") });
     lib.addCSourceFile(.{ .file = b.path("src/context_inline.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/render_inline_dot.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/render_inline_svg.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/output_dot.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/write_c_inline.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/render_inline.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/render_inline_svg.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/render_inline_dot.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/output_dot.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/write_c_inline.c") });
     lib.addCSourceFile(.{ .file = b.path("src/gvusershape_size.c") });
     lib.root_module.export_symbol_names = &.{
         "wasm_alloc",
