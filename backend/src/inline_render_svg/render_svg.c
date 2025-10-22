@@ -441,10 +441,10 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 
 */
 
-extern void render_svg(GVC_t *gvc, GVJ_t *job, Agrw_t graph, char **result,
-                       size_t *length);
+extern void inner_render_svg(GVC_t *gvc, GVJ_t *job, Agrw_t graph,
+                             char **result, size_t *length);
 /* Render layout in a specified format to a malloc'ed string */
-void gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char **result, size_t *length) {
+void render_svg(GVC_t *gvc, Agrw_t graph, char **result, size_t *length) {
 
   Agraph_t *g = graph;
   init_bb(g);
@@ -476,5 +476,5 @@ void gw_gvRenderData(GVC_t *gvc, Agrw_t graph, char **result, size_t *length) {
   job->output_data = *result;
   job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
   job->output_data_position = 0;
-  render_svg(gvc, job, g, result, length);
+  inner_render_svg(gvc, job, g, result, length);
 }

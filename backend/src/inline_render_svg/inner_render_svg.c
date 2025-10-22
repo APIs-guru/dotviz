@@ -422,8 +422,8 @@ gvplugin_available_t svg_render_available = {
     .typestr = "svg",
 };
 
-void render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
-                size_t *length) {
+void inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
+                      size_t *length) {
   gvc->api[API_device] = &svg_device_available;
   gvc->api[API_render] = &svg_render_available;
 

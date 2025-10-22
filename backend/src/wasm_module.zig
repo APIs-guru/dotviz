@@ -335,7 +335,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     defer freeCString(responseSvg);
     if (request.renderSvg) {
         var response: [:0]const u8 = undefined;
-        c.gw_gvRenderData(
+        c.render_svg(
             gvc,
             graphptr,
             @ptrCast(&response.ptr),
