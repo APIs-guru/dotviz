@@ -78,5 +78,38 @@ describe('Viz', () => {
         ],
       });
     });
+    it('_background attribute', async () => {
+      const viz = await VizPackage.instance();
+      const result = viz.renderFormats(
+        `digraph G {
+  _background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36";
+  a -> b
+}`,
+        ['dot', 'svg'],
+      );
+      const dot = String.raw`digraph G {
+	graph [_background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36",
+		bb="0,0,54,108"
+	];
+	node [label="\N"];
+	a	[height=0.5,
+		pos="27,90",
+		width=0.75];
+	b	[height=0.5,
+		pos="27,18",
+		width=0.75];
+	a -> b	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"];
+}
+`;
+      const svg = fs.readFileSync(
+        'test/snapshots/_background_attribute.svg',
+        'utf8',
+      );
+      assert.deepStrictEqual(result, {
+        status: 'success',
+        output: { dot, svg },
+        errors: [],
+      });
+    });
   });
 });
