@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include <locale.h>
 #include <math.h>
 #include <geomprocs.h>
 #include "gvcext.h"
@@ -64,21 +63,11 @@ extern Agsym_t *N_style, *N_layer, *N_comment, *N_fontname, *N_fontsize;
 extern Agsym_t *E_layer, *E_dir, *E_arrowsz, *E_color, *E_fillcolor,
     *E_penwidth, *E_decorate, *E_comment, *E_style;
 
-#ifdef _WIN32
-#define strtok_r strtok_s
-#endif
-
 #define P2RECT(p, pr, sx, sy)                                                  \
   (pr[0].x = p.x - sx, pr[0].y = p.y - sy, pr[1].x = p.x + sx,                 \
    pr[1].y = p.y + sy)
 #define FUZZ 3
 #define EPSILON .0001
-
-#ifdef DEBUG
-enum { debug = 1 };
-#else
-enum { debug = 0 };
-#endif
 
 typedef struct {
   xdot_op op;
@@ -3758,31 +3747,8 @@ extern gvevent_key_binding_t gvevent_key_binding[];
 extern const size_t gvevent_key_binding_size;
 extern gvdevice_callbacks_t gvdevice_callbacks;
 
-/* Set LC_NUMERIC to "C" to get expected interpretation of %f
- * in printf functions. Languages like postscript and dot expect
- * floating point numbers to use a decimal point.
- *
- * If set is non-zero, the "C" locale set;
- * if set is zero, the original locale is reset.
- * Calls to the function can nest.
- */
 void gv_fixLocale(int set) {
-  static char *save_locale;
-  static int cnt;
-
-  if (set) {
-    cnt++;
-    if (cnt == 1) {
-      save_locale = gv_strdup(setlocale(LC_NUMERIC, NULL));
-      setlocale(LC_NUMERIC, "C");
-    }
-  } else if (cnt > 0) {
-    cnt--;
-    if (cnt == 0) {
-      setlocale(LC_NUMERIC, save_locale);
-      free(save_locale);
-    }
-  }
+  // FIXME: do nothing successfully
 }
 
 int gvRenderJobs(GVC_t *gvc, graph_t *g) {
@@ -3798,7 +3764,6 @@ int gvRenderJobs(GVC_t *gvc, graph_t *g) {
   init_gvc(gvc, g);
   init_layering(gvc, g);
 
-  gv_fixLocale(1);
   for (job = gvjobs_first(gvc); job; job = gvjobs_next(gvc)) {
     if (gvc->gvg) {
       job->input_filename = gvc->gvg->input_filename;
@@ -3813,14 +3778,12 @@ int gvRenderJobs(GVC_t *gvc, graph_t *g) {
     job->numkeys = gvevent_key_binding_size;
     if (!GD_drawing(g)) {
       agerrorf("layout was not done\n");
-      gv_fixLocale(0);
       return -1;
     }
 
     job->output_lang = gvrender_select(job, job->output_langname);
     if (job->output_lang == NO_SUPPORT) {
       agerrorf("renderer for %s is unavailable\n", job->output_langname);
-      gv_fixLocale(0);
       return -1;
     }
 
@@ -3878,7 +3841,6 @@ int gvRenderJobs(GVC_t *gvc, graph_t *g) {
      */
     prevjob = job;
   }
-  gv_fixLocale(0);
   return 0;
 }
 
