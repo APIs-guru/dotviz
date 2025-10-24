@@ -46,6 +46,7 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/context_inline.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/inner_render_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/render_svg.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/emit_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/render_inline_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/output_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/write_c_inline.c") });
@@ -342,6 +343,7 @@ pub fn buildGraphviz(
     lib.installHeadersDirectory(graphviz_dep.path("lib/cdt"), "", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/cgraph"), "", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/util"), "", h);
+    lib.installHeadersDirectory(graphviz_dep.path("lib/xdot"), "", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/util"), "util/", h);
     lib.installHeader(graphviz_dep.path("lib/gvc/gvc.h"), "gvc.h");
     lib.installHeadersDirectory(b.path("src/graphviz_build/inc/common"), "", .{});
@@ -394,10 +396,11 @@ const src_gvc = [_][]const u8{
 };
 
 const src_common = [_][]const u8{
-    "splines.c",  "htmllex.c", "colxlate.c", "textspan_lut.c", "postproc.c",
-    "taper.c",    "globals.c", "timing.c",   "psusershape.c",  "emit.c",
-    "textspan.c", "utils.c",   "args.c",     "routespl.c",     "shapes.c",
-    "pointset.c", "ns.c",      "ellipse.c",  "arrows.c",       "geom.c",
+    "splines.c", "htmllex.c", "colxlate.c", "textspan_lut.c", "postproc.c",
+    "taper.c",    "globals.c",  "timing.c", "psusershape.c", // "emit.c",
+    "textspan.c", "utils.c",    "args.c",   "routespl.c",
+    "shapes.c",   "pointset.c", "ns.c",     "ellipse.c",
+    "arrows.c",   "geom.c",
     "input.c", //"output.c",
     "labels.c",
     "htmltable.c",
