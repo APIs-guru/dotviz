@@ -5,7 +5,6 @@
 #include "gvc.h" // IWYU pragma: keep
 #include "gvcint.h"
 #include "util/list.h"
-// #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

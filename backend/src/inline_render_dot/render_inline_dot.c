@@ -1,10 +1,8 @@
 
-#include "gv_char_classes.h"
-#include "output_string.h"
+#include "../gv_char_classes.h"
+#include "../output_string.h"
 #include "types.h"
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 extern void my_attach_attrs_and_arrows(graph_t *g);
 
@@ -22,8 +20,6 @@ output_string render_dot(Agraph_t *g) {
 
   // agwarningf("pagedir=%s ignored\n", gvc->pagedir);
 
-  // GVC_t* gvc_ = GD_gvc(g);
-  // GD_gvc(g) = NULL;
   my_attach_attrs_and_arrows(g);
 
   /* reset node state */
@@ -31,7 +27,6 @@ output_string render_dot(Agraph_t *g) {
     ND_state(n) = 0;
 
   output_string output = my_agwrite(g, max_len);
-  // GD_gvc(g) = gvc_;
 
   return output;
 }
