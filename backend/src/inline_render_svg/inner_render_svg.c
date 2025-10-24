@@ -452,7 +452,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   gvc->active_jobs = job;  /* first job of new list */
   job->next_active = NULL; /* terminate active list */
-  job->callbacks = &gvdevice_callbacks;
+  job->callbacks = NULL;   // FIXME: not used
 
   init_job_pad(job);
   init_job_margin(job);

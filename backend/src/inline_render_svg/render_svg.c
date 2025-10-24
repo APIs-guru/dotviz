@@ -458,8 +458,8 @@ output_string render_svg(GVC_t *gvc, Agrw_t graph) {
   job->graph_index = 0;
   job->common = &gvc->common;
   job->layout_type = gvc->layout.type;
-  job->keybindings = gvevent_key_binding;
-  job->numkeys = gvevent_key_binding_size;
+  job->keybindings = NULL; // FIXME: not used
+  job->numkeys = 0;        // FIXME: not used
 
   job->output_lang = GVRENDER_PLUGIN;
 

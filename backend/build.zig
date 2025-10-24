@@ -391,8 +391,8 @@ const src_cgraph = [_][]const u8{
 const src_gvc = [_][]const u8{
     "gvtextlayout.c", "gvjobs.c",      "gvlayout.c", "gvplugin.c",
     "gvrender.c",     "gvusershape.c", "gvc.c",      "gvdevice.c",
-    "gvconfig.c",     "gvcontext.c",   "gvevent.c",  "gvtool_tred.c",
-    "gvloadimage.c",
+    "gvconfig.c",    "gvcontext.c", // "gvevent.c",
+    "gvtool_tred.c", "gvloadimage.c",
 };
 
 const src_common = [_][]const u8{
