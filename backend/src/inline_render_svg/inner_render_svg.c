@@ -1,22 +1,16 @@
-#include "../agrw.h"
+#include "../output_string.h"
 #include "cgraph.h"
 #include "const.h"
 #include "geom.h"
 #include "geomprocs.h"
-#include "gv_ctype.h"
-#include "gv_math.h"
 #include "gvc.h" // IWYU pragma: keep
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "gvcproc.h"
 #include "gvplugin.h"
-#include "gvplugin_device.h" // IWYU pragma: keep
 #include "gvplugin_render.h" // IWYU pragma: keep
-#include "streq.h"
-#include "strview.h" // IWYU pragma: keep
 #include "svg.h"
-#include "util/list.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -422,8 +416,18 @@ gvplugin_available_t svg_render_available = {
     .typestr = "svg",
 };
 
-void inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
-                      size_t *length) {
+output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
+  /* page size on Linux, Mac OS X and Windows */
+  const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
+  output_string output;
+  if (!(output.data = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
+    agerrorf("failure malloc'ing for result string");
+    exit(-1);
+  }
+  job->output_data = output.data;
+  job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
+  job->output_data_position = 0;
+
   gvc->api[API_device] = &svg_device_available;
   gvc->api[API_render] = &svg_render_available;
 
@@ -463,12 +467,14 @@ void inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g, char **result,
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 
-  *result = job->output_data;
-  *length = job->output_data_position;
+  output.data = job->output_data;
+  output.data_position = job->output_data_position;
 
   free(job->active_tooltip);
   free(job->selected_href);
   free(job);
   gvc->jobs = gvc->job = gvc->active_jobs = NULL;
   gvc->common.viewNum = 0;
+
+  return output;
 }
