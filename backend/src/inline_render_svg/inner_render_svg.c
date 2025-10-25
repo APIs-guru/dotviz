@@ -7,10 +7,8 @@
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
-#include "gvplugin.h"
 #include "gvplugin_render.h" // IWYU pragma: keep
 #include "render_svg.h"
-#include "svg.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -308,43 +306,10 @@ static void init_job_viewport(GVJ_t *job, graph_t *g) {
 enum { FORMAT_SVG, FORMAT_SVGZ, FORMAT_SVG_INLINE };
 
 extern gvrender_engine_t svg_engine;
-
-gvdevice_features_t my_device_features_svg = {
-    GVDEVICE_DOES_TRUECOLOR | GVDEVICE_DOES_LAYERS, /* flags */
-    {0., 0.},   /* default margin - points */
-    {0., 0.},   /* default page width, height - points */
-    {72., 72.}, /* default dpi */
-};
-
-gvrender_features_t my_render_features_svg = {
-    GVRENDER_Y_GOES_DOWN | GVRENDER_DOES_TRANSFORM | GVRENDER_DOES_LABELS |
-        GVRENDER_DOES_MAPS | GVRENDER_DOES_TARGETS |
-        GVRENDER_DOES_TOOLTIPS,                  /* flags */
-    4.,                                          /* default pad - graph units */
-    my_svg_knowncolors,                          /* knowncolors */
-    sizeof(my_svg_knowncolors) / sizeof(char *), /* sizeof knowncolors */
-    RGBA_BYTE,                                   /* color_type */
-};
-
-gvplugin_installed_t svg_device_installed = {FORMAT_SVG, "svg:svg", 1, NULL,
-                                             &my_device_features_svg};
-gvplugin_available_t svg_device_available = {
-    .next = NULL,
-    .package = NULL,
-    .quality = 1,
-    .typeptr = &svg_device_installed,
-    .typestr = "svg:svg",
-};
-
-gvplugin_installed_t svg_render_installed = {FORMAT_SVG, "svg", 1, &svg_engine,
-                                             &my_render_features_svg};
-gvplugin_available_t svg_render_available = {
-    .next = NULL,
-    .package = NULL,
-    .quality = 1,
-    .typeptr = &svg_render_installed,
-    .typestr = "svg",
-};
+extern gvplugin_available_t svg_device_available;
+extern gvplugin_available_t svg_render_available;
+extern gvdevice_features_t my_device_features_svg;
+extern gvrender_features_t my_render_features_svg;
 
 extern void svg_begin_job(GVJ_t *job);
 output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {

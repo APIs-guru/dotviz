@@ -966,7 +966,7 @@ gvrender_engine_t svg_engine = {
     0, /* svg_library_shape */
 };
 
-gvrender_features_t render_features_svg = {
+gvrender_features_t my_render_features_svg = {
     GVRENDER_Y_GOES_DOWN | GVRENDER_DOES_TRANSFORM | GVRENDER_DOES_LABELS |
         GVRENDER_DOES_MAPS | GVRENDER_DOES_TARGETS |
         GVRENDER_DOES_TOOLTIPS,               /* flags */
@@ -976,30 +976,29 @@ gvrender_features_t render_features_svg = {
     RGBA_BYTE,                                /* color_type */
 };
 
-gvdevice_features_t device_features_svg = {
+gvdevice_features_t my_device_features_svg = {
     GVDEVICE_DOES_TRUECOLOR | GVDEVICE_DOES_LAYERS, /* flags */
     {0., 0.},   /* default margin - points */
     {0., 0.},   /* default page width, height - points */
     {72., 72.}, /* default dpi */
 };
 
-gvdevice_features_t device_features_svgz = {
-    GVDEVICE_DOES_TRUECOLOR | GVDEVICE_DOES_LAYERS | GVDEVICE_BINARY_FORMAT |
-        GVDEVICE_COMPRESSED_FORMAT, /* flags */
-    {0., 0.},                       /* default margin - points */
-    {0., 0.},                       /* default page width, height - points */
-    {72., 72.},                     /* default dpi */
+gvplugin_installed_t svg_device_installed = {FORMAT_SVG, "svg:svg", 1, NULL,
+                                             &my_device_features_svg};
+gvplugin_available_t svg_device_available = {
+    .next = NULL,
+    .package = NULL,
+    .quality = 1,
+    .typeptr = &svg_device_installed,
+    .typestr = "svg:svg",
 };
 
-gvplugin_installed_t gvrender_svg_types[] = {
-    {FORMAT_SVG, "svg", 1, &svg_engine, &render_features_svg},
-    {FORMAT_SVG_INLINE, "svg_inline", 1, &svg_engine, &render_features_svg},
-    {0, NULL, 0, NULL, NULL}};
-
-gvplugin_installed_t gvdevice_svg_types[] = {
-    {FORMAT_SVG, "svg:svg", 1, NULL, &device_features_svg},
-#ifdef HAVE_LIBZ
-    {FORMAT_SVGZ, "svgz:svg", 1, NULL, &device_features_svgz},
-#endif
-    {FORMAT_SVG_INLINE, "svg_inline:svg", 1, NULL, &device_features_svg},
-    {0, NULL, 0, NULL, NULL}};
+gvplugin_installed_t svg_render_installed = {FORMAT_SVG, "svg", 1, &svg_engine,
+                                             &my_render_features_svg};
+gvplugin_available_t svg_render_available = {
+    .next = NULL,
+    .package = NULL,
+    .quality = 1,
+    .typeptr = &svg_render_installed,
+    .typestr = "svg",
+};

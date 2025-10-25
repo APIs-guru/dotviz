@@ -18,6 +18,7 @@
 #include "config.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 #include <const.h>
 #include <macros.h>
@@ -39,15 +40,6 @@
 // clang-format on
 
 extern bool mapbool(const char *s);
-
-/* gvrender_begin_job:
- * Return 0 on success
- */
-extern int svg_begin_job(GVJ_t *job);
-int gvrender_begin_job(GVJ_t *job) {
-  svg_begin_job(job);
-  return 0;
-}
 
 /* font modifiers */
 #define REGULAR 0
@@ -107,10 +99,10 @@ static int gvrender_comparestr(const void *s1, const void *s2) {
  * as an argument of the compare function, while the arguments to
  * strcasecmp are both char*.
  */
+extern gvrender_features_t my_render_features_svg;
 static void gvrender_resolve_color(gvrender_features_t *features, char *name,
                                    gvcolor_t *color) {
   int rc;
-
   color->u.string = name;
   color->type = COLOR_STRING;
   if (!features->knowncolors ||

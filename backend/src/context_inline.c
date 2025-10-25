@@ -3,8 +3,7 @@
 #include "gvc.h" // IWYU pragma: keep
 #include "gvplugin.h"
 #include "gvcint.h" // IWYU pragma: keep
-#include "gvcproc.h"
-#include "strview.h"
+#include "strview.h" // IWYU pragma: keep
 #include <stdio.h> // IWYU pragma: keep
 // clang-format on
 
