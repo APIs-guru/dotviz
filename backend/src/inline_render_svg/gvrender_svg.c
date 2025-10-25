@@ -139,72 +139,24 @@ static void gvrender_resolve_color(gvrender_features_t *features, char *name,
   }
 }
 
-extern void svg_begin_graph(GVJ_t *job);
-void gvrender_begin_graph(GVJ_t *job) { svg_begin_graph(job); }
-
-extern void svg_end_graph(GVJ_t *job);
-void gvrender_end_graph(GVJ_t *job) {
-  svg_end_graph(job);
-  gvdevice_format(job);
-}
-
-extern void svg_begin_page(GVJ_t *job);
-void gvrender_begin_page(GVJ_t *job) { svg_begin_page(job); }
-
-extern void svg_end_page(GVJ_t *job);
-void gvrender_end_page(GVJ_t *job) { svg_end_page(job); }
-
-extern void svg_begin_layer(GVJ_t *job, char *layername, int layerNum,
-                            int numLayers);
-void gvrender_begin_layer(GVJ_t *job) {
-  svg_begin_layer(job, job->gvc->layerIDs[job->layerNum], job->layerNum,
-                  job->numLayers);
-}
-
-extern void svg_end_layer(GVJ_t *job);
-void gvrender_end_layer(GVJ_t *job) { svg_end_layer(job); }
-
-extern void svg_begin_cluster(GVJ_t *job);
-void gvrender_begin_cluster(GVJ_t *job) { svg_begin_cluster(job); }
-
-extern void svg_end_cluster(GVJ_t *job);
-void gvrender_end_cluster(GVJ_t *job) { svg_end_cluster(job); }
-
-void gvrender_begin_nodes(GVJ_t *job) {}
-
-void gvrender_end_nodes(GVJ_t *job) {}
-
-void gvrender_begin_edges(GVJ_t *job) {}
-
-void gvrender_end_edges(GVJ_t *job) {}
-
-extern void svg_begin_node(GVJ_t *job);
-void gvrender_begin_node(GVJ_t *job) { svg_begin_node(job); }
-
-extern void svg_end_node(GVJ_t *job);
-void gvrender_end_node(GVJ_t *job) { svg_end_node(job); }
-
-extern void svg_begin_edge(GVJ_t *job);
-void gvrender_begin_edge(GVJ_t *job) { svg_begin_edge(job); }
-
-extern void svg_end_edge(GVJ_t *job);
-void gvrender_end_edge(GVJ_t *job) { svg_end_edge(job); }
-
 extern void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
                              char *target, char *id);
+
+// FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
                            char *id) {
   svg_begin_anchor(job, href, tooltip, target, id);
 }
-
 extern void svg_end_anchor(GVJ_t *job);
+// FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_end_anchor(GVJ_t *job) { svg_end_anchor(job); }
-
+// FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_begin_label(GVJ_t *job, label_type type) {}
-
+// FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_end_label(GVJ_t *job) {}
 
 extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
+// FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_textspan(GVJ_t *job, pointf p, textspan_t *span) {
   pointf PF;
 
@@ -304,6 +256,7 @@ void gvrender_set_style(GVJ_t *job, char **s) {
 }
 
 extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
+// FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_ellipse(GVJ_t *job, pointf *pf, int filled) {
   if (job->obj->pen != PEN_NONE) {
     pointf af[] = {
@@ -381,14 +334,6 @@ void gvrender_polyline(GVJ_t *job, pointf *af, size_t n) {
       free(AF);
     }
   }
-}
-
-extern void svg_comment(GVJ_t *job, char *str);
-void gvrender_comment(GVJ_t *job, char *str) {
-  if (!str || !str[0])
-    return;
-
-  svg_comment(job, str);
 }
 
 static imagescale_t get_imagescale(char *s) {

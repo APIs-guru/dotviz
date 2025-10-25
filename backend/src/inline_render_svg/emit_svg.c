@@ -1503,6 +1503,7 @@ static bool node_in_box(node_t *n, boxf b) { return boxf_overlap(ND_bb(n), b); }
 
 static char *saved_color_scheme;
 
+extern void svg_begin_node(GVJ_t *job);
 static void emit_begin_node(GVJ_t *job, node_t *n) {
   obj_state_t *obj;
   int flags = job->flags;
@@ -1640,11 +1641,12 @@ static void emit_begin_node(GVJ_t *job, node_t *n) {
   }
 
   saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
-  gvrender_begin_node(job);
+  svg_begin_node(job);
 }
 
+extern void svg_end_node(GVJ_t *job);
 static void emit_end_node(GVJ_t *job) {
-  gvrender_end_node(job);
+  svg_end_node(job);
 
   char *color_scheme = setColorScheme(saved_color_scheme);
   free(color_scheme);
@@ -1652,6 +1654,14 @@ static void emit_end_node(GVJ_t *job) {
   saved_color_scheme = NULL;
 
   pop_obj_state(job);
+}
+
+extern void svg_comment(GVJ_t *job, char *str);
+static void my_gvrender_comment(GVJ_t *job, char *str) {
+  if (!str || !str[0])
+    return;
+
+  svg_comment(job, str);
 }
 
 static void emit_node(GVJ_t *job, node_t *n) {
@@ -1669,10 +1679,10 @@ static void emit_node(GVJ_t *job, node_t *n) {
   {
     ND_state(n) = gvc->common.viewNum; /* mark node as drawn */
 
-    gvrender_comment(job, agnameof(n));
+    my_gvrender_comment(job, agnameof(n));
     s = late_string(n, N_comment, "");
     if (s[0])
-      gvrender_comment(job, s);
+      my_gvrender_comment(job, s);
 
     style = late_string(n, N_style, "");
     if (style[0]) {
@@ -2193,6 +2203,9 @@ static bool edge_in_box(edge_t *e, boxf b) {
   return false;
 }
 
+extern void svg_begin_edge(GVJ_t *job);
+extern void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
+                             char *target, char *id);
 static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
   obj_state_t *obj;
   int flags = job->flags;
@@ -2364,11 +2377,12 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
     }
   }
 
-  gvrender_begin_edge(job);
+  svg_begin_edge(job);
   if (obj->url || obj->explicit_tooltip)
-    gvrender_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+    svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
 }
 
+extern void svg_end_anchor(GVJ_t *job);
 static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
                             int explicit, char *url, char *tooltip,
                             char *target, char *id, splines *spl) {
@@ -2402,7 +2416,7 @@ static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
   job->obj->emit_state = lkind;
   if ((url || explicit) && !(flags & EMIT_CLUSTERS_LAST)) {
     map_label(job, lbl);
-    gvrender_begin_anchor(job, url, tooltip, target, newid);
+    svg_begin_anchor(job, url, tooltip, target, newid);
   }
   emit_label(job, lkind, lbl);
   if (spl)
@@ -2410,9 +2424,9 @@ static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
   if (url || explicit) {
     if (flags & EMIT_CLUSTERS_LAST) {
       map_label(job, lbl);
-      gvrender_begin_anchor(job, url, tooltip, target, newid);
+      svg_begin_anchor(job, url, tooltip, target, newid);
     }
-    gvrender_end_anchor(job);
+    svg_end_anchor(job);
   }
   agxbfree(&xb);
   job->obj->emit_state = old_emit_state;
@@ -2452,21 +2466,21 @@ static void nodeIntersect(GVJ_t *job, pointf p, bool explicit_iurl, char *iurl,
   }
 }
 
+extern void svg_end_edge(GVJ_t *job);
 static void emit_end_edge(GVJ_t *job) {
   obj_state_t *obj = job->obj;
   edge_t *e = obj->u.e;
 
   if (obj->url || obj->explicit_tooltip) {
-    gvrender_end_anchor(job);
+    svg_end_anchor(job);
     if (obj->url_bsplinemap_poly_n) {
       for (size_t nump = obj->url_bsplinemap_n[0], i = 1;
            i < obj->url_bsplinemap_poly_n; i++) {
         /* additional polygon maps around remaining bezier pieces */
         obj->url_map_n = obj->url_bsplinemap_n[i];
         obj->url_map_p = &(obj->url_bsplinemap_p[nump]);
-        gvrender_begin_anchor(job, obj->url, obj->tooltip, obj->target,
-                              obj->id);
-        gvrender_end_anchor(job);
+        svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+        svg_end_anchor(job);
         nump += obj->url_bsplinemap_n[i];
       }
     }
@@ -2512,7 +2526,7 @@ static void emit_end_edge(GVJ_t *job) {
   emit_edge_label(job, ED_tail_label(e), EMIT_TLABEL, obj->explicit_tailtooltip,
                   obj->tailurl, obj->tailtooltip, obj->tailtarget, obj->id, 0);
 
-  gvrender_end_edge(job);
+  svg_end_edge(job);
   pop_obj_state(job);
 }
 
@@ -2532,12 +2546,12 @@ static void emit_edge(GVJ_t *job, edge_t *e) {
     else
       agxbput(&edge, "--");
     agxbput(&edge, agnameof(aghead(e)));
-    gvrender_comment(job, agxbuse(&edge));
+    my_gvrender_comment(job, agxbuse(&edge));
     agxbfree(&edge);
 
     s = late_string(e, E_comment, "");
     if (s[0])
-      gvrender_comment(job, s);
+      my_gvrender_comment(job, s);
 
     style = late_string(e, E_style, "");
     /* We shortcircuit drawing an invisible edge because the arrowhead
@@ -2641,34 +2655,23 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
     emit_clusters(job, g, flags);
   if (flags & EMIT_SORTED) {
     /* output all nodes, then all edges */
-    gvrender_begin_nodes(job);
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
       emit_node(job, n);
-    gvrender_end_nodes(job);
-    gvrender_begin_edges(job);
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       for (e = agfstout(g, n); e; e = agnxtout(g, e))
         emit_edge(job, e);
     }
-    gvrender_end_edges(job);
   } else if (flags & EMIT_EDGE_SORTED) {
     /* output all edges, then all nodes */
-    gvrender_begin_edges(job);
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
       for (e = agfstout(g, n); e; e = agnxtout(g, e))
         emit_edge(job, e);
-    gvrender_end_edges(job);
-    gvrender_begin_nodes(job);
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
       emit_node(job, n);
-    gvrender_end_nodes(job);
   } else if (flags & EMIT_PREORDER) {
-    gvrender_begin_nodes(job);
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
       if (write_node_test(g, n))
         emit_node(job, n);
-    gvrender_end_nodes(job);
-    gvrender_begin_edges(job);
 
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
@@ -2676,7 +2679,6 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
           emit_edge(job, e);
       }
     }
-    gvrender_end_edges(job);
   } else {
     /* output in breadth first graph walk order */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
@@ -2692,6 +2694,7 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
     emit_clusters(job, g, flags);
 }
 
+extern void svg_begin_graph(GVJ_t *job);
 void emit_begin_graph(GVJ_t *job, graph_t *g) {
   obj_state_t *obj;
 
@@ -2702,11 +2705,13 @@ void emit_begin_graph(GVJ_t *job, graph_t *g) {
 
   initObjMapData(job, GD_label(g), g);
 
-  gvrender_begin_graph(job);
+  svg_begin_graph(job);
 }
 
+extern void svg_end_graph(GVJ_t *job);
 void emit_end_graph(GVJ_t *job) {
-  gvrender_end_graph(job);
+  svg_end_graph(job);
+  gvdevice_format(job);
   pop_obj_state(job);
 }
 
@@ -2714,6 +2719,8 @@ void emit_end_graph(GVJ_t *job) {
   (((j)->layerNum > 1) || ((j)->pagesArrayElem.x > 0) ||                       \
    ((j)->pagesArrayElem.x > 0))
 
+extern void svg_begin_page(GVJ_t *job);
+extern void svg_end_page(GVJ_t *job);
 void emit_page(GVJ_t *job, graph_t *g) {
   obj_state_t *obj = job->obj;
   int flags = job->flags;
@@ -2738,7 +2745,7 @@ void emit_page(GVJ_t *job, graph_t *g) {
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
   setup_page(job);
-  gvrender_begin_page(job);
+  svg_begin_page(job);
   gvrender_set_pencolor(job, DEFAULT_COLOR);
   gvrender_set_fillcolor(job, DEFAULT_FILL);
   if ((flags & (GVRENDER_DOES_MAPS | GVRENDER_DOES_TOOLTIPS)) &&
@@ -2772,15 +2779,15 @@ void emit_page(GVJ_t *job, graph_t *g) {
    */
   if (!(flags & EMIT_CLUSTERS_LAST) && (obj->url || obj->explicit_tooltip)) {
     emit_map_rect(job, job->clip);
-    gvrender_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+    svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
   }
   emit_background(job, g);
   if (GD_label(g))
     emit_label(job, EMIT_GLABEL, GD_label(g));
   if (!(flags & EMIT_CLUSTERS_LAST) && (obj->url || obj->explicit_tooltip))
-    gvrender_end_anchor(job);
+    svg_end_anchor(job);
   emit_view(job, g, flags);
-  gvrender_end_page(job);
+  svg_end_page(job);
   if (obj_id_needs_restore) {
     obj->id = saveid;
   }
@@ -2814,6 +2821,7 @@ void emit_once_reset(void) {
   }
 }
 
+extern void svg_begin_cluster(GVJ_t *job);
 static void emit_begin_cluster(GVJ_t *job, Agraph_t *sg) {
   obj_state_t *obj;
 
@@ -2824,11 +2832,12 @@ static void emit_begin_cluster(GVJ_t *job, Agraph_t *sg) {
 
   initObjMapData(job, GD_label(sg), sg);
 
-  gvrender_begin_cluster(job);
+  svg_begin_cluster(job);
 }
 
+extern void svg_end_cluster(GVJ_t *job);
 static void emit_end_cluster(GVJ_t *job) {
-  gvrender_end_cluster(job);
+  svg_end_cluster(job);
   pop_obj_state(job);
 }
 
@@ -2857,7 +2866,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     char *previous_color_scheme = setColorScheme(agget(sg, "colorscheme"));
     if (doAnchor && !(flags & EMIT_CLUSTERS_LAST)) {
       emit_map_rect(job, GD_bb(sg));
-      gvrender_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+      svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     }
     filled = 0;
     graphviz_polygon_style_t istyle = {0};
@@ -2976,10 +2985,9 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     if (doAnchor) {
       if (flags & EMIT_CLUSTERS_LAST) {
         emit_map_rect(job, GD_bb(sg));
-        gvrender_begin_anchor(job, obj->url, obj->tooltip, obj->target,
-                              obj->id);
+        svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
       }
-      gvrender_end_anchor(job);
+      svg_end_anchor(job);
     }
 
     if (flags & EMIT_PREORDER) {
@@ -3168,6 +3176,9 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   return true;
 }
 
+extern void svg_begin_layer(GVJ_t *job, char *layername, int layerNum,
+                            int numLayers);
+extern void svg_end_layer(GVJ_t *job);
 void emit_graph(GVJ_t *job, graph_t *g, gvrender_engine_t *render_engine) {
   node_t *n;
   char *s;
@@ -3208,15 +3219,17 @@ void emit_graph(GVJ_t *job, graph_t *g, gvrender_engine_t *render_engine) {
     ND_state(n) = 0;
   /* iterate layers */
   for (firstlayer(job, &lp); validlayer(job); nextlayer(job, &lp)) {
-    if (numPhysicalLayers(job) > 1)
-      gvrender_begin_layer(job);
+    if (numPhysicalLayers(job) > 1) {
+      svg_begin_layer(job, job->gvc->layerIDs[job->layerNum], job->layerNum,
+                      job->numLayers);
+    }
 
     /* iterate pages */
     for (firstpage(job); validpage(job); nextpage(job))
       emit_page(job, g);
 
     if (numPhysicalLayers(job) > 1)
-      gvrender_end_layer(job);
+      svg_end_layer(job);
   }
   emit_end_graph(job);
 }
