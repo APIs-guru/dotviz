@@ -4,6 +4,7 @@
 #include "geomprocs.h"
 #include "gvc.h" // IWYU pragma: keep
 #include "gvcint.h"
+#include "gvcproc.h"
 #include "util/list.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -464,5 +465,11 @@ output_string render_svg(GVC_t *gvc, Agrw_t graph) {
   job->output_lang = GVRENDER_PLUGIN;
 
   job->flags |= chkOrder(g);
-  return inner_render_svg(gvc, job, g);
+  output_string output = inner_render_svg(gvc, job, g);
+  if (gvc->active_jobs) {
+    gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here
+                             */
+    gvdevice_finalize(gvc->active_jobs);
+  }
+  return output;
 }

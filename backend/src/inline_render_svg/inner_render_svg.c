@@ -346,6 +346,7 @@ gvplugin_available_t svg_render_available = {
     .typestr = "svg",
 };
 
+extern void svg_begin_job(GVJ_t *job);
 output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* page size on Linux, Mac OS X and Windows */
   const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
@@ -376,9 +377,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   job->render.id = FORMAT_SVG;
 
-  gvrender_engine_t *render_engine = &svg_engine;
-  if (render_engine->begin_job)
-    render_engine->begin_job(job);
+  svg_begin_job(job);
 
   gvc->active_jobs = job;  /* first job of new list */
   job->next_active = NULL; /* terminate active list */
@@ -391,9 +390,6 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_pagination(job, g);
 
   emit_graph(job, g);
-
-  if (render_engine->end_job)
-    render_engine->end_job(job);
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 

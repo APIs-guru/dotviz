@@ -305,7 +305,6 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     const gvc = c.gw_create_context();
     defer {
-        _ = c.gvFinalize(gvc);
         _ = c.gvFreeContext(gvc);
     }
 
