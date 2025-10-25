@@ -70,7 +70,7 @@ pub fn build(b: *std.Build) void {
     });
     exe.addIncludePath(b.path("src"));
     exe.want_lto = true;
-    exe.import_symbols = true;
+    exe.import_symbols = false;
     exe.export_table = true;
     exe.bundle_ubsan_rt = false;
     exe.root_module.strip = true;
