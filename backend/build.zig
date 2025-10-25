@@ -48,6 +48,7 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/render_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/emit_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/gvrender_svg.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/core_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/render_inline_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/output_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/write_c_inline.c") });
@@ -315,23 +316,10 @@ pub fn buildGraphviz(
     addInclude(lib_label, graphviz_dep);
     lib_label.addConfigHeader(config_h);
 
-    const lib_plugin_core = b.addLibrary(.{
-        .name = "plugin_core",
-        .root_module = lib_mod,
-        .linkage = .static,
-    });
-    lib_plugin_core.addCSourceFiles(.{
-        .root = graphviz_dep.path("plugin/core"),
-        .files = &src_plugin_core,
-    });
-    addInclude(lib_plugin_core, graphviz_dep);
-    lib_plugin_core.addConfigHeader(config_h);
-
     inline for (&.{
-        lib,          lib_cdt,         lib_cgraph,            lib_common,
-        lib_dotgen,   lib_gvc,         lib_label,             lib_pack,
-        lib_pathplan, lib_plugin_core, lib_plugin_dot_layout, lib_util,
-        lib_xdot,
+        lib,          lib_cdt,               lib_cgraph, lib_common,
+        lib_dotgen,   lib_gvc,               lib_label,  lib_pack,
+        lib_pathplan, lib_plugin_dot_layout, lib_util,   lib_xdot,
     }) |library| {
         applyWasiEmulation(library);
     }
@@ -426,9 +414,4 @@ const src_dotgen = [_][]const u8{
 
 const src_label = [_][]const u8{
     "index.c", "split.q.c", "xlabels.c", "rectangle.c", "node.c",
-};
-
-const src_plugin_core = [_][]const u8{
-    "gvrender_core_dot.c",
-    "gvrender_core_svg.c",
 };
