@@ -130,7 +130,6 @@ static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
    */
   p_.y = p.y + (b.UR.y - b.LL.y) / 2.0;
 
-  gvrender_begin_label(job, LABEL_HTML);
   for (size_t i = 0; i < nspans; i++) {
     /* set p.x to leftmost point where the line of text begins */
     switch (spans[i].just) {
@@ -187,8 +186,6 @@ static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
       ti++;
     }
   }
-
-  gvrender_end_label(job);
 }
 
 static void emit_html_txt(GVJ_t *job, htmltxt_t *tp, htmlenv_t *env) {
@@ -370,6 +367,8 @@ static int setFill(GVJ_t *job, char *color, int angle, htmlstyle_t style,
  * FIX: Should we provide a tooltip if none is set, as is done
  * for nodes, edges, etc. ?
  */
+extern void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
+                             char *target, char *id);
 static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
                       htmlmap_data_t *save) {
   obj_state_t *obj = job->obj;
@@ -398,7 +397,7 @@ static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
   if (changed) {
     if (obj->url || obj->explicit_tooltip) {
       emit_map_rect(job, b);
-      gvrender_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+      svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     }
   }
   return changed;
@@ -420,11 +419,12 @@ static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
  * top-down. For ordinary map anchors, this is all done bottom-up, so
  * the geometric map info at the higher level hasn't been emitted yet.
  */
+extern void svg_end_anchor(GVJ_t *job);
 static void endAnchor(GVJ_t *job, htmlmap_data_t *save) {
   obj_state_t *obj = job->obj;
 
   if (obj->url || obj->explicit_tooltip)
-    gvrender_end_anchor(job);
+    svg_end_anchor(job);
   RESET(url);
   RESET(tooltip);
   RESET(target);
