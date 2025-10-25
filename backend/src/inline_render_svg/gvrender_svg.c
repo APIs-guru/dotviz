@@ -43,10 +43,8 @@ extern bool mapbool(const char *s);
 /* gvrender_begin_job:
  * Return 0 on success
  */
-extern void svg_begin_job(GVJ_t *job);
+extern int svg_begin_job(GVJ_t *job);
 int gvrender_begin_job(GVJ_t *job) {
-  if (gvdevice_initialize(job))
-    return 1;
   svg_begin_job(job);
   return 0;
 }
@@ -158,17 +156,7 @@ void gvrender_end_label(GVJ_t *job) {}
 extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
 // FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_textspan(GVJ_t *job, pointf p, textspan_t *span) {
-  pointf PF;
-
-  if (span->str && span->str[0] &&
-      (!job->obj /* because of xdgen non-conformity */
-       || job->obj->pen != PEN_NONE)) {
-    if (job->flags & GVRENDER_DOES_TRANSFORM)
-      PF = p;
-    else
-      PF = gvrender_ptf(job, p);
-    svg_textspan(job, PF, span);
-  }
+  svg_textspan(job, p, span);
 }
 
 void gvrender_set_pencolor(GVJ_t *job, char *name) {
@@ -258,82 +246,25 @@ void gvrender_set_style(GVJ_t *job, char **s) {
 extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
 // FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_ellipse(GVJ_t *job, pointf *pf, int filled) {
-  if (job->obj->pen != PEN_NONE) {
-    pointf af[] = {
-        mid_pointf(pf[0], pf[1]), // center
-        pf[1]                     // corner
-    };
-
-    if (!(job->flags & GVRENDER_DOES_TRANSFORM))
-      gvrender_ptf_A(job, af, af, 2);
-    svg_ellipse(job, af, filled);
-  }
+  svg_ellipse(job, pf, filled);
 }
 
 extern void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
 void gvrender_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
-  int noPoly = 0;
-  gvcolor_t save_pencolor;
-
-  if (job->obj->pen != PEN_NONE) {
-    if (filled & NO_POLY) {
-      noPoly = 1;
-      filled &= ~NO_POLY;
-      save_pencolor = job->obj->pencolor;
-      job->obj->pencolor = job->obj->fillcolor;
-    }
-    if (job->flags & GVRENDER_DOES_TRANSFORM)
-      svg_polygon(job, af, n, filled);
-    else {
-      pointf *AF = gv_calloc(n, sizeof(pointf));
-      gvrender_ptf_A(job, af, AF, n);
-      svg_polygon(job, AF, n, filled);
-      free(AF);
-    }
-    if (noPoly)
-      job->obj->pencolor = save_pencolor;
-  }
+  svg_polygon(job, af, n, filled);
 }
 
-void gvrender_box(GVJ_t *job, boxf B, int filled) {
-  pointf A[4];
-
-  A[0] = B.LL;
-  A[2] = B.UR;
-  A[1].x = A[0].x;
-  A[1].y = A[2].y;
-  A[3].x = A[2].x;
-  A[3].y = A[0].y;
-
-  gvrender_polygon(job, A, 4, filled);
-}
+extern void svg_box(GVJ_t *job, boxf B, int filled);
+void gvrender_box(GVJ_t *job, boxf B, int filled) { svg_box(job, B, filled); }
 
 extern void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 void gvrender_beziercurve(GVJ_t *job, pointf *af, size_t n, int filled) {
-  if (job->obj->pen != PEN_NONE) {
-    if (job->flags & GVRENDER_DOES_TRANSFORM)
-      svg_bezier(job, af, n, filled);
-    else {
-      pointf *AF = gv_calloc(n, sizeof(pointf));
-      gvrender_ptf_A(job, af, AF, n);
-      svg_bezier(job, AF, n, filled);
-      free(AF);
-    }
-  }
+  svg_bezier(job, af, n, filled);
 }
 
 extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
 void gvrender_polyline(GVJ_t *job, pointf *af, size_t n) {
-  if (job->obj->pen != PEN_NONE) {
-    if (job->flags & GVRENDER_DOES_TRANSFORM)
-      svg_polyline(job, af, n);
-    else {
-      pointf *AF = gv_calloc(n, sizeof(pointf));
-      gvrender_ptf_A(job, af, AF, n);
-      svg_polyline(job, AF, n);
-      free(AF);
-    }
-  }
+  svg_polyline(job, af, n);
 }
 
 static imagescale_t get_imagescale(char *s) {

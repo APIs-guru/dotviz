@@ -19,11 +19,13 @@
  */
 
 // clang-format off
+#include "cgraph.h"
 #include "config.h"
 #include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -40,6 +42,8 @@
 #include <util/unreachable.h>
 #include <util/xml.h>
 
+#include "geomprocs.h"
+#include "gvcproc.h"
 // clang-format on
 
 #define LOCALNAMEPREFIX '%'
@@ -219,6 +223,10 @@ void svg_comment(GVJ_t *job, char *str) {
 }
 
 void svg_begin_job(GVJ_t *job) {
+  if (gvdevice_initialize(job)) {
+    fprintf(stderr, "svg_begin_job: FIXME: we are too cool for errors");
+    exit(-1);
+  }
   char *s;
   if (emit_standalone_headers(job)) {
     gvputs(job,
@@ -399,7 +407,19 @@ void svg_end_anchor(GVJ_t *job) {
               "</g>\n");
 }
 
-void svg_textspan(GVJ_t *job, pointf p, textspan_t *span) {
+void svg_textspan(GVJ_t *job, pointf raw_p, textspan_t *span) {
+  if (!(span->str && span->str[0] &&
+        (!job->obj /* because of xdgen non-conformity */
+         || job->obj->pen != PEN_NONE))) {
+    return;
+  }
+
+  pointf p;
+  if (job->flags & GVRENDER_DOES_TRANSFORM)
+    p = raw_p;
+  else
+    p = gvrender_ptf(job, raw_p);
+
   obj_state_t *obj = job->obj;
   PostscriptAlias *pA;
   char *family = NULL, *weight = NULL, *stretch = NULL, *style = NULL;
@@ -606,7 +626,19 @@ static int svg_rgradstyle(GVJ_t *job) {
   return id;
 }
 
-void svg_ellipse(GVJ_t *job, pointf *A, int filled) {
+void svg_ellipse(GVJ_t *job, pointf *pf, int filled) {
+  if (job->obj->pen == PEN_NONE) {
+    return;
+  }
+
+  pointf A[] = {
+      mid_pointf(pf[0], pf[1]), // center
+      pf[1]                     // corner
+  };
+
+  if (!(job->flags & GVRENDER_DOES_TRANSFORM))
+    gvrender_ptf_A(job, A, A, 2);
+
   int gid = 0;
 
   /* A[] contains 2 points: the center and corner. */
@@ -628,7 +660,7 @@ void svg_ellipse(GVJ_t *job, pointf *A, int filled) {
   gvputs(job, "\"/>\n");
 }
 
-void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled) {
+static void svg_bezier_impl(GVJ_t *job, pointf *A, size_t n, int filled) {
   int gid = 0;
   obj_state_t *obj = job->obj;
 
@@ -649,7 +681,20 @@ void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled) {
   gvputs(job, "\"/>\n");
 }
 
-void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled) {
+void svg_bezier(GVJ_t *job, pointf *af, size_t n, int filled) {
+  if (job->obj->pen != PEN_NONE) {
+    if (job->flags & GVRENDER_DOES_TRANSFORM)
+      svg_bezier_impl(job, af, n, filled);
+    else {
+      pointf *AF = gv_calloc(n, sizeof(pointf));
+      gvrender_ptf_A(job, af, AF, n);
+      svg_bezier_impl(job, AF, n, filled);
+      free(AF);
+    }
+  }
+}
+
+static void svg_polygon_impl(GVJ_t *job, pointf *A, size_t n, int filled) {
   int gid = 0;
   if (filled == GRADIENT) {
     gid = svg_gradstyle(job, A, n);
@@ -672,7 +717,44 @@ void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled) {
   gvputs(job, "\"/>\n");
 }
 
-void svg_polyline(GVJ_t *job, pointf *A, size_t n) {
+void svg_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
+  int noPoly = 0;
+  gvcolor_t save_pencolor;
+
+  if (job->obj->pen != PEN_NONE) {
+    if (filled & NO_POLY) {
+      noPoly = 1;
+      filled &= ~NO_POLY;
+      save_pencolor = job->obj->pencolor;
+      job->obj->pencolor = job->obj->fillcolor;
+    }
+    if (job->flags & GVRENDER_DOES_TRANSFORM)
+      svg_polygon_impl(job, af, n, filled);
+    else {
+      pointf *AF = gv_calloc(n, sizeof(pointf));
+      gvrender_ptf_A(job, af, AF, n);
+      svg_polygon_impl(job, AF, n, filled);
+      free(AF);
+    }
+    if (noPoly)
+      job->obj->pencolor = save_pencolor;
+  }
+}
+
+void svg_box(GVJ_t *job, boxf B, int filled) {
+  pointf A[4];
+
+  A[0] = B.LL;
+  A[2] = B.UR;
+  A[1].x = A[0].x;
+  A[1].y = A[2].y;
+  A[3].x = A[2].x;
+  A[3].y = A[0].y;
+
+  svg_polygon(job, A, 4, filled);
+}
+
+void svg_polyline_impl(GVJ_t *job, pointf *A, size_t n) {
   gvputs(job, "<polyline");
   svg_grstyle(job, 0, 0);
   gvputs(job, " points=\"");
@@ -685,6 +767,19 @@ void svg_polyline(GVJ_t *job, pointf *A, size_t n) {
     }
   }
   gvputs(job, "\"/>\n");
+}
+
+void svg_polyline(GVJ_t *job, pointf *af, size_t n) {
+  if (job->obj->pen != PEN_NONE) {
+    if (job->flags & GVRENDER_DOES_TRANSFORM)
+      svg_polyline_impl(job, af, n);
+    else {
+      pointf *AF = gv_calloc(n, sizeof(pointf));
+      gvrender_ptf_A(job, af, AF, n);
+      svg_polyline_impl(job, AF, n);
+      free(AF);
+    }
+  }
 }
 
 /* color names from http://www.w3.org/TR/SVG/types.html */
