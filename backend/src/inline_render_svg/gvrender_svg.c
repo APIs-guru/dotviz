@@ -105,11 +105,11 @@ static void gvrender_resolve_color(gvrender_features_t *features, char *name,
   int rc;
   color->u.string = name;
   color->type = COLOR_STRING;
-  if (!features->knowncolors ||
-      (bsearch(name, features->knowncolors, features->sz_knowncolors,
-               sizeof(char *), gvrender_comparestr)) == NULL) {
+  if (bsearch(name, my_render_features_svg.knowncolors,
+              my_render_features_svg.sz_knowncolors, sizeof(char *),
+              gvrender_comparestr) == NULL) {
     /* if name was not found in known_colors */
-    rc = colorxlate(name, color, features->color_type);
+    rc = colorxlate(name, color, RGBA_BYTE);
     if (rc != COLOR_OK) {
       if (rc == COLOR_UNKNOWN) {
         agxbuf missedcolor = {0};
