@@ -40,64 +40,6 @@
 
 extern bool mapbool(const char *s);
 
-int gvrender_select(GVJ_t *job, const char *str) {
-  GVC_t *gvc = job->gvc;
-  gvplugin_available_t *plugin;
-  gvplugin_installed_t *typeptr;
-
-  gvplugin_load(gvc, API_device, str, NULL);
-
-  /* When job is created, it is zeroed out.
-   * Some flags, such as OUTPUT_NOT_REQUIRED, may already be set,
-   * so don't reset.
-   */
-  /* job->flags = 0; */
-  plugin = gvc->api[API_device];
-  if (plugin) {
-    typeptr = plugin->typeptr;
-    job->device.engine = typeptr->engine;
-    job->device.features = typeptr->features;
-    job->device.id = typeptr->id;
-    job->device.type = plugin->typestr;
-
-    job->flags |= job->device.features->flags;
-  } else
-    return NO_SUPPORT; /* FIXME - should differentiate problem */
-
-  /* The device plugin has a dependency on a render plugin,
-   * so the render plugin should be available as well now */
-  plugin = gvc->api[API_render];
-  if (plugin) {
-    typeptr = plugin->typeptr;
-    job->render.engine = typeptr->engine;
-    job->render.features = typeptr->features;
-    job->render.type = plugin->typestr;
-
-    job->flags |= job->render.features->flags;
-
-    if (job->device.engine)
-      job->render.id = typeptr->id;
-    else
-      /* A null device engine indicates that the device id is also the renderer
-       * id and that the renderer doesn't need "device" functions. Device
-       * "features" settings are still available */
-      job->render.id = job->device.id;
-    return GVRENDER_PLUGIN;
-  }
-  job->render.engine = NULL;
-  return NO_SUPPORT; /* FIXME - should differentiate problem */
-}
-
-int gvrender_features(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-  int features = 0;
-
-  if (gvre) {
-    features = job->render.features->flags;
-  }
-  return features;
-}
-
 /* gvrender_begin_job:
  * Return 0 on success
  */
