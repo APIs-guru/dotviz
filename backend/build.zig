@@ -47,6 +47,7 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/inner_render_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/render_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/emit_svg.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/gvrender_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/render_inline_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/output_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/write_c_inline.c") });
@@ -389,8 +390,9 @@ const src_cgraph = [_][]const u8{
 };
 
 const src_gvc = [_][]const u8{
-    "gvtextlayout.c", "gvjobs.c",      "gvlayout.c", "gvplugin.c",
-    "gvrender.c",     "gvusershape.c", "gvc.c",      "gvdevice.c",
+    "gvtextlayout.c", "gvjobs.c", "gvlayout.c", "gvplugin.c",
+    // "gvrender.c",
+    "gvusershape.c",  "gvc.c",    "gvdevice.c",
     "gvconfig.c",    "gvcontext.c", // "gvevent.c",
     "gvtool_tred.c", "gvloadimage.c",
 };
