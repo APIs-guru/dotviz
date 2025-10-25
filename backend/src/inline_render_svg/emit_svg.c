@@ -1657,13 +1657,6 @@ static void emit_end_node(GVJ_t *job) {
 }
 
 extern void svg_comment(GVJ_t *job, char *str);
-static void my_gvrender_comment(GVJ_t *job, char *str) {
-  if (!str || !str[0])
-    return;
-
-  svg_comment(job, str);
-}
-
 static void emit_node(GVJ_t *job, node_t *n) {
   GVC_t *gvc = job->gvc;
   char *s;
@@ -1679,10 +1672,9 @@ static void emit_node(GVJ_t *job, node_t *n) {
   {
     ND_state(n) = gvc->common.viewNum; /* mark node as drawn */
 
-    my_gvrender_comment(job, agnameof(n));
+    svg_comment(job, agnameof(n));
     s = late_string(n, N_comment, "");
-    if (s[0])
-      my_gvrender_comment(job, s);
+    svg_comment(job, s);
 
     style = late_string(n, N_style, "");
     if (style[0]) {
@@ -2546,12 +2538,11 @@ static void emit_edge(GVJ_t *job, edge_t *e) {
     else
       agxbput(&edge, "--");
     agxbput(&edge, agnameof(aghead(e)));
-    my_gvrender_comment(job, agxbuse(&edge));
+    svg_comment(job, agxbuse(&edge));
     agxbfree(&edge);
 
     s = late_string(e, E_comment, "");
-    if (s[0])
-      my_gvrender_comment(job, s);
+    svg_comment(job, s);
 
     style = late_string(e, E_style, "");
     /* We shortcircuit drawing an invisible edge because the arrowhead
@@ -3204,9 +3195,7 @@ void emit_graph(GVJ_t *job, graph_t *g, gvrender_engine_t *render_engine) {
   }
 
   s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
-  if (s && s[0] != '\0' && render_engine->comment) {
-    render_engine->comment(job, s);
-  }
+  svg_comment(job, s);
 
   job->layerNum = 0;
   emit_begin_graph(job, g);

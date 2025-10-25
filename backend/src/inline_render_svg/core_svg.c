@@ -210,6 +210,9 @@ static void svg_grstyle(GVJ_t *job, int filled, int gid) {
 }
 
 void svg_comment(GVJ_t *job, char *str) {
+  if (!str || !str[0])
+    return;
+
   gvputs(job, "<!-- ");
   gvputs_xml(job, str);
   gvputs(job, " -->\n");
