@@ -7,11 +7,10 @@
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
-#include "gvcproc.h"
 #include "gvplugin.h"
 #include "gvplugin_render.h" // IWYU pragma: keep
+#include "render_svg.h"
 #include "svg.h"
-#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -306,75 +305,6 @@ static void init_job_viewport(GVJ_t *job, graph_t *g) {
   job->focus = xy;
 }
 
-extern obj_state_t *push_obj_state(GVJ_t *job);
-extern void initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj);
-
-extern void emit_colors(GVJ_t *job, graph_t *g);
-extern void firstlayer(GVJ_t *job, int **listp);
-extern bool validlayer(GVJ_t *job);
-extern void nextlayer(GVJ_t *job, int **listp);
-extern int numPhysicalLayers(GVJ_t *job);
-extern void firstpage(GVJ_t *job);
-extern bool validpage(GVJ_t *job);
-extern void nextpage(GVJ_t *job);
-extern void emit_page(GVJ_t *job, graph_t *g);
-extern void emit_end_graph(GVJ_t *job);
-
-extern void emit_begin_graph(GVJ_t *job, graph_t *g);
-static void my_emit_graph(GVJ_t *job, graph_t *g,
-                          gvrender_engine_t *render_engine) {
-  node_t *n;
-  char *s;
-  int flags = job->flags;
-  int *lp;
-
-  /* device dpi is now known */
-  job->scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
-  job->scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
-
-  job->devscale.x = job->dpi.x / POINTS_PER_INCH;
-  job->devscale.y = job->dpi.y / POINTS_PER_INCH;
-  if ((job->flags & GVRENDER_Y_GOES_DOWN) || (Y_invert))
-    job->devscale.y *= -1;
-
-  /* compute current view in graph units */
-  if (job->rotation) {
-    job->view.y = job->width / job->scale.y;
-    job->view.x = job->height / job->scale.x;
-  } else {
-    job->view.x = job->width / job->scale.x;
-    job->view.y = job->height / job->scale.y;
-  }
-
-  s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
-  if (s && s[0] != '\0' && render_engine->comment) {
-    render_engine->comment(job, s);
-  }
-
-  job->layerNum = 0;
-  emit_begin_graph(job, g);
-
-  if (flags & EMIT_COLORS)
-    emit_colors(job, g);
-
-  /* reset node state */
-  for (n = agfstnode(g); n; n = agnxtnode(g, n))
-    ND_state(n) = 0;
-  /* iterate layers */
-  for (firstlayer(job, &lp); validlayer(job); nextlayer(job, &lp)) {
-    if (numPhysicalLayers(job) > 1)
-      gvrender_begin_layer(job);
-
-    /* iterate pages */
-    for (firstpage(job); validpage(job); nextpage(job))
-      emit_page(job, g);
-
-    if (numPhysicalLayers(job) > 1)
-      gvrender_end_layer(job);
-  }
-  emit_end_graph(job);
-}
-
 enum { FORMAT_SVG, FORMAT_SVGZ, FORMAT_SVG_INLINE };
 
 extern gvrender_engine_t svg_engine;
@@ -460,7 +390,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_viewport(job, g);
   init_job_pagination(job, g);
 
-  my_emit_graph(job, g, render_engine);
+  emit_graph(job, g, render_engine);
 
   if (render_engine->end_job)
     render_engine->end_job(job);
