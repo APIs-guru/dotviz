@@ -209,13 +209,13 @@ static void svg_grstyle(GVJ_t *job, int filled, int gid) {
   gvputc(job, '"');
 }
 
-static void svg_comment(GVJ_t *job, char *str) {
+void svg_comment(GVJ_t *job, char *str) {
   gvputs(job, "<!-- ");
   gvputs_xml(job, str);
   gvputs(job, " -->\n");
 }
 
-static void svg_begin_job(GVJ_t *job) {
+void svg_begin_job(GVJ_t *job) {
   char *s;
   if (emit_standalone_headers(job)) {
     gvputs(job,
@@ -238,7 +238,7 @@ static void svg_begin_job(GVJ_t *job) {
               " -->\n");
 }
 
-static void svg_begin_graph(GVJ_t *job) {
+void svg_begin_graph(GVJ_t *job) {
   obj_state_t *obj = job->obj;
 
   gvputs(job, "<!--");
@@ -268,10 +268,9 @@ static void svg_begin_graph(GVJ_t *job) {
   gvputs(job, ">\n");
 }
 
-static void svg_end_graph(GVJ_t *job) { gvputs(job, "</svg>\n"); }
+void svg_end_graph(GVJ_t *job) { gvputs(job, "</svg>\n"); }
 
-static void svg_begin_layer(GVJ_t *job, char *layername, int layerNum,
-                            int numLayers) {
+void svg_begin_layer(GVJ_t *job, char *layername, int layerNum, int numLayers) {
   (void)layerNum;
   (void)numLayers;
 
@@ -281,13 +280,13 @@ static void svg_begin_layer(GVJ_t *job, char *layername, int layerNum,
   gvputs(job, ">\n");
 }
 
-static void svg_end_layer(GVJ_t *job) { gvputs(job, "</g>\n"); }
+void svg_end_layer(GVJ_t *job) { gvputs(job, "</g>\n"); }
 
 /* svg_begin_page:
  * Currently, svg output does not support pages.
  * FIX: If implemented, we must guarantee the id is unique.
  */
-static void svg_begin_page(GVJ_t *job) {
+void svg_begin_page(GVJ_t *job) {
   obj_state_t *obj = job->obj;
 
   /* its really just a page of the graph, but its still a graph,
@@ -309,9 +308,9 @@ static void svg_begin_page(GVJ_t *job) {
   }
 }
 
-static void svg_end_page(GVJ_t *job) { gvputs(job, "</g>\n"); }
+void svg_end_page(GVJ_t *job) { gvputs(job, "</g>\n"); }
 
-static void svg_begin_cluster(GVJ_t *job) {
+void svg_begin_cluster(GVJ_t *job) {
   obj_state_t *obj = job->obj;
 
   svg_print_id_class(job, obj->id, NULL, "cluster", obj->u.sg);
@@ -321,9 +320,9 @@ static void svg_begin_cluster(GVJ_t *job) {
   gvputs(job, "</title>\n");
 }
 
-static void svg_end_cluster(GVJ_t *job) { gvputs(job, "</g>\n"); }
+void svg_end_cluster(GVJ_t *job) { gvputs(job, "</g>\n"); }
 
-static void svg_begin_node(GVJ_t *job) {
+void svg_begin_node(GVJ_t *job) {
   obj_state_t *obj = job->obj;
   char *idx;
 
@@ -338,9 +337,9 @@ static void svg_begin_node(GVJ_t *job) {
   gvputs(job, "</title>\n");
 }
 
-static void svg_end_node(GVJ_t *job) { gvputs(job, "</g>\n"); }
+void svg_end_node(GVJ_t *job) { gvputs(job, "</g>\n"); }
 
-static void svg_begin_edge(GVJ_t *job) {
+void svg_begin_edge(GVJ_t *job) {
   obj_state_t *obj = job->obj;
   char *ename;
 
@@ -354,15 +353,15 @@ static void svg_begin_edge(GVJ_t *job) {
   gvputs(job, "</title>\n");
 }
 
-static void svg_end_edge(GVJ_t *job) { gvputs(job, "</g>\n"); }
+void svg_end_edge(GVJ_t *job) { gvputs(job, "</g>\n"); }
 
 /// wrap `gvputs` to offer a `void *` first parameter
 static int gvputs_wrapper(void *state, const char *s) {
   return gvputs(state, s);
 }
 
-static void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
-                             char *target, char *id) {
+void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
+                      char *id) {
   gvputs(job, "<g");
   if (id) {
     gvputs(job, " id=\"a_");
@@ -392,12 +391,12 @@ static void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
   gvputs(job, ">\n");
 }
 
-static void svg_end_anchor(GVJ_t *job) {
+void svg_end_anchor(GVJ_t *job) {
   gvputs(job, "</a>\n"
               "</g>\n");
 }
 
-static void svg_textspan(GVJ_t *job, pointf p, textspan_t *span) {
+void svg_textspan(GVJ_t *job, pointf p, textspan_t *span) {
   obj_state_t *obj = job->obj;
   PostscriptAlias *pA;
   char *family = NULL, *weight = NULL, *stretch = NULL, *style = NULL;
@@ -604,7 +603,7 @@ static int svg_rgradstyle(GVJ_t *job) {
   return id;
 }
 
-static void svg_ellipse(GVJ_t *job, pointf *A, int filled) {
+void svg_ellipse(GVJ_t *job, pointf *A, int filled) {
   int gid = 0;
 
   /* A[] contains 2 points: the center and corner. */
@@ -626,7 +625,7 @@ static void svg_ellipse(GVJ_t *job, pointf *A, int filled) {
   gvputs(job, "\"/>\n");
 }
 
-static void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled) {
+void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled) {
   int gid = 0;
   obj_state_t *obj = job->obj;
 
@@ -647,7 +646,7 @@ static void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled) {
   gvputs(job, "\"/>\n");
 }
 
-static void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled) {
+void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled) {
   int gid = 0;
   if (filled == GRADIENT) {
     gid = svg_gradstyle(job, A, n);
@@ -670,7 +669,7 @@ static void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled) {
   gvputs(job, "\"/>\n");
 }
 
-static void svg_polyline(GVJ_t *job, pointf *A, size_t n) {
+void svg_polyline(GVJ_t *job, pointf *A, size_t n) {
   gvputs(job, "<polyline");
   svg_grstyle(job, 0, 0);
   gvputs(job, " points=\"");

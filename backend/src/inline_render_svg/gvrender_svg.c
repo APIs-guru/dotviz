@@ -43,25 +43,15 @@ extern bool mapbool(const char *s);
 /* gvrender_begin_job:
  * Return 0 on success
  */
+extern void svg_begin_job(GVJ_t *job);
 int gvrender_begin_job(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
   if (gvdevice_initialize(job))
     return 1;
-  if (gvre) {
-    if (gvre->begin_job)
-      gvre->begin_job(job);
-  }
+  svg_begin_job(job);
   return 0;
 }
 
 void gvrender_end_job(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->end_job)
-      gvre->end_job(job);
-  }
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
   gvdevice_finalize(job);
 }
@@ -149,192 +139,73 @@ static void gvrender_resolve_color(gvrender_features_t *features, char *name,
   }
 }
 
-void gvrender_begin_graph(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+extern void svg_begin_graph(GVJ_t *job);
+void gvrender_begin_graph(GVJ_t *job) { svg_begin_graph(job); }
 
-  if (gvre) {
-    /* render specific init */
-    if (gvre->begin_graph)
-      gvre->begin_graph(job);
-  }
-}
-
+extern void svg_end_graph(GVJ_t *job);
 void gvrender_end_graph(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->end_graph)
-      gvre->end_graph(job);
-  }
+  svg_end_graph(job);
   gvdevice_format(job);
 }
 
-void gvrender_begin_page(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+extern void svg_begin_page(GVJ_t *job);
+void gvrender_begin_page(GVJ_t *job) { svg_begin_page(job); }
 
-  if (gvre) {
-    if (gvre->begin_page)
-      gvre->begin_page(job);
-  }
-}
+extern void svg_end_page(GVJ_t *job);
+void gvrender_end_page(GVJ_t *job) { svg_end_page(job); }
 
-void gvrender_end_page(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->end_page)
-      gvre->end_page(job);
-  }
-}
-
+extern void svg_begin_layer(GVJ_t *job, char *layername, int layerNum,
+                            int numLayers);
 void gvrender_begin_layer(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->begin_layer)
-      gvre->begin_layer(job, job->gvc->layerIDs[job->layerNum], job->layerNum,
-                        job->numLayers);
-  }
+  svg_begin_layer(job, job->gvc->layerIDs[job->layerNum], job->layerNum,
+                  job->numLayers);
 }
 
-void gvrender_end_layer(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+extern void svg_end_layer(GVJ_t *job);
+void gvrender_end_layer(GVJ_t *job) { svg_end_layer(job); }
 
-  if (gvre) {
-    if (gvre->end_layer)
-      gvre->end_layer(job);
-  }
-}
+extern void svg_begin_cluster(GVJ_t *job);
+void gvrender_begin_cluster(GVJ_t *job) { svg_begin_cluster(job); }
 
-void gvrender_begin_cluster(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+extern void svg_end_cluster(GVJ_t *job);
+void gvrender_end_cluster(GVJ_t *job) { svg_end_cluster(job); }
 
-  if (gvre) {
-    if (gvre->begin_cluster)
-      gvre->begin_cluster(job);
-  }
-}
+void gvrender_begin_nodes(GVJ_t *job) {}
 
-void gvrender_end_cluster(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+void gvrender_end_nodes(GVJ_t *job) {}
 
-  if (gvre) {
-    if (gvre->end_cluster)
-      gvre->end_cluster(job);
-  }
-}
+void gvrender_begin_edges(GVJ_t *job) {}
 
-void gvrender_begin_nodes(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+void gvrender_end_edges(GVJ_t *job) {}
 
-  if (gvre) {
-    if (gvre->begin_nodes)
-      gvre->begin_nodes(job);
-  }
-}
+extern void svg_begin_node(GVJ_t *job);
+void gvrender_begin_node(GVJ_t *job) { svg_begin_node(job); }
 
-void gvrender_end_nodes(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+extern void svg_end_node(GVJ_t *job);
+void gvrender_end_node(GVJ_t *job) { svg_end_node(job); }
 
-  if (gvre) {
-    if (gvre->end_nodes)
-      gvre->end_nodes(job);
-  }
-}
+extern void svg_begin_edge(GVJ_t *job);
+void gvrender_begin_edge(GVJ_t *job) { svg_begin_edge(job); }
 
-void gvrender_begin_edges(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+extern void svg_end_edge(GVJ_t *job);
+void gvrender_end_edge(GVJ_t *job) { svg_end_edge(job); }
 
-  if (gvre) {
-    if (gvre->begin_edges)
-      gvre->begin_edges(job);
-  }
-}
-
-void gvrender_end_edges(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->end_edges)
-      gvre->end_edges(job);
-  }
-}
-
-void gvrender_begin_node(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->begin_node)
-      gvre->begin_node(job);
-  }
-}
-
-void gvrender_end_node(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->end_node)
-      gvre->end_node(job);
-  }
-}
-
-void gvrender_begin_edge(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->begin_edge)
-      gvre->begin_edge(job);
-  }
-}
-
-void gvrender_end_edge(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->end_edge)
-      gvre->end_edge(job);
-  }
-}
-
+extern void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
+                             char *target, char *id);
 void gvrender_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
                            char *id) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->begin_anchor)
-      gvre->begin_anchor(job, href, tooltip, target, id);
-  }
+  svg_begin_anchor(job, href, tooltip, target, id);
 }
 
-void gvrender_end_anchor(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
+extern void svg_end_anchor(GVJ_t *job);
+void gvrender_end_anchor(GVJ_t *job) { svg_end_anchor(job); }
 
-  if (gvre) {
-    if (gvre->end_anchor)
-      gvre->end_anchor(job);
-  }
-}
+void gvrender_begin_label(GVJ_t *job, label_type type) {}
 
-void gvrender_begin_label(GVJ_t *job, label_type type) {
-  gvrender_engine_t *gvre = job->render.engine;
+void gvrender_end_label(GVJ_t *job) {}
 
-  if (gvre) {
-    if (gvre->begin_label)
-      gvre->begin_label(job, type);
-  }
-}
-
-void gvrender_end_label(GVJ_t *job) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->end_label)
-      gvre->end_label(job);
-  }
-}
-
+extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
 void gvrender_textspan(GVJ_t *job, pointf p, textspan_t *span) {
-  gvrender_engine_t *gvre = job->render.engine;
   pointf PF;
 
   if (span->str && span->str[0] &&
@@ -344,10 +215,7 @@ void gvrender_textspan(GVJ_t *job, pointf p, textspan_t *span) {
       PF = p;
     else
       PF = gvrender_ptf(job, p);
-    if (gvre) {
-      if (gvre->textspan)
-        gvre->textspan(job, PF, span);
-    }
+    svg_textspan(job, PF, span);
   }
 }
 
@@ -360,8 +228,8 @@ void gvrender_set_pencolor(GVJ_t *job, char *name) {
     *cp = '\0';
   if (gvre) {
     gvrender_resolve_color(job->render.features, name, color);
-    if (gvre->resolve_color)
-      gvre->resolve_color(job, color);
+    // if (gvre->resolve_color)
+    //   gvre->resolve_color(job, color);
   }
   if (cp) /* restore color list */
     *cp = ':';
@@ -376,8 +244,8 @@ void gvrender_set_fillcolor(GVJ_t *job, char *name) {
     *cp = '\0';
   if (gvre) {
     gvrender_resolve_color(job->render.features, name, color);
-    if (gvre->resolve_color)
-      gvre->resolve_color(job, color);
+    // if (gvre->resolve_color)
+    //   gvre->resolve_color(job, color);
   }
   if (cp)
     *cp = ':';
@@ -390,8 +258,8 @@ void gvrender_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
 
   if (gvre) {
     gvrender_resolve_color(job->render.features, stopcolor, color);
-    if (gvre->resolve_color)
-      gvre->resolve_color(job, color);
+    // if (gvre->resolve_color)
+    //   gvre->resolve_color(job, color);
   }
   job->obj->gradient_angle = angle;
   job->obj->gradient_frac = frac;
@@ -435,47 +303,42 @@ void gvrender_set_style(GVJ_t *job, char **s) {
   }
 }
 
+extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
 void gvrender_ellipse(GVJ_t *job, pointf *pf, int filled) {
-  gvrender_engine_t *gvre = job->render.engine;
+  if (job->obj->pen != PEN_NONE) {
+    pointf af[] = {
+        mid_pointf(pf[0], pf[1]), // center
+        pf[1]                     // corner
+    };
 
-  if (gvre) {
-    if (gvre->ellipse && job->obj->pen != PEN_NONE) {
-      pointf af[] = {
-          mid_pointf(pf[0], pf[1]), // center
-          pf[1]                     // corner
-      };
-
-      if (!(job->flags & GVRENDER_DOES_TRANSFORM))
-        gvrender_ptf_A(job, af, af, 2);
-      gvre->ellipse(job, af, filled);
-    }
+    if (!(job->flags & GVRENDER_DOES_TRANSFORM))
+      gvrender_ptf_A(job, af, af, 2);
+    svg_ellipse(job, af, filled);
   }
 }
 
+extern void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
 void gvrender_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
   int noPoly = 0;
   gvcolor_t save_pencolor;
 
-  gvrender_engine_t *gvre = job->render.engine;
-  if (gvre) {
-    if (gvre->polygon && job->obj->pen != PEN_NONE) {
-      if (filled & NO_POLY) {
-        noPoly = 1;
-        filled &= ~NO_POLY;
-        save_pencolor = job->obj->pencolor;
-        job->obj->pencolor = job->obj->fillcolor;
-      }
-      if (job->flags & GVRENDER_DOES_TRANSFORM)
-        gvre->polygon(job, af, n, filled);
-      else {
-        pointf *AF = gv_calloc(n, sizeof(pointf));
-        gvrender_ptf_A(job, af, AF, n);
-        gvre->polygon(job, AF, n, filled);
-        free(AF);
-      }
-      if (noPoly)
-        job->obj->pencolor = save_pencolor;
+  if (job->obj->pen != PEN_NONE) {
+    if (filled & NO_POLY) {
+      noPoly = 1;
+      filled &= ~NO_POLY;
+      save_pencolor = job->obj->pencolor;
+      job->obj->pencolor = job->obj->fillcolor;
     }
+    if (job->flags & GVRENDER_DOES_TRANSFORM)
+      svg_polygon(job, af, n, filled);
+    else {
+      pointf *AF = gv_calloc(n, sizeof(pointf));
+      gvrender_ptf_A(job, af, AF, n);
+      svg_polygon(job, AF, n, filled);
+      free(AF);
+    }
+    if (noPoly)
+      job->obj->pencolor = save_pencolor;
   }
 }
 
@@ -492,50 +355,40 @@ void gvrender_box(GVJ_t *job, boxf B, int filled) {
   gvrender_polygon(job, A, 4, filled);
 }
 
+extern void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 void gvrender_beziercurve(GVJ_t *job, pointf *af, size_t n, int filled) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->beziercurve && job->obj->pen != PEN_NONE) {
-      if (job->flags & GVRENDER_DOES_TRANSFORM)
-        gvre->beziercurve(job, af, n, filled);
-      else {
-        pointf *AF = gv_calloc(n, sizeof(pointf));
-        gvrender_ptf_A(job, af, AF, n);
-        gvre->beziercurve(job, AF, n, filled);
-        free(AF);
-      }
+  if (job->obj->pen != PEN_NONE) {
+    if (job->flags & GVRENDER_DOES_TRANSFORM)
+      svg_bezier(job, af, n, filled);
+    else {
+      pointf *AF = gv_calloc(n, sizeof(pointf));
+      gvrender_ptf_A(job, af, AF, n);
+      svg_bezier(job, AF, n, filled);
+      free(AF);
     }
   }
 }
 
+extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
 void gvrender_polyline(GVJ_t *job, pointf *af, size_t n) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    if (gvre->polyline && job->obj->pen != PEN_NONE) {
-      if (job->flags & GVRENDER_DOES_TRANSFORM)
-        gvre->polyline(job, af, n);
-      else {
-        pointf *AF = gv_calloc(n, sizeof(pointf));
-        gvrender_ptf_A(job, af, AF, n);
-        gvre->polyline(job, AF, n);
-        free(AF);
-      }
+  if (job->obj->pen != PEN_NONE) {
+    if (job->flags & GVRENDER_DOES_TRANSFORM)
+      svg_polyline(job, af, n);
+    else {
+      pointf *AF = gv_calloc(n, sizeof(pointf));
+      gvrender_ptf_A(job, af, AF, n);
+      svg_polyline(job, AF, n);
+      free(AF);
     }
   }
 }
 
+extern void svg_comment(GVJ_t *job, char *str);
 void gvrender_comment(GVJ_t *job, char *str) {
-  gvrender_engine_t *gvre = job->render.engine;
-
   if (!str || !str[0])
     return;
 
-  if (gvre) {
-    if (gvre->comment)
-      gvre->comment(job, str);
-  }
+  svg_comment(job, str);
 }
 
 static imagescale_t get_imagescale(char *s) {
@@ -595,10 +448,6 @@ void gvrender_usershape(GVJ_t *job, char *name, pointf *a, size_t n,
   assert(name[0]);
 
   if (!(us = gvusershape_find(name))) {
-    if (find_user_shape(name)) {
-      if (gvre && gvre->library_shape)
-        gvre->library_shape(job, name, a, n, filled);
-    }
     return;
   }
 
