@@ -390,7 +390,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_viewport(job, g);
   init_job_pagination(job, g);
 
-  emit_graph(job, g, render_engine);
+  emit_graph(job, g);
 
   if (render_engine->end_job)
     render_engine->end_job(job);

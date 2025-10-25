@@ -3170,7 +3170,7 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
 extern void svg_begin_layer(GVJ_t *job, char *layername, int layerNum,
                             int numLayers);
 extern void svg_end_layer(GVJ_t *job);
-void emit_graph(GVJ_t *job, graph_t *g, gvrender_engine_t *render_engine) {
+void emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
   char *s;
   int flags = job->flags;
