@@ -124,14 +124,6 @@ static void gvrender_resolve_color(gvrender_features_t *features, char *name,
   }
 }
 
-extern void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
-                             char *target, char *id);
-
-// FIXME: used in another parts of graphviz like htmltable.c
-void gvrender_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
-                           char *id) {
-  svg_begin_anchor(job, href, tooltip, target, id);
-}
 extern void svg_end_anchor(GVJ_t *job);
 // FIXME: used in another parts of graphviz like htmltable.c
 void gvrender_end_anchor(GVJ_t *job) { svg_end_anchor(job); }
