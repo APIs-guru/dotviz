@@ -1,0 +1,648 @@
+digraph Linux_kernel_diagram {
+	graph [bb="0,0,1454.7,798",
+		fontname=Helvetica,
+		newrank=true,
+		nodesep=0.3,
+		overlap=true,
+		ranksep=0.2,
+		splines=false
+	];
+	node [fixedsize=false,
+		fontname=Helvetica,
+		fontsize=24,
+		height=1,
+		label="\N",
+		shape=box,
+		style="filled,setlinewidth(5)",
+		width=2.2
+	];
+	edge [arrowhead=none,
+		arrowsize=0.5,
+		fontname=Helvetica,
+		labelfontname=Ubuntu,
+		style="filled,setlinewidth(5)",
+		weight=10
+	];
+	subgraph system {
+		node [color="#e27dd6ff"];
+		edge [color="#e27dd6ff"];
+		system_	[fixedsize=true,
+			height=0.02,
+			pos="493.2,660.4",
+			shape=point,
+			style=invis,
+			width=0.02];
+		system	[URL="https://en.wikibooks.org/wiki/The_Linux_Kernel/System",
+			fillcolor=white,
+			fixedsize=true,
+			height=0.6,
+			pos="493.2,714.4",
+			row=func,
+			width=2];
+		system -> system_	[arrowhead="",
+			pos="e,493.2,661.59 493.2,692.55 493.2,683.65 493.2,673.91 493.2,667.73",
+			row=func];
+		SCI	[URL="https://en.wikibooks.org/wiki/The_Linux_Kernel/Syscalls",
+			fillcolor="#d9e7ee",
+			fixedsize=true,
+			label="System calls",
+			pos="493.2,592",
+			row=usr,
+			shape=ellipse];
+		sysfs	[fillcolor="#b2d3e4",
+			label="proc & sysfs\nfile systems",
+			pos="493.2,506"];
+		SCI -> sysfs	[pos="493.2,555.86 493.2,551.37 493.2,546.76 493.2,542.27"];
+		DM	[fillcolor="#91b5c9",
+			fixedsize=true,
+			fontsize=20,
+			height=0.8,
+			label="Device\nModel",
+			pos="493.2,420",
+			shape=octagon,
+			width=2];
+		sysfs -> DM	[pos="493.2,469.86 493.2,462.94 493.2,455.76 493.2,449.11"];
+		log_sys	[fillcolor="#6a9ab1",
+			fontsize=20,
+			height=1.4444,
+			label="system run,\nmodules,\ngeneric\nHW access ",
+			pos="493.2,318"];
+		DM -> log_sys	[pos="493.2,390.88 493.2,384.41 493.2,377.33 493.2,370.22"];
+		bus_drv	[fillcolor="#71809b",
+			label="bus drivers",
+			pos="493.2,212"];
+		log_sys -> bus_drv	[pos="493.2,265.61 493.2,259.78 493.2,253.93 493.2,248.37"];
+		buses	[fillcolor="#777777",
+			fontcolor=white,
+			fontsize=20,
+			label="buses:\nPCI, USB ...",
+			pos="493.2,122",
+			row=chip];
+		bus_drv -> buses	[pos="493.2,175.71 493.2,169.98 493.2,164.03 493.2,158.29"];
+	}
+	subgraph networking {
+		node [color="#61c2c5"];
+		edge [color="#61c2c5"];
+		networking_	[fixedsize=true,
+			height=0.01,
+			pos="1372.2,660.4",
+			shape=point,
+			style=invis,
+			width=0.01];
+		networking	[URL="https://en.wikibooks.org/wiki/The_Linux_Kernel/Networking",
+			fillcolor=white,
+			fixedsize=true,
+			height=0.6,
+			pos="1372.2,714.4",
+			row=func,
+			width=2];
+		networking -> networking_	[arrowhead="",
+			pos="e,1372.2,661.45 1372.2,692.55 1372.2,683.57 1372.2,673.74 1372.2,667.57",
+			row=func];
+		sock	[fillcolor="#d9e7ee",
+			fixedsize=true,
+			label=Sockets,
+			pos="1372.2,592",
+			row=usr,
+			shape=ellipse];
+		prot_fam	[fillcolor="#b2d3e4",
+			label="protocol\nfamilies",
+			pos="1372.2,506"];
+		sock -> prot_fam	[pos="1372.2,555.86 1372.2,551.37 1372.2,546.76 1372.2,542.27"];
+		log_prot	[fillcolor="#6a9ab1",
+			label="protocols:\nTCP, UDP, IP",
+			pos="1372.2,318",
+			width=2.278];
+		prot_fam -> log_prot	[pos="1372.2,469.75 1372.2,436.57 1372.2,387.71 1372.2,354.46"];
+		netif	[fillcolor="#71809b",
+			fontsize=20,
+			height=1.1111,
+			label="network\ninterfaces\nand drivers",
+			pos="1372.2,212"];
+		log_prot -> netif	[pos="1372.2,281.79 1372.2,272.36 1372.2,262.11 1372.2,252.47"];
+		net_hw	[fillcolor="#777777",
+			fontcolor=white,
+			fontsize=20,
+			label="network:\nEthernet, WiFi ...",
+			pos="1372.2,122",
+			row=chip,
+			width=2.2906];
+		netif -> net_hw	[pos="1372.2,171.63 1372.2,167.24 1372.2,162.78 1372.2,158.44"];
+		NFS	[color="#8383cc",
+			fillcolor="#91b5c9",
+			fixedsize=true,
+			height=0.8,
+			label=NFS,
+			pos="1280.2,420",
+			shape=octagon,
+			width=1.2];
+		NFS -> log_prot	[pos="1303.2,394.02 1314.2,381.99 1327.7,367.35 1339.8,354.21",
+			weight=0];
+	}
+	subgraph processing {
+		node [color="#c46747"];
+		edge [color="#c46747"];
+		processing_	[fixedsize=true,
+			height=0.01,
+			pos="673.2,660.4",
+			shape=point,
+			style=invis,
+			width=0.01];
+		processing	[URL="https://en.wikibooks.org/wiki/The_Linux_Kernel/Processing",
+			fillcolor=white,
+			fixedsize=true,
+			height=0.6,
+			pos="673.2,714.4",
+			row=func,
+			width=2];
+		processing -> processing_	[arrowhead="",
+			pos="e,673.2,661.45 673.2,692.55 673.2,683.57 673.2,673.74 673.2,667.57",
+			row=func];
+		proc	[fillcolor="#d9e7ee",
+			fixedsize=true,
+			label=Processes,
+			pos="673.2,592",
+			row=usr,
+			shape=ellipse];
+		Tasks	[fillcolor="#b2d3e4",
+			pos="673.2,506"];
+		proc -> Tasks	[pos="673.2,555.86 673.2,551.37 673.2,546.76 673.2,542.27"];
+		sync	[fillcolor="#91b5c9",
+			fixedsize=true,
+			fontname=Arial,
+			fontsize=20,
+			height=0.7,
+			label=synchronization,
+			pos="673.2,420",
+			shape=octagon];
+		Tasks -> sync	[pos="673.2,469.86 673.2,461.68 673.2,453.14 673.2,445.53"];
+		sched	[fillcolor="#6a9ab1",
+			label=Scheduler,
+			pos="673.2,318"];
+		sync -> sched	[pos="673.2,394.54 673.2,382.39 673.2,367.51 673.2,354.17"];
+		IRQ	[fillcolor="#71809b",
+			fontsize=20,
+			height=1.1111,
+			label="interrupts\ncore,\nCPU arch",
+			pos="673.2,212"];
+		sched -> IRQ	[pos="673.2,281.79 673.2,272.36 673.2,262.11 673.2,252.47"];
+		CPU	[fillcolor="#777777",
+			fontcolor=white,
+			fontsize=20,
+			pos="673.2,122",
+			row=chip];
+		IRQ -> CPU	[pos="673.2,171.63 673.2,167.24 673.2,162.78 673.2,158.44"];
+	}
+	subgraph mem {
+		node [color="#51bf5b",
+			height=1
+		];
+		edge [color="#51bf5b"];
+		MA	[fillcolor="#d9e7ee",
+			fixedsize=true,
+			label="memory\naccess",
+			pos="853.2,592",
+			row=usr,
+			shape=ellipse];
+		VM	[fillcolor="#b2d3e4",
+			label="Virtual\nmemory",
+			pos="853.2,506"];
+		MA -> VM	[pos="853.2,555.86 853.2,551.37 853.2,546.76 853.2,542.27"];
+		mmap	[fillcolor="#91b5c9",
+			fixedsize=true,
+			fontsize=20,
+			height=0.8,
+			label="memory\nmapping",
+			pos="853.2,420",
+			shape=octagon,
+			width=2];
+		VM -> mmap	[pos="853.2,469.86 853.2,462.94 853.2,455.76 853.2,449.11"];
+		log_mem	[fillcolor="#6a9ab1",
+			label="logical\nmemory",
+			pos="853.2,318"];
+		mmap -> log_mem	[pos="853.2,390.88 853.2,379.56 853.2,366.37 853.2,354.4"];
+		SW	[color="#8383cc",
+			fillcolor="#91b5c9",
+			fixedsize=true,
+			height=0.8,
+			label=Swap,
+			pos="997.2,318",
+			shape=octagon,
+			width=1.2];
+		mmap -> SW	[pos="889.91,393.51 914.07,376.73 945.29,355.05 967.81,339.41",
+			weight=1];
+		PA	[fillcolor="#71809b",
+			label="Page\nAllocator",
+			pos="853.2,212"];
+		log_mem -> PA	[pos="853.2,281.79 853.2,270.95 853.2,259.01 853.2,248.17"];
+		RAM	[fillcolor="#777777",
+			fontcolor=white,
+			fontsize=20,
+			label="MMU, RAM",
+			pos="853.2,122",
+			row=chip];
+		PA -> RAM	[pos="853.2,175.71 853.2,169.98 853.2,164.03 853.2,158.29"];
+		block	[fillcolor="#71809b",
+			fontsize=20,
+			height=1.1111,
+			label="Block\ndevices\nand drivers",
+			pos="1187.2,212"];
+		SW -> block	[color="#8383cc",
+			pos="1030.3,298.88 1053.7,286.08 1085.9,268.42 1115.1,252.45",
+			weight=1];
+		PC	[fillcolor="#91b5c9",
+			fixedsize=true,
+			fontsize=20,
+			height=0.8,
+			label="page\ncache",
+			pos="1092.2,420",
+			shape=octagon,
+			width=1.2];
+		PC -> PA	[pos="1065.7,396.95 1024.4,360.98 944.23,291.23 895.04,248.42",
+			weight=0];
+		memory	[URL="https://en.wikibooks.org/wiki/The_Linux_Kernel/Memory",
+			fillcolor=white,
+			fixedsize=true,
+			height=0.6,
+			pos="853.2,714.4",
+			row=func,
+			width=2];
+		memory_	[fixedsize=true,
+			height=0.01,
+			pos="853.2,660.4",
+			shape=point,
+			style=invis,
+			width=0.01];
+		memory -> memory_	[arrowhead="",
+			pos="e,853.2,661.45 853.2,692.55 853.2,683.57 853.2,673.74 853.2,667.57",
+			row=func];
+	}
+	subgraph storage {
+		node [color="#8383cc"];
+		edge [color="#8383cc"];
+		NFS;
+		mmap;
+		block;
+		SD	[fillcolor="#777777",
+			fontcolor=white,
+			fontsize=20,
+			label="storage devices:\nSCSI, NVMe ...",
+			pos="1187.2,122",
+			row=chip,
+			width=2.2449];
+		block -> SD	[pos="1187.2,171.63 1187.2,167.24 1187.2,162.78 1187.2,158.44"];
+		PC;
+		storage_	[fixedsize=true,
+			height=0.01,
+			pos="1187.2,660.4",
+			shape=point,
+			style=invis,
+			width=0.01];
+		storage	[URL="https://en.wikibooks.org/wiki/The_Linux_Kernel/Storage",
+			fillcolor=white,
+			fixedsize=true,
+			height=0.6,
+			pos="1187.2,714.4",
+			row=func,
+			width=2];
+		storage -> storage_	[arrowhead="",
+			pos="e,1187.2,661.45 1187.2,692.55 1187.2,683.57 1187.2,673.74 1187.2,667.57",
+			row=func];
+		FS	[fillcolor="#d9e7ee",
+			fixedsize=true,
+			label="files and\ndirectories",
+			pos="1187.2,592",
+			row=usr,
+			shape=ellipse];
+		VFS	[fillcolor="#b2d3e4",
+			label="Virtual\nFile System",
+			pos="1187.2,506"];
+		FS -> VFS	[pos="1187.2,555.86 1187.2,551.37 1187.2,546.76 1187.2,542.27"];
+		VFS -> NFS	[pos="1226.4,469.62 1235.9,461.01 1245.9,452.02 1254.6,444.15",
+			weight=0];
+		VFS -> mmap	[pos="1107.6,484.99 1048.6,470.14 969.23,450.18 914.94,436.53",
+			weight=0];
+		VFS -> PC	[pos="1147.2,469.62 1137.3,460.92 1127.1,451.83 1118.1,443.9",
+			weight=0];
+		logFS	[fillcolor="#6a9ab1",
+			fontsize=20,
+			height=1.1111,
+			label="logical\nfilesystems:\next3, xfs ...",
+			pos="1187.2,318"];
+		VFS -> logFS	[pos="1187.2,469.75 1187.2,437.85 1187.2,391.45 1187.2,358.37"];
+		logFS -> block	[pos="1187.2,277.68 1187.2,269.4 1187.2,260.66 1187.2,252.37"];
+	}
+	subgraph HI {
+		node [color="#cfbf57ff"];
+		edge [color="#cfbf57ff",
+			weight=10
+		];
+		HI_	[fixedsize=true,
+			height=0.01,
+			pos="308.2,660.4",
+			shape=point,
+			style=invis,
+			width=0.01];
+		HI	[URL="https://en.wikibooks.org/wiki/The_Linux_Kernel/Human_interfaces",
+			fillcolor=white,
+			fixedsize=true,
+			fontsize=12,
+			height=0.6,
+			label="human\ninterface",
+			pos="308.2,714.4",
+			row=func,
+			width=2];
+		HI -> HI_	[arrowhead="",
+			pos="e,308.2,661.45 308.2,692.55 308.2,683.57 308.2,673.74 308.2,667.57",
+			row=func];
+		char	[fillcolor="#d9e7ee",
+			fixedsize=true,
+			label="char\ndevices",
+			pos="308.2,592",
+			row=usr,
+			shape=ellipse];
+		input	[fillcolor="#b2d3e4",
+			label="input\nsubsystem",
+			pos="308.2,506"];
+		char -> input	[pos="308.2,555.86 308.2,551.37 308.2,546.76 308.2,542.27"];
+		F7	[fillcolor="#6a9ab1",
+			label="HI class\ndrivers",
+			pos="308.2,318"];
+		input -> F7	[pos="308.2,469.75 308.2,436.57 308.2,387.71 308.2,354.46"];
+		HID	[URL="https://www.kernel.org/doc/html/latest/hid/",
+			fillcolor="#71809b",
+			fontsize=20,
+			height=1.1111,
+			label="HI\nperipherals\ndrivers",
+			pos="308.2,212"];
+		F7 -> HID	[pos="308.2,281.79 308.2,272.36 308.2,262.11 308.2,252.47"];
+		display	[fillcolor="#777777",
+			fontcolor=white,
+			fontsize=19,
+			label="keyboard, mouse,\ndisplay, audio",
+			pos="308.2,122",
+			row=chip,
+			width=2.3198];
+		HID -> display	[pos="308.2,171.63 308.2,167.24 308.2,162.78 308.2,158.44"];
+	}
+	subgraph functions {
+		graph [rank=same];
+		edge [style=invis,
+			weight=1
+		];
+		system;
+		processing;
+		system -> processing	[pos="565.62,714.4 577.39,714.4 589.15,714.4 600.92,714.4"];
+		networking;
+		memory;
+		processing -> memory	[pos="745.62,714.4 757.39,714.4 769.15,714.4 780.92,714.4"];
+		storage;
+		memory -> storage	[pos="925.61,714.4 988.71,714.4 1051.8,714.4 1114.9,714.4"];
+		storage -> networking	[pos="1259.5,714.4 1273,714.4 1286.5,714.4 1300,714.4"];
+		HI;
+		HI -> system	[pos="380.47,714.4 393.97,714.4 407.47,714.4 420.98,714.4"];
+		functions_	[fixedsize=true,
+			height=0.01,
+			pos="187.2,714.4",
+			shape=point,
+			style=invis,
+			width=0.01];
+		functions_ -> HI	[pos="187.67,714.4 203.84,714.4 220,714.4 236.17,714.4"];
+		functions	[URL="http://www.makelinux.net/ldd3/chp-1-sect-2.shtml",
+			color=gray,
+			fillcolor=gray,
+			fixedsize=true,
+			height=0.6,
+			pos="79.2,714.4",
+			row=func,
+			style=dashed,
+			tooltip="Columns represent main functionalities of the kernel",
+			width=1.6];
+		functions -> functions_	[arrowhead="",
+			color=gray,
+			pos="e,186.42,714.4 137,714.4 151.41,714.4 165.82,714.4 180.24,714.4",
+			style="",
+			weight=""];
+	}
+	subgraph interfaces {
+		graph [rank=same];
+		SCI;
+		sock;
+		proc;
+		MA;
+		FS;
+		char;
+		usr_	[fixedsize=true,
+			height=0.02,
+			pos="202.2,592",
+			shape=point,
+			style=invis,
+			width=0.02];
+		usr	[fillcolor="#d9e7eeff",
+			fixedsize=true,
+			label="user space\ninterfaces",
+			pos="79.2,592",
+			row=usr,
+			shape=ellipse,
+			style="filled,setlinewidth(0)"];
+	}
+	{
+		edge [style=invis,
+			weight=10
+		];
+		system_;
+		SCI;
+		system_ -> SCI	[pos="493.2,659.21 493.2,657.41 493.2,643.21 493.2,628.41"];
+		networking_;
+		sock;
+		networking_ -> sock	[pos="1372.2,659.35 1372.2,658.41 1372.2,643.77 1372.2,628.48"];
+		processing_;
+		proc;
+		processing_ -> proc	[pos="673.2,659.35 673.2,658.41 673.2,643.77 673.2,628.48"];
+		MA;
+		memory_;
+		memory_ -> MA	[pos="853.2,659.35 853.2,658.41 853.2,643.77 853.2,628.48"];
+		storage_;
+		FS;
+		storage_ -> FS	[pos="1187.2,659.35 1187.2,658.41 1187.2,643.77 1187.2,628.48"];
+		HI_;
+		char;
+		HI_ -> char	[pos="308.2,659.35 308.2,658.41 308.2,643.77 308.2,628.48"];
+	}
+	subgraph virtual {
+		graph [rank=same];
+		sysfs;
+		prot_fam;
+		Tasks;
+		VM;
+		VFS;
+		input;
+		D0	[fixedsize=true,
+			height=0.01,
+			pos="202.2,506",
+			shape=point,
+			style=invis,
+			width=0.01];
+		virt	[URL="https://en.wikipedia.org/wiki/Proxy_pattern",
+			fillcolor="#b2d3e4",
+			label="virtual\nsubsystems",
+			pos="79.2,506",
+			style="filled,setlinewidth(0)",
+			tooltip="proxy between standard user space interfaces and internal implementations"];
+	}
+	subgraph bridges {
+		graph [rank=same];
+		DM;
+		NFS;
+		sync;
+		mmap;
+		bridges	[URL="https://en.wikipedia.org/wiki/Bridge_pattern",
+			fillcolor="#91b5c9",
+			pos="79.2,420",
+			shape=octagon,
+			style="filled,setlinewidth(0)",
+			tooltip="bridges between uniform virtual interfaces and various implementations"];
+		E0	[fixedsize=true,
+			height=0.01,
+			pos="202.2,420",
+			shape=point,
+			style=invis,
+			width=0.01];
+	}
+	subgraph logical {
+		graph [rank=same];
+		log_sys;
+		log_prot;
+		sched;
+		log_mem;
+		logFS;
+		F7;
+		F0	[fixedsize=true,
+			height=0.01,
+			pos="202.2,318",
+			shape=point,
+			style=invis,
+			width=0.01];
+		logical	[fillcolor="#6a9ab1",
+			pos="79.2,318",
+			style="filled,setlinewidth(0)"];
+	}
+	subgraph HWI {
+		graph [rank=same];
+		bus_drv;
+		netif;
+		IRQ;
+		block;
+		HID;
+		HWI	[fillcolor="#71809b",
+			label="hardware\ninterfaces",
+			pos="79.2,212",
+			style="filled,setlinewidth(0)"];
+		G0	[fixedsize=true,
+			height=0.01,
+			pos="202.2,212",
+			shape=point,
+			style=invis,
+			width=0.01];
+	}
+	subgraph HW {
+		graph [rank=same];
+		buses;
+		net_hw;
+		CPU;
+		RAM;
+		SD;
+		display;
+		HW	[fillcolor="#777777",
+			fontcolor=white,
+			label="electronics,\nhardware",
+			pos="79.2,122",
+			row=chip,
+			style="filled,setlinewidth(0)"];
+		H0	[fixedsize=true,
+			height=0.01,
+			pos="202.2,122",
+			shape=point,
+			style=invis,
+			width=0.01];
+	}
+	bottom	[URL="http://www.MakeLinux.net/kernel/diagram",
+		label="@ 2007-2022 Costa Shulyupin http://www.MakeLinux.net/kernel/diagram",
+		pos="673.2,36",
+		shape=plaintext,
+		style="",
+		width=10.974];
+	CPU -> bottom	[pos="673.2,85.863 673.2,81.277 673.2,76.58 673.2,71.996",
+		style=invis];
+	layers	[fillcolor=lightgray,
+		height=0.51111,
+		pos="79.2,660.4",
+		style="filled,setlinewidth(0)",
+		tooltip="Functionalities are divided to common layers. It is approximate division.",
+		width=1.1114];
+	functions -> layers	[pos="79.2,692.55 79.2,688.14 79.2,683.53 79.2,679.24",
+		style=invis];
+	usr -> usr_	[arrowhead="",
+		color="#d9e7eeff",
+		minlen=2,
+		pos="e,201.18,592 158.48,592 170.6,592 182.72,592 194.84,592"];
+	usr -> virt	[color="#d9e7eeff",
+		pos="79.2,555.86 79.2,551.37 79.2,546.76 79.2,542.27"];
+	virt -> D0	[arrowhead="",
+		color="#b2d3e4",
+		minlen=2,
+		pos="e,201.52,506 158.48,506 170.69,506 182.91,506 195.13,506"];
+	virt -> bridges	[color="#b2d3e4",
+		pos="79.2,469.86 79.2,465.37 79.2,460.76 79.2,456.27"];
+	bridges -> E0	[arrowhead="",
+		color="#91b5c9",
+		minlen=2,
+		pos="e,201.52,420 158.48,420 170.69,420 182.91,420 195.13,420",
+		style="filled,setlinewidth(6)",
+		weight=""];
+	bridges -> logical	[color="#91b5c9",
+		pos="79.2,383.74 79.2,374.18 79.2,363.84 79.2,354.27",
+		style="filled,setlinewidth(6)"];
+	logical -> F0	[arrowhead="",
+		color="#6a9ab1",
+		minlen=2,
+		pos="e,201.52,318 158.48,318 170.69,318 182.91,318 195.13,318",
+		row=logical,
+		style="filled,setlinewidth(6)",
+		weight=""];
+	logical -> HWI	[color="#6a9ab1",
+		pos="79.2,281.79 79.2,270.95 79.2,259.01 79.2,248.17",
+		row=logical,
+		style="filled,setlinewidth(6)"];
+	HWI -> G0	[arrowhead="",
+		color="#71809b",
+		minlen=2,
+		pos="e,201.52,212 158.48,212 170.69,212 182.91,212 195.13,212",
+		row=HWI,
+		style="filled,setlinewidth(6)",
+		weight=""];
+	HWI -> HW	[color="#71809b",
+		pos="79.2,175.71 79.2,169.98 79.2,164.03 79.2,158.29",
+		row=HWI,
+		style="filled,setlinewidth(6)"];
+	HW -> H0	[arrowhead="",
+		color="#777777",
+		minlen=2,
+		pos="e,201.52,122 158.48,122 170.69,122 182.91,122 195.13,122",
+		row=chip,
+		style="filled,setlinewidth(6)",
+		weight=""];
+	layers -> usr	[arrowhead="",
+		color=gray,
+		pos="e,79.2,628.28 79.2,641.61 79.2,639.4 79.2,637.08 79.2,634.7",
+		style="filled,setlinewidth(1)"];
+	LKD	[fontsize=40,
+		height=0.66667,
+		label="Linux kernel diagram",
+		pos="673.2,774",
+		shape=plain,
+		style="",
+		width=5.1571];
+	LKD -> processing	[pos="673.2,750.23 673.2,745.58 673.2,740.71 673.2,736.13",
+		style=invis];
+}

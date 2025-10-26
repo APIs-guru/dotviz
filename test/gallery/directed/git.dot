@@ -1,0 +1,162 @@
+digraph git_basics {
+	graph [bb="0,0,825.2,235.8",
+		fontname=Helvetica,
+		fontsize=20,
+		label="Basic git concepts and operations\n\n",
+		labelloc=t,
+		layout=dot,
+		lheight=0.67,
+		lp="412.6,207.8",
+		lwidth=4.15,
+		newrank=true,
+		rankdir=LR
+	];
+	node [fontname=Helvetica,
+		label="\N",
+		pencolor="#00000044",
+		shape=plaintext,
+		style=filled
+	];
+	edge [arrowsize=0.5,
+		fontname=Helvetica,
+		labeldistance=3,
+		labelfontcolor="#00000080",
+		penwidth=2,
+		style=dotted
+	];
+	{
+		edge [arrowhead=none,
+			color="#00008844"
+		];
+		changes	[color="#88000022",
+			height=1.0556,
+			label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b>changes</b><br/>in the working tree </td> </tr>
+			<tr> <td align="left"><i>To view: </i><br align="left"/>
+			git diff
+			<br align="left"/></td> </tr>
+		</table>>,
+			pos="64.141,141.8",
+			shape=plain,
+			width=1.7817];
+		stash_push	[color="#00008844",
+			height=0.23333,
+			label="git stash [push]",
+			pos="212.36,114.8",
+			shape=plain,
+			style="",
+			width=1.3078];
+		changes -> stash_push	[pos="128,130.19 140.85,127.82 154.13,125.37 166.21,123.14"];
+		staging	[fillcolor="#ff880022",
+			height=1.0556,
+			label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b>staging area</b><br/>(cache, index)</td> </tr>
+			<tr> <td align="left"><i>To view: </i><br align="left"/>
+			git diff --staged
+			<br align="left"/></td> </tr>
+		</table>>,
+			pos="347.75,136.8",
+			shape=plain,
+			width=1.425];
+		stash_push -> staging	[pos="259.27,122.37 271.32,124.36 284.39,126.51 296.65,128.54"];
+	}
+	{
+		graph [rank=same];
+		changes;
+		discard	[height=0.5,
+			pos="64.141,49.8",
+			style="",
+			width=0.84904];
+	}
+	changes -> staging	[color="#88000088",
+		label="git add ...    \ngit reset      ",
+		lp="212.36,158.37",
+		pos="e,296.77,139.19 128.15,141.78 170.63,141.63 227.91,141.15 278.45,139.8 281.88,139.71 285.4,139.6 288.96,139.48"];
+	stash	[fillcolor="#0044ff22",
+		height=0.9,
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b>stash</b></td> </tr>
+			<tr> <td align="left"><i>To view:</i><br align="left"/>
+			git stash list
+			<br align="left"/></td> </tr>
+		</table>>,
+		pos="212.36,55.8",
+		shape=plain,
+		width=1.1547];
+	changes -> stash	[color="#00000088",
+		dir=back,
+		pos="s,128,104.83 134.85,100.8 147.23,93.52 159.74,86.165 170.95,79.57",
+		weight=0,
+		xlabel="git stash pop",
+		xlp="189.02,96.484"];
+	changes -> discard	[color="#88000088",
+		label="git restore ...",
+		lp="52.741,85.8",
+		pos="e,64.141,67.539 64.141,103.93 64.141,94.379 64.141,84.342 64.141,75.541"];
+	HEAD	[fillcolor="#88ff0022",
+		height=2.0778,
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="3">
+			<tr> <td port="push" sides="ltr"> <b>HEAD </b>of</td> </tr>
+			<tr> <td port="pull" sides="lbr"> the current branch</td> </tr>
+			<tr> <td port="switch" align="left">
+				<i>To view:</i>
+				<br align="left"/>
+				git show<br align="left"/>
+				git log
+				<br align="left"/>
+			</td> </tr>
+			<tr> <td align="left">
+				<i>To change branch:</i><br align="left"/>
+				git switch ...
+				<br align="left"/>
+				git checkout ...
+				<br align="left"/>
+			</td> </tr>
+		</table>>,
+		pos="561.59,74.8",
+		shape=plain,
+		width=1.7432];
+	staging -> HEAD:push	[color="#88000088",
+		label="git commit",
+		lp="448.94,145.59",
+		pos="e,498.83,137.2 398.78,137 425.68,137.09 459.67,137.18 490.95,137.2",
+		weight=1000];
+	remote	[color="#00000022",
+		fillcolor="#00ff0022",
+		height=0.5,
+		label="remote branch",
+		pos="767.29,145.8",
+		shape=box,
+		width=1.476];
+	HEAD:push -> remote	[color="#88000088",
+		label="git push",
+		lp="666.86,147.91",
+		pos="e,713.75,141.1 624.34,137.2 651.19,137.2 680.84,138.75 706.07,140.54"];
+	HEAD:pull -> remote	[color="#00440088",
+		dir=back,
+		label="git pull",
+		lp="666.86,125.4",
+		pos="s,624.34,112.4 632.2,112.36 655.89,112.13 664.95,111.15 691.38,117 702.53,119.47 714.23,123.31 724.97,127.39"];
+	branches	[fillcolor="#00888822",
+		height=0.9,
+		label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tr> <td> <b>local branches</b> </td> </tr>
+			<tr> <td align="left"><i>To view:</i><br align="left"/>
+			git branch [--list]
+			<br align="left"/></td> </tr>
+			</table>>,
+		pos="767.29,74.8",
+		shape=plain,
+		width=1.6086];
+	HEAD:switch -> branches	[arrowhead=none,
+		arrowtail=odiamond,
+		color="#00000088",
+		dir=back,
+		penwidth=1,
+		pos="s,624.34,75 631.31,74.999 657.52,74.993 685.79,74.957 709.65,74.916",
+		style=""];
+	stash_push -> stash	[color="#00008844",
+		minlen=0,
+		pos="e,212.36,88.066 212.36,106.45 212.36,102.9 212.36,99.362 212.36,95.82",
+		xdir=back];
+}

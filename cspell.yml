@@ -4,6 +4,7 @@ validateDirectives: true
 ignorePaths:
   # Excluded from spelling check
   - cspell.yml
+  - test/gallery
   # FIXME
   - backend
 dictionaries:

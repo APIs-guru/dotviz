@@ -1,0 +1,35 @@
+digraph G {
+	graph [bb="0,0,86,117.6",
+		bgcolor="purple:pink",
+		fontcolor=white,
+		fontname=Helvetica,
+		label=agraph,
+		lheight=0.23,
+		lp="43,12.4",
+		lwidth=0.61
+	];
+	node [fontname=Helvetica,
+		label="\N"
+	];
+	edge [fontname=Helvetica];
+	subgraph cluster1 {
+		graph [bb="8,32.8,78,109.6",
+			fillcolor="blue:cyan",
+			fontcolor=white,
+			gradientangle=270,
+			label=acluster,
+			lheight=0.23,
+			lp="43,97.2",
+			lwidth=0.68,
+			style=filled
+		];
+		node [fillcolor="red:yellow",
+			gradientangle=90,
+			shape=box,
+			style=filled
+		];
+		anode	[height=0.5,
+			pos="43,58.8",
+			width=0.76293];
+	}
+}

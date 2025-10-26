@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { describe, it } from 'node:test';
 
 import * as VizPackage from '../src/index.ts';
 
 describe('Viz', () => {
   describe('render', () => {
-    it('comment attribute', async () => {
+    it('comment attribute', async (ctx) => {
       const viz = await VizPackage.instance();
       const result = viz.render(
         `digraph {
@@ -15,18 +14,20 @@ describe('Viz', () => {
   B[comment = "I am node B"]
   A -> B[comment = "I am an edge"]
 }`,
-        {
-          format: 'svg',
-        },
+        { format: 'svg' },
       );
 
+      const svg = result.output;
+      ctx.assert.fileSnapshot(svg, './test/snapshots/comment_attribute.svg', {
+        serializers: [(str: string) => str],
+      });
       assert.deepStrictEqual(result, {
         status: 'success',
-        output: fs.readFileSync('test/snapshots/comment_attribute.svg', 'utf8'),
+        output: svg,
         errors: [],
       });
     });
-    it('layers support', async () => {
+    it('layers support', async (ctx) => {
       const viz = await VizPackage.instance();
       const result = viz.renderFormats(
         `digraph G {
@@ -66,7 +67,12 @@ describe('Viz', () => {
 		pos="e,154.52,35.47 131.83,72.411 136.81,64.304 142.92,54.354 148.51,45.248"];
 }
 `;
-      const svg = fs.readFileSync('test/snapshots/layers_support.svg', 'utf8');
+
+      const svg = result.output?.svg;
+      ctx.assert.fileSnapshot(svg, './test/snapshots/layers_support.svg', {
+        serializers: [(str: string) => str],
+      });
+
       assert.deepStrictEqual(result, {
         status: 'success',
         output: { dot, svg },
@@ -78,7 +84,7 @@ describe('Viz', () => {
         ],
       });
     });
-    it('_background attribute', async () => {
+    it('_background attribute', async (ctx) => {
       const viz = await VizPackage.instance();
       const result = viz.renderFormats(
         `digraph G {
@@ -101,9 +107,11 @@ describe('Viz', () => {
 	a -> b	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"];
 }
 `;
-      const svg = fs.readFileSync(
-        'test/snapshots/_background_attribute.svg',
-        'utf8',
+      const svg = result.output?.svg;
+      ctx.assert.fileSnapshot(
+        svg,
+        './test/snapshots/_background_attribute.svg',
+        { serializers: [(str: string) => str] },
       );
       assert.deepStrictEqual(result, {
         status: 'success',

@@ -1,0 +1,49 @@
+digraph mygraph {
+	graph [bb="0,0,688.31,396",
+		fontname=Helvetica
+	];
+	node [fontname=Helvetica,
+		label="\N",
+		shape=box
+	];
+	edge [fontname=Helvetica];
+	"//absl/random:random"	[height=0.5,
+		pos="238.71,378",
+		width=2.1136];
+	"//absl/random:distributions"	[height=0.5,
+		pos="89.707,234",
+		width=2.4918];
+	"//absl/random:random" -> "//absl/random:distributions"	[pos="e,107.66,252.11 220.44,359.59 194.27,334.65 145.97,288.62 115.97,260.03"];
+	"//absl/random:seed_sequences"	[height=0.5,
+		pos="402.71,306",
+		width=2.9246];
+	"//absl/random:random" -> "//absl/random:seed_sequences"	[pos="e,361.98,324.38 279.67,359.52 301.47,350.21 328.49,338.68 351.65,328.79"];
+	"//absl/random/internal:pool_urbg"	[height=0.5,
+		pos="240.71,162",
+		width=3.011];
+	"//absl/random:random" -> "//absl/random/internal:pool_urbg"	[pos="e,240.55,180.23 238.87,359.85 239.21,323.14 240.02,236.66 240.44,191.53"];
+	"//absl/random/internal:nonsecure_base"	[height=0.5,
+		pos="402.71,234",
+		width=3.5839];
+	"//absl/random:random" -> "//absl/random/internal:nonsecure_base"	[pos="e,347.77,252.43 244.76,359.5 252.33,339.86 266.99,308.11 288.71,288 302.7,275.04 320.41,264.76 337.68,256.83"];
+	"//absl/strings:strings"	[height=0.5,
+		pos="235.71,18",
+		width=1.9404];
+	"//absl/random:distributions" -> "//absl/strings:strings"	[pos="e,216.3,36.328 94.25,215.75 99.599,197.17 109.58,167.16 123.71,144 147.19,105.5 183.21,67.872 208.03,44.127"];
+	"//absl/random:seed_sequences" -> "//absl/random/internal:pool_urbg"	[pos="e,240.88,180.24 320.52,287.61 299.91,279.75 279.49,268.39 264.71,252 249.87,235.54 244.06,210.85 241.85,191.65"];
+	"//absl/random:seed_sequences" -> "//absl/random/internal:nonsecure_base"	[pos="e,402.71,252.1 402.71,287.7 402.71,280.41 402.71,271.73 402.71,263.54"];
+	"//absl/random/internal:seed_material"	[height=0.5,
+		pos="376.71,90",
+		width=3.3674];
+	"//absl/random:seed_sequences" -> "//absl/random/internal:seed_material"	[pos="e,498.22,97.197 491.05,287.58 591.45,263.9 734.05,216.06 673.71,144 652.25,118.37 578.35,105.12 509.64,98.281"];
+	"//absl/random/internal:salted_seed_seq"	[height=0.5,
+		pos="534.71,162",
+		width=3.6164];
+	"//absl/random:seed_sequences" -> "//absl/random/internal:salted_seed_seq"	[pos="e,541.81,180.41 493.99,287.54 512.35,279.72 529.44,268.39 540.71,252 552.76,234.45 550.14,210.09 545.13,191.29"];
+	"//absl/random/internal:pool_urbg" -> "//absl/random/internal:seed_material"	[pos="e,343.17,108.26 274.67,143.52 292.33,134.43 314.12,123.22 333.01,113.49"];
+	"//absl/random/internal:nonsecure_base" -> "//absl/random/internal:pool_urbg"	[pos="e,280.93,180.38 362.24,215.52 340.81,206.25 314.26,194.78 291.45,184.93"];
+	"//absl/random/internal:nonsecure_base" -> "//absl/random/internal:seed_material"	[pos="e,379.84,108.11 399.52,215.59 395.13,191.61 387.17,148.14 381.91,119.42"];
+	"//absl/random/internal:nonsecure_base" -> "//absl/random/internal:salted_seed_seq"	[pos="e,502.16,180.26 435.68,215.52 452.73,206.47 473.76,195.32 492.04,185.62"];
+	"//absl/random/internal:seed_material" -> "//absl/strings:strings"	[pos="e,270.47,36.261 341.49,71.517 323.1,62.386 300.39,51.112 280.73,41.354"];
+	"//absl/random/internal:salted_seed_seq" -> "//absl/random/internal:seed_material"	[pos="e,415.94,108.38 495.24,143.52 474.33,134.25 448.44,122.78 426.2,112.93"];
+}

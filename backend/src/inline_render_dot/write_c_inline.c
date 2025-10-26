@@ -12,7 +12,6 @@
 // non-graphviz headers
 #include <ctype.h>
 #include <inttypes.h>
-#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h> /* need sprintf() */
 #include <stdlib.h>
@@ -49,10 +48,8 @@ static void ioput(output_string *output, char *str) {
   output->data[output->data_position] = '\0'; /* keep null terminated */
 }
 
-#define MAX_OUTPUTLINE 128
-#define MIN_OUTPUTLINE 60
 static int Level;
-static int Max_outputline = MAX_OUTPUTLINE;
+static int Max_outputline = 0;
 static Agsym_t *Tailport, *Headport;
 
 typedef struct {
@@ -619,16 +616,12 @@ output_string my_agwrite(Agraph_t *g, unsigned long max_output_linelength) {
   output.data_position = 0;
 
   Level = 0; /* re-initialize tab level */
-  if ((max_output_linelength == 0 || max_output_linelength >= MIN_OUTPUTLINE) &&
-      max_output_linelength <= INT_MAX) {
-    Max_outputline = (int)max_output_linelength;
-  }
+  Max_outputline = max_output_linelength;
   write_info_t wr_info = before_write(g);
   write_hdr(g, &output, true);
   write_body(g, &output, &wr_info);
   write_trl(&output);
   after_write(wr_info);
-  Max_outputline = MAX_OUTPUTLINE;
 
   return output;
 }
