@@ -35,10 +35,12 @@ export async function instance(): Promise<Viz> {
           );
         return 52; // WASI_ERRNO_NOTSUP
       },
-      environ_sizes_get() {
-        return 0;
-      },
-      environ_get() {
+      environ_sizes_get(environCount: number, environBufSize: number) {
+        // @ts-expect-error not sure how to properly type it
+        const memory: Uint8Array = instance.instance.exports.memory;
+        const view = new DataView(memory.buffer);
+        view.setUint32(environCount, 0, true);
+        view.setUint32(environBufSize, 0, true);
         return 0;
       },
       path_filestat_get() {
@@ -54,6 +56,7 @@ export async function instance(): Promise<Viz> {
       fd_read: wasiErrnoBadF,
       fd_seek: wasiErrnoBadF,
       fd_fdstat_get: wasiErrnoBadF,
+      environ_get: wasiErrnoNoSys,
       random_get: wasiErrnoNoSys,
       path_open: wasiErrnoNoSys,
       proc_exit: wasiErrnoNoSys, // FIXME: maybe handle errors

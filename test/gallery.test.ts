@@ -21,8 +21,8 @@ describe('GraphViz Gallery', () => {
     it('crazy', testCase('directed/crazy'));
     it('datastruct', testCase('directed/datastruct'));
     it('fsm', testCase('directed/fsm'));
-    // FIXME it('Genetic_Programming', testCase('directed/Genetic_Programming'));
-    // FIXME it('git', testCase('directed/git'));
+    // FIXME it.only('Genetic_Programming', testCase('directed/Genetic_Programming'));
+    it('git', testCase('directed/git'));
     it('go-package', testCase('directed/go-package'));
     it('hello', testCase('directed/hello'));
     it.skip('kennedyanc', testCase('directed/kennedyanc'));
@@ -34,7 +34,7 @@ describe('GraphViz Gallery', () => {
     it('profile', testCase('directed/profile'));
     it('psg', testCase('directed/psg'));
     it('sdh', testCase('directed/sdh'));
-    // FIXME it('siblings', testCase('directed/siblings'));
+    // FIXME it.only('siblings', testCase('directed/siblings'));
     it('switch', testCase('directed/switch'));
     it('UML_Class_diagram', testCase('directed/UML_Class_diagram'));
     it('unix', testCase('directed/unix'));
