@@ -16,96 +16,89 @@ const dotviz = useVizJS
 describe('GraphViz Gallery', () => {
   /* spell-checker: disable */
   describe('directed', () => {
-    it('bazel', testCase('directed/bazel'));
-    it('cluster', testCase('directed/cluster'));
-    it('crazy', testCase('directed/crazy'));
-    it('datastruct', testCase('directed/datastruct'));
-    it('fsm', testCase('directed/fsm'));
-    // FIXME it.only('Genetic_Programming', testCase('directed/Genetic_Programming'));
-    it('git', testCase('directed/git'));
-    it('go-package', testCase('directed/go-package'));
-    it('hello', testCase('directed/hello'));
-    it.skip('kennedyanc', testCase('directed/kennedyanc'));
-    it('Linux_kernel_diagram', testCase('directed/Linux_kernel_diagram'));
-    it('lion_share', testCase('directed/lion_share'));
-    it('neural-network', testCase('directed/neural-network'));
-    it('ninja', testCase('directed/ninja'));
-    it('pprof', testCase('directed/pprof'));
-    it('profile', testCase('directed/profile'));
-    it('psg', testCase('directed/psg'));
-    it('sdh', testCase('directed/sdh'));
-    // FIXME it.only('siblings', testCase('directed/siblings'));
-    it('switch', testCase('directed/switch'));
-    it('UML_Class_diagram', testCase('directed/UML_Class_diagram'));
-    it('unix', testCase('directed/unix'));
-    it('world', testCase('directed/world'));
+    it('gallery/directed/bazel.gv', snapshotGvFile);
+    it('gallery/directed/cluster.gv', snapshotGvFile);
+    it('gallery/directed/crazy.gv', snapshotGvFile);
+    it('gallery/directed/datastruct.gv', snapshotGvFile);
+    it('gallery/directed/fsm.gv', snapshotGvFile);
+    // FIXME it('gallery/directed/Genetic_Programming.gv', snapshotGvFile);
+    it('gallery/directed/git.gv', snapshotGvFile);
+    it('gallery/directed/go-package.gv', snapshotGvFile);
+    it('gallery/directed/hello.gv', snapshotGvFile);
+    it.skip('kennedyanc.gv', snapshotGvFile);
+    it('gallery/directed/Linux_kernel_diagram.gv', snapshotGvFile);
+    it('gallery/directed/lion_share.gv', snapshotGvFile);
+    it('gallery/directed/neural-network.gv', snapshotGvFile);
+    it('gallery/directed/ninja.gv', snapshotGvFile);
+    it('gallery/directed/pprof.gv', snapshotGvFile);
+    it('gallery/directed/profile.gv', snapshotGvFile);
+    it('gallery/directed/psg.gv', snapshotGvFile);
+    it('gallery/directed/sdh.gv', snapshotGvFile);
+    // FIXME it('gallery/directed/siblings.gv', snapshotGvFile);
+    it('gallery/directed/switch.gv', snapshotGvFile);
+    it('gallery/directed/UML_Class_diagram.gv', snapshotGvFile);
+    it('gallery/directed/unix.gv', snapshotGvFile);
+    it('gallery/directed/world.gv', snapshotGvFile);
   });
   describe.skip('fdp', () => {
-    it('fdpclust', testCase('fdp/fdpclust'));
+    it('gallery/fdp/fdpclust.gv', snapshotGvFile);
   });
   describe('gradient', () => {
-    it('angles', testCase('gradient/angles'));
-    it('cluster', testCase('gradient/cluster'));
-    it('colors', testCase('gradient/colors'));
-    it('datastruct', testCase('gradient/datastruct'));
-    it('g_c_n', testCase('gradient/g_c_n'));
-    it('linear_angle', testCase('gradient/linear_angle'));
-    it('radial_angle', testCase('gradient/radial_angle'));
-    it('table', testCase('gradient/table'));
+    it('gallery/gradient/angles.gv', snapshotGvFile);
+    it('gallery/gradient/cluster.gv', snapshotGvFile);
+    it('gallery/gradient/colors.gv', snapshotGvFile);
+    it('gallery/gradient/datastruct.gv', snapshotGvFile);
+    it('gallery/gradient/g_c_n.gv', snapshotGvFile);
+    it('gallery/gradient/linear_angle.gv', snapshotGvFile);
+    it('gallery/gradient/radial_angle.gv', snapshotGvFile);
+    it('gallery/gradient/table.gv', snapshotGvFile);
   });
   describe.skip('neato', () => {
-    it('color_wheel', testCase('neato/color_wheel'));
-    it('colors', testCase('neato/colors'));
-    it('ER', testCase('neato/ER'));
-    it('philo', testCase('neato/philo'));
-    it('process', testCase('neato/process'));
-    it('softmaint', testCase('neato/softmaint'));
-    it('traffic_lights', testCase('neato/traffic_lights'));
-    it('transparency', testCase('neato/transparency'));
+    it('gallery/neato/color_wheel.gv', snapshotGvFile);
+    it('gallery/neato/colors.gv', snapshotGvFile);
+    it('gallery/neato/ER.gv', snapshotGvFile);
+    it('gallery/neato/philo.gv', snapshotGvFile);
+    it('gallery/neato/process.gv', snapshotGvFile);
+    it('gallery/neato/softmaint.gv', snapshotGvFile);
+    it('gallery/neato/traffic_lights.gv', snapshotGvFile);
+    it('gallery/neato/transparency.gv', snapshotGvFile);
   });
   describe.skip('sfdp', () => {
-    it('root', testCase('sfdp/root'));
+    it('gallery/sfdp/root.gv', snapshotGvFile);
   });
   describe.skip('twopi', () => {
-    it('happiness', testCase('twopi/happiness'));
-    it('networkmap_twopi', testCase('twopi/networkmap_twopi'));
-    it('twopi2', testCase('twopi/twopi2'));
+    it('gallery/twopi/happiness.gv', snapshotGvFile);
+    it('gallery/twopi/networkmap_twopi.gv', snapshotGvFile);
+    it('gallery/twopi/twopi2.gv', snapshotGvFile);
   });
   describe('undirected', () => {
-    it('gd_1994_2007', testCase('undirected/gd_1994_2007'));
-    it('grid', testCase('undirected/grid'));
-    it('inet', testCase('undirected/inet'));
+    it('gallery/undirected/gd_1994_2007.gv', snapshotGvFile);
+    it('gallery/undirected/grid.gv', snapshotGvFile);
+    it('gallery/undirected/inet.gv', snapshotGvFile);
   });
   /* spell-checker: enable */
 });
 
-function testCase(path: string) {
-  return (ctx: TestContext) => {
-    const result = dotviz.renderFormats(
-      fs.readFileSync(`./test/gallery/${path}.gv`, 'utf8'),
-      ['dot', 'svg'],
-    );
+function snapshotGvFile(ctx: TestContext) {
+  const gvPath = ctx.name;
+  const result = dotviz.renderFormats(
+    fs.readFileSync('./test/' + gvPath, 'utf8'),
+    ['dot', 'svg'],
+  );
 
-    const dot = result.output?.dot;
-    let svg = result.output?.svg;
-    assert.deepStrictEqual(result, {
-      status: 'success',
-      output: { dot, svg },
-      errors: [],
-    });
+  const output = result.output;
+  assert.deepStrictEqual(result, { status: 'success', output, errors: [] });
 
-    ctx.assert.fileSnapshot(dot, `./test/gallery/${path}.dot`, {
-      serializers: [(str: string) => str],
-    });
-
-    if (useVizJS && svg != null) {
-      svg = svg.replaceAll(
+  const dot = output?.dot;
+  const svg = useVizJS
+    ? output?.svg.replaceAll(
         'Generated by graphviz version 14.0.1 (20251006.0113)',
         'Generated by graphviz version a (a)',
-      );
-    }
-    ctx.assert.fileSnapshot(svg, `./test/gallery/${path}.svg`, {
-      serializers: [(str: string) => str],
-    });
-  };
+      )
+    : output?.svg;
+
+  const basePath = gvPath.replace(/\.gv$/, '');
+  const serializers = [(str: string) => str];
+  ctx.assert.fileSnapshot(dot, `./test/${basePath}.dot`, { serializers });
+  ctx.assert.fileSnapshot(svg, `./test/${basePath}.svg`, { serializers });
 }

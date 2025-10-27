@@ -152,7 +152,7 @@ describe('Viz', () => {
       });
     });
 
-    it.only('returns error messages for invalid options', async () => {
+    it('returns error messages for invalid options', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('digraph {a -> b}', {
         // @ts-expect-error invalid value for test
