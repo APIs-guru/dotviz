@@ -25,7 +25,7 @@ describe('GraphViz Gallery', () => {
     it('gallery/directed/git.gv', snapshotGvFile);
     it('gallery/directed/go-package.gv', snapshotGvFile);
     it('gallery/directed/hello.gv', snapshotGvFile);
-    it.skip('kennedyanc.gv', snapshotGvFile);
+    it.skip('gallery/directed/kennedyanc.gv', snapshotGvFile);
     it('gallery/directed/Linux_kernel_diagram.gv', snapshotGvFile);
     it('gallery/directed/lion_share.gv', snapshotGvFile);
     it('gallery/directed/neural-network.gv', snapshotGvFile);
@@ -84,11 +84,9 @@ describe('GraphViz Gallery', () => {
 });
 
 function snapshotGvFile(ctx: TestContext) {
-  const gvPath = ctx.name;
-  const result = dotviz.renderFormats(
-    fs.readFileSync('./test/' + gvPath, 'utf8'),
-    ['dot', 'svg'],
-  );
+  const gvPath = './test/graphviz/' + ctx.name;
+  const gvFile = fs.readFileSync(gvPath, 'utf8');
+  const result = dotviz.renderFormats(gvFile, ['dot', 'svg']);
 
   const output = result.output;
   assert.deepStrictEqual(result, { status: 'success', output, errors: [] });
@@ -103,6 +101,6 @@ function snapshotGvFile(ctx: TestContext) {
 
   const basePath = gvPath.replace(/\.gv$/, '');
   const serializers = [(str: string) => str];
-  ctx.assert.fileSnapshot(dot, `./test/${basePath}.dot`, { serializers });
-  ctx.assert.fileSnapshot(svg, `./test/${basePath}.svg`, { serializers });
+  ctx.assert.fileSnapshot(dot, basePath + '.dot', { serializers });
+  ctx.assert.fileSnapshot(svg, basePath + '.svg', { serializers });
 }
