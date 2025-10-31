@@ -1,0 +1,37 @@
+digraph G {
+	graph [bb="0,0,79.766,198",
+		center=1,
+		rankdir=LR,
+		ratio=fill,
+		size="7.5,10.0"
+	];
+	node [label="\N",
+		shape=box
+	];
+	{
+		graph [rank=same];
+		dc1	[height=0.5,
+			label="DC 1",
+			pos="39.883,18",
+			shape=plaintext,
+			width=0.75];
+		dc10	[height=0.5,
+			label="DC 10",
+			pos="39.883,72",
+			shape=plaintext,
+			width=0.75];
+		dc100	[height=0.5,
+			label="DC 100",
+			pos="39.883,126",
+			shape=plaintext,
+			width=0.83261];
+	}
+	{
+		graph [rank=min];
+		no_dc	[height=0.5,
+			label=NOTHING,
+			pos="39.883,180",
+			shape=plaintext,
+			width=1.1079];
+	}
+}

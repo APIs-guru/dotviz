@@ -1,0 +1,11 @@
+digraph mygraph {
+	graph [bb="0,0,54,55.5"];
+	node [label="\N"];
+	label_foo	[height=0.51389,
+		label="<foo>foo",
+		pos="27,18.5",
+		rects="0,0.5,53.662,36.5",
+		shape=record,
+		width=0.75];
+	label_foo:foo -> label_foo	[pos="e,33.466,36.776 20.365,36.776 19.273,46.574 21.451,55.5 26.916,55.5 30.075,55.5 32.136,52.517 33.101,48.106"];
+}

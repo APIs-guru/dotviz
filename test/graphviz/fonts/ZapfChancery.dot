@@ -1,0 +1,16 @@
+graph {
+	graph [bb="0,0,450.62,91.2"];
+	node [label="\N"];
+	34	[fontname="ZapfChancery-MediumItalic",
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"ZapfChancery-MediumItalic"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="225.31,45.6",
+		shape=box,
+		width=6.2587];
+}
