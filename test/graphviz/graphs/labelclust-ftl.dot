@@ -1,0 +1,42 @@
+digraph G {
+	graph [bb="0,0,176,202.8",
+		label="label demo",
+		lheight=0.23,
+		lp="88,12.4",
+		lwidth=0.86,
+		rankdir=LR
+	];
+	node [label="\N"];
+	subgraph cluster0 {
+		graph [bb="8,32.8,168,109.8",
+			label=cluster0,
+			labeljust=left,
+			labelloc=top,
+			lheight=0.23,
+			lp="38.159,97.4",
+			lwidth=0.62
+		];
+		a	[height=0.5,
+			pos="43,58.8",
+			width=0.75];
+		b	[height=0.5,
+			pos="133,58.8",
+			width=0.75];
+		a -> b	[pos="e,105.62,58.8 70.403,58.8 77.886,58.8 86.183,58.8 94.199,58.8"];
+	}
+	subgraph cluster1 {
+		graph [bb="8,117.8,168,194.8",
+			label=cluster1,
+			lheight=0.23,
+			lp="88,182.4",
+			lwidth=0.62
+		];
+		c	[height=0.5,
+			pos="43,143.8",
+			width=0.75];
+		d	[height=0.5,
+			pos="133,143.8",
+			width=0.75];
+		c -> d	[pos="e,105.62,143.8 70.403,143.8 77.886,143.8 86.183,143.8 94.199,143.8"];
+	}
+}

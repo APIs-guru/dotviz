@@ -1,0 +1,88 @@
+digraph structs {
+	graph [bb="0,0,659.38,4401.2"];
+	node [label="\N",
+		shape=record
+	];
+	struct1	[height=0.51389,
+		label="<f0> left|<f1> middle|<f2> right",
+		pos="282.59,4382.7",
+		rects="216.6,4364.7,251.25,4400.7 251.25,4364.7,306.14,4400.7 306.14,4364.7,348.58,4400.7",
+		width=1.833];
+	struct2	[height=0.51389,
+		label="<f0> one|<f1> two",
+		pos="45.589,2164.1",
+		rects="8.9819,2146.1,45.196,2182.1 45.196,2146.1,82.196,2182.1",
+		width=1.0169];
+	struct1:f1 -> struct2:f0	[pos="e,27.089,2183.1 278.7,4364.2 278.7,4279.1 145.79,4393 90.589,4328.2 -61.786,4149.4 24.471,2471.8 27.031,2194.5"];
+	struct3	[height=60.114,
+		label="hello\nworld\nand  | { Thats the reason | post-menopausal | estrogen } | is\ngiven together with another hormone called\nprogestin: \
+The combination lowers the risk of\nendometrial cancer.\n\nBut the NTP advisers said putting all\nestrogens on the federal list \
+would help\nwomen trying to balance the benefits and\nrisks when choosing hormone therapy.\nPhysicians never discuss any of these \
+risks\nwhen they are prescribing hormone therapy.\nThey only discuss benefits. Listing might\nforce it on the table, Michelle Medinsky, \
+a\ntoxicologist from Durham, N.C., said before\nthe vote.\n\nThe committee of scientists advises the NTP,\na branch of the National \
+Institutes of Health\nthat every two years updates the federal list\nof proven and suspected cancer-causing\nsubstances.\n\nThe \
+NTP typically follows its advisers\nrecommendations, but an officially updated\ncarcinogen list isnt expected until 2002.\n\nThursday, \
+after a daylong debate, the panel\ndeclined to add talc powder to the list,\nsaying there wasnt enough evidence linking\nits use \
+in feminine hygiene products to\novarian cancer. The panel deadlocked over\nwhether to a second type of talc, fibrous\ntalc that \
+some studies have linked to lung\ncancer in talc miners.\n\nOn Wednesday, the panel voted to add\nultraviolet radiation -- those\nsunburn-causing \
+rays long known to cause skin\ncancer -- to the official carcinogen list.\n\nThe panel on Friday continued debating an\nassociation \
+between cancers of the nose and\nsinuses with industrial exposure to wood\ndust.\n\nTalc has long been controversial. When\nstudies \
+first appeared suggesting it migrated\ninto the ovaries to cause tumors, many\nfeminine hygiene products replaced talc with\ncornstarch.\n\nPanelist \
+Medinsky said she had been prepared\nto list talc powder as reasonably believed\nto cause cancer. But after listening to\nhours \
+of industry attacks on the science,\nthe evidence has knocked me out of the\nreasonably category into not list, she\nsaid before \
+the panel voted 7-3 against\nlisting talc.\n\nTalc has long been controversial. When\nstudies first appeared suggesting it migrated\ninto \
+the ovaries to cause tumors, many\nfeminine hygiene products replaced talc with\ncornstarch.\n\nPanelist Medinsky said she had been \
+prepared\nto list talc powder as reasonably believed\nto cause cancer. But after listening to\nhours of industry attacks on the \
+science,\nthe evidence has knocked me out of the\nreasonably category into not list, she\nsaid before the panel voted 7-3 against\nlisting \
+talc.\n\nTalc in one form or the other can be found in\nmany papers, paints, ceramics, food wrappers,\nhard candy, chewing gum, \
+cosmetics and pills.\nMost people are familiar with talc as a loose\npowder used in cosmetics and as a drying\npowder.\n\nIndustry \
+officials also attacked studies that\nshowed increased lung cancer in talc miners\nin New York State and questioned an\nexperiment \
+that showed that rats breathing\nhigh concentrations of talc got lung cancer.\n\nHigher lung-cancer rates in talc miners may\nhave \
+resulted from their smoking or from the\npresence of radon gas in the mines or\nasbestos in soils nearby, industry officials\nsaid.\n\nThe \
+scientific advisers then deadlocked on\nwhether this second type of talc, fibrous\ntalc, caused lung cancer, voting 5-5 on\nadding \
+it to the carcinogen list.\n\nUV light, however, was a no-brainer for the\npanel, which voted unanimously that it was a\nknown human \
+carcinogen.\n\nUV radiation is not visible, but it is felt\nas heat and can damage the eyes and skin. It\ncomes in three forms, \
+ranging from the\nrelatively long-wavelength UVA to the\nshortest wavelength UVC. UVA accounts for\nmost of the solar UV radiation \
+because it is\nnot absorbed by the atmosphere. UVB is mostly\nabsorbed by the ozone layer and UVC is\ntotally absorbed.\n\nAll three \
+are produced by mercury arc sun\nlamps, while other lamps that simulate\nsunlight produce primarily UVA.\n\nSYDNEY, Australia (AP) \
+-- Botanists have\nfound a stand of living fossil trees from\na species dating back to prehistoric times in\nthe dense rainforests \
+north of Sydney,\nauthorities said Friday.\n\nAbout 20 mature trees found in the Nightcap\nRange about 400 miles north of Sydney \
+bear\nnuts similar in structure to those discovered\nin fossilized form in 1875 by botanist Baron\nFerdinand von Mueller.\n\nIt \
+gives us another small paragraph or a\npage of the insight into the evolution of\nflowering plants and the incredible changes                    \nthat \
+have occurred on this continent through\nenormous periods of time, said botanist\nPeter Kooyman, who discovered the trees in\nAugust.\n\nThe \
+exact location is being kept secret to\nprotect the trees, state environment minister\nBob Debus said.\n\nKooyman sent details of \
+his find to Sydneys\nRoyal Botanic Gardens, which identified the\nrainforests which once covered the ancient \nsuper-continent of \
+Gondwanaland -- now\nAustralia, Africa, South America and New\nZealand, Debus said.\n\nThe biggest of the newly discovered trees \
+is\nat least 120 feet tall and has beautiful,\nprimitive and messy flowers with a scent\nsimilar to aniseed, Kooyman said.\n\nA \
+similar discovery was made in the Blue\nMountains west of Sydney in 1994, when\nbotanists discovered a stand of living fossil\ntrees \
+known as the Wollemi Pines.\n\nprovocative Turkish  \nstudy suggests that     \nusing honey as an      \nointment during a     \ncertain \
+type of      \ncolon-cancer surgery\ncan help prevent tumors       \nfrom recurring.              \n\nWhile the research was     \ndone \
+in mice and no one   \nexpects hospitals t\nstart stocking    \noperating rooms with    \nhoney jars, honey has  \nbeen used as \
+a folk   \nremedy for healing   \nsince biblical times\n\nAnd a Mayo Clinic \ncancer expert said the       \nresults, though             \npreliminary, \
+are too       \nfascinating to be         \ndismissed.               \n\nThe research was aimed \nat improving the safety   \nof \
+laparoscopic          \nsurgery, an\nincreasingly popular technique that involves\ntiny keyhole incisions and skinny\ninstruments.\n\nEnthusiasm \
+for the technique has been\ntempered by some reports that laparoscopy for\ncolon cancer can itself cause tumors to\ndevelop in the \
+abdominal wall, along the path\nthe surgical instruments took.\n\nThe Turkish researchers suggest honey might\nwork as a barrier \
+to tumor cells when it is\nspread in the incisions. The findings, based\non a study of 60 mice, were published in\nDecembers issue \
+of the Archives of Surgery.\n\nDr. Tonia Young-Fadok, a Mayo Clinic surgeon\nparticipating in a U.S. study on whether\nlaparoscopic \
+surgery for colon cancer can\ncause new tumors, said substances in honey\nmight actually help dissolve tumor cells.\n\nIts not clear \
+what the power of honey is,\nbut theres certainly something here thats\nof interest, Young-Fadok said.\n\nLaparoscopies are being \
+used increasingly to\ntreat a variety of conditions that formerly\nrequired major operations. Skinny instruments\nand a slender \
+viewing tube called a\nlaparoscope are inserted through tiny\nincisions. Carbon dioxide gas is injected\ninto the body cavity to \
+cause the abdomen to\nswell, creating a work space for surgeons.\n\nColon tumors are essentially the only type of\ncancer for which \
+doctors use laparoscopy.\n\nSome theorize that the gas might cause cancer\ncells to shift location and form tumors.\nOthers suggest \
+that inexperienced surgeons\nmight inadvertently cause malignant cells to\nimplant as they extract the tumor.\n\nYoung-Fadok said \
+some research has found that\ntumors occur in less than 1 percent of cases\nand that when the laparoscopy is done by\nexperienced \
+surgeons, the risk is essentially\nzero.\n\nIn the Turkish study, led by Dr. Ismail\nHamzaoglu of Istanbul University, researchers\ninjected \
+the mice with air, made neck\nincisions and injected the animals with tumor\ncells. The researchers spread honey inside\nthe incisions \
+in one group of mice before and\nafter the injections.\n\nAll 30 mice without honey developed tumors,\ncompared with only eight \
+of the 30\nhoney-treated mice.\n\nIn a commentary accompanying the study,\nChicago plastic surgeon Dr. Thomas Mustoe\nnoted that \
+other research has suggested honey\nhas anti-bacterial properties and may be an\neffective treatment for burns.\n\nThe study highlights \
+another potential\nuse, Mustoe said.\nabde |{ b |{c|<here> d|e}| f}| g | h",
+		pos="379.59,2164.1",
+		rects="99.799,0.5,148.46,4327.7 148.46,2885.9,259.33,4327.7 148.46,1443.1,259.33,2885.9 148.46,1.3,259.33,1443.1 259.33,0.5,545.95,4327.7 \
+545.95,2885.9,613.38,4327.7 545.95,1443.1,568.17,2885.9 568.17,1443.1,591.17,2885.9 591.17,1443.1,613.38,2885.9 545.95,1.3,613.38,\
+1443.1 613.38,0.5,636.38,4327.7 636.38,0.5,659.38,4327.7",
+		width=7.7719];
+	struct1:f2 -> struct3:here	[pos="e,590.29,2886.3 327.36,4364.2 327.36,4315 513.8,4365.5 545.95,4328.2 593.12,4273.5 595.78,3503.5 590.39,2897.5"];
+}

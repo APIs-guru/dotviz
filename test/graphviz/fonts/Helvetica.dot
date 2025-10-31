@@ -1,0 +1,107 @@
+digraph {
+	graph [bb="0,0,463.28,981.6"];
+	node [label="\N"];
+	13	[fontname=Helvetica,
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"Helvetica"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="231.64,936",
+		shape=box,
+		width=6.4345];
+	14	[fontname="Helvetica-Bold",
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"Helvetica-Bold"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="231.64,808.8",
+		shape=box,
+		width=6.2587];
+	13 -> 14	[pos="e,231.64,854.75 231.64,890.15 231.64,882.33 231.64,874.11 231.64,866.03"];
+	15	[fontname="Helvetica-BoldOblique",
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"Helvetica-BoldOblique"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="231.64,681.6",
+		shape=box,
+		width=6.2587];
+	14 -> 15	[pos="e,231.64,727.55 231.64,762.95 231.64,755.13 231.64,746.91 231.64,738.83"];
+	16	[fontname="Helvetica-Narrow",
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"Helvetica-Narrow"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="231.64,554.4",
+		shape=box,
+		width=6.2587];
+	15 -> 16	[pos="e,231.64,600.35 231.64,635.75 231.64,627.93 231.64,619.71 231.64,611.63"];
+	17	[fontname="Helvetica-Narrow-Bold",
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"Helvetica-Narrow-Bold"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="231.64,427.2",
+		shape=box,
+		width=6.2587];
+	16 -> 17	[pos="e,231.64,473.15 231.64,508.55 231.64,500.73 231.64,492.51 231.64,484.43"];
+	18	[fontname="Helvetica-Narrow-BoldOblique",
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"Helvetica-Narrow-BoldOblique"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="231.64,300",
+		shape=box,
+		width=6.2587];
+	17 -> 18	[pos="e,231.64,345.95 231.64,381.35 231.64,373.53 231.64,365.31 231.64,357.23"];
+	19	[fontname="Helvetica-Narrow-Oblique",
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"Helvetica-Narrow-Oblique"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="231.64,172.8",
+		shape=box,
+		width=6.2587];
+	18 -> 19	[pos="e,231.64,218.75 231.64,254.15 231.64,246.33 231.64,238.11 231.64,230.03"];
+	20	[fontname="Helvetica-Oblique",
+		height=1.2667,
+		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"Helvetica-Oblique"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>,
+		margin="0,0",
+		pos="231.64,45.6",
+		shape=box,
+		width=6.2587];
+	19 -> 20	[pos="e,231.64,91.554 231.64,126.95 231.64,119.13 231.64,110.91 231.64,102.83"];
+}

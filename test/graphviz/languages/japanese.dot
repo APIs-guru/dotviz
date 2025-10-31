@@ -1,0 +1,48 @@
+digraph G {
+	graph [bb="0,0,395.84,276.8",
+		label=下駄配列の派生図,
+		lheight=0.23,
+		lp="197.92,12.4",
+		lwidth=1.17
+	];
+	node [label="\N"];
+	{
+		new_getas	[height=0.5,
+			label=新下駄配列,
+			pos="47.25,186.8",
+			width=1.3125];
+		getas_in_fine_weather	[height=0.5,
+			label=日和下駄配列,
+			pos="97.25,42.8",
+			width=1.5137];
+		lacquered_getas	[height=0.5,
+			label=塗り下駄配列,
+			pos="204.25,186.8",
+			width=1.5137];
+		new_JIS_getas	[height=0.5,
+			label=新JIS下駄配列,
+			pos="336.25,186.8",
+			width=1.6554];
+	}
+	getas	[height=0.5,
+		label=下駄配列,
+		pos="163.25,258.8",
+		width=1.1113];
+	getas -> new_getas	[pos="e,71.605,202.5 140.05,243.8 123.24,233.66 100.24,219.77 81.337,208.37"];
+	getas -> getas_in_fine_weather	[pos="e,101.18,60.936 155.56,240.83 151.06,230.53 145.45,217.05 141.25,204.8 125.52,158.9 111.55,104.17 103.76,71.794"];
+	getas -> lacquered_getas	[pos="e,194.32,204.76 172.97,241.21 177.65,233.22 183.37,223.44 188.64,214.44"];
+	getas -> new_JIS_getas	[pos="e,301.53,201.85 192.21,246.08 219.14,235.19 259.69,218.78 290.91,206.14"];
+	black_lacquered_getas	[height=0.5,
+		label=黒塗り下駄配列,
+		pos="225.25,114.8",
+		width=1.7149];
+	black_lacquered_getas -> getas_in_fine_weather	[pos="e,124.4,58.646 197.16,98.438 178.74,88.362 154.44,75.076 134.42,64.128",
+		style=dotted];
+	black_lacquered_getas_made_of_paulownia	[height=0.5,
+		label=黒塗り桐下駄配列,
+		pos="238.25,42.8",
+		width=1.9161];
+	black_lacquered_getas -> black_lacquered_getas_made_of_paulownia	[pos="e,229.18,60.904 222.55,96.497 223.16,89.122 224.55,80.324 226.37,72.05"];
+	black_lacquered_getas_made_of_paulownia -> black_lacquered_getas	[pos="e,234.28,96.855 240.95,61.075 240.34,68.574 238.91,77.548 237.05,85.948"];
+	lacquered_getas -> black_lacquered_getas	[pos="e,220.12,132.9 209.44,168.5 211.68,161.04 214.35,152.12 216.86,143.77"];
+}

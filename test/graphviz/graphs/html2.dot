@@ -1,0 +1,61 @@
+digraph G {
+	graph [bb="0,0,447.42,284.72",
+		rankdir=LR
+	];
+	node [label="\N",
+		shape=plaintext
+	];
+	{
+		graph [rank=same];
+		b	[height=2.4199,
+			href="http://www.graphviz.org/content/node-shapes",
+			label=<
+<TABLE BGCOLOR="bisque" href="http://www.graphviz.org/content/node-shapes#html">
+  <TR><TD COLSPAN="3" BGCOLOR="bisque" href="http://go/wiki/Elephant">elephant</TD> 
+      <TD ROWSPAN="2" BGCOLOR="chartreuse" 
+          VALIGN="bottom" ALIGN="right">two</TD> </TR>
+  <TR><TD COLSPAN="2" ROWSPAN="2">
+        <TABLE BGCOLOR="grey" href="http://go/wiki/Grey">
+          <TR> <TD href="http://go/wiki/Sweet_corn">corn</TD> </TR> 
+          <TR> <TD BGCOLOR="yellow">c</TD> </TR> 
+          <TR> <TD href="http://go/wiki/F">f</TD> </TR> 
+        </TABLE> </TD>
+      <TD BGCOLOR="white">penguin</TD> 
+  </TR> 
+  <TR> <TD COLSPAN="2" BORDER="4" ALIGN="right" PORT="there">4</TD> </TR>
+</TABLE>>,
+			pos="343.49,87.116",
+			shape=ellipse,
+			style=filled,
+			width=2.8869];
+		c	[height=0.81111,
+			label=<long line 1<BR/>line 2<BR ALIGN="LEFT"/>line 3<BR ALIGN="RIGHT"/>>,
+			pos="343.49,239.12",
+			width=1.0539];
+	}
+	a	[height=0.5,
+		label=<
+<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+  <TR><TD ROWSPAN="3" BGCOLOR="yellow">class</TD></TR>
+  <TR><TD PORT="here" BGCOLOR="lightblue">qualifier</TD></TR>
+</TABLE>>,
+		pos="51.317,55.116",
+		width=1.4255];
+	a:here -> b:there	[arrowtail=diamond,
+		dir=both,
+		pos="s,95.635,55.116 e,365.92,31.516 108.61,54.188 175.67,45.895 337.77,-14.414 362.69,20.498"];
+	c -> b	[pos="e,343.49,174.69 343.49,209.92 343.49,201.94 343.49,193.96 343.49,185.98"];
+	d	[height=0.68889,
+		pos="51.317,239.12",
+		shape=triangle,
+		width=0.88139];
+	d -> c	[label=<
+<TABLE>
+  <TR><TD BGCOLOR="red" WIDTH="10"> </TD>
+      <TD>Edge labels<BR/>also</TD>
+      <TD BGCOLOR="blue" WIDTH="10"> </TD>
+  </TR>
+</TABLE>>,
+		lp="171.1,261.92",
+		pos="e,305.76,239.12 72.721,239.12 118.38,239.12 229.85,239.12 294.3,239.12"];
+}

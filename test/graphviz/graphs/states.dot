@@ -1,0 +1,41 @@
+digraph states {
+	graph [bb="0,0,504.8,119",
+		rankdir=LR,
+		size="3,2"
+	];
+	node [label="\N",
+		shape=ellipse
+	];
+	empty	[height=0.5,
+		label=Empty,
+		pos="36.787,18",
+		width=1.0219];
+	stolen	[height=0.5,
+		label=Stolen,
+		pos="191.95,48",
+		width=0.99212];
+	empty -> stolen	[label=dispatch,
+		lp="114.9,45.84",
+		pos="e,158.2,41.586 71.398,24.584 93.671,28.946 123.11,34.714 147.21,39.433",
+		wt=28];
+	full	[height=0.5,
+		label=Full,
+		pos="477.8,48",
+		width=0.75];
+	empty -> full	[label=return,
+		lp="262.38,33.163",
+		pos="e,451.05,44.416 73.872,17.583 112.1,17.371 174.19,17.687 227.66,21 303.28,25.685 391.31,36.49 439.87,42.921"];
+	waiting	[height=0.5,
+		label=Waiting,
+		pos="339.23,101",
+		width=1.1706];
+	stolen -> waiting	[label=touch,
+		lp="262.38,87.647",
+		pos="e,306.31,89.353 221.65,58.471 242.81,66.189 271.92,76.811 295.77,85.509"];
+	stolen -> full	[label=return,
+		lp="339.23,56.4",
+		pos="e,450.62,48 228.04,48 281.79,48 384.09,48 439.27,48"];
+	waiting -> full	[label=return,
+		lp="416.09,86.073",
+		pos="e,454.02,56.841 371.22,88.973 392.77,80.613 421.46,69.479 443.49,60.928"];
+}
