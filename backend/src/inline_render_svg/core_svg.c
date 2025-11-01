@@ -194,10 +194,6 @@ void svg_comment(GVJ_t *job, char *str) {
 }
 
 void svg_begin_job(GVJ_t *job) {
-  if (gvdevice_initialize(job)) {
-    fprintf(stderr, "svg_begin_job: FIXME: we are too cool for errors");
-    exit(-1);
-  }
   char *s;
   gvputs(job, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
   if ((s = agget(job->gvc->g, "stylesheet")) && s[0]) {

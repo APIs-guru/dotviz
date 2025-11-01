@@ -26,27 +26,6 @@
 #include <util/prisize_t.h>
 #include <util/xml.h>
 
-#ifdef _WIN32
-#include <fcntl.h>
-#include <io.h>
-#endif
-
-#ifdef HAVE_LIBZ
-#include <zlib.h>
-
-#ifndef OS_CODE
-#define OS_CODE 0x03 /* assume Unix */
-#endif
-static const unsigned char z_file_header[] = {
-    0x1f, 0x8b, /*magic*/ Z_DEFLATED, 0 /*flags*/,  0,
-    0,    0,    0 /*time*/,           0 /*xflags*/, OS_CODE};
-
-static z_stream z_strm;
-static unsigned char *df;
-static unsigned int dfallocated;
-static uint64_t crc;
-#endif /* HAVE_LIBZ */
-
 #include <assert.h>
 #include <const.h>
 #include <gvplugin_device.h>
@@ -60,120 +39,19 @@ static uint64_t crc;
 #include <util/startswith.h>
 
 static size_t gvwrite_no_z(GVJ_t *job, const void *s, size_t len) {
-  if (job->gvc->write_fn) /* externally provided write discipline */
-    return job->gvc->write_fn(job, s, len);
-  if (job->output_data) {
-    if (len > job->output_data_allocated - (job->output_data_position + 1)) {
-      /* ensure enough allocation for string = null terminator */
-      job->output_data_allocated = job->output_data_position + len + 1;
-      job->output_data = realloc(job->output_data, job->output_data_allocated);
-      if (!job->output_data) {
-        job->common->errorfn("memory allocation failure\n");
-        graphviz_exit(1);
-      }
-    }
-    memcpy(job->output_data + job->output_data_position, s, len);
-    job->output_data_position += len;
-    job->output_data[job->output_data_position] =
-        '\0'; /* keep null terminated */
-    return len;
-  }
-  assert(job->output_file != NULL);
-  return fwrite(s, sizeof(char), len, job->output_file);
-}
-
-static void auto_output_filename(GVJ_t *job) {
-  static agxbuf buf;
-  char *fn;
-
-  if (!(fn = job->input_filename))
-    fn = "noname.gv";
-  agxbput(&buf, fn);
-  if (job->graph_index)
-    agxbprint(&buf, ".%d", job->graph_index + 1);
-  agxbputc(&buf, '.');
-
-  {
-    const char *src = job->output_langname;
-    const char *src_end = src + strlen(src);
-    for (const char *q = src_end;; --q) {
-      if (*q == ':') {
-        agxbprint(&buf, "%.*s.", (int)(src_end - q - 1), q + 1);
-        src_end = q;
-      }
-      if (q == src) {
-        agxbprint(&buf, "%.*s", (int)(src_end - src), src);
-        break;
-      }
+  if (len > job->output_data_allocated - (job->output_data_position + 1)) {
+    /* ensure enough allocation for string = null terminator */
+    job->output_data_allocated = job->output_data_position + len + 1;
+    job->output_data = realloc(job->output_data, job->output_data_allocated);
+    if (!job->output_data) {
+      job->common->errorfn("memory allocation failure\n");
+      graphviz_exit(1);
     }
   }
-
-  job->output_filename = agxbuse(&buf);
-}
-
-/* gvdevice_initialize:
- * Return 0 on success, non-zero on failure
- */
-int gvdevice_initialize(GVJ_t *job) {
-  gvdevice_engine_t *gvde = job->device.engine;
-  GVC_t *gvc = job->gvc;
-
-  if (gvde && gvde->initialize) {
-    gvde->initialize(job);
-  } else if (job->output_data) {
-  }
-  /* if the device has no initialization then it uses file output */
-  else if (!job->output_file) { /* if not yet opened */
-    if (gvc->common.auto_outfile_names)
-      auto_output_filename(job);
-    if (job->output_filename) {
-      job->output_file = gv_fopen(job->output_filename, "w");
-      if (job->output_file == NULL) {
-        job->common->errorfn("Could not open \"%s\" for writing : %s\n",
-                             job->output_filename, strerror(errno));
-        /* perror(job->output_filename); */
-        return 1;
-      }
-    } else
-      job->output_file = stdout;
-
-#ifdef HAVE_SETMODE
-#ifdef O_BINARY
-    if (job->flags & GVDEVICE_BINARY_FORMAT)
-#ifdef _WIN32
-      _setmode(fileno(job->output_file), O_BINARY);
-#else
-      setmode(fileno(job->output_file), O_BINARY);
-#endif
-#endif
-#endif
-  }
-
-  if (job->flags & GVDEVICE_COMPRESSED_FORMAT) {
-#ifdef HAVE_LIBZ
-    z_stream *z = &z_strm;
-
-    z->zalloc = 0;
-    z->zfree = 0;
-    z->opaque = 0;
-    z->next_in = NULL;
-    z->next_out = NULL;
-    z->avail_in = 0;
-
-    crc = crc32(0L, Z_NULL, 0);
-
-    if (deflateInit2(z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -MAX_WBITS,
-                     MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY) != Z_OK) {
-      job->common->errorfn("Error initializing for deflation\n");
-      return 1;
-    }
-    gvwrite_no_z(job, z_file_header, sizeof(z_file_header));
-#else
-    job->common->errorfn("No libz support.\n");
-    return 1;
-#endif
-  }
-  return 0;
+  memcpy(job->output_data + job->output_data_position, s, len);
+  job->output_data_position += len;
+  job->output_data[job->output_data_position] = '\0'; /* keep null terminated */
+  return len;
 }
 
 size_t gvwrite(GVJ_t *job, const char *s, size_t len) {
