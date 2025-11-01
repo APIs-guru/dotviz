@@ -206,6 +206,7 @@ fn stringifyResponseJSON(allocator: std.mem.Allocator, response: vizjs_types.Ren
 
 pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     const json_string = json_bytes[0..size];
+    defer wasm_allocator.free(json_string);
 
     var arena = std.heap.ArenaAllocator.init(wasm_allocator);
     const arena_allocator = arena.allocator();

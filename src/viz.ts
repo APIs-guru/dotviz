@@ -242,25 +242,22 @@ class Viz {
       null,
       2,
     );
-    let inputJSONBuf;
-    let outputJSONBuf;
+    const cJson = this._utf8Encoder.encode(requestJSON);
+    const jsonPtr = this._wasm.wasm_alloc(cJson.length);
+    const inputJSONBuf = new Uint8Array(
+      this._wasm.memory.buffer,
+      jsonPtr,
+      cJson.length,
+    );
+    inputJSONBuf.set(cJson);
+    const sliceU64 = this._wasm.render(
+      inputJSONBuf.byteOffset,
+      inputJSONBuf.length,
+    );
+    const ptr = Number(BigInt.asUintN(32, sliceU64));
+    const len = Number(BigInt.asUintN(32, sliceU64 >> 32n));
+    const outputJSONBuf = new Uint8Array(this._wasm.memory.buffer, ptr, len);
     try {
-      const cJson = this._utf8Encoder.encode(requestJSON);
-      const jsonPtr = this._wasm.wasm_alloc(cJson.length);
-      inputJSONBuf = new Uint8Array(
-        this._wasm.memory.buffer,
-        jsonPtr,
-        cJson.length,
-      );
-      inputJSONBuf.set(cJson);
-      const sliceU64 = this._wasm.render(
-        inputJSONBuf.byteOffset,
-        inputJSONBuf.length,
-      );
-      const ptr = Number(BigInt.asUintN(32, sliceU64));
-      const len = Number(BigInt.asUintN(32, sliceU64 >> 32n));
-
-      outputJSONBuf = new Uint8Array(this._wasm.memory.buffer, ptr, len);
       const str: string = this._utf8Decoder.decode(outputJSONBuf);
       const response = JSON.parse(str) as MultipleRenderResult;
       let output: Record<string, string> | null = null;
@@ -279,12 +276,7 @@ class Viz {
       response.output = output;
       return response;
     } finally {
-      if (inputJSONBuf) {
-        this._wasm.wasm_free(inputJSONBuf.byteOffset, inputJSONBuf.length);
-      }
-      if (outputJSONBuf) {
-        this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
-      }
+      this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
     }
   }
 
