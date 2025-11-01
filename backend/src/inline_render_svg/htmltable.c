@@ -112,6 +112,7 @@ static void popFontInfo(htmlenv_t *env, textfont_t *savp) {
     env->finfo.size = savp->size;
 }
 
+extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
 static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
                             pointf p, double halfwidth_x, textfont_t finfo,
                             boxf b, int simple) {
@@ -181,7 +182,7 @@ static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
       tl.just = 'l';
 
       p_.x = p.x;
-      gvrender_textspan(job, p_, &tl);
+      svg_textspan(job, p_, &tl);
       p.x += ti->size.x;
       ti++;
     }
@@ -204,13 +205,14 @@ static void emit_html_txt(GVJ_t *job, htmltxt_t *tp, htmlenv_t *env) {
                   tp->box, tp->simple);
 }
 
+extern void svg_box(GVJ_t *job, boxf B, int filled);
 static void doSide(GVJ_t *job, pointf p, double wd, double ht) {
   boxf BF;
 
   BF.LL = p;
   BF.UR.x = p.x + wd;
   BF.UR.y = p.y + ht;
-  gvrender_box(job, BF, 1);
+  svg_box(job, BF, 1);
 }
 
 /* Convert boxf into four corner points
@@ -241,6 +243,7 @@ static pointf *mkPts(pointf *AF, boxf b, int border) {
  * Also handles thick lines.
  * Assume dp->border > 0
  */
+extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
 static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
   pointf AF[7];
   char *sptr[2];
@@ -266,56 +269,56 @@ static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
     mkPts(AF + 1, b, dp->border); /* AF[1-4] has LL=SW,SE,UR=NE,NW */
     switch (sides) {
     case BORDER_BOTTOM:
-      gvrender_polyline(job, AF + 1, 2);
+      svg_polyline(job, AF + 1, 2);
       break;
     case BORDER_RIGHT:
-      gvrender_polyline(job, AF + 2, 2);
+      svg_polyline(job, AF + 2, 2);
       break;
     case BORDER_TOP:
-      gvrender_polyline(job, AF + 3, 2);
+      svg_polyline(job, AF + 3, 2);
       break;
     case BORDER_LEFT:
       AF[0] = AF[4];
-      gvrender_polyline(job, AF, 2);
+      svg_polyline(job, AF, 2);
       break;
     case BORDER_BOTTOM | BORDER_RIGHT:
-      gvrender_polyline(job, AF + 1, 3);
+      svg_polyline(job, AF + 1, 3);
       break;
     case BORDER_RIGHT | BORDER_TOP:
-      gvrender_polyline(job, AF + 2, 3);
+      svg_polyline(job, AF + 2, 3);
       break;
     case BORDER_TOP | BORDER_LEFT:
       AF[5] = AF[1];
-      gvrender_polyline(job, AF + 3, 3);
+      svg_polyline(job, AF + 3, 3);
       break;
     case BORDER_LEFT | BORDER_BOTTOM:
       AF[0] = AF[4];
-      gvrender_polyline(job, AF, 3);
+      svg_polyline(job, AF, 3);
       break;
     case BORDER_BOTTOM | BORDER_RIGHT | BORDER_TOP:
-      gvrender_polyline(job, AF + 1, 4);
+      svg_polyline(job, AF + 1, 4);
       break;
     case BORDER_RIGHT | BORDER_TOP | BORDER_LEFT:
       AF[5] = AF[1];
-      gvrender_polyline(job, AF + 2, 4);
+      svg_polyline(job, AF + 2, 4);
       break;
     case BORDER_TOP | BORDER_LEFT | BORDER_BOTTOM:
       AF[5] = AF[1];
       AF[6] = AF[2];
-      gvrender_polyline(job, AF + 3, 4);
+      svg_polyline(job, AF + 3, 4);
       break;
     case BORDER_LEFT | BORDER_BOTTOM | BORDER_RIGHT:
       AF[0] = AF[4];
-      gvrender_polyline(job, AF, 4);
+      svg_polyline(job, AF, 4);
       break;
     case BORDER_TOP | BORDER_BOTTOM:
-      gvrender_polyline(job, AF + 1, 2);
-      gvrender_polyline(job, AF + 3, 2);
+      svg_polyline(job, AF + 1, 2);
+      svg_polyline(job, AF + 3, 2);
       break;
     case BORDER_LEFT | BORDER_RIGHT:
       AF[0] = AF[4];
-      gvrender_polyline(job, AF, 2);
-      gvrender_polyline(job, AF + 2, 2);
+      svg_polyline(job, AF, 2);
+      svg_polyline(job, AF + 2, 2);
       break;
     default:
       break;
@@ -328,7 +331,7 @@ static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
       b.UR.x -= delta;
       b.UR.y -= delta;
     }
-    gvrender_box(job, b, 0);
+    svg_box(job, b, 0);
   }
 }
 
@@ -542,7 +545,7 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
         round_corners(job, mkPts(AF, pts, tbl->data.border), 4,
                       (graphviz_polygon_style_t){.rounded = true}, filled);
       } else
-        gvrender_box(job, pts, filled);
+        svg_box(job, pts, filled);
       free(clrs[0]);
       free(clrs[1]);
     }
@@ -637,7 +640,7 @@ static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {
         round_corners(job, mkPts(AF, pts, cp->data.border), 4,
                       (graphviz_polygon_style_t){.rounded = true}, filled);
       } else
-        gvrender_box(job, pts, filled);
+        svg_box(job, pts, filled);
       free(clrs[0]);
     }
 
