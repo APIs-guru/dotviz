@@ -8,6 +8,7 @@ typedef struct {
   size_t data_position;
 } output_string;
 
-void out_strput(output_string *output, char *str);
+void out_put(output_string *output, const char *str, size_t len);
+void out_strput(output_string *output, const char *str);
 
 #endif

@@ -38,91 +38,17 @@
 #include <util/exit.h>
 #include <util/startswith.h>
 
-static size_t gvwrite_no_z(GVJ_t *job, const void *s, size_t len) {
-  if (len > job->output_data_allocated - (job->output_data_position + 1)) {
-    /* ensure enough allocation for string = null terminator */
-    job->output_data_allocated = job->output_data_position + len + 1;
-    job->output_data = realloc(job->output_data, job->output_data_allocated);
-    if (!job->output_data) {
-      job->common->errorfn("memory allocation failure\n");
-      graphviz_exit(1);
-    }
-  }
-  memcpy(job->output_data + job->output_data_position, s, len);
-  job->output_data_position += len;
-  job->output_data[job->output_data_position] = '\0'; /* keep null terminated */
-  return len;
-}
+#include "../output_string.h"
 
 size_t gvwrite(GVJ_t *job, const char *s, size_t len) {
-  size_t ret, olen;
-
-  if (!len || !s)
-    return 0;
-
-  if (job->flags & GVDEVICE_COMPRESSED_FORMAT) {
-#ifdef HAVE_LIBZ
-    z_streamp z = &z_strm;
-
-    size_t dflen = deflateBound(z, len);
-    if (dfallocated < dflen) {
-      dfallocated = dflen > UINT_MAX - 1 ? UINT_MAX : (unsigned)dflen + 1;
-      df = realloc(df, dfallocated);
-      if (!df) {
-        job->common->errorfn("memory allocation failure\n");
-        graphviz_exit(1);
-      }
-    }
-
-#if ZLIB_VERNUM >= 0x1290
-    crc = crc32_z(crc, (const unsigned char *)s, len);
-#else
-    crc = crc32(crc, (const unsigned char *)s, len);
-#endif
-
-    for (size_t offset = 0; offset < len;) {
-// Suppress Clang/GCC -Wcast-qual warnings. `next_in` is morally const.
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
-      z->next_in = (unsigned char *)s + offset;
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-      const unsigned chunk =
-          len - offset > UINT_MAX ? UINT_MAX : (unsigned)(len - offset);
-      z->avail_in = chunk;
-      z->next_out = df;
-      z->avail_out = dfallocated;
-      int r = deflate(z, Z_NO_FLUSH);
-      if (r != Z_OK) {
-        job->common->errorfn("deflation problem %d\n", r);
-        graphviz_exit(1);
-      }
-
-      if ((olen = (size_t)(z->next_out - df))) {
-        ret = gvwrite_no_z(job, df, olen);
-        if (ret != olen) {
-          job->common->errorfn("gvwrite_no_z problem %d\n", ret);
-          graphviz_exit(1);
-        }
-      }
-      offset += chunk - z->avail_in;
-    }
-
-#else
-    (void)olen;
-    job->common->errorfn("No libz support.\n");
-    graphviz_exit(1);
-#endif
-  } else { /* uncompressed write */
-    ret = gvwrite_no_z(job, s, len);
-    if (ret != len) {
-      job->common->errorfn("gvwrite_no_z problem %d\n", len);
-      graphviz_exit(1);
-    }
-  }
+  output_string output;
+  output.data_allocated = job->output_data_allocated;
+  output.data_position = job->output_data_position;
+  output.data = job->output_data;
+  out_put(&output, s, len);
+  job->output_data_allocated = output.data_allocated;
+  job->output_data_position = output.data_position;
+  job->output_data = output.data;
   return len;
 }
 
@@ -173,92 +99,6 @@ int gvputc(GVJ_t *job, int c) {
     return EOF;
   }
   return c;
-}
-
-int gvflush(GVJ_t *job) {
-  if (job->output_file && !job->external_context && !job->gvc->write_fn) {
-    return fflush(job->output_file);
-  } else
-    return 0;
-}
-
-static void gvdevice_close(GVJ_t *job) {
-  if (job->output_filename && job->output_file != stdout &&
-      !job->external_context) {
-    if (job->output_file) {
-      fclose(job->output_file);
-      job->output_file = NULL;
-    }
-    job->output_filename = NULL;
-  }
-}
-
-void gvdevice_format(GVJ_t *job) {
-  gvdevice_engine_t *gvde = job->device.engine;
-
-  if (gvde && gvde->format)
-    gvde->format(job);
-  gvflush(job);
-}
-
-void gvdevice_finalize(GVJ_t *job) {
-  gvdevice_engine_t *gvde = job->device.engine;
-  bool finalized_p = false;
-
-  if (job->flags & GVDEVICE_COMPRESSED_FORMAT) {
-#ifdef HAVE_LIBZ
-    z_streamp z = &z_strm;
-    unsigned char out[8] = "";
-    int ret;
-    int cnt = 0;
-
-    z->next_in = out;
-    z->avail_in = 0;
-    z->next_out = df;
-    z->avail_out = dfallocated;
-    while ((ret = deflate(z, Z_FINISH)) == Z_OK && (cnt++ <= 100)) {
-      gvwrite_no_z(job, df, (size_t)(z->next_out - df));
-      z->next_out = df;
-      z->avail_out = dfallocated;
-    }
-    if (ret != Z_STREAM_END) {
-      job->common->errorfn("deflation finish problem %d cnt=%d\n", ret, cnt);
-      graphviz_exit(1);
-    }
-    gvwrite_no_z(job, df, (size_t)(z->next_out - df));
-
-    ret = deflateEnd(z);
-    if (ret != Z_OK) {
-      job->common->errorfn("deflation end problem %d\n", ret);
-      graphviz_exit(1);
-    }
-    out[0] = (unsigned char)crc;
-    out[1] = (unsigned char)(crc >> 8);
-    out[2] = (unsigned char)(crc >> 16);
-    out[3] = (unsigned char)(crc >> 24);
-    out[4] = (unsigned char)z->total_in;
-    out[5] = (unsigned char)(z->total_in >> 8);
-    out[6] = (unsigned char)(z->total_in >> 16);
-    out[7] = (unsigned char)(z->total_in >> 24);
-    gvwrite_no_z(job, out, sizeof(out));
-#else
-    job->common->errorfn("No libz support\n");
-    graphviz_exit(1);
-#endif
-  }
-
-  if (gvde) {
-    if (gvde->finalize) {
-      gvde->finalize(job);
-      finalized_p = true;
-    }
-  }
-
-  if (!finalized_p) {
-    /* if the device has no finalization then it uses file output */
-    gvflush(job);
-    gvdevice_close(job);
-  }
 }
 
 void gvprintf(GVJ_t *job, const char *format, ...) {
@@ -319,52 +159,6 @@ val_str(maxnegnum, -999999999999999.99)
     free(staging);
   }
 }
-
-#ifdef GVPRINTNUM_TEST
-int main(int argc, char *argv[]) {
-  agxbuf xb = {0};
-
-  double test[] = {-maxnegnum * 1.1,
-                   -maxnegnum * .9,
-                   1e8,
-                   10.008,
-                   10,
-                   1,
-                   .1,
-                   .01,
-                   .006,
-                   .005,
-                   .004,
-                   .001,
-                   1e-8,
-                   0,
-                   -0,
-                   -1e-8,
-                   -.001,
-                   -.004,
-                   -.005,
-                   -.006,
-                   -.01,
-                   -.1,
-                   -1,
-                   -10,
-                   -10.008,
-                   -1e8,
-                   maxnegnum * .9,
-                   maxnegnum * 1.1};
-  int i = sizeof(test) / sizeof(test[0]);
-
-  while (i--) {
-    gvprintnum(&xb, test[i]);
-    const char *buf = agxbuse(&xb);
-    const size_t len = strlen(buf);
-    printf("%g = %s %" PRISIZE_T "\n", test[i], buf, len);
-  }
-
-  agxbfree(&xb);
-  graphviz_exit(0);
-}
-#endif
 
 /* gv_trim_zeros
  * Identify Trailing zeros and decimal point, if possible.

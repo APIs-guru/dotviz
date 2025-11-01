@@ -3,10 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-void out_strput(output_string *output, char *str) {
-  size_t len = str != NULL ? strlen(str) : 0;
-
-  if (len == 0)
+void out_put(output_string *output, const char *str, size_t len) {
+  if (str == NULL || len == 0)
     return;
 
   if (len > output->data_allocated - (output->data_position + 1)) {
@@ -21,4 +19,10 @@ void out_strput(output_string *output, char *str) {
   memcpy(output->data + output->data_position, str, len);
   output->data_position += len;
   output->data[output->data_position] = '\0'; /* keep null terminated */
+}
+
+void out_strput(output_string *output, const char *str) {
+  size_t len = str != NULL ? strlen(str) : 0;
+
+  out_put(output, str, len);
 }

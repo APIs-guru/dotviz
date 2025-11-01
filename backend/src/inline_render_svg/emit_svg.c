@@ -2707,7 +2707,6 @@ void emit_begin_graph(GVJ_t *job, graph_t *g) {
 extern void svg_end_graph(GVJ_t *job);
 void emit_end_graph(GVJ_t *job) {
   svg_end_graph(job);
-  gvdevice_format(job);
   pop_obj_state(job);
 }
 

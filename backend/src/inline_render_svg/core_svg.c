@@ -60,7 +60,7 @@ static void svg_bzptarray(GVJ_t *job, pointf *A, size_t n) {
 
   c = 'M'; /* first point */
   for (size_t i = 0; i < n; i++) {
-    gvwrite(job, &c, 1);
+    gvputc(job, c);
     gvprintdouble(job, A[i].x);
     gvputc(job, ',');
     gvprintdouble(job, -A[i].y);
