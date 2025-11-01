@@ -8,4 +8,6 @@ typedef struct {
   size_t data_position;
 } output_string;
 
+void out_strput(output_string *output, char *str);
+
 #endif

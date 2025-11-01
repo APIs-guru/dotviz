@@ -41,6 +41,7 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/agrw.c") });
     lib.addCSourceFile(.{ .file = b.path("src/layout_inline.c") });
     lib.addCSourceFile(.{ .file = b.path("src/context_inline.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/output_string.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/inner_render_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/render_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/emit_svg.c") });

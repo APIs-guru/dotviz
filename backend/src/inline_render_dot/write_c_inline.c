@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include "output_string.h"
-#include "gv_char_classes.h"
+#include "../output_string.h"
+#include "../gv_char_classes.h"
 
 // graphviz headers
 #include "cghdr.h"
@@ -27,26 +27,6 @@
 
 #define EMPTY(s) (((s) == 0) || (s)[0] == '\0')
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-
-static void ioput(output_string *output, char *str) {
-  size_t len = str != NULL ? strlen(str) : 0;
-
-  if (len == 0)
-    return;
-
-  if (len > output->data_allocated - (output->data_position + 1)) {
-    /* ensure enough allocation for string = null terminator */
-    output->data_allocated = output->data_position + len + 1;
-    output->data = realloc(output->data, output->data_allocated);
-    if (!output->data) {
-      agerrorf("memory allocation failure\n");
-      exit(1);
-    }
-  }
-  memcpy(output->data + output->data_position, str, len);
-  output->data_position += len;
-  output->data[output->data_position] = '\0'; /* keep null terminated */
-}
 
 static int Level;
 static int Max_outputline = 0;
@@ -68,7 +48,7 @@ static void after_write(write_info_t);
 
 static void indent(output_string *output) {
   for (int i = Level; i > 0; i--)
-    ioput(output, "\t");
+    out_strput(output, "\t");
 }
 
 // alphanumeric, '.', '-', or non-ascii; basically, chars used in unquoted ids
@@ -217,16 +197,16 @@ static void write_canonstr_str(output_string *output, char *str) {
   }
 
   char *canonicalized = return_canonstr(str, scratch);
-  ioput(output, canonicalized);
+  out_strput(output, canonicalized);
 
   free(scratch);
 }
 
 static void write_canonstr_refstr(output_string *output, char *str) {
   if (aghtmlstr(str)) {
-    ioput(output, "<");
-    ioput(output, str);
-    ioput(output, ">");
+    out_strput(output, "<");
+    out_strput(output, str);
+    out_strput(output, ">");
   } else {
     write_canonstr_str(output, str);
   }
@@ -254,24 +234,24 @@ static void write_dict(output_string *output, char *name, Dict_t *dict,
     }
     if (cnt++ == 0) {
       indent(output);
-      ioput(output, name);
-      ioput(output, " [");
+      out_strput(output, name);
+      out_strput(output, " [");
       Level++;
     } else {
-      ioput(output, ",\n");
+      out_strput(output, ",\n");
       indent(output);
     }
     write_canonstr_refstr(output, sym->name);
-    ioput(output, "=");
+    out_strput(output, "=");
     write_canonstr_refstr(output, sym->defval);
   }
   if (cnt > 0) {
     Level--;
     if (cnt > 1) {
-      ioput(output, "\n");
+      out_strput(output, "\n");
       indent(output);
     }
-    ioput(output, "];\n");
+    out_strput(output, "];\n");
   }
   if (!top)
     dtview(dict, view); /* restore previous view */
@@ -312,17 +292,17 @@ static void write_hdr(Agraph_t *g, output_string *output, bool top) {
     hasName = false;
   }
   indent(output);
-  ioput(output, strict);
+  out_strput(output, strict);
 
   /* output "<kind>graph" only for root graphs or graphs with names */
   if (root || hasName) {
-    ioput(output, kind);
-    ioput(output, "graph ");
+    out_strput(output, kind);
+    out_strput(output, "graph ");
   }
   if (hasName)
     write_canonstr_str(output, name);
-  ioput(output, sep);
-  ioput(output, "{\n");
+  out_strput(output, sep);
+  out_strput(output, "{\n");
   Level++;
   write_dicts(g, output, top);
   AGATTRWF(g) = true;
@@ -331,7 +311,7 @@ static void write_hdr(Agraph_t *g, output_string *output, bool top) {
 static void write_trl(output_string *output) {
   Level--;
   indent(output);
-  ioput(output, "}\n");
+  out_strput(output, "}\n");
 }
 
 /// is this graph unnamed?
@@ -416,10 +396,10 @@ static int write_edge_name(Agedge_t *e, output_string *output, bool terminate) {
     if (!terminate) {
       Level++;
     }
-    ioput(output, "\t[key=");
+    out_strput(output, "\t[key=");
     write_canonstr_str(output, p);
     if (terminate)
-      ioput(output, "]");
+      out_strput(output, "]");
     return 1;
   }
   return 0;
@@ -448,19 +428,19 @@ static void write_nondefault_attrs(void *obj, output_string *output,
       }
       if (data->str[sym->id] != sym->defval) {
         if (cnt++ == 0) {
-          ioput(output, "\t[");
+          out_strput(output, "\t[");
           Level++;
         } else {
-          ioput(output, ",\n");
+          out_strput(output, ",\n");
           indent(output);
         }
         write_canonstr_refstr(output, sym->name);
-        ioput(output, "=");
+        out_strput(output, "=");
         write_canonstr_refstr(output, data->str[sym->id]);
       }
     }
   if (cnt > 0) {
-    ioput(output, "]");
+    out_strput(output, "]");
     Level--;
   }
   AGATTRWF(obj) = true;
@@ -476,7 +456,7 @@ static void write_nodename(Agnode_t *n, output_string *output) {
     char buf[sizeof("__SUSPECT") + 20];
     snprintf(buf, sizeof(buf), "_%" PRIu64 "_SUSPECT",
              AGID(n)); /* could be deadly wrong */
-    ioput(output, buf);
+    out_strput(output, buf);
   }
 }
 
@@ -489,7 +469,7 @@ static void write_node(Agraph_t *subg, Agnode_t *n, output_string *output,
   if (!attrs_written(n))
     write_nondefault_attrs(n, output, d);
   wr_info->node_last_written[AGSEQ(n)] = wr_info->preorder_number[AGSEQ(subg)];
-  ioput(output, ";\n");
+  out_strput(output, ";\n");
 }
 
 /* node must be written if it wasn't already emitted because of
@@ -516,7 +496,7 @@ static void write_port(Agedge_t *e, output_string *output, Agsym_t *port) {
   if (val[0] == '\0')
     return;
 
-  ioput(output, ":");
+  out_strput(output, ":");
   if (aghtmlstr(val)) {
     write_canonstr_refstr(output, val);
   } else {
@@ -524,7 +504,7 @@ static void write_port(Agedge_t *e, output_string *output, Agsym_t *port) {
     if (s) {
       *s = '\0';
       write_canonstr_str(output, val);
-      ioput(output, ":");
+      out_strput(output, ":");
       write_canonstr_str(output, s + 1);
       *s = ':';
     } else {
@@ -549,7 +529,7 @@ static void write_edge(Agraph_t *subg, Agedge_t *e, output_string *output,
   indent(output);
   write_nodename(t, output);
   write_port(e, output, Tailport);
-  ioput(output, (agisdirected(agraphof(t)) ? " -> " : " -- "));
+  out_strput(output, (agisdirected(agraphof(t)) ? " -> " : " -- "));
   write_nodename(h, output);
   write_port(e, output, Headport);
   if (!attrs_written(e)) {
@@ -558,7 +538,7 @@ static void write_edge(Agraph_t *subg, Agedge_t *e, output_string *output,
     write_edge_name(e, output, true);
   }
   wr_info->edge_last_written[AGSEQ(e)] = wr_info->preorder_number[AGSEQ(subg)];
-  ioput(output, ";\n");
+  out_strput(output, ";\n");
 }
 
 static void write_body(Agraph_t *g, output_string *output,
