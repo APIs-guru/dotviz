@@ -527,6 +527,7 @@ static int parseSegs(const char *clrs, colorsegs_t *psegs) {
  *  2 => error with message
  *  3 => warning message
  */
+extern void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
   colorsegs_t segs;
   int rv;
@@ -556,7 +557,7 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
     else
       angle1 = angle0 + 2 * M_PI * s.t;
     pp = ellipticWedge(ctr, semi.x, semi.y, angle0, angle1);
-    gvrender_beziercurve(job, pp->ps, pp->pn, 1);
+    svg_bezier(job, pp->ps, pp->pn, 1);
     angle0 = angle1;
     freePath(pp);
   }
@@ -573,6 +574,7 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
  * boundaries are drawn. 0 => okay 1 => error without message 2 => error with
  * message 3 => warning message
  */
+extern void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
 int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
   colorsegs_t segs;
   int rv;
@@ -612,7 +614,7 @@ int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
       pts[1].x = pts[2].x = lastx;
     else
       pts[1].x = pts[2].x = pts[0].x + xdelta * (s.t);
-    gvrender_polygon(job, pts, 4, FILL);
+    svg_polygon(job, pts, 4, FILL);
     pts[0].x = pts[3].x = pts[1].x;
   }
   if (save_penwidth > THIN_LINE)
@@ -1220,6 +1222,9 @@ static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   return pts;
 }
 
+extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
+extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
+extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
 static void emit_xdot(GVJ_t *job, xdot *xd) {
   int image_warn = 1;
   int angle;
@@ -1236,8 +1241,7 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
                          .y = op->op.u.ellipse.y - op->op.u.ellipse.h},
                         {.x = op->op.u.ellipse.x + op->op.u.ellipse.w,
                          .y = op->op.u.ellipse.y + op->op.u.ellipse.h}};
-        gvrender_ellipse(job, pts,
-                         op->op.kind == xd_filled_ellipse ? filled : 0);
+        svg_ellipse(job, pts, op->op.kind == xd_filled_ellipse ? filled : 0);
       }
       break;
     case xd_filled_polygon:
@@ -1245,9 +1249,9 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
       if (boxf_overlap(op->bb, job->clip)) {
         pointf *pts = copyPts(op->op.u.polygon.pts, op->op.u.polygon.cnt);
         assert(op->op.u.polygon.cnt <= INT_MAX &&
-               "polygon count exceeds gvrender_polygon support");
-        gvrender_polygon(job, pts, op->op.u.polygon.cnt,
-                         op->op.kind == xd_filled_polygon ? filled : 0);
+               "polygon count exceeds svg_polygon support");
+        svg_polygon(job, pts, op->op.u.polygon.cnt,
+                    op->op.kind == xd_filled_polygon ? filled : 0);
         free(pts);
       }
       break;
@@ -1255,22 +1259,22 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
     case xd_unfilled_bezier:
       if (boxf_overlap(op->bb, job->clip)) {
         pointf *pts = copyPts(op->op.u.bezier.pts, op->op.u.bezier.cnt);
-        gvrender_beziercurve(job, pts, op->op.u.bezier.cnt,
-                             op->op.kind == xd_filled_bezier ? filled : 0);
+        svg_bezier(job, pts, op->op.u.bezier.cnt,
+                   op->op.kind == xd_filled_bezier ? filled : 0);
         free(pts);
       }
       break;
     case xd_polyline:
       if (boxf_overlap(op->bb, job->clip)) {
         pointf *pts = copyPts(op->op.u.polyline.pts, op->op.u.polyline.cnt);
-        gvrender_polyline(job, pts, op->op.u.polyline.cnt);
+        svg_polyline(job, pts, op->op.u.polyline.cnt);
         free(pts);
       }
       break;
     case xd_text:
       if (boxf_overlap(op->bb, job->clip)) {
         pointf pt = {.x = op->op.u.text.x, .y = op->op.u.text.y};
-        gvrender_textspan(job, pt, op->span);
+        svg_textspan(job, pt, op->span);
       }
       break;
     case xd_fill_color:
@@ -1334,6 +1338,7 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
     gvrender_set_style(job, job->gvc->defaultlinestyle);
 }
 
+extern void svg_box(GVJ_t *job, boxf B, int filled);
 static void emit_background(GVJ_t *job, graph_t *g) {
   xdot *xd;
   char *str;
@@ -1375,13 +1380,13 @@ static void emit_background(GVJ_t *job, graph_t *g) {
         filled = RGRADIENT;
       else
         filled = GRADIENT;
-      gvrender_box(job, job->clip, filled);
+      svg_box(job, job->clip, filled);
       free(clrs[0]);
       free(clrs[1]);
     } else {
       gvrender_set_fillcolor(job, str);
       gvrender_set_pencolor(job, "transparent");
-      gvrender_box(job, job->clip, FILL); /* filled */
+      svg_box(job, job->clip, FILL); /* filled */
     }
   }
 
@@ -1749,7 +1754,7 @@ static void emit_attachment(GVJ_t *job, textlabel_t *lp, splines *spl) {
      - defaults to black for html-like labels
    */
   gvrender_set_pencolor(job, lp->fontcolor);
-  gvrender_polyline(job, AF, 3);
+  svg_polyline(job, AF, 3);
 }
 
 /* edges’ colors can be multiple colors separated by ":"
@@ -1870,21 +1875,21 @@ static int multicolor(GVJ_t *job, edge_t *e, char **styles, const char *colors,
       if (first) {
         first = 0;
         splitBSpline(&bz, s.t, &bz_l, &bz_r);
-        gvrender_beziercurve(job, bz_l.list, bz_l.size, 0);
+        svg_bezier(job, bz_l.list, bz_l.size, 0);
         free(bz_l.list);
         if (AEQ0(left)) {
           free(bz_r.list);
           break;
         }
       } else if (AEQ0(left)) {
-        gvrender_beziercurve(job, bz_r.list, bz_r.size, 0);
+        svg_bezier(job, bz_r.list, bz_r.size, 0);
         free(bz_r.list);
         break;
       } else {
         bz0 = bz_r;
         splitBSpline(&bz0, s.t / (left + s.t), &bz_l, &bz_r);
         free(bz0.list);
-        gvrender_beziercurve(job, bz_l.list, bz_l.size, 0);
+        svg_bezier(job, bz_l.list, bz_l.size, 0);
         free(bz_l.list);
       }
     }
@@ -2029,7 +2034,7 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
       bz = ED_spl(e)->list[0];
       stroke_t stp = taper(&bz, taperfun(e), penwidth);
       assert(stp.nvertices <= INT_MAX);
-      gvrender_polygon(job, stp.vertices, stp.nvertices, 1);
+      svg_polygon(job, stp.vertices, stp.nvertices, 1);
       free_stroke(stp);
       gvrender_set_pencolor(job, color);
       if (fillcolor != color)
@@ -2107,7 +2112,7 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
             tmplist[j].x += offlist[j].x;
             tmplist[j].y += offlist[j].y;
           }
-          gvrender_beziercurve(job, tmplist, tmpspl.list[i].size, 0);
+          svg_bezier(job, tmplist, tmpspl.list[i].size, 0);
         }
       }
       if (bz.sflag) {
@@ -2154,7 +2159,7 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
       }
       for (size_t i = 0; i < ED_spl(e)->size; i++) {
         bz = ED_spl(e)->list[i];
-        gvrender_beziercurve(job, bz.list, bz.size, 0);
+        svg_bezier(job, bz.list, bz.size, 0);
         if (bz.sflag) {
           arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                     bz.sflag);
@@ -2957,14 +2962,14 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
         gvrender_set_pencolor(job, pencolor);
       if (stripedBox(job, AF, fillcolor, 0) > 1)
         agerr(AGPREV, "in cluster %s\n", agnameof(sg));
-      gvrender_box(job, GD_bb(sg), 0);
+      svg_box(job, GD_bb(sg), 0);
     } else {
       if (late_int(sg, G_peripheries, 1, 0)) {
         gvrender_set_pencolor(job, pencolor);
-        gvrender_box(job, GD_bb(sg), filled);
+        svg_box(job, GD_bb(sg), filled);
       } else if (filled != 0) {
         gvrender_set_pencolor(job, "transparent");
-        gvrender_box(job, GD_bb(sg), filled);
+        svg_box(job, GD_bb(sg), filled);
       }
     }
 
