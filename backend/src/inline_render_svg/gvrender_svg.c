@@ -124,20 +124,6 @@ static void gvrender_resolve_color(gvrender_features_t *features, char *name,
   }
 }
 
-extern void svg_end_anchor(GVJ_t *job);
-// FIXME: used in another parts of graphviz like htmltable.c
-void gvrender_end_anchor(GVJ_t *job) { svg_end_anchor(job); }
-// FIXME: used in another parts of graphviz like htmltable.c
-void gvrender_begin_label(GVJ_t *job, label_type type) {}
-// FIXME: used in another parts of graphviz like htmltable.c
-void gvrender_end_label(GVJ_t *job) {}
-
-extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
-// FIXME: used in another parts of graphviz like htmltable.c
-void gvrender_textspan(GVJ_t *job, pointf p, textspan_t *span) {
-  svg_textspan(job, p, span);
-}
-
 void gvrender_set_pencolor(GVJ_t *job, char *name) {
   gvrender_engine_t *gvre = job->render.engine;
   gvcolor_t *color = &(job->obj->pencolor);
@@ -220,30 +206,6 @@ void gvrender_set_style(GVJ_t *job, char **s) {
         }
       }
   }
-}
-
-extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
-// FIXME: used in another parts of graphviz like htmltable.c
-void gvrender_ellipse(GVJ_t *job, pointf *pf, int filled) {
-  svg_ellipse(job, pf, filled);
-}
-
-extern void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
-void gvrender_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
-  svg_polygon(job, af, n, filled);
-}
-
-extern void svg_box(GVJ_t *job, boxf B, int filled);
-void gvrender_box(GVJ_t *job, boxf B, int filled) { svg_box(job, B, filled); }
-
-extern void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
-void gvrender_beziercurve(GVJ_t *job, pointf *af, size_t n, int filled) {
-  svg_bezier(job, af, n, filled);
-}
-
-extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
-void gvrender_polyline(GVJ_t *job, pointf *af, size_t n) {
-  svg_polyline(job, af, n);
 }
 
 static imagescale_t get_imagescale(char *s) {
