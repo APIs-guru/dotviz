@@ -646,6 +646,7 @@ static pointf arrow_type_normal0(pointf p, pointf u, double penwidth,
   return q;
 }
 
+extern void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
 static pointf arrow_type_normal(GVJ_t *job, pointf p, pointf u,
                                 double arrowsize, double penwidth,
                                 uint32_t flag) {
@@ -656,11 +657,11 @@ static pointf arrow_type_normal(GVJ_t *job, pointf p, pointf u,
   pointf q = arrow_type_normal0(p, u, penwidth, flag, a);
 
   if (flag & ARR_MOD_LEFT)
-    gvrender_polygon(job, a, 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(job, a, 3, !(flag & ARR_MOD_OPEN));
   else if (flag & ARR_MOD_RIGHT)
-    gvrender_polygon(job, &a[2], 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(job, &a[2], 3, !(flag & ARR_MOD_OPEN));
   else
-    gvrender_polygon(job, &a[1], 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(job, &a[1], 3, !(flag & ARR_MOD_OPEN));
 
   return q;
 }
@@ -826,15 +827,16 @@ static pointf arrow_type_crow(GVJ_t *job, pointf p, pointf u, double arrowsize,
 
   pointf q = arrow_type_crow0(p, u, arrowsize, penwidth, flag, a);
   if (flag & ARR_MOD_LEFT)
-    gvrender_polygon(job, a, 5, 1);
+    svg_polygon(job, a, 5, 1);
   else if (flag & ARR_MOD_RIGHT)
-    gvrender_polygon(job, &a[4], 5, 1);
+    svg_polygon(job, &a[4], 5, 1);
   else
-    gvrender_polygon(job, a, 8, 1);
+    svg_polygon(job, a, 8, 1);
 
   return q;
 }
 
+extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
 static pointf arrow_type_gap(GVJ_t *job, pointf p, pointf u, double arrowsize,
                              double penwidth, uint32_t flag) {
   (void)arrowsize;
@@ -847,7 +849,7 @@ static pointf arrow_type_gap(GVJ_t *job, pointf p, pointf u, double arrowsize,
   q.y = p.y + u.y;
   a[0] = p;
   a[1] = q;
-  gvrender_polyline(job, a, 2);
+  svg_polyline(job, a, 2);
 
   return q;
 }
@@ -902,10 +904,10 @@ static pointf arrow_type_tee(GVJ_t *job, pointf p, pointf u, double arrowsize,
     a[1] = m;
     a[2] = n;
   }
-  gvrender_polygon(job, a, 4, 1);
+  svg_polygon(job, a, 4, 1);
   a[0] = p;
   a[1] = q;
-  gvrender_polyline(job, a, 2);
+  svg_polyline(job, a, 2);
 
   // A polyline doesn't extend visually beyond its starting point, so we
   // return the starting point as it is, without taking penwidth into account
@@ -960,10 +962,10 @@ static pointf arrow_type_box(GVJ_t *job, pointf p, pointf u, double arrowsize,
     a[1] = p;
     a[2] = m;
   }
-  gvrender_polygon(job, a, 4, !(flag & ARR_MOD_OPEN));
+  svg_polygon(job, a, 4, !(flag & ARR_MOD_OPEN));
   a[0] = m;
   a[1] = q;
-  gvrender_polyline(job, a, 2);
+  svg_polyline(job, a, 2);
 
   // A polyline doesn't extend visually beyond its starting point, so we
   // return the starting point as it is, without taking penwidth into account
@@ -1024,15 +1026,16 @@ static pointf arrow_type_diamond(GVJ_t *job, pointf p, pointf u,
   pointf q = arrow_type_diamond0(p, u, penwidth, flag, a);
 
   if (flag & ARR_MOD_LEFT)
-    gvrender_polygon(job, &a[2], 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(job, &a[2], 3, !(flag & ARR_MOD_OPEN));
   else if (flag & ARR_MOD_RIGHT)
-    gvrender_polygon(job, a, 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(job, a, 3, !(flag & ARR_MOD_OPEN));
   else
-    gvrender_polygon(job, a, 4, !(flag & ARR_MOD_OPEN));
+    svg_polygon(job, a, 4, !(flag & ARR_MOD_OPEN));
 
   return q;
 }
 
+extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
 static pointf arrow_type_dot(GVJ_t *job, pointf p, pointf u, double arrowsize,
                              double penwidth, uint32_t flag) {
   (void)arrowsize;
@@ -1061,7 +1064,7 @@ static pointf arrow_type_dot(GVJ_t *job, pointf p, pointf u, double arrowsize,
   AF[0].y = p.y + u.y / 2. - r;
   AF[1].x = p.x + u.x / 2. + r;
   AF[1].y = p.y + u.y / 2. + r;
-  gvrender_ellipse(job, AF, !(flag & ARR_MOD_OPEN));
+  svg_ellipse(job, AF, !(flag & ARR_MOD_OPEN));
 
   pointf q = {p.x + u.x, p.y + u.y};
 
@@ -1077,6 +1080,7 @@ static pointf arrow_type_dot(GVJ_t *job, pointf p, pointf u, double arrowsize,
  * http://digerati-illuminatus.blogspot.com.au/2008/05/approximating-semicircle-with-cubic.html
  * for details.
  */
+extern void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 static pointf arrow_type_curve(GVJ_t *job, pointf p, pointf u, double arrowsize,
                                double penwidth, uint32_t flag) {
   (void)arrowsize;
@@ -1126,12 +1130,12 @@ static pointf arrow_type_curve(GVJ_t *job, pointf p, pointf u, double arrowsize,
     AF[2].y = AF[3].y - w.y * 4.0 / 3.0;
   }
 
-  gvrender_polyline(job, a, 2);
+  svg_polyline(job, a, 2);
   if (flag & ARR_MOD_LEFT)
     Bezier(AF, 0.5, NULL, AF);
   else if (flag & ARR_MOD_RIGHT)
     Bezier(AF, 0.5, AF, NULL);
-  gvrender_beziercurve(job, AF, sizeof(AF) / sizeof(pointf), 0);
+  svg_bezier(job, AF, sizeof(AF) / sizeof(pointf), 0);
 
   return q;
 }
