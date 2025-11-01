@@ -48,6 +48,7 @@ pub fn build(b: *std.Build) void {
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/core_svg.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/htmltable.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/shapes.c") });
+    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/labels.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/render_inline_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/output_dot.c") });
     lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/write_c_inline.c") });
@@ -383,7 +384,7 @@ const src_common = [_][]const u8{
     "pointset.c", "ns.c",      "ellipse.c", "arrows.c",
     "geom.c",
     "input.c", //"output.c",
-    "labels.c",
+    // "labels.c",
     // "htmltable.c",
 };
 
