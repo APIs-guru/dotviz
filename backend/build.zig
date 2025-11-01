@@ -8,10 +8,8 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const optimize = b.standardOptimizeOption(.{
-        .preferred_optimize_mode = .ReleaseSmall,
-    });
-    const graphviz_build_mode = std.builtin.OptimizeMode.ReleaseSmall;
+    const optimize = b.standardOptimizeOption(.{});
+    const graphviz_build_mode = optimize;
 
     const lib_mod = b.createModule(.{
         .root_source_file = b.path("src/wasm_module.zig"),
@@ -23,7 +21,6 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .sanitize_c = .off,
     });
     exe_mod.addImport("dotviz_lib", lib_mod);
 
@@ -60,9 +57,6 @@ pub fn build(b: *std.Build) void {
         "wasm_free",
         "render",
     };
-    lib.root_module.strip = true;
-    lib.export_table = true;
-    lib.bundle_ubsan_rt = false;
     applyWasiEmulation(lib);
 
     const exe = b.addExecutable(.{
@@ -70,12 +64,7 @@ pub fn build(b: *std.Build) void {
         .root_module = exe_mod,
     });
     exe.addIncludePath(b.path("src"));
-    exe.want_lto = true;
-    exe.import_symbols = false;
-    exe.export_table = true;
-    exe.bundle_ubsan_rt = false;
-    exe.root_module.strip = true;
-    exe.bundle_ubsan_rt = false;
+    exe.lto = .full;
     applyWasiEmulation(exe);
 
     b.installArtifact(exe);
@@ -103,7 +92,6 @@ pub fn buildGraphviz(
         .target = target,
         .optimize = optimize,
         .link_libc = true,
-        .sanitize_c = .off,
     });
 
     const lib = b.addLibrary(.{

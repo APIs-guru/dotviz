@@ -9,7 +9,9 @@ import {
 
 fs.rmSync('lib', { recursive: true, force: true });
 fs.mkdirSync('lib');
-spawn('zig', ['build'], { cwd: 'backend/' });
+const zigOptimizeMode = process.env.ZIG_OPTIMIZE_MODE ?? 'ReleaseSmall';
+/* cspell:disable-next-line */
+spawn('zig', ['build', '-Doptimize=' + zigOptimizeMode], { cwd: 'backend/' });
 fs.copyFileSync('backend/zig-out/bin/dotviz.wasm', 'lib/module.wasm');
 
 const wasm = fs.readFileSync('lib/module.wasm');
