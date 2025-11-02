@@ -8,8 +8,9 @@ typedef struct {
   size_t data_position;
 } output_string;
 
-size_t out_put(output_string *output, const char *str, size_t len);
-void out_strput(output_string *output, const char *str);
+void out_put(output_string *output, const char *str, size_t len);
+void out_puts(output_string *output, const char *str);
+void out_putc(output_string *output, char c);
 
 typedef struct GVJ_s GVJ_t;
 output_string job2output_string(GVJ_t *job);

@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-size_t out_put(output_string *output, const char *str, size_t len) {
+void out_put(output_string *output, const char *str, size_t len) {
   if (str == NULL || len == 0)
-    return len;
+    return;
 
   if (len > output->data_allocated - (output->data_position + 1)) {
     /* ensure enough allocation for string = null terminator */
@@ -22,14 +22,15 @@ size_t out_put(output_string *output, const char *str, size_t len) {
   memcpy(output->data + output->data_position, str, len);
   output->data_position += len;
   output->data[output->data_position] = '\0'; /* keep null terminated */
-  return len;
 }
 
-void out_strput(output_string *output, const char *str) {
+void out_puts(output_string *output, const char *str) {
   size_t len = str != NULL ? strlen(str) : 0;
 
   out_put(output, str, len);
 }
+
+void out_putc(output_string *output, const char c) { out_put(output, &c, 1); }
 
 output_string job2output_string(GVJ_t *job) {
   output_string output;

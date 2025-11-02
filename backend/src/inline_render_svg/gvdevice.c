@@ -15,22 +15,14 @@
 #include <ctype.h>
 #include <limits.h>
 #include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
 #include <errno.h>
-#include <unistd.h>
-#include <util/gv_fopen.h>
-#include <util/prisize_t.h>
 
 #include <assert.h>
 #include <const.h>
-#include <gvplugin_device.h>
-#include <gvcint.h>
-#include <gvcproc.h>
-#include <utils.h>
+#include "cgraph.h"
 #include "gvio_svg.h"
 #include <util/agxbuf.h>
 #include <util/exit.h>
@@ -39,11 +31,6 @@
 #include "../output_string.h"
 #include "gv_ctype.h"
 #include "unreachable.h"
-
-void gvputs(output_string *output, const char *s) {
-  size_t len = strlen(s);
-  out_put(output, s, len);
-}
 
 /* return true if *s points to &[A-Za-z]+;      (e.g. &Ccedil; )
  *                          or &#[0-9]*;        (e.g. &#38; )
@@ -99,52 +86,52 @@ static void xml_core(char previous, const char **current, xml_flags_t flags,
 
   // escape '&' only if not part of a legal entity sequence
   if (c == '&' && (flags.raw || !xml_isentity(s))) {
-    gvputs(output, "&amp;");
+    out_puts(output, "&amp;");
     return;
   }
 
   // '<' '>' are safe to substitute even if string is already XML encoded since
   // XML strings won’t contain '<' or '>'
   if (c == '<') {
-    gvputs(output, "&lt;");
+    out_puts(output, "&lt;");
     return;
   }
 
   if (c == '>') {
-    gvputs(output, "&gt;");
+    out_puts(output, "&gt;");
     return;
   }
 
   // '-' cannot be used in XML comment strings
   if (c == '-' && flags.dash) {
-    gvputs(output, "&#45;");
+    out_puts(output, "&#45;");
     return;
   }
 
   if (c == ' ' && previous == ' ' && flags.nbsp) {
     // substitute 2nd and subsequent spaces with required_spaces
-    gvputs(output,
-           "&#160;"); // Inkscape does not recognize &nbsp;
+    out_puts(output,
+             "&#160;"); // Inkscape does not recognize &nbsp;
     return;
   }
 
   if (c == '"') {
-    gvputs(output, "&quot;");
+    out_puts(output, "&quot;");
     return;
   }
 
   if (c == '\'') {
-    gvputs(output, "&#39;");
+    out_puts(output, "&#39;");
     return;
   }
 
   if (c == '\n' && flags.raw) {
-    gvputs(output, "&#10;");
+    out_puts(output, "&#10;");
     return;
   }
 
   if (c == '\r' && flags.raw) {
-    gvputs(output, "&#13;");
+    out_puts(output, "&#13;");
     return;
   }
 
@@ -220,13 +207,13 @@ static void xml_core(char previous, const char **current, xml_flags_t flags,
     // note how many extra characters we consumed
     *current += length - 1;
 
-    gvputs(output, buffer);
+    out_puts(output, buffer);
     return;
   }
 
   // otherwise, output the character as-is
   char buffer[2] = {c, '\0'};
-  gvputs(output, buffer);
+  out_puts(output, buffer);
 }
 
 static void my_xml_escape(const char *s, xml_flags_t flags,
@@ -247,11 +234,6 @@ void gvputs_xml(output_string *output, const char *s) {
 void gvputs_xml_with_flags(output_string *output, const char *s,
                            xml_flags_t flags) {
   my_xml_escape(s, flags, output);
-}
-
-void gvputc(output_string *output, int c) {
-  const char cc = (char)c;
-  out_put(output, &cc, 1);
 }
 
 void gvprintf(output_string *output, const char *format, ...) {
@@ -341,7 +323,7 @@ static size_t gv_trim_zeros(const char *buf) {
 void gvprintdouble(output_string *output, double num) {
   // Prevents values like -0
   if (num > -0.005 && num < 0.005) {
-    out_put(output, "0", 1);
+    out_putc(output, '0');
     return;
   }
   char buf[50];

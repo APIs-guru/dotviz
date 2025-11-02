@@ -13,9 +13,6 @@
 
 #include <stddef.h>
 #include "../output_string.h"
-void gvputc(output_string *output, int c);
-void gvputs(output_string *output, const char *s);
-
 // `gvputs`, but XML-escape the input string
 void gvputs_xml(output_string *output, const char *s);
 /// options to tweak the behavior of XML escaping
