@@ -13,11 +13,11 @@
 
 #include <stddef.h>
 #include "../output_string.h"
-int gvputc(output_string *output, int c);
-int gvputs(output_string *output, const char *s);
+void gvputc(output_string *output, int c);
+void gvputs(output_string *output, const char *s);
 
 // `gvputs`, but XML-escape the input string
-int gvputs_xml(output_string *output, const char *s);
+void gvputs_xml(output_string *output, const char *s);
 /// options to tweak the behavior of XML escaping
 typedef struct {
   /// assume no embedded escapes, and escape "\n" and "\r"
@@ -29,8 +29,8 @@ typedef struct {
   /// anticipate non-ASCII characters that need to be encoded
   unsigned utf8 : 1;
 } xml_flags_t;
-int gvputs_xml_with_flags(output_string *output, const char *s,
-                          xml_flags_t flags);
+void gvputs_xml_with_flags(output_string *output, const char *s,
+                           xml_flags_t flags);
 
 __attribute__((format(printf, 2, 3))) void gvprintf(output_string *output,
                                                     const char *format, ...);

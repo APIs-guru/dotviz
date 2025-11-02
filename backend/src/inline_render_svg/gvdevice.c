@@ -40,10 +40,9 @@
 #include "gv_ctype.h"
 #include "unreachable.h"
 
-int gvputs(output_string *output, const char *s) {
+void gvputs(output_string *output, const char *s) {
   size_t len = strlen(s);
   out_put(output, s, len);
-  return len;
 }
 
 /* return true if *s points to &[A-Za-z]+;      (e.g. &Ccedil; )
@@ -89,8 +88,8 @@ static bool xml_isentity(const char *s) {
  * \param state Data to pass as the first parameter when calling `cb`.
  * \return The return value of a call to `cb`.
  */
-static int xml_core(char previous, const char **current, xml_flags_t flags,
-                    output_string *output) {
+static void xml_core(char previous, const char **current, xml_flags_t flags,
+                     output_string *output) {
 
   const char *s = *current;
   char c = *s;
@@ -99,37 +98,55 @@ static int xml_core(char previous, const char **current, xml_flags_t flags,
   ++*current;
 
   // escape '&' only if not part of a legal entity sequence
-  if (c == '&' && (flags.raw || !xml_isentity(s)))
-    return gvputs(output, "&amp;");
+  if (c == '&' && (flags.raw || !xml_isentity(s))) {
+    gvputs(output, "&amp;");
+    return;
+  }
 
   // '<' '>' are safe to substitute even if string is already XML encoded since
   // XML strings won’t contain '<' or '>'
-  if (c == '<')
-    return gvputs(output, "&lt;");
+  if (c == '<') {
+    gvputs(output, "&lt;");
+    return;
+  }
 
-  if (c == '>')
-    return gvputs(output, "&gt;");
+  if (c == '>') {
+    gvputs(output, "&gt;");
+    return;
+  }
 
   // '-' cannot be used in XML comment strings
-  if (c == '-' && flags.dash)
-    return gvputs(output, "&#45;");
+  if (c == '-' && flags.dash) {
+    gvputs(output, "&#45;");
+    return;
+  }
 
-  if (c == ' ' && previous == ' ' && flags.nbsp)
+  if (c == ' ' && previous == ' ' && flags.nbsp) {
     // substitute 2nd and subsequent spaces with required_spaces
-    return gvputs(output,
-                  "&#160;"); // Inkscape does not recognize &nbsp;
+    gvputs(output,
+           "&#160;"); // Inkscape does not recognize &nbsp;
+    return;
+  }
 
-  if (c == '"')
-    return gvputs(output, "&quot;");
+  if (c == '"') {
+    gvputs(output, "&quot;");
+    return;
+  }
 
-  if (c == '\'')
-    return gvputs(output, "&#39;");
+  if (c == '\'') {
+    gvputs(output, "&#39;");
+    return;
+  }
 
-  if (c == '\n' && flags.raw)
-    return gvputs(output, "&#10;");
+  if (c == '\n' && flags.raw) {
+    gvputs(output, "&#10;");
+    return;
+  }
 
-  if (c == '\r' && flags.raw)
-    return gvputs(output, "&#13;");
+  if (c == '\r' && flags.raw) {
+    gvputs(output, "&#13;");
+    return;
+  }
 
   unsigned char uc = (unsigned char)c;
   if (uc > 0x7f && flags.utf8) {
@@ -137,15 +154,18 @@ static int xml_core(char previous, const char **current, xml_flags_t flags,
     // replicating a table from https://en.wikipedia.org/wiki/UTF-8:
     //
     //   ┌────────────────┬───────────────┬────────┬────────┬────────┬────────┐
-    //   │First code point│Last code point│Byte 1  │Byte 2  │Byte 3  │Byte 4  │
+    //   │First code point│Last code point│Byte 1  │Byte 2  │Byte 3
+    //   │Byte 4  │
     //   ├────────────────┼───────────────┼────────┼────────┼────────┼────────┤
-    //   │          U+0000│         U+007F│0xxxxxxx│        │        │        │
-    //   │          U+0080│         U+07FF│110xxxxx│10xxxxxx│        │        │
-    //   │          U+0800│         U+FFFF│1110xxxx│10xxxxxx│10xxxxxx│        │
-    //   │         U+10000│       U+10FFFF│11110xxx│10xxxxxx│10xxxxxx│10xxxxxx│
+    //   │          U+0000│         U+007F│0xxxxxxx│        │        │ │
+    //   │          U+0080│         U+07FF│110xxxxx│10xxxxxx│        │ │
+    //   │          U+0800│         U+FFFF│1110xxxx│10xxxxxx│10xxxxxx│ │
+    //   │         U+10000│
+    //   U+10FFFF│11110xxx│10xxxxxx│10xxxxxx│10xxxxxx│
     //   └────────────────┴───────────────┴────────┴────────┴────────┴────────┘
     //
-    // from which we can calculate the byte length of the current character
+    // from which we can calculate the byte length of the current
+    // character
     size_t length = (uc >> 5) == 6    ? 2
                     : (uc >> 4) == 14 ? 3
                     : (uc >> 3) == 30 ? 4
@@ -162,8 +182,8 @@ static int xml_core(char previous, const char **current, xml_flags_t flags,
       graphviz_exit(EXIT_FAILURE);
     }
 
-    // Decode the character. Refer again to the above table to understand this
-    // algorithm.
+    // Decode the character. Refer again to the above table to
+    // understand this algorithm.
     uint32_t utf8_char = 0;
     switch (length) {
     case 2: {
@@ -200,45 +220,38 @@ static int xml_core(char previous, const char **current, xml_flags_t flags,
     // note how many extra characters we consumed
     *current += length - 1;
 
-    return gvputs(output, buffer);
+    gvputs(output, buffer);
+    return;
   }
 
   // otherwise, output the character as-is
   char buffer[2] = {c, '\0'};
-  return gvputs(output, buffer);
+  gvputs(output, buffer);
 }
 
-static int my_xml_escape(const char *s, xml_flags_t flags,
-                         output_string *output) {
+static void my_xml_escape(const char *s, xml_flags_t flags,
+                          output_string *output) {
   char previous = '\0';
-  int rc = 0;
   while (*s != '\0') {
     char p = *s;
-    rc = xml_core(previous, &s, flags, output);
-    if (rc < 0)
-      return rc;
+    xml_core(previous, &s, flags, output);
     previous = p;
   }
-  return rc;
 }
 
-int gvputs_xml(output_string *output, const char *s) {
+void gvputs_xml(output_string *output, const char *s) {
   const xml_flags_t flags = {.dash = 1, .nbsp = 1};
-  return my_xml_escape(s, flags, output);
+  my_xml_escape(s, flags, output);
 }
 
-int gvputs_xml_with_flags(output_string *output, const char *s,
-                          xml_flags_t flags) {
-  return my_xml_escape(s, flags, output);
+void gvputs_xml_with_flags(output_string *output, const char *s,
+                           xml_flags_t flags) {
+  my_xml_escape(s, flags, output);
 }
 
-int gvputc(output_string *output, int c) {
+void gvputc(output_string *output, int c) {
   const char cc = (char)c;
-
-  if (out_put(output, &cc, 1) != 1) {
-    return EOF;
-  }
-  return c;
+  out_put(output, &cc, 1);
 }
 
 void gvprintf(output_string *output, const char *format, ...) {
