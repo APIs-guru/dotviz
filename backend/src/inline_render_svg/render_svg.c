@@ -4,7 +4,6 @@
 #include "geomprocs.h"
 #include "gvc.h" // IWYU pragma: keep
 #include "gvcint.h"
-#include "gvcproc.h"
 #include "util/list.h"
 #include <stdio.h>
 #include <stdlib.h>

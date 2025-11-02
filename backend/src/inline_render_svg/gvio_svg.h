@@ -11,7 +11,6 @@
 #ifndef GVIO_SVG_
 #define GVIO_SVG_ /* nothing */
 
-#include "geom.h"
 #include "gvcext.h"
 #include <stddef.h>
 int gvputc(GVJ_t *job, int c);

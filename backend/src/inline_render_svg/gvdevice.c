@@ -44,14 +44,9 @@
 #include "unreachable.h"
 
 static size_t gvwrite(GVJ_t *job, const char *s, size_t len) {
-  output_string output;
-  output.data_allocated = job->output_data_allocated;
-  output.data_position = job->output_data_position;
-  output.data = job->output_data;
+  output_string output = job2output_string(job);
   out_put(&output, s, len);
-  job->output_data_allocated = output.data_allocated;
-  job->output_data_position = output.data_position;
-  job->output_data = output.data;
+  output_string2job(job, &output);
   return len;
 }
 

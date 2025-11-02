@@ -1,5 +1,8 @@
 #include "output_string.h"
 #include "cgraph.h"
+#include "types.h"  // IWYU pragma: keep
+#include "geom.h"   // IWYU pragma: keep
+#include "gvcjob.h" // IWYU pragma: keep
 #include <stdlib.h>
 #include <string.h>
 
@@ -25,4 +28,18 @@ void out_strput(output_string *output, const char *str) {
   size_t len = str != NULL ? strlen(str) : 0;
 
   out_put(output, str, len);
+}
+
+output_string job2output_string(GVJ_t *job) {
+  output_string output;
+  output.data_allocated = job->output_data_allocated;
+  output.data_position = job->output_data_position;
+  output.data = job->output_data;
+  return output;
+}
+
+void output_string2job(GVJ_t *job, output_string *output) {
+  job->output_data_allocated = output->data_allocated;
+  job->output_data_position = output->data_position;
+  job->output_data = output->data;
 }
