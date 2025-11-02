@@ -45,6 +45,23 @@
 #include "gvio_svg.h"
 #include "../output_string.h"
 
+static pointf svg_ptf(GVJ_t *job, pointf p) {
+  pointf rv, translation, scale;
+
+  translation = job->translation;
+  scale.x = job->zoom * job->devscale.x;
+  scale.y = job->zoom * job->devscale.y;
+
+  if (job->rotation) {
+    rv.x = -(p.y + translation.y) * scale.x;
+    rv.y = (p.x + translation.x) * scale.y;
+  } else {
+    rv.x = (p.x + translation.x) * scale.x;
+    rv.y = (p.y + translation.y) * scale.y;
+  }
+  return rv;
+}
+
 /* transform an array of n points */
 /*  *AF and *af must be preallocated */
 /*  *AF can be the same as *af for inplace transforms */
@@ -69,6 +86,172 @@ pointf *svg_ptf_A(GVJ_t *job, pointf *af, pointf *AF, size_t n) {
     }
   }
   return AF;
+}
+
+static imagescale_t get_imagescale(char *s) {
+  if (*s == '\0')
+    return IMAGESCALE_FALSE;
+  if (!strcasecmp(s, "width"))
+    return IMAGESCALE_WIDTH;
+  if (!strcasecmp(s, "height"))
+    return IMAGESCALE_HEIGHT;
+  if (!strcasecmp(s, "both"))
+    return IMAGESCALE_BOTH;
+  if (mapbool(s))
+    return IMAGESCALE_TRUE;
+  return IMAGESCALE_FALSE;
+}
+
+static imagepos_t get_imagepos(char *s) {
+  if (*s == '\0')
+    return IMAGEPOS_MIDDLE_CENTER;
+  if (!strcasecmp(s, "tl"))
+    return IMAGEPOS_TOP_LEFT;
+  if (!strcasecmp(s, "tc"))
+    return IMAGEPOS_TOP_CENTER;
+  if (!strcasecmp(s, "tr"))
+    return IMAGEPOS_TOP_RIGHT;
+  if (!strcasecmp(s, "ml"))
+    return IMAGEPOS_MIDDLE_LEFT;
+  if (!strcasecmp(s, "mc"))
+    return IMAGEPOS_MIDDLE_CENTER;
+  if (!strcasecmp(s, "mr"))
+    return IMAGEPOS_MIDDLE_RIGHT;
+  if (!strcasecmp(s, "bl"))
+    return IMAGEPOS_BOTTOM_LEFT;
+  if (!strcasecmp(s, "bc"))
+    return IMAGEPOS_BOTTOM_CENTER;
+  if (!strcasecmp(s, "br"))
+    return IMAGEPOS_BOTTOM_RIGHT;
+  return IMAGEPOS_MIDDLE_CENTER;
+}
+
+/* gvrender_usershape:
+ * Scale image to fill polygon bounding box according to "imagescale",
+ * positioned at "imagepos"
+ */
+void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
+                   char *imagescale, char *imagepos) {
+  gvrender_engine_t *gvre = job->render.engine;
+  usershape_t *us;
+  double iw, ih, pw, ph;
+  double scalex, scaley; /* scale factors */
+  boxf b;                /* target box */
+  point isz;
+  imagepos_t position;
+
+  assert(job);
+  assert(name);
+  assert(name[0]);
+
+  if (!(us = gvusershape_find(name))) {
+    return;
+  }
+
+  isz = gvusershape_size_dpi(us, job->dpi);
+  if ((isz.x <= 0) && (isz.y <= 0))
+    return;
+
+  /* compute bb of polygon */
+  b.LL = b.UR = a[0];
+  for (size_t i = 1; i < n; i++) {
+    expandbp(&b, a[i]);
+  }
+
+  pw = b.UR.x - b.LL.x;
+  ph = b.UR.y - b.LL.y;
+  ih = (double)isz.y;
+  iw = (double)isz.x;
+
+  scalex = pw / iw;
+  scaley = ph / ih;
+
+  switch (get_imagescale(imagescale)) {
+  case IMAGESCALE_TRUE:
+    /* keep aspect ratio fixed by just using the smaller scale */
+    if (scalex < scaley) {
+      iw *= scalex;
+      ih *= scalex;
+    } else {
+      iw *= scaley;
+      ih *= scaley;
+    }
+    break;
+  case IMAGESCALE_WIDTH:
+    iw *= scalex;
+    break;
+  case IMAGESCALE_HEIGHT:
+    ih *= scaley;
+    break;
+  case IMAGESCALE_BOTH:
+    iw *= scalex;
+    ih *= scaley;
+    break;
+  case IMAGESCALE_FALSE:
+  default:
+    break;
+  }
+
+  /* if image is smaller in any dimension, apply the specified positioning */
+  position = get_imagepos(imagepos);
+  if (iw < pw) {
+    switch (position) {
+    case IMAGEPOS_TOP_LEFT:
+    case IMAGEPOS_MIDDLE_LEFT:
+    case IMAGEPOS_BOTTOM_LEFT:
+      b.UR.x = b.LL.x + iw;
+      break;
+    case IMAGEPOS_TOP_RIGHT:
+    case IMAGEPOS_MIDDLE_RIGHT:
+    case IMAGEPOS_BOTTOM_RIGHT:
+      b.LL.x += (pw - iw);
+      b.UR.x = b.LL.x + iw;
+      break;
+    default:
+      b.LL.x += (pw - iw) / 2.0;
+      b.UR.x -= (pw - iw) / 2.0;
+      break;
+    }
+  }
+  if (ih < ph) {
+    switch (position) {
+    case IMAGEPOS_TOP_LEFT:
+    case IMAGEPOS_TOP_CENTER:
+    case IMAGEPOS_TOP_RIGHT:
+      b.LL.y = b.UR.y - ih;
+      break;
+    case IMAGEPOS_BOTTOM_LEFT:
+    case IMAGEPOS_BOTTOM_CENTER:
+    case IMAGEPOS_BOTTOM_RIGHT:
+      b.LL.y += ih;
+      b.UR.y = b.LL.y - ih;
+      break;
+    default:
+      b.LL.y += (ph - ih) / 2.0;
+      b.UR.y -= (ph - ih) / 2.0;
+      break;
+    }
+  }
+
+  /* convert from graph to device coordinates */
+  if (!(job->flags & GVRENDER_DOES_TRANSFORM)) {
+    b.LL = svg_ptf(job, b.LL);
+    b.UR = svg_ptf(job, b.UR);
+  }
+
+  if (b.LL.x > b.UR.x) {
+    double d = b.LL.x;
+    b.LL.x = b.UR.x;
+    b.UR.x = d;
+  }
+  if (b.LL.y > b.UR.y) {
+    double d = b.LL.y;
+    b.LL.y = b.UR.y;
+    b.UR.y = d;
+  }
+  if (gvre) {
+    gvloadimage(job, us, b, filled, job->render.type);
+  }
 }
 
 #define LOCALNAMEPREFIX '%'
@@ -458,7 +641,7 @@ void svg_textspan(GVJ_t *job, pointf raw_p, textspan_t *span) {
   if (job->flags & GVRENDER_DOES_TRANSFORM)
     p = raw_p;
   else
-    p = gvrender_ptf(job, raw_p);
+    p = svg_ptf(job, raw_p);
 
   obj_state_t *obj = job->obj;
   PostscriptAlias *pA;

@@ -3063,9 +3063,9 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
         svg_polygon(job, AF, sides, filled);
       }
     }
-    gvrender_usershape(job, name, AF, sides, filled != 0,
-                       late_string(n, N_imagescale, "false"),
-                       late_string(n, N_imagepos, "mc"));
+    svg_usershape(job, name, AF, sides, filled != 0,
+                  late_string(n, N_imagescale, "false"),
+                  late_string(n, N_imagepos, "mc"));
     filled = 0; /* with user shapes, we have done the fill if needed */
   }
 

@@ -4,6 +4,7 @@
 #include "geom.h"
 #include "gvcext.h"
 #include "textspan.h"
+#include <stdbool.h>
 #include <stddef.h>
 pointf *svg_ptf_A(GVJ_t *job, pointf *af, pointf *AF, size_t n);
 void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
@@ -31,4 +32,6 @@ void svg_end_layer(GVJ_t *job);
 
 void svg_begin_job(GVJ_t *job);
 
+void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
+                   char *imagescale, char *imagepos);
 #endif
