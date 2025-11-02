@@ -8,7 +8,7 @@ typedef struct {
   size_t data_position;
 } output_string;
 
-void out_put(output_string *output, const char *str, size_t len);
+size_t out_put(output_string *output, const char *str, size_t len);
 void out_strput(output_string *output, const char *str);
 
 typedef struct GVJ_s GVJ_t;

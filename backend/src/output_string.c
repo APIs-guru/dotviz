@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-void out_put(output_string *output, const char *str, size_t len) {
+size_t out_put(output_string *output, const char *str, size_t len) {
   if (str == NULL || len == 0)
-    return;
+    return len;
 
   if (len > output->data_allocated - (output->data_position + 1)) {
     /* ensure enough allocation for string = null terminator */
@@ -22,6 +22,7 @@ void out_put(output_string *output, const char *str, size_t len) {
   memcpy(output->data + output->data_position, str, len);
   output->data_position += len;
   output->data[output->data_position] = '\0'; /* keep null terminated */
+  return len;
 }
 
 void out_strput(output_string *output, const char *str) {

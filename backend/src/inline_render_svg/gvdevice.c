@@ -43,16 +43,11 @@
 #include "gvcext.h"
 #include "unreachable.h"
 
-static size_t gvwrite(GVJ_t *job, const char *s, size_t len) {
+int gvputs(GVJ_t *job, const char *s) {
+  size_t len = strlen(s);
   output_string output = job2output_string(job);
   out_put(&output, s, len);
   output_string2job(job, &output);
-  return len;
-}
-
-int gvputs(GVJ_t *job, const char *s) {
-  size_t len = strlen(s);
-  gvwrite(job, s, len);
   return len;
 }
 
@@ -243,9 +238,11 @@ int gvputs_xml_with_flags(GVJ_t *job, const char *s, xml_flags_t flags) {
 int gvputc(GVJ_t *job, int c) {
   const char cc = (char)c;
 
-  if (gvwrite(job, &cc, 1) != 1) {
+  output_string output = job2output_string(job);
+  if (out_put(&output, &cc, 1) != 1) {
     return EOF;
   }
+  output_string2job(job, &output);
   return c;
 }
 
@@ -262,7 +259,10 @@ void gvprintf(GVJ_t *job, const char *format, ...) {
   }
   va_end(argp);
 
-  gvwrite(job, agxbuse(&buf), (size_t)len);
+  output_string output = job2output_string(job);
+  out_put(&output, agxbuse(&buf), (size_t)len);
+  output_string2job(job, &output);
+
   agxbfree(&buf);
 }
 
@@ -333,16 +333,18 @@ static size_t gv_trim_zeros(const char *buf) {
 }
 
 void gvprintdouble(GVJ_t *job, double num) {
+  output_string output = job2output_string(job);
   // Prevents values like -0
   if (num > -0.005 && num < 0.005) {
-    gvwrite(job, "0", 1);
+    out_put(&output, "0", 1);
+    output_string2job(job, &output);
     return;
   }
-
   char buf[50];
 
   snprintf(buf, 50, "%.02f", num);
   size_t len = gv_trim_zeros(buf);
 
-  gvwrite(job, buf, len);
+  out_put(&output, buf, len);
+  output_string2job(job, &output);
 }
