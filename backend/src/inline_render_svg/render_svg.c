@@ -469,7 +469,6 @@ output_string render_svg(GVC_t *gvc, Agrw_t graph) {
   if (gvc->active_jobs) {
     gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here
                              */
-    gvdevice_finalize(gvc->active_jobs);
   }
   return output;
 }
