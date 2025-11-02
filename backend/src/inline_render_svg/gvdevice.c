@@ -24,12 +24,10 @@
 #include <unistd.h>
 #include <util/gv_fopen.h>
 #include <util/prisize_t.h>
-#include <util/xml.h>
 
 #include <assert.h>
 #include <const.h>
 #include <gvplugin_device.h>
-#include <gvcjob.h>
 #include <gvcint.h>
 #include <gvcproc.h>
 #include <utils.h>
@@ -40,14 +38,11 @@
 
 #include "../output_string.h"
 #include "gv_ctype.h"
-#include "gvcext.h"
 #include "unreachable.h"
 
-int gvputs(GVJ_t *job, const char *s) {
+int gvputs(output_string *output, const char *s) {
   size_t len = strlen(s);
-  output_string output = job2output_string(job);
-  out_put(&output, s, len);
-  output_string2job(job, &output);
+  out_put(output, s, len);
   return len;
 }
 
@@ -95,7 +90,7 @@ static bool xml_isentity(const char *s) {
  * \return The return value of a call to `cb`.
  */
 static int xml_core(char previous, const char **current, xml_flags_t flags,
-                    GVJ_t *job) {
+                    output_string *output) {
 
   const char *s = *current;
   char c = *s;
@@ -105,36 +100,36 @@ static int xml_core(char previous, const char **current, xml_flags_t flags,
 
   // escape '&' only if not part of a legal entity sequence
   if (c == '&' && (flags.raw || !xml_isentity(s)))
-    return gvputs(job, "&amp;");
+    return gvputs(output, "&amp;");
 
   // '<' '>' are safe to substitute even if string is already XML encoded since
   // XML strings won’t contain '<' or '>'
   if (c == '<')
-    return gvputs(job, "&lt;");
+    return gvputs(output, "&lt;");
 
   if (c == '>')
-    return gvputs(job, "&gt;");
+    return gvputs(output, "&gt;");
 
   // '-' cannot be used in XML comment strings
   if (c == '-' && flags.dash)
-    return gvputs(job, "&#45;");
+    return gvputs(output, "&#45;");
 
   if (c == ' ' && previous == ' ' && flags.nbsp)
     // substitute 2nd and subsequent spaces with required_spaces
-    return gvputs(job,
+    return gvputs(output,
                   "&#160;"); // Inkscape does not recognize &nbsp;
 
   if (c == '"')
-    return gvputs(job, "&quot;");
+    return gvputs(output, "&quot;");
 
   if (c == '\'')
-    return gvputs(job, "&#39;");
+    return gvputs(output, "&#39;");
 
   if (c == '\n' && flags.raw)
-    return gvputs(job, "&#10;");
+    return gvputs(output, "&#10;");
 
   if (c == '\r' && flags.raw)
-    return gvputs(job, "&#13;");
+    return gvputs(output, "&#13;");
 
   unsigned char uc = (unsigned char)c;
   if (uc > 0x7f && flags.utf8) {
@@ -205,20 +200,21 @@ static int xml_core(char previous, const char **current, xml_flags_t flags,
     // note how many extra characters we consumed
     *current += length - 1;
 
-    return gvputs(job, buffer);
+    return gvputs(output, buffer);
   }
 
   // otherwise, output the character as-is
   char buffer[2] = {c, '\0'};
-  return gvputs(job, buffer);
+  return gvputs(output, buffer);
 }
 
-static int my_xml_escape(const char *s, xml_flags_t flags, GVJ_t *job) {
+static int my_xml_escape(const char *s, xml_flags_t flags,
+                         output_string *output) {
   char previous = '\0';
   int rc = 0;
   while (*s != '\0') {
     char p = *s;
-    rc = xml_core(previous, &s, flags, job);
+    rc = xml_core(previous, &s, flags, output);
     if (rc < 0)
       return rc;
     previous = p;
@@ -226,27 +222,26 @@ static int my_xml_escape(const char *s, xml_flags_t flags, GVJ_t *job) {
   return rc;
 }
 
-int gvputs_xml(GVJ_t *job, const char *s) {
+int gvputs_xml(output_string *output, const char *s) {
   const xml_flags_t flags = {.dash = 1, .nbsp = 1};
-  return my_xml_escape(s, flags, job);
+  return my_xml_escape(s, flags, output);
 }
 
-int gvputs_xml_with_flags(GVJ_t *job, const char *s, xml_flags_t flags) {
-  return my_xml_escape(s, flags, job);
+int gvputs_xml_with_flags(output_string *output, const char *s,
+                          xml_flags_t flags) {
+  return my_xml_escape(s, flags, output);
 }
 
-int gvputc(GVJ_t *job, int c) {
+int gvputc(output_string *output, int c) {
   const char cc = (char)c;
 
-  output_string output = job2output_string(job);
-  if (out_put(&output, &cc, 1) != 1) {
+  if (out_put(output, &cc, 1) != 1) {
     return EOF;
   }
-  output_string2job(job, &output);
   return c;
 }
 
-void gvprintf(GVJ_t *job, const char *format, ...) {
+void gvprintf(output_string *output, const char *format, ...) {
   agxbuf buf = {0};
   va_list argp;
 
@@ -259,9 +254,7 @@ void gvprintf(GVJ_t *job, const char *format, ...) {
   }
   va_end(argp);
 
-  output_string output = job2output_string(job);
-  out_put(&output, agxbuse(&buf), (size_t)len);
-  output_string2job(job, &output);
+  out_put(output, agxbuse(&buf), (size_t)len);
 
   agxbfree(&buf);
 }
@@ -332,12 +325,10 @@ static size_t gv_trim_zeros(const char *buf) {
   return strlen(buf);
 }
 
-void gvprintdouble(GVJ_t *job, double num) {
-  output_string output = job2output_string(job);
+void gvprintdouble(output_string *output, double num) {
   // Prevents values like -0
   if (num > -0.005 && num < 0.005) {
-    out_put(&output, "0", 1);
-    output_string2job(job, &output);
+    out_put(output, "0", 1);
     return;
   }
   char buf[50];
@@ -345,6 +336,5 @@ void gvprintdouble(GVJ_t *job, double num) {
   snprintf(buf, 50, "%.02f", num);
   size_t len = gv_trim_zeros(buf);
 
-  out_put(&output, buf, len);
-  output_string2job(job, &output);
+  out_put(output, buf, len);
 }
