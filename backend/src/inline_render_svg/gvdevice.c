@@ -33,7 +33,7 @@
 #include <gvcint.h>
 #include <gvcproc.h>
 #include <utils.h>
-#include <gvio.h>
+#include "gvio_svg.h"
 #include <util/agxbuf.h>
 #include <util/exit.h>
 #include <util/startswith.h>
@@ -43,7 +43,7 @@
 #include "gvcext.h"
 #include "unreachable.h"
 
-size_t gvwrite(GVJ_t *job, const char *s, size_t len) {
+static size_t gvwrite(GVJ_t *job, const char *s, size_t len) {
   output_string output;
   output.data_allocated = job->output_data_allocated;
   output.data_position = job->output_data_position;
@@ -245,18 +245,6 @@ int gvputs_xml_with_flags(GVJ_t *job, const char *s, xml_flags_t flags) {
   return my_xml_escape(s, flags, job);
 }
 
-void gvputs_nonascii(GVJ_t *job, const char *s) {
-  for (; *s != '\0'; ++s) {
-    if (*s == '\\') {
-      gvputs(job, "\\\\");
-    } else if (isascii((int)*s)) {
-      gvputc(job, *s);
-    } else {
-      gvprintf(job, "%03o", (unsigned)*s);
-    }
-  }
-}
-
 int gvputc(GVJ_t *job, int c) {
   const char cc = (char)c;
 
@@ -362,26 +350,4 @@ void gvprintdouble(GVJ_t *job, double num) {
   size_t len = gv_trim_zeros(buf);
 
   gvwrite(job, buf, len);
-}
-
-void gvprintpointf(GVJ_t *job, pointf p) {
-  agxbuf xb = {0};
-
-  gvprintnum(&xb, p.x);
-  const char *buf = agxbuse(&xb);
-  gvwrite(job, buf, strlen(buf));
-  gvwrite(job, " ", 1);
-  gvprintnum(&xb, p.y);
-  buf = agxbuse(&xb);
-  gvwrite(job, buf, strlen(buf));
-  agxbfree(&xb);
-}
-
-void gvprintpointflist(GVJ_t *job, pointf *p, size_t n) {
-  const char *separator = "";
-  for (size_t i = 0; i < n; ++i) {
-    gvputs(job, separator);
-    gvprintpointf(job, p[i]);
-    separator = " ";
-  }
 }

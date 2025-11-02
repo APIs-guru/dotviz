@@ -34,7 +34,7 @@
 #include <gvplugin_render.h>
 #include <utils.h>
 #include <gvplugin_device.h>
-#include <gvio.h>
+#include "gvio_svg.h"
 #include <gvcint.h>
 #include <util/agxbuf.h>
 #include <util/strcasecmp.h>
