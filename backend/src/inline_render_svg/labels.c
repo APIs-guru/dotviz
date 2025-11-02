@@ -17,6 +17,7 @@
 #include <stddef.h>
 #include <util/agxbuf.h>
 #include <util/alloc.h>
+#include "core_svg.h"
 
 static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash);
 
@@ -207,7 +208,6 @@ void free_label(textlabel_t *p) {
   }
 }
 
-extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
 void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
   obj_state_t *obj = job->obj;
   pointf p;

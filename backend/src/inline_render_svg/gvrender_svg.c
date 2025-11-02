@@ -63,32 +63,6 @@ pointf gvrender_ptf(GVJ_t *job, pointf p) {
   return rv;
 }
 
-/* transform an array of n points */
-/*  *AF and *af must be preallocated */
-/*  *AF can be the same as *af for inplace transforms */
-pointf *gvrender_ptf_A(GVJ_t *job, pointf *af, pointf *AF, size_t n) {
-  double t;
-  pointf translation, scale;
-
-  translation = job->translation;
-  scale.x = job->zoom * job->devscale.x;
-  scale.y = job->zoom * job->devscale.y;
-
-  if (job->rotation) {
-    for (size_t i = 0; i < n; i++) {
-      t = -(af[i].y + translation.y) * scale.x;
-      AF[i].y = (af[i].x + translation.x) * scale.y;
-      AF[i].x = t;
-    }
-  } else {
-    for (size_t i = 0; i < n; i++) {
-      AF[i].x = (af[i].x + translation.x) * scale.x;
-      AF[i].y = (af[i].y + translation.y) * scale.y;
-    }
-  }
-  return AF;
-}
-
 static int gvrender_comparestr(const void *s1, const void *s2) {
   return strcasecmp(s1, *(char *const *)s2);
 }

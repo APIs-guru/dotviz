@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <util/startswith.h>
 #include <util/streq.h>
+#include "core_svg.h"
 
 extern Agsym_t *E_dir, *E_penwidth, *E_arrowsz;
 
@@ -646,7 +647,6 @@ static pointf arrow_type_normal0(pointf p, pointf u, double penwidth,
   return q;
 }
 
-extern void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
 static pointf arrow_type_normal(GVJ_t *job, pointf p, pointf u,
                                 double arrowsize, double penwidth,
                                 uint32_t flag) {
@@ -836,7 +836,6 @@ static pointf arrow_type_crow(GVJ_t *job, pointf p, pointf u, double arrowsize,
   return q;
 }
 
-extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
 static pointf arrow_type_gap(GVJ_t *job, pointf p, pointf u, double arrowsize,
                              double penwidth, uint32_t flag) {
   (void)arrowsize;
@@ -1035,7 +1034,6 @@ static pointf arrow_type_diamond(GVJ_t *job, pointf p, pointf u,
   return q;
 }
 
-extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
 static pointf arrow_type_dot(GVJ_t *job, pointf p, pointf u, double arrowsize,
                              double penwidth, uint32_t flag) {
   (void)arrowsize;
@@ -1080,7 +1078,6 @@ static pointf arrow_type_dot(GVJ_t *job, pointf p, pointf u, double arrowsize,
  * http://digerati-illuminatus.blogspot.com.au/2008/05/approximating-semicircle-with-cubic.html
  * for details.
  */
-extern void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 static pointf arrow_type_curve(GVJ_t *job, pointf p, pointf u, double arrowsize,
                                double penwidth, uint32_t flag) {
   (void)arrowsize;

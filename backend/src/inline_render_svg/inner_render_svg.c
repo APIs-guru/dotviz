@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "core_svg.h"
 
 extern bool Y_invert;
 
@@ -311,7 +312,6 @@ extern gvplugin_available_t svg_render_available;
 extern gvdevice_features_t my_device_features_svg;
 extern gvrender_features_t my_render_features_svg;
 
-extern void svg_begin_job(GVJ_t *job);
 output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* page size on Linux, Mac OS X and Windows */
   const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;

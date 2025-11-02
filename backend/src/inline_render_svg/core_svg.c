@@ -45,6 +45,32 @@
 #include "gvio_svg.h"
 #include "../output_string.h"
 
+/* transform an array of n points */
+/*  *AF and *af must be preallocated */
+/*  *AF can be the same as *af for inplace transforms */
+pointf *svg_ptf_A(GVJ_t *job, pointf *af, pointf *AF, size_t n) {
+  double t;
+  pointf translation, scale;
+
+  translation = job->translation;
+  scale.x = job->zoom * job->devscale.x;
+  scale.y = job->zoom * job->devscale.y;
+
+  if (job->rotation) {
+    for (size_t i = 0; i < n; i++) {
+      t = -(af[i].y + translation.y) * scale.x;
+      AF[i].y = (af[i].x + translation.x) * scale.y;
+      AF[i].x = t;
+    }
+  } else {
+    for (size_t i = 0; i < n; i++) {
+      AF[i].x = (af[i].x + translation.x) * scale.x;
+      AF[i].y = (af[i].y + translation.y) * scale.y;
+    }
+  }
+  return AF;
+}
+
 #define LOCALNAMEPREFIX '%'
 
 /* SVG dash array */
@@ -657,7 +683,7 @@ void svg_ellipse(GVJ_t *job, pointf *pf, int filled) {
   };
 
   if (!(job->flags & GVRENDER_DOES_TRANSFORM))
-    gvrender_ptf_A(job, A, A, 2);
+    svg_ptf_A(job, A, A, 2);
 
   int gid = 0;
 
@@ -712,7 +738,7 @@ void svg_bezier(GVJ_t *job, pointf *af, size_t n, int filled) {
       svg_bezier_impl(&output, obj, af, n, filled);
     else {
       pointf *AF = gv_calloc(n, sizeof(pointf));
-      gvrender_ptf_A(job, af, AF, n);
+      svg_ptf_A(job, af, AF, n);
       svg_bezier_impl(&output, obj, AF, n, filled);
       free(AF);
     }
@@ -762,7 +788,7 @@ void svg_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
       svg_polygon_impl(&output, obj, af, n, filled);
     else {
       pointf *AF = gv_calloc(n, sizeof(pointf));
-      gvrender_ptf_A(job, af, AF, n);
+      svg_ptf_A(job, af, AF, n);
       svg_polygon_impl(&output, obj, AF, n, filled);
       free(AF);
     }
@@ -811,7 +837,7 @@ void svg_polyline(GVJ_t *job, pointf *af, size_t n) {
       svg_polyline_impl(&output, obj, af, n);
     else {
       pointf *AF = gv_calloc(n, sizeof(pointf));
-      gvrender_ptf_A(job, af, AF, n);
+      svg_ptf_A(job, af, AF, n);
       svg_polyline_impl(&output, obj, AF, n);
       free(AF);
     }

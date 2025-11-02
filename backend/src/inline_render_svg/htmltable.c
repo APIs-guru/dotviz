@@ -52,6 +52,7 @@
 
 #include "render_svg.h"
 #include <htmltable.h>
+#include "core_svg.h"
 // clang-format on
 
 #define DEFAULT_BORDER 1
@@ -112,7 +113,6 @@ static void popFontInfo(htmlenv_t *env, textfont_t *savp) {
     env->finfo.size = savp->size;
 }
 
-extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
 static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
                             pointf p, double halfwidth_x, textfont_t finfo,
                             boxf b, int simple) {
@@ -205,7 +205,6 @@ static void emit_html_txt(GVJ_t *job, htmltxt_t *tp, htmlenv_t *env) {
                   tp->box, tp->simple);
 }
 
-extern void svg_box(GVJ_t *job, boxf B, int filled);
 static void doSide(GVJ_t *job, pointf p, double wd, double ht) {
   boxf BF;
 
@@ -243,7 +242,6 @@ static pointf *mkPts(pointf *AF, boxf b, int border) {
  * Also handles thick lines.
  * Assume dp->border > 0
  */
-extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
 static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
   pointf AF[7];
   char *sptr[2];
@@ -370,8 +368,6 @@ static int setFill(GVJ_t *job, char *color, int angle, htmlstyle_t style,
  * FIX: Should we provide a tooltip if none is set, as is done
  * for nodes, edges, etc. ?
  */
-extern void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
-                             char *target, char *id);
 static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
                       htmlmap_data_t *save) {
   obj_state_t *obj = job->obj;
@@ -422,7 +418,6 @@ static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
  * top-down. For ordinary map anchors, this is all done bottom-up, so
  * the geometric map info at the higher level hasn't been emitted yet.
  */
-extern void svg_end_anchor(GVJ_t *job);
 static void endAnchor(GVJ_t *job, htmlmap_data_t *save) {
   obj_state_t *obj = job->obj;
 

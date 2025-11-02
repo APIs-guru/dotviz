@@ -25,6 +25,7 @@
 #include <util/gv_math.h>
 #include <util/streq.h>
 #include <util/unreachable.h>
+#include "core_svg.h"
 // clang-format on
 
 extern const char **Lib;
@@ -512,7 +513,6 @@ static graphviz_polygon_style_t stylenode(GVJ_t *job, node_t *n) {
   return istyle;
 }
 
-extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
 static void Mcircle_hack(GVJ_t *job, node_t *n) {
   double x, y;
   pointf AF[2], p;
@@ -589,7 +589,6 @@ static pointf *alloc_interpolation_points(pointf *AF, size_t sides,
  *
  * Diagonals are weird. Rewrite someday.
  */
-extern void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
 static void diagonals_draw(GVJ_t *job, pointf *AF, size_t sides,
                            graphviz_polygon_style_t style, int filled) {
   pointf *B = alloc_interpolation_points(AF, sides, style, false);
@@ -608,7 +607,6 @@ static void diagonals_draw(GVJ_t *job, pointf *AF, size_t sides,
  *
  * For example, a rounded star looks like a cartoon starfish.
  */
-extern void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 static void rounded_draw(GVJ_t *job, pointf *AF, size_t sides,
                          graphviz_polygon_style_t style, int filled) {
   size_t i = 0;
@@ -2890,11 +2888,6 @@ static port poly_port(node_t *n, char *portname, char *compass) {
 }
 
 static bool multicolor(const char *f) { return strchr(f, ':') != NULL; }
-
-extern void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
-                             char *target, char *id);
-extern void svg_end_anchor(GVJ_t *job);
-extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
 /* generic polygon gencode routine */
 static void poly_gencode(GVJ_t *job, node_t *n) {
   obj_state_t *obj = job->obj;
@@ -3842,7 +3835,6 @@ static void gen_fields(GVJ_t *job, node_t *n, field_t *f) {
   }
 }
 
-extern void svg_box(GVJ_t *job, boxf B, int filled);
 static void record_gencode(GVJ_t *job, node_t *n) {
   obj_state_t *obj = job->obj;
   boxf BF;

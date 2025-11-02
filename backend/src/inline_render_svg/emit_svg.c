@@ -55,6 +55,7 @@
 #include "utils.h"
 #include "xdot.h"
 #include "render_svg.h"
+#include "core_svg.h"
 // clang-format on
 
 extern bool Y_invert;
@@ -338,7 +339,7 @@ static void map_point(GVJ_t *job, pointf pf) {
     obj->url_map_p = p = gv_calloc(obj->url_map_n, sizeof(pointf));
     P2RECT(pf, p, FUZZ, FUZZ);
     if (!(flags & GVRENDER_DOES_TRANSFORM))
-      gvrender_ptf_A(job, p, p, 2);
+      svg_ptf_A(job, p, p, 2);
     if (!(flags & GVRENDER_DOES_MAP_RECTANGLE))
       rect2poly(p);
   }
@@ -527,7 +528,6 @@ static int parseSegs(const char *clrs, colorsegs_t *psegs) {
  *  2 => error with message
  *  3 => warning message
  */
-extern void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
   colorsegs_t segs;
   int rv;
@@ -574,7 +574,6 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
  * boundaries are drawn. 0 => okay 1 => error without message 2 => error with
  * message 3 => warning message
  */
-extern void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
 int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
   colorsegs_t segs;
   int rv;
@@ -641,7 +640,7 @@ void emit_map_rect(GVJ_t *job, boxf b) {
     p[0] = b.LL;
     p[1] = b.UR;
     if (!(flags & GVRENDER_DOES_TRANSFORM))
-      gvrender_ptf_A(job, p, p, 2);
+      svg_ptf_A(job, p, p, 2);
     if (!(flags & GVRENDER_DOES_MAP_RECTANGLE))
       rect2poly(p);
   }
@@ -664,7 +663,7 @@ static void map_label(GVJ_t *job, textlabel_t *lab) {
     obj->url_map_p = p = gv_calloc(obj->url_map_n, sizeof(pointf));
     P2RECT(lab->pos, p, lab->dimen.x / 2., lab->dimen.y / 2.);
     if (!(flags & GVRENDER_DOES_TRANSFORM))
-      gvrender_ptf_A(job, p, p, 2);
+      svg_ptf_A(job, p, p, 2);
     if (!(flags & GVRENDER_DOES_MAP_RECTANGLE))
       rect2poly(p);
   }
@@ -1222,9 +1221,6 @@ static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   return pts;
 }
 
-extern void svg_ellipse(GVJ_t *job, pointf *A, int filled);
-extern void svg_polyline(GVJ_t *job, pointf *A, size_t n);
-extern void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
 static void emit_xdot(GVJ_t *job, xdot *xd) {
   int image_warn = 1;
   int angle;
@@ -1338,7 +1334,6 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
     gvrender_set_style(job, job->gvc->defaultlinestyle);
 }
 
-extern void svg_box(GVJ_t *job, boxf B, int filled);
 static void emit_background(GVJ_t *job, graph_t *g) {
   xdot *xd;
   char *str;
@@ -1508,7 +1503,6 @@ static bool node_in_box(node_t *n, boxf b) { return boxf_overlap(ND_bb(n), b); }
 
 static char *saved_color_scheme;
 
-extern void svg_begin_node(GVJ_t *job);
 static void emit_begin_node(GVJ_t *job, node_t *n) {
   obj_state_t *obj;
   int flags = job->flags;
@@ -1640,7 +1634,7 @@ static void emit_begin_node(GVJ_t *job, node_t *n) {
       p[1].y = coord.y + (ND_ht(n) / 2);
     }
     if (!(flags & GVRENDER_DOES_TRANSFORM))
-      gvrender_ptf_A(job, p, p, nump);
+      svg_ptf_A(job, p, p, nump);
     obj->url_map_p = p;
     obj->url_map_n = nump;
   }
@@ -1649,7 +1643,6 @@ static void emit_begin_node(GVJ_t *job, node_t *n) {
   svg_begin_node(job);
 }
 
-extern void svg_end_node(GVJ_t *job);
 static void emit_end_node(GVJ_t *job) {
   svg_end_node(job);
 
@@ -1661,7 +1654,6 @@ static void emit_end_node(GVJ_t *job) {
   pop_obj_state(job);
 }
 
-extern void svg_comment(GVJ_t *job, char *str);
 static void emit_node(GVJ_t *job, node_t *n) {
   GVC_t *gvc = job->gvc;
   char *s;
@@ -2200,9 +2192,6 @@ static bool edge_in_box(edge_t *e, boxf b) {
   return false;
 }
 
-extern void svg_begin_edge(GVJ_t *job);
-extern void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip,
-                             char *target, char *id);
 static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
   obj_state_t *obj;
   int flags = job->flags;
@@ -2363,7 +2352,7 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
         for (size_t i = 0; i < pbs_size_size(&pbs_n); ++i) {
           nump += pbs_size_get(&pbs_n, i);
         }
-        gvrender_ptf_A(job, points_front(&pbs), points_front(&pbs), nump);
+        svg_ptf_A(job, points_front(&pbs), points_front(&pbs), nump);
       }
       obj->url_bsplinemap_p = points_front(&pbs);
       obj->url_map_shape = MAP_POLYGON;
@@ -2379,7 +2368,6 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
     svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
 }
 
-extern void svg_end_anchor(GVJ_t *job);
 static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
                             int explicit, char *url, char *tooltip,
                             char *target, char *id, splines *spl) {
@@ -2463,7 +2451,6 @@ static void nodeIntersect(GVJ_t *job, pointf p, bool explicit_iurl, char *iurl,
   }
 }
 
-extern void svg_end_edge(GVJ_t *job);
 static void emit_end_edge(GVJ_t *job) {
   obj_state_t *obj = job->obj;
   edge_t *e = obj->u.e;
@@ -2690,7 +2677,6 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
     emit_clusters(job, g, flags);
 }
 
-extern void svg_begin_graph(GVJ_t *job);
 void emit_begin_graph(GVJ_t *job, graph_t *g) {
   obj_state_t *obj;
 
@@ -2704,7 +2690,6 @@ void emit_begin_graph(GVJ_t *job, graph_t *g) {
   svg_begin_graph(job);
 }
 
-extern void svg_end_graph(GVJ_t *job);
 void emit_end_graph(GVJ_t *job) {
   svg_end_graph(job);
   pop_obj_state(job);
@@ -2714,8 +2699,7 @@ void emit_end_graph(GVJ_t *job) {
   (((j)->layerNum > 1) || ((j)->pagesArrayElem.x > 0) ||                       \
    ((j)->pagesArrayElem.x > 0))
 
-extern void svg_begin_page(GVJ_t *job);
-extern void svg_end_page(GVJ_t *job);
+
 void emit_page(GVJ_t *job, graph_t *g) {
   obj_state_t *obj = job->obj;
   int flags = job->flags;
@@ -2760,7 +2744,7 @@ void emit_page(GVJ_t *job, graph_t *g) {
         rect2poly(p);
     }
     if (!(flags & GVRENDER_DOES_TRANSFORM))
-      gvrender_ptf_A(job, p, p, nump);
+      svg_ptf_A(job, p, p, nump);
     obj->url_map_p = p;
     obj->url_map_n = nump;
   }
@@ -2816,7 +2800,6 @@ void emit_once_reset(void) {
   }
 }
 
-extern void svg_begin_cluster(GVJ_t *job);
 static void emit_begin_cluster(GVJ_t *job, Agraph_t *sg) {
   obj_state_t *obj;
 
@@ -2830,7 +2813,6 @@ static void emit_begin_cluster(GVJ_t *job, Agraph_t *sg) {
   svg_begin_cluster(job);
 }
 
-extern void svg_end_cluster(GVJ_t *job);
 static void emit_end_cluster(GVJ_t *job) {
   svg_end_cluster(job);
   pop_obj_state(job);
@@ -3171,9 +3153,7 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   return true;
 }
 
-extern void svg_begin_layer(GVJ_t *job, char *layername, int layerNum,
-                            int numLayers);
-extern void svg_end_layer(GVJ_t *job);
+
 void emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
   char *s;
