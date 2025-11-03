@@ -524,7 +524,7 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
   pts.LL.y += pos.y;
   pts.UR.y += pos.y;
 
-  if (doAnchor && !(job->flags & EMIT_CLUSTERS_LAST))
+  if (doAnchor)
     anchor = initAnchor(job, env, &tbl->data, pts, &saved);
   else
     anchor = 0;
@@ -568,11 +568,6 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
 
   if (anchor)
     endAnchor(job, &saved);
-
-  if (doAnchor && (job->flags & EMIT_CLUSTERS_LAST)) {
-    if (initAnchor(job, env, &tbl->data, pts, &saved))
-      endAnchor(job, &saved);
-  }
 
   if (tbl->font)
     popFontInfo(env, &savef);
@@ -621,7 +616,7 @@ static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {
   pts.LL.y += pos.y;
   pts.UR.y += pos.y;
 
-  if (doAnchor && !(job->flags & EMIT_CLUSTERS_LAST))
+  if (doAnchor)
     inAnchor = initAnchor(job, env, &cp->data, pts, &saved);
   else
     inAnchor = 0;
@@ -652,11 +647,6 @@ static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {
 
   if (inAnchor)
     endAnchor(job, &saved);
-
-  if (doAnchor && (job->flags & EMIT_CLUSTERS_LAST)) {
-    if (initAnchor(job, env, &cp->data, pts, &saved))
-      endAnchor(job, &saved);
-  }
 }
 
 /* Push new obj on stack to be used in common by all

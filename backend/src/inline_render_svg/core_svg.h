@@ -6,7 +6,7 @@
 #include "textspan.h"
 #include <stdbool.h>
 #include <stddef.h>
-pointf *svg_ptf_A(GVJ_t *job, pointf *af, pointf *AF, size_t n);
+
 void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
 void svg_ellipse(GVJ_t *job, pointf *A, int filled);

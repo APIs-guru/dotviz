@@ -41,52 +41,8 @@
 
 #include "geomprocs.h"
 #include "gvcjob.h"
-#include "gvcproc.h"
 #include "gvio_svg.h"
 #include "../output_string.h"
-
-static pointf svg_ptf(GVJ_t *job, pointf p) {
-  pointf rv, translation, scale;
-
-  translation = job->translation;
-  scale.x = job->zoom * job->devscale.x;
-  scale.y = job->zoom * job->devscale.y;
-
-  if (job->rotation) {
-    rv.x = -(p.y + translation.y) * scale.x;
-    rv.y = (p.x + translation.x) * scale.y;
-  } else {
-    rv.x = (p.x + translation.x) * scale.x;
-    rv.y = (p.y + translation.y) * scale.y;
-  }
-  return rv;
-}
-
-/* transform an array of n points */
-/*  *AF and *af must be preallocated */
-/*  *AF can be the same as *af for inplace transforms */
-pointf *svg_ptf_A(GVJ_t *job, pointf *af, pointf *AF, size_t n) {
-  double t;
-  pointf translation, scale;
-
-  translation = job->translation;
-  scale.x = job->zoom * job->devscale.x;
-  scale.y = job->zoom * job->devscale.y;
-
-  if (job->rotation) {
-    for (size_t i = 0; i < n; i++) {
-      t = -(af[i].y + translation.y) * scale.x;
-      AF[i].y = (af[i].x + translation.x) * scale.y;
-      AF[i].x = t;
-    }
-  } else {
-    for (size_t i = 0; i < n; i++) {
-      AF[i].x = (af[i].x + translation.x) * scale.x;
-      AF[i].y = (af[i].y + translation.y) * scale.y;
-    }
-  }
-  return AF;
-}
 
 static imagescale_t get_imagescale(char *s) {
   if (*s == '\0')
@@ -255,12 +211,6 @@ void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
       b.UR.y -= (ph - ih) / 2.0;
       break;
     }
-  }
-
-  /* convert from graph to device coordinates */
-  if (!(job->flags & GVRENDER_DOES_TRANSFORM)) {
-    b.LL = svg_ptf(job, b.LL);
-    b.UR = svg_ptf(job, b.UR);
   }
 
   if (b.LL.x > b.UR.x) {
@@ -650,7 +600,7 @@ void svg_end_anchor(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_textspan(GVJ_t *job, pointf raw_p, textspan_t *span) {
+void svg_textspan(GVJ_t *job, pointf p, textspan_t *span) {
   output_string output = job2output_string(job);
 
   if (!(span->str && span->str[0] &&
@@ -658,12 +608,6 @@ void svg_textspan(GVJ_t *job, pointf raw_p, textspan_t *span) {
          || job->obj->pen != PEN_NONE))) {
     return;
   }
-
-  pointf p;
-  if (job->flags & GVRENDER_DOES_TRANSFORM)
-    p = raw_p;
-  else
-    p = svg_ptf(job, raw_p);
 
   obj_state_t *obj = job->obj;
   PostscriptAlias *pA;
@@ -887,9 +831,6 @@ void svg_ellipse(GVJ_t *job, pointf *pf, int filled) {
       pf[1]                     // corner
   };
 
-  if (!(job->flags & GVRENDER_DOES_TRANSFORM))
-    svg_ptf_A(job, A, A, 2);
-
   int gid = 0;
 
   /* A[] contains 2 points: the center and corner. */
@@ -913,66 +854,30 @@ void svg_ellipse(GVJ_t *job, pointf *pf, int filled) {
   output_string2job(job, &output);
 }
 
-static void svg_bezier_impl(output_string *output, obj_state_t *obj, pointf *A,
-                            size_t n, int filled) {
-  int gid = 0;
-
-  if (filled == GRADIENT) {
-    gid = svg_gradstyle(output, obj, A, n);
-  } else if (filled == RGRADIENT) {
-    gid = svg_rgradstyle(output, obj);
-  }
-  out_puts(output, "<path");
-  if (obj->labeledgealigned) {
-    out_puts(output, " id=\"");
-    gvputs_xml(output, obj->id);
-    out_puts(output, "_p\" ");
-  }
-  svg_grstyle(output, obj, filled, gid);
-  out_puts(output, " d=\"");
-  svg_bzptarray(output, A, n);
-  out_puts(output, "\"/>\n");
-}
-
 void svg_bezier(GVJ_t *job, pointf *af, size_t n, int filled) {
   output_string output = job2output_string(job);
   obj_state_t *obj = job->obj;
 
   if (job->obj->pen != PEN_NONE) {
-    if (job->flags & GVRENDER_DOES_TRANSFORM)
-      svg_bezier_impl(&output, obj, af, n, filled);
-    else {
-      pointf *AF = gv_calloc(n, sizeof(pointf));
-      svg_ptf_A(job, af, AF, n);
-      svg_bezier_impl(&output, obj, AF, n, filled);
-      free(AF);
+    int gid = 0;
+
+    if (filled == GRADIENT) {
+      gid = svg_gradstyle(&output, obj, af, n);
+    } else if (filled == RGRADIENT) {
+      gid = svg_rgradstyle(&output, obj);
     }
+    out_puts(&output, "<path");
+    if (obj->labeledgealigned) {
+      out_puts(&output, " id=\"");
+      gvputs_xml(&output, obj->id);
+      out_puts(&output, "_p\" ");
+    }
+    svg_grstyle(&output, obj, filled, gid);
+    out_puts(&output, " d=\"");
+    svg_bzptarray(&output, af, n);
+    out_puts(&output, "\"/>\n");
   }
   output_string2job(job, &output);
-}
-
-static void svg_polygon_impl(output_string *output, obj_state_t *obj, pointf *A,
-                             size_t n, int filled) {
-  int gid = 0;
-  if (filled == GRADIENT) {
-    gid = svg_gradstyle(output, obj, A, n);
-  } else if (filled == RGRADIENT) {
-    gid = svg_rgradstyle(output, obj);
-  }
-  out_puts(output, "<polygon");
-  svg_grstyle(output, obj, filled, gid);
-  out_puts(output, " points=\"");
-  for (size_t i = 0; i < n; i++) {
-    gvprintdouble(output, A[i].x);
-    out_putc(output, ',');
-    gvprintdouble(output, -A[i].y);
-    out_putc(output, ' ');
-  }
-  /* repeat the first point because Adobe SVG is broken */
-  gvprintdouble(output, A[0].x);
-  out_putc(output, ',');
-  gvprintdouble(output, -A[0].y);
-  out_puts(output, "\"/>\n");
 }
 
 void svg_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
@@ -989,14 +894,27 @@ void svg_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
       save_pencolor = obj->pencolor;
       obj->pencolor = obj->fillcolor;
     }
-    if (job->flags & GVRENDER_DOES_TRANSFORM)
-      svg_polygon_impl(&output, obj, af, n, filled);
-    else {
-      pointf *AF = gv_calloc(n, sizeof(pointf));
-      svg_ptf_A(job, af, AF, n);
-      svg_polygon_impl(&output, obj, AF, n, filled);
-      free(AF);
+    int gid = 0;
+    if (filled == GRADIENT) {
+      gid = svg_gradstyle(&output, obj, af, n);
+    } else if (filled == RGRADIENT) {
+      gid = svg_rgradstyle(&output, obj);
     }
+    out_puts(&output, "<polygon");
+    svg_grstyle(&output, obj, filled, gid);
+    out_puts(&output, " points=\"");
+    for (size_t i = 0; i < n; i++) {
+      gvprintdouble(&output, af[i].x);
+      out_putc(&output, ',');
+      gvprintdouble(&output, -af[i].y);
+      out_putc(&output, ' ');
+    }
+    /* repeat the first point because Adobe SVG is broken */
+    gvprintdouble(&output, af[0].x);
+    out_putc(&output, ',');
+    gvprintdouble(&output, -af[0].y);
+    out_puts(&output, "\"/>\n");
+
     if (noPoly)
       obj->pencolor = save_pencolor;
   }
@@ -1017,35 +935,23 @@ void svg_box(GVJ_t *job, boxf B, int filled) {
   svg_polygon(job, A, 4, filled);
 }
 
-static void svg_polyline_impl(output_string *output, obj_state_t *obj,
-                              pointf *A, size_t n) {
-  out_puts(output, "<polyline");
-  svg_grstyle(output, obj, 0, 0);
-  out_puts(output, " points=\"");
-  for (size_t i = 0; i < n; i++) {
-    gvprintdouble(output, A[i].x);
-    out_putc(output, ',');
-    gvprintdouble(output, -A[i].y);
-    if (i + 1 != n) {
-      out_putc(output, ' ');
-    }
-  }
-  out_puts(output, "\"/>\n");
-}
-
 void svg_polyline(GVJ_t *job, pointf *af, size_t n) {
   output_string output = job2output_string(job);
   obj_state_t *obj = job->obj;
 
   if (obj->pen != PEN_NONE) {
-    if (job->flags & GVRENDER_DOES_TRANSFORM)
-      svg_polyline_impl(&output, obj, af, n);
-    else {
-      pointf *AF = gv_calloc(n, sizeof(pointf));
-      svg_ptf_A(job, af, AF, n);
-      svg_polyline_impl(&output, obj, AF, n);
-      free(AF);
+    out_puts(&output, "<polyline");
+    svg_grstyle(&output, obj, 0, 0);
+    out_puts(&output, " points=\"");
+    for (size_t i = 0; i < n; i++) {
+      gvprintdouble(&output, af[i].x);
+      out_putc(&output, ',');
+      gvprintdouble(&output, -af[i].y);
+      if (i + 1 != n) {
+        out_putc(&output, ' ');
+      }
     }
+    out_puts(&output, "\"/>\n");
   }
 
   output_string2job(job, &output);

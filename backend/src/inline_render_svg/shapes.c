@@ -2902,7 +2902,7 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
   char *fillcolor = NULL;
   char *pencolor = NULL;
 
-  if (doMap && !(job->flags & EMIT_CLUSTERS_LAST))
+  if (doMap)
     svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
 
   poly = ND_shape_info(n);
@@ -3075,8 +3075,6 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
 
   emit_label(job, EMIT_NLABEL, ND_label(n));
   if (doMap) {
-    if (job->flags & EMIT_CLUSTERS_LAST)
-      svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     svg_end_anchor(job);
   }
 }
@@ -3227,7 +3225,7 @@ static void point_gencode(GVJ_t *job, node_t *n) {
   char *color;
   int doMap = obj->url || obj->explicit_tooltip;
 
-  if (doMap && !(job->flags & EMIT_CLUSTERS_LAST))
+  if (doMap)
     svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
 
   poly = ND_shape_info(n);
@@ -3294,8 +3292,6 @@ static void point_gencode(GVJ_t *job, node_t *n) {
   }
 
   if (doMap) {
-    if (job->flags & EMIT_CLUSTERS_LAST)
-      svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     svg_end_anchor(job);
   }
 }
@@ -3850,7 +3846,7 @@ static void record_gencode(GVJ_t *job, node_t *n) {
   BF.UR.x += ND_coord(n).x;
   BF.UR.y += ND_coord(n).y;
 
-  if (doMap && !(job->flags & EMIT_CLUSTERS_LAST))
+  if (doMap)
     svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
   graphviz_polygon_style_t style = stylenode(job, n);
   penColor(job, n);
@@ -3898,8 +3894,6 @@ static void record_gencode(GVJ_t *job, node_t *n) {
   free(clrs[1]);
 
   if (doMap) {
-    if (job->flags & EMIT_CLUSTERS_LAST)
-      svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     svg_end_anchor(job);
   }
 }
@@ -3977,7 +3971,7 @@ static void epsf_gencode(GVJ_t *job, node_t *n) {
   if (!desc)
     return;
 
-  if (doMap && !(job->flags & EMIT_CLUSTERS_LAST))
+  if (doMap)
     svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
   if (desc)
     fprintf(job->output_file, "%.5g %.5g translate newpath user_shape_%d\n",
@@ -3987,8 +3981,6 @@ static void epsf_gencode(GVJ_t *job, node_t *n) {
 
   emit_label(job, EMIT_NLABEL, ND_label(n));
   if (doMap) {
-    if (job->flags & EMIT_CLUSTERS_LAST)
-      svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     svg_end_anchor(job);
   }
 }

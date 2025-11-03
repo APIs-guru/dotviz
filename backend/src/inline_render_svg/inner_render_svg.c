@@ -60,46 +60,19 @@ static void init_job_pagination(GVJ_t *job, graph_t *g) {
   pointf margin = job->margin; // margin for a page of the graph - points
 
   /* determine pagination */
-  if (gvc->graph_sets_pageSize && (job->flags & GVDEVICE_DOES_PAGES)) {
-    /* page was set by user */
 
-    /* determine size of page for image */
-    pageSize.x = gvc->pageSize.x - 2 * margin.x;
-    pageSize.y = gvc->pageSize.y - 2 * margin.y;
+  /* page not set by user, use default from renderer */
+  if (job->render.features) {
+    pageSize.x = job->device.features->default_pagesize.x - 2 * margin.x;
+    pageSize.x = fmax(pageSize.x, 0);
+    pageSize.y = job->device.features->default_pagesize.y - 2 * margin.y;
+    pageSize.y = fmax(pageSize.y, 0);
+  } else
+    pageSize.x = pageSize.y = 0.;
+  job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
 
-    if (pageSize.x < EPSILON)
-      job->pagesArraySize.x = 1;
-    else {
-      job->pagesArraySize.x = (int)(imageSize.x / pageSize.x);
-      if (imageSize.x - job->pagesArraySize.x * pageSize.x > EPSILON)
-        job->pagesArraySize.x++;
-    }
-    if (pageSize.y < EPSILON)
-      job->pagesArraySize.y = 1;
-    else {
-      job->pagesArraySize.y = (int)(imageSize.y / pageSize.y);
-      if (imageSize.y - job->pagesArraySize.y * pageSize.y > EPSILON)
-        job->pagesArraySize.y++;
-    }
-    job->numPages = job->pagesArraySize.x * job->pagesArraySize.y;
-
-    /* find the drawable size in points */
-    imageSize.x = fmin(imageSize.x, pageSize.x);
-    imageSize.y = fmin(imageSize.y, pageSize.y);
-  } else {
-    /* page not set by user, use default from renderer */
-    if (job->render.features) {
-      pageSize.x = job->device.features->default_pagesize.x - 2 * margin.x;
-      pageSize.x = fmax(pageSize.x, 0);
-      pageSize.y = job->device.features->default_pagesize.y - 2 * margin.y;
-      pageSize.y = fmax(pageSize.y, 0);
-    } else
-      pageSize.x = pageSize.y = 0.;
-    job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
-
-    pageSize.x = fmax(pageSize.x, imageSize.x);
-    pageSize.y = fmax(pageSize.y, imageSize.y);
-  }
+  pageSize.x = fmax(pageSize.x, imageSize.x);
+  pageSize.y = fmax(pageSize.y, imageSize.y);
 
   /* initial window size */
   job->width =
