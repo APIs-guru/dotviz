@@ -8,6 +8,7 @@ pub const c = @cImport({
     @cInclude("agrw.h");
     @cInclude("layout_inline.h");
     @cInclude("geom.h");
+    @cInclude("gvusershape_size.h");
 });
 
 extern var Y_invert: bool;
@@ -359,4 +360,12 @@ var g_image_map: vizjs_types.ImageDimensionsMap = undefined;
 export fn gvusershape_size(graph: Agrw_t, name: [*c]u8) c.point {
     const dimensions = g_image_map.map.get(std.mem.span(name)) orelse @panic("no image found");
     return c.my_gvusershape_size(graph, dimensions.height, dimensions.width);
+}
+
+export fn get_dimensions_by_name(name: [*c]u8, dpi: c.pointf) c.point {
+    const dimensions = g_image_map.map.get(std.mem.span(name)) orelse return .{
+        .x = -1,
+        .y = -1,
+    };
+    return c.convert_image_dimensions(dpi, dimensions.height, dimensions.width);
 }

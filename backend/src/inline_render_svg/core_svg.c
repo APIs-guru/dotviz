@@ -126,45 +126,69 @@ static imagepos_t get_imagepos(char *s) {
   return IMAGEPOS_MIDDLE_CENTER;
 }
 
+static void core_loadimage_svg(GVJ_t *job, const char *name, boxf b,
+                               bool filled) {
+  output_string output = job2output_string(job);
+  (void)filled;
+
+  double width = (b.UR.x - b.LL.x);
+  double height = (b.UR.y - b.LL.y);
+  double originx = (b.UR.x + b.LL.x - width) / 2;
+  double originy = (b.UR.y + b.LL.y + height) / 2;
+
+  out_puts(&output, "<image xlink:href=\"");
+  out_puts(&output, name);
+  if (job->rotation) {
+
+    // FIXME - this is messed up >>>
+    gvprintf(&output,
+             "\" width=\"%gpx\" height=\"%gpx\" preserveAspectRatio=\"xMidYMid "
+             "meet\" x=\"%g\" y=\"%g\"",
+             height, width, originx, -originy);
+    gvprintf(&output, " transform=\"rotate(%d %g %g)\"", job->rotation, originx,
+             -originy);
+    // <<<
+  } else {
+    gvprintf(&output,
+             "\" width=\"%gpx\" height=\"%gpx\" preserveAspectRatio=\"xMinYMin "
+             "meet\" x=\"%g\" y=\"%g\"",
+             width, height, originx, -originy);
+  }
+  out_puts(&output, "/>\n");
+  output_string2job(job, &output);
+}
+
+extern point get_dimensions_by_name(const char *name, pointf dpi);
 /* gvrender_usershape:
- * Scale image to fill polygon bounding box according to "imagescale",
+ * Scale image to fill polygon bounding box accordingus to "imagescale",
  * positioned at "imagepos"
  */
 void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
                    char *imagescale, char *imagepos) {
-  gvrender_engine_t *gvre = job->render.engine;
-  usershape_t *us;
-  double iw, ih, pw, ph;
-  double scalex, scaley; /* scale factors */
-  boxf b;                /* target box */
-  point isz;
-  imagepos_t position;
-
   assert(job);
   assert(name);
   assert(name[0]);
 
-  if (!(us = gvusershape_find(name))) {
-    return;
-  }
+  point isz = get_dimensions_by_name(name, job->dpi);
 
-  isz = gvusershape_size_dpi(us, job->dpi);
   if ((isz.x <= 0) && (isz.y <= 0))
     return;
 
   /* compute bb of polygon */
+  boxf b; /* target box */
   b.LL = b.UR = a[0];
   for (size_t i = 1; i < n; i++) {
     expandbp(&b, a[i]);
   }
 
-  pw = b.UR.x - b.LL.x;
-  ph = b.UR.y - b.LL.y;
-  ih = (double)isz.y;
-  iw = (double)isz.x;
+  double pw = b.UR.x - b.LL.x;
+  double ph = b.UR.y - b.LL.y;
+  double ih = (double)isz.y;
+  double iw = (double)isz.x;
 
-  scalex = pw / iw;
-  scaley = ph / ih;
+  /* scale factors */
+  double scalex = pw / iw;
+  double scaley = ph / ih;
 
   switch (get_imagescale(imagescale)) {
   case IMAGESCALE_TRUE:
@@ -193,7 +217,7 @@ void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
   }
 
   /* if image is smaller in any dimension, apply the specified positioning */
-  position = get_imagepos(imagepos);
+  imagepos_t position = get_imagepos(imagepos);
   if (iw < pw) {
     switch (position) {
     case IMAGEPOS_TOP_LEFT:
@@ -249,9 +273,7 @@ void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
     b.LL.y = b.UR.y;
     b.UR.y = d;
   }
-  if (gvre) {
-    gvloadimage(job, us, b, filled, job->render.type);
-  }
+  core_loadimage_svg(job, name, b, filled);
 }
 
 #define LOCALNAMEPREFIX '%'

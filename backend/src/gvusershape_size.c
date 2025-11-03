@@ -2,6 +2,8 @@
 #include "types.h"
 #include <stdio.h>
 
+#include "gvusershape_size.h"
+
 #define DEFAULT_DPI 96
 
 static int svg_units_convert(double n, char *u) {
@@ -23,31 +25,25 @@ static int svg_units_convert(double n, char *u) {
 }
 
 // point my_gvusershape_size(graph_t *g, char *name)
-point my_gvusershape_size(graph_t *g, const char *my_height,
-                          const char *my_width) {
+point convert_image_dimensions(pointf dpi, const char *raw_height,
+                               const char *raw_width) {
   point rv;
-  pointf dpi;
-
-  if ((dpi.y = GD_drawing(g)->dpi) >= 1.0)
-    dpi.x = dpi.y;
-  else
-    dpi.x = dpi.y = DEFAULT_DPI;
 
   double n;
   char u[3];
 
   int w = 0;
   int h = 0;
-  if (sscanf(my_width, "%lf%2s", &n, u) == 2) {
+  if (sscanf(raw_width, "%lf%2s", &n, u) == 2) {
     w = svg_units_convert(n, u);
-  } else if (sscanf(my_width, "%lf", &n) == 1) {
+  } else if (sscanf(raw_width, "%lf", &n) == 1) {
     w = svg_units_convert(n, "pt");
   }
 
-  if (sscanf(my_height, "%lf%2s", &n, u) == 2) {
+  if (sscanf(raw_height, "%lf%2s", &n, u) == 2) {
     h = svg_units_convert(n, u);
 
-  } else if (sscanf(my_height, "%lf", &n) == 1) {
+  } else if (sscanf(raw_height, "%lf", &n) == 1) {
     h = svg_units_convert(n, "pt");
   }
 
@@ -55,4 +51,16 @@ point my_gvusershape_size(graph_t *g, const char *my_height,
   rv.y = (int)(h * POINTS_PER_INCH / dpi.y);
 
   return rv;
+}
+
+point my_gvusershape_size(graph_t *g, const char *raw_height,
+                          const char *raw_width) {
+  pointf dpi;
+
+  if ((dpi.y = GD_drawing(g)->dpi) >= 1.0)
+    dpi.x = dpi.y;
+  else
+    dpi.x = dpi.y = DEFAULT_DPI;
+
+  return convert_image_dimensions(dpi, raw_height, raw_width);
 }
