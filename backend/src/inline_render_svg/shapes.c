@@ -368,7 +368,7 @@ static char *penColor(GVJ_t *job, node_t *n) {
   color = late_nnstring(n, N_color, "");
   if (!color[0])
     color = DEFAULT_COLOR;
-  gvrender_set_pencolor(job, color);
+  svg_set_pencolor(job, color);
   return color;
 }
 
@@ -503,11 +503,11 @@ static graphviz_polygon_style_t stylenode(GVJ_t *job, node_t *n) {
   double penwidth;
 
   if ((pstyle = checkStyle(n, &istyle)))
-    gvrender_set_style(job, pstyle);
+    svg_set_style(job, pstyle);
 
   if (N_penwidth && (s = agxget(n, N_penwidth)) && s[0]) {
     penwidth = late_double(n, N_penwidth, 1.0, 0.0);
-    gvrender_set_penwidth(job, penwidth);
+    svg_set_penwidth(job, penwidth);
   }
 
   return istyle;
@@ -2922,46 +2922,46 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
   char *clrs[2] = {0};
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     pencolor = DEFAULT_ACTIVEPENCOLOR;
-    gvrender_set_pencolor(job, pencolor);
+    svg_set_pencolor(job, pencolor);
     color = DEFAULT_ACTIVEFILLCOLOR;
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
     pencolor = DEFAULT_SELECTEDPENCOLOR;
-    gvrender_set_pencolor(job, pencolor);
+    svg_set_pencolor(job, pencolor);
     color = DEFAULT_SELECTEDFILLCOLOR;
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
     pencolor = DEFAULT_DELETEDPENCOLOR;
-    gvrender_set_pencolor(job, pencolor);
+    svg_set_pencolor(job, pencolor);
     color = DEFAULT_DELETEDFILLCOLOR;
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
     pencolor = DEFAULT_VISITEDPENCOLOR;
-    gvrender_set_pencolor(job, pencolor);
+    svg_set_pencolor(job, pencolor);
     color = DEFAULT_VISITEDFILLCOLOR;
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
     filled = FILL;
   } else {
     if (style.filled) {
       double frac;
       fillcolor = findFill(n);
       if (findStopColor(fillcolor, clrs, &frac)) {
-        gvrender_set_fillcolor(job, clrs[0]);
+        svg_set_fillcolor(job, clrs[0]);
         if (clrs[1])
-          gvrender_set_gradient_vals(job, clrs[1],
-                                     late_int(n, N_gradientangle, 0, 0), frac);
+          svg_set_gradient_vals(job, clrs[1],
+                                late_int(n, N_gradientangle, 0, 0), frac);
         else
-          gvrender_set_gradient_vals(job, DEFAULT_COLOR,
-                                     late_int(n, N_gradientangle, 0, 0), frac);
+          svg_set_gradient_vals(job, DEFAULT_COLOR,
+                                late_int(n, N_gradientangle, 0, 0), frac);
         if (style.radial)
           filled = RGRADIENT;
         else
           filled = GRADIENT;
       } else {
-        gvrender_set_fillcolor(job, fillcolor);
+        svg_set_fillcolor(job, fillcolor);
         filled = FILL;
       }
     } else if (style.striped || style.wedged) {
@@ -2978,7 +2978,7 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
   /* if no boundary but filled, set boundary color to transparent */
   if (peripheries == 0 && filled != 0 && pfilled) {
     peripheries = 1;
-    gvrender_set_pencolor(job, "transparent");
+    svg_set_pencolor(job, "transparent");
   }
 
   /* draw peripheries first */
@@ -3008,9 +3008,9 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
       }
       svg_polygon(job, AF, sides, 0);
     } else if (style.underline) {
-      gvrender_set_pencolor(job, "transparent");
+      svg_set_pencolor(job, "transparent");
       svg_polygon(job, AF, sides, filled);
-      gvrender_set_pencolor(job, pencolor);
+      svg_set_pencolor(job, pencolor);
       svg_polyline(job, AF + 2, 2);
     } else if (SPECIAL_CORNERS(style)) {
       round_corners(job, AF, sides, style, filled);
@@ -3236,36 +3236,36 @@ static void point_gencode(GVJ_t *job, node_t *n) {
   graphviz_polygon_style_t style = {0};
   checkStyle(n, &style);
   if (style.invisible)
-    gvrender_set_style(job, point_style);
+    svg_set_style(job, point_style);
   else
-    gvrender_set_style(job, &point_style[1]);
+    svg_set_style(job, &point_style[1]);
   if (N_penwidth)
-    gvrender_set_penwidth(job, late_double(n, N_penwidth, 1.0, 0.0));
+    svg_set_penwidth(job, late_double(n, N_penwidth, 1.0, 0.0));
 
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     color = DEFAULT_ACTIVEPENCOLOR;
-    gvrender_set_pencolor(job, color);
+    svg_set_pencolor(job, color);
     color = DEFAULT_ACTIVEFILLCOLOR;
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
   } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
     color = DEFAULT_SELECTEDPENCOLOR;
-    gvrender_set_pencolor(job, color);
+    svg_set_pencolor(job, color);
     color = DEFAULT_SELECTEDFILLCOLOR;
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
   } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
     color = DEFAULT_DELETEDPENCOLOR;
-    gvrender_set_pencolor(job, color);
+    svg_set_pencolor(job, color);
     color = DEFAULT_DELETEDFILLCOLOR;
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
   } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
     color = DEFAULT_VISITEDPENCOLOR;
-    gvrender_set_pencolor(job, color);
+    svg_set_pencolor(job, color);
     color = DEFAULT_VISITEDFILLCOLOR;
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
   } else {
     color = findFillDflt(n, "black");
-    gvrender_set_fillcolor(job, color); /* emit fill color */
-    penColor(job, n);                   /* emit pen color */
+    svg_set_fillcolor(job, color); /* emit fill color */
+    penColor(job, n);              /* emit pen color */
   }
   filled = true;
 
@@ -3273,7 +3273,7 @@ static void point_gencode(GVJ_t *job, node_t *n) {
   if (peripheries == 0) {
     peripheries = 1;
     if (color[0])
-      gvrender_set_pencolor(job, color);
+      svg_set_pencolor(job, color);
   }
 
   for (size_t j = 0; j < peripheries; j++) {
@@ -3856,20 +3856,20 @@ static void record_gencode(GVJ_t *job, node_t *n) {
     double frac;
 
     if (findStopColor(fillcolor, clrs, &frac)) {
-      gvrender_set_fillcolor(job, clrs[0]);
+      svg_set_fillcolor(job, clrs[0]);
       if (clrs[1])
-        gvrender_set_gradient_vals(job, clrs[1],
-                                   late_int(n, N_gradientangle, 0, 0), frac);
+        svg_set_gradient_vals(job, clrs[1], late_int(n, N_gradientangle, 0, 0),
+                              frac);
       else
-        gvrender_set_gradient_vals(job, DEFAULT_COLOR,
-                                   late_int(n, N_gradientangle, 0, 0), frac);
+        svg_set_gradient_vals(job, DEFAULT_COLOR,
+                              late_int(n, N_gradientangle, 0, 0), frac);
       if (style.radial)
         filled = RGRADIENT;
       else
         filled = GRADIENT;
     } else {
       filled = FILL;
-      gvrender_set_fillcolor(job, fillcolor);
+      svg_set_fillcolor(job, fillcolor);
     }
   } else
     filled = 0;

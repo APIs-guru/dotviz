@@ -166,7 +166,7 @@ static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
       else
         tf.flags = 0;
 
-      gvrender_set_pencolor(job, tf.color);
+      svg_set_pencolor(job, tf.color);
 
       tl.str = ti->str;
       tl.font = &tf;
@@ -248,17 +248,17 @@ static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
   unsigned short sides;
 
-  gvrender_set_pencolor(job, color);
+  svg_set_pencolor(job, color);
   if (dp->style.dashed || dp->style.dotted) {
     sptr[0] = sptr[1] = NULL;
     if (dp->style.dashed)
       sptr[0] = "dashed";
     else if (dp->style.dotted)
       sptr[0] = "dotted";
-    gvrender_set_style(job, sptr);
+    svg_set_style(job, sptr);
   } else
-    gvrender_set_style(job, job->gvc->defaultlinestyle);
-  gvrender_set_penwidth(job, dp->border);
+    svg_set_style(job, job->gvc->defaultlinestyle);
+  svg_set_penwidth(job, dp->border);
 
   if (dp->style.rounded)
     round_corners(job, mkPts(AF, b, dp->border), 4,
@@ -341,20 +341,20 @@ static int setFill(GVJ_t *job, char *color, int angle, htmlstyle_t style,
   int filled;
   double frac;
   if (findStopColor(color, clrs, &frac)) {
-    gvrender_set_fillcolor(job, clrs[0]);
+    svg_set_fillcolor(job, clrs[0]);
     if (clrs[1])
-      gvrender_set_gradient_vals(job, clrs[1], angle, frac);
+      svg_set_gradient_vals(job, clrs[1], angle, frac);
     else
-      gvrender_set_gradient_vals(job, DEFAULT_COLOR, angle, frac);
+      svg_set_gradient_vals(job, DEFAULT_COLOR, angle, frac);
     if (style.radial)
       filled = RGRADIENT;
     else
       filled = GRADIENT;
   } else {
-    gvrender_set_fillcolor(job, color);
+    svg_set_fillcolor(job, color);
     filled = FILL;
   }
-  gvrender_set_pencolor(job, "transparent");
+  svg_set_pencolor(job, "transparent");
   return filled;
 }
 
@@ -445,8 +445,8 @@ static void emit_html_rules(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env,
 
   if (!color)
     color = DEFAULT_COLOR;
-  gvrender_set_fillcolor(job, color);
-  gvrender_set_pencolor(job, color);
+  svg_set_fillcolor(job, color);
+  svg_set_pencolor(job, color);
 
   pts = cp->data.box;
   pts.LL.x += pos.x;
@@ -556,7 +556,7 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
      * calculations to take into account wider rules.
      */
     cells = tbl->u.n.cells;
-    gvrender_set_penwidth(job, 1.0);
+    svg_set_penwidth(job, 1.0);
     while ((cp = *cells++)) {
       if (cp->hruled || cp->vruled)
         emit_html_rules(job, cp, env, tbl->data.pencolor, *cells);
@@ -745,11 +745,11 @@ void emit_html_label(GVJ_t *job, htmllabel_t *lp, textlabel_t *tp) {
 
     /* set basic graphics context */
     /* Need to override line style set by node. */
-    gvrender_set_style(job, job->gvc->defaultlinestyle);
+    svg_set_style(job, job->gvc->defaultlinestyle);
     if (tbl->data.pencolor)
-      gvrender_set_pencolor(job, tbl->data.pencolor);
+      svg_set_pencolor(job, tbl->data.pencolor);
     else
-      gvrender_set_pencolor(job, DEFAULT_COLOR);
+      svg_set_pencolor(job, DEFAULT_COLOR);
     emit_html_tbl(job, tbl, &env);
   } else {
     emit_html_txt(job, lp->u.txt, &env);

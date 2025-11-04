@@ -34,4 +34,9 @@ void svg_begin_job(GVJ_t *job);
 
 void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
                    char *imagescale, char *imagepos);
+void svg_set_pencolor(GVJ_t *job, char *name);
+void svg_set_fillcolor(GVJ_t *job, char *name);
+void svg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle, double frac);
+void svg_set_style(GVJ_t *job, char **s);
+void svg_set_penwidth(GVJ_t *job, double penwidth);
 #endif

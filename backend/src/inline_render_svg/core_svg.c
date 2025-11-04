@@ -1188,7 +1188,7 @@ extern bool mapbool(const char *s);
 #define BOLD 1
 #define ITALIC 2
 
-static int gvrender_comparestr(const void *s1, const void *s2) {
+static int svg_comparestr(const void *s1, const void *s2) {
   return strcasecmp(s1, *(char *const *)s2);
 }
 
@@ -1199,14 +1199,14 @@ static int gvrender_comparestr(const void *s1, const void *s2) {
  * strcasecmp are both char*.
  */
 extern gvrender_features_t my_render_features_svg;
-static void gvrender_resolve_color(gvrender_features_t *features, char *name,
-                                   gvcolor_t *color) {
+static void svg_resolve_color(gvrender_features_t *features, char *name,
+                              gvcolor_t *color) {
   int rc;
   color->u.string = name;
   color->type = COLOR_STRING;
   if (bsearch(name, my_render_features_svg.knowncolors,
               my_render_features_svg.sz_knowncolors, sizeof(char *),
-              gvrender_comparestr) == NULL) {
+              svg_comparestr) == NULL) {
     /* if name was not found in known_colors */
     rc = colorxlate(name, color, RGBA_BYTE);
     if (rc != COLOR_OK) {
@@ -1223,7 +1223,7 @@ static void gvrender_resolve_color(gvrender_features_t *features, char *name,
   }
 }
 
-void gvrender_set_pencolor(GVJ_t *job, char *name) {
+void svg_set_pencolor(GVJ_t *job, char *name) {
   gvrender_engine_t *gvre = job->render.engine;
   gvcolor_t *color = &(job->obj->pencolor);
   char *cp = NULL;
@@ -1231,7 +1231,7 @@ void gvrender_set_pencolor(GVJ_t *job, char *name) {
   if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
     *cp = '\0';
   if (gvre) {
-    gvrender_resolve_color(job->render.features, name, color);
+    svg_resolve_color(job->render.features, name, color);
     // if (gvre->resolve_color)
     //   gvre->resolve_color(job, color);
   }
@@ -1239,7 +1239,7 @@ void gvrender_set_pencolor(GVJ_t *job, char *name) {
     *cp = ':';
 }
 
-void gvrender_set_fillcolor(GVJ_t *job, char *name) {
+void svg_set_fillcolor(GVJ_t *job, char *name) {
   gvrender_engine_t *gvre = job->render.engine;
   gvcolor_t *color = &(job->obj->fillcolor);
   char *cp = NULL;
@@ -1247,7 +1247,7 @@ void gvrender_set_fillcolor(GVJ_t *job, char *name) {
   if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
     *cp = '\0';
   if (gvre) {
-    gvrender_resolve_color(job->render.features, name, color);
+    svg_resolve_color(job->render.features, name, color);
     // if (gvre->resolve_color)
     //   gvre->resolve_color(job, color);
   }
@@ -1255,13 +1255,13 @@ void gvrender_set_fillcolor(GVJ_t *job, char *name) {
     *cp = ':';
 }
 
-void gvrender_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
-                                double frac) {
+void svg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
+                           double frac) {
   gvrender_engine_t *gvre = job->render.engine;
   gvcolor_t *color = &(job->obj->stopcolor);
 
   if (gvre) {
-    gvrender_resolve_color(job->render.features, stopcolor, color);
+    svg_resolve_color(job->render.features, stopcolor, color);
     // if (gvre->resolve_color)
     //   gvre->resolve_color(job, color);
   }
@@ -1269,7 +1269,7 @@ void gvrender_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
   job->obj->gradient_frac = frac;
 }
 
-void gvrender_set_style(GVJ_t *job, char **s) {
+void svg_set_style(GVJ_t *job, char **s) {
   gvrender_engine_t *gvre = job->render.engine;
   obj_state_t *obj = job->obj;
   char *line, *p;
@@ -1300,14 +1300,13 @@ void gvrender_set_style(GVJ_t *job, char **s) {
         else if (streq(line, "tapered"))
           ;
         else {
-          agwarningf("gvrender_set_style: unsupported style %s - ignoring\n",
-                     line);
+          agwarningf("svg_set_style: unsupported style %s - ignoring\n", line);
         }
       }
   }
 }
 
-void gvrender_set_penwidth(GVJ_t *job, double penwidth) {
+void svg_set_penwidth(GVJ_t *job, double penwidth) {
   gvrender_engine_t *gvre = job->render.engine;
 
   if (gvre) {

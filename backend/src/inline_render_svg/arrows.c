@@ -1201,9 +1201,9 @@ void arrow_gen(GVJ_t *job, emit_state_t emit_state, pointf p, pointf u,
 
   /* Dotted and dashed styles on the arrowhead are ugly (dds) */
   /* linewidth needs to be reset */
-  gvrender_set_style(job, job->gvc->defaultlinestyle);
+  svg_set_style(job, job->gvc->defaultlinestyle);
 
-  gvrender_set_penwidth(job, penwidth);
+  svg_set_penwidth(job, penwidth);
 
   /* generate arrowhead vector */
   u.x -= p.x;

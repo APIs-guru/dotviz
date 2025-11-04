@@ -226,7 +226,7 @@ void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
   if (lp->u.txt.nspans < 1)
     return;
 
-  gvrender_set_pencolor(job, lp->fontcolor);
+  svg_set_pencolor(job, lp->fontcolor);
 
   /* position for first span */
   switch (lp->valign) {

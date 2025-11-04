@@ -527,7 +527,7 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
   const pointf ctr = mid_pointf(pf[0], pf[1]);
   const pointf semi = sub_pointf(pf[1], ctr);
   if (save_penwidth > THIN_LINE)
-    gvrender_set_penwidth(job, THIN_LINE);
+    svg_set_penwidth(job, THIN_LINE);
 
   angle0 = 0;
   for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
@@ -536,7 +536,7 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
       break;
     if (s.t <= 0)
       continue;
-    gvrender_set_fillcolor(job, s.color);
+    svg_set_fillcolor(job, s.color);
 
     if (i + 1 == colorsegs_size(&segs))
       angle1 = 2 * M_PI;
@@ -549,7 +549,7 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
   }
 
   if (save_penwidth > THIN_LINE)
-    gvrender_set_penwidth(job, save_penwidth);
+    svg_set_penwidth(job, save_penwidth);
   colorsegs_free(&segs);
   return rv;
 }
@@ -587,14 +587,14 @@ int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
   pts[1].x = pts[2].x = pts[0].x;
 
   if (save_penwidth > THIN_LINE)
-    gvrender_set_penwidth(job, THIN_LINE);
+    svg_set_penwidth(job, THIN_LINE);
   for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
     const colorseg_t s = colorsegs_get(&segs, i);
     if (s.color == NULL)
       break;
     if (s.t <= 0)
       continue;
-    gvrender_set_fillcolor(job, s.color);
+    svg_set_fillcolor(job, s.color);
     if (i + 1 == colorsegs_size(&segs))
       pts[1].x = pts[2].x = lastx;
     else
@@ -603,7 +603,7 @@ int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
     pts[0].x = pts[3].x = pts[1].x;
   }
   if (save_penwidth > THIN_LINE)
-    gvrender_set_penwidth(job, save_penwidth);
+    svg_set_penwidth(job, save_penwidth);
   colorsegs_free(&segs);
   return rv;
 }
@@ -1231,11 +1231,11 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
       }
       break;
     case xd_fill_color:
-      gvrender_set_fillcolor(job, op->op.u.color);
+      svg_set_fillcolor(job, op->op.u.color);
       filled = FILL;
       break;
     case xd_pen_color:
-      gvrender_set_pencolor(job, op->op.u.color);
+      svg_set_pencolor(job, op->op.u.color);
       filled = FILL;
       break;
     case xd_grad_fill_color:
@@ -1249,8 +1249,8 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
         } else {
           angle = (int)(180 * acos((p->x0 - p->x1) / p->r0) / M_PI);
         }
-        gvrender_set_fillcolor(job, clr0);
-        gvrender_set_gradient_vals(job, clr1, angle, frac);
+        svg_set_fillcolor(job, clr0);
+        svg_set_gradient_vals(job, clr1, angle, frac);
         filled = RGRADIENT;
       } else {
         xdot_linear_grad *p = &op->op.u.grad_color.u.ling;
@@ -1258,8 +1258,8 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
         char *const clr1 = p->stops[1].color;
         const double frac = p->stops[1].frac;
         angle = (int)(180 * atan2(p->y1 - p->y0, p->x1 - p->x0) / M_PI);
-        gvrender_set_fillcolor(job, clr0);
-        gvrender_set_gradient_vals(job, clr1, angle, frac);
+        svg_set_fillcolor(job, clr0);
+        svg_set_gradient_vals(job, clr1, angle, frac);
         filled = GRADIENT;
       }
       break;
@@ -1271,7 +1271,7 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
       break;
     case xd_style:
       styles = parse_style(op->op.u.style);
-      gvrender_set_style(job, styles);
+      svg_set_style(job, styles);
       break;
     case xd_fontchar:
       /* font characteristics already encoded via xdotBB */
@@ -1288,7 +1288,7 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
     op++;
   }
   if (styles)
-    gvrender_set_style(job, job->gvc->defaultlinestyle);
+    svg_set_style(job, job->gvc->defaultlinestyle);
 }
 
 static void emit_background(GVJ_t *job, graph_t *g) {
@@ -1312,15 +1312,15 @@ static void emit_background(GVJ_t *job, graph_t *g) {
     if ((findStopColor(str, clrs, &frac))) {
       int filled;
       graphviz_polygon_style_t istyle = {0};
-      gvrender_set_fillcolor(job, clrs[0]);
-      gvrender_set_pencolor(job, "transparent");
+      svg_set_fillcolor(job, clrs[0]);
+      svg_set_pencolor(job, "transparent");
       checkClusterStyle(g, &istyle);
       if (clrs[1])
-        gvrender_set_gradient_vals(job, clrs[1],
-                                   late_int(g, G_gradientangle, 0, 0), frac);
+        svg_set_gradient_vals(job, clrs[1], late_int(g, G_gradientangle, 0, 0),
+                              frac);
       else
-        gvrender_set_gradient_vals(job, DEFAULT_COLOR,
-                                   late_int(g, G_gradientangle, 0, 0), frac);
+        svg_set_gradient_vals(job, DEFAULT_COLOR,
+                              late_int(g, G_gradientangle, 0, 0), frac);
       if (istyle.radial)
         filled = RGRADIENT;
       else
@@ -1329,8 +1329,8 @@ static void emit_background(GVJ_t *job, graph_t *g) {
       free(clrs[0]);
       free(clrs[1]);
     } else {
-      gvrender_set_fillcolor(job, str);
-      gvrender_set_pencolor(job, "transparent");
+      svg_set_fillcolor(job, str);
+      svg_set_pencolor(job, "transparent");
       svg_box(job, job->clip, FILL); /* filled */
     }
   }
@@ -1596,12 +1596,12 @@ static void emit_attachment(GVJ_t *job, textlabel_t *lp, splines *spl) {
   AF[1] = (pointf){AF[0].x - sz.x, AF[0].y};
   AF[2] = dotneato_closest(spl, lp->pos);
   /* Don't use edge style to draw attachment */
-  gvrender_set_style(job, job->gvc->defaultlinestyle);
+  svg_set_style(job, job->gvc->defaultlinestyle);
   /* Use font color to draw attachment
      - need something unambiguous in case of multicolored parallel edges
      - defaults to black for html-like labels
    */
-  gvrender_set_pencolor(job, lp->fontcolor);
+  svg_set_pencolor(job, lp->fontcolor);
   svg_polyline(job, AF, 3);
 }
 
@@ -1717,7 +1717,7 @@ static int multicolor(GVJ_t *job, edge_t *e, char **styles, const char *colors,
         break;
       if (AEQ0(s.t))
         continue;
-      gvrender_set_pencolor(job, s.color);
+      svg_set_pencolor(job, s.color);
       left -= s.t;
       endcolor = s.color;
       if (first) {
@@ -1746,19 +1746,19 @@ static int multicolor(GVJ_t *job, edge_t *e, char **styles, const char *colors,
      * Use local copy of penwidth to work around reset.
      */
     if (bz.sflag) {
-      gvrender_set_pencolor(job, colorsegs_front(&segs)->color);
-      gvrender_set_fillcolor(job, colorsegs_front(&segs)->color);
+      svg_set_pencolor(job, colorsegs_front(&segs)->color);
+      svg_set_fillcolor(job, colorsegs_front(&segs)->color);
       arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                 bz.sflag);
     }
     if (bz.eflag) {
-      gvrender_set_pencolor(job, endcolor);
-      gvrender_set_fillcolor(job, endcolor);
+      svg_set_pencolor(job, endcolor);
+      svg_set_fillcolor(job, endcolor);
       arrow_gen(job, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
                 penwidth, bz.eflag);
     }
     if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-      gvrender_set_style(job, styles);
+      svg_set_style(job, styles);
   }
   colorsegs_free(&segs);
   return 0;
@@ -1867,9 +1867,9 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
     } else
       fillcolor = late_nnstring(e, E_fillcolor, color);
     if (pencolor != color)
-      gvrender_set_pencolor(job, pencolor);
+      svg_set_pencolor(job, pencolor);
     if (fillcolor != color)
-      gvrender_set_fillcolor(job, fillcolor);
+      svg_set_fillcolor(job, fillcolor);
     color = pencolor;
 
     if (tapered) {
@@ -1877,16 +1877,16 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
         color = DEFAULT_COLOR;
       if (*fillcolor == '\0')
         fillcolor = DEFAULT_COLOR;
-      gvrender_set_pencolor(job, "transparent");
-      gvrender_set_fillcolor(job, color);
+      svg_set_pencolor(job, "transparent");
+      svg_set_fillcolor(job, color);
       bz = ED_spl(e)->list[0];
       stroke_t stp = taper(&bz, taperfun(e), penwidth);
       assert(stp.nvertices <= INT_MAX);
       svg_polygon(job, stp.vertices, stp.nvertices, 1);
       free_stroke(stp);
-      gvrender_set_pencolor(job, color);
+      svg_set_pencolor(job, color);
       if (fillcolor != color)
-        gvrender_set_fillcolor(job, fillcolor);
+        svg_set_fillcolor(job, fillcolor);
       if (bz.sflag) {
         arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                   bz.sflag);
@@ -1944,8 +1944,8 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
           color = DEFAULT_COLOR;
         if (color != lastcolor) {
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            gvrender_set_pencolor(job, color);
-            gvrender_set_fillcolor(job, color);
+            svg_set_pencolor(job, color);
+            svg_set_fillcolor(job, color);
           }
           lastcolor = color;
         }
@@ -1967,8 +1967,8 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
         if (color != tailcolor) {
           color = tailcolor;
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            gvrender_set_pencolor(job, color);
-            gvrender_set_fillcolor(job, color);
+            svg_set_pencolor(job, color);
+            svg_set_fillcolor(job, color);
           }
         }
         arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
@@ -1978,8 +1978,8 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
         if (color != headcolor) {
           color = headcolor;
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            gvrender_set_pencolor(job, color);
-            gvrender_set_fillcolor(job, color);
+            svg_set_pencolor(job, color);
+            svg_set_fillcolor(job, color);
           }
         }
         arrow_gen(job, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
@@ -1995,14 +1995,14 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
     } else {
       if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
         if (color[0]) {
-          gvrender_set_pencolor(job, color);
-          gvrender_set_fillcolor(job, fillcolor);
+          svg_set_pencolor(job, color);
+          svg_set_fillcolor(job, fillcolor);
         } else {
-          gvrender_set_pencolor(job, DEFAULT_COLOR);
+          svg_set_pencolor(job, DEFAULT_COLOR);
           if (fillcolor[0])
-            gvrender_set_fillcolor(job, fillcolor);
+            svg_set_fillcolor(job, fillcolor);
           else
-            gvrender_set_fillcolor(job, DEFAULT_COLOR);
+            svg_set_fillcolor(job, DEFAULT_COLOR);
         }
       }
       for (size_t i = 0; i < ED_spl(e)->size; i++) {
@@ -2017,7 +2017,7 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
                     penwidth, bz.eflag);
         }
         if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-          gvrender_set_style(job, styles);
+          svg_set_style(job, styles);
       }
     }
   }
@@ -2067,11 +2067,11 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
    * is needed below for calculating polygonal image maps
    */
   if (styles && ED_spl(e))
-    gvrender_set_style(job, styles);
+    svg_set_style(job, styles);
 
   if (E_penwidth && (s = agxget(e, E_penwidth)) && s[0]) {
     penwidth = late_double(e, E_penwidth, 1.0, 0.0);
-    gvrender_set_penwidth(job, penwidth);
+    svg_set_penwidth(job, penwidth);
   }
 
   if ((lab = ED_label(e)))
@@ -2371,15 +2371,15 @@ static void emit_cluster_colors(GVJ_t *job, graph_t *g) {
     sg = GD_clust(g)[c];
     emit_cluster_colors(job, sg);
     if (((str = agget(sg, "color")) != 0) && str[0])
-      gvrender_set_pencolor(job, str);
+      svg_set_pencolor(job, str);
     if (((str = agget(sg, "pencolor")) != 0) && str[0])
-      gvrender_set_pencolor(job, str);
+      svg_set_pencolor(job, str);
     if (((str = agget(sg, "bgcolor")) != 0) && str[0])
-      gvrender_set_pencolor(job, str);
+      svg_set_pencolor(job, str);
     if (((str = agget(sg, "fillcolor")) != 0) && str[0])
-      gvrender_set_fillcolor(job, str);
+      svg_set_fillcolor(job, str);
     if (((str = agget(sg, "fontcolor")) != 0) && str[0])
-      gvrender_set_pencolor(job, str);
+      svg_set_pencolor(job, str);
   }
 }
 
@@ -2465,8 +2465,8 @@ void emit_page(GVJ_t *job, graph_t *g) {
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
   setup_page(job);
   svg_begin_page(job);
-  gvrender_set_pencolor(job, DEFAULT_COLOR);
-  gvrender_set_fillcolor(job, DEFAULT_FILL);
+  svg_set_pencolor(job, DEFAULT_COLOR);
+  svg_set_fillcolor(job, DEFAULT_FILL);
   if (obj->url || obj->explicit_tooltip) {
     obj->url_map_p = p;
     obj->url_map_n = nump;
@@ -2569,7 +2569,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     filled = 0;
     graphviz_polygon_style_t istyle = {0};
     if ((style = checkClusterStyle(sg, &istyle))) {
-      gvrender_set_style(job, style);
+      svg_set_style(job, style);
       if (istyle.filled)
         filled = FILL;
     }
@@ -2617,24 +2617,24 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     if (filled != 0) {
       double frac;
       if (findStopColor(fillcolor, clrs, &frac)) {
-        gvrender_set_fillcolor(job, clrs[0]);
+        svg_set_fillcolor(job, clrs[0]);
         if (clrs[1])
-          gvrender_set_gradient_vals(job, clrs[1],
-                                     late_int(sg, G_gradientangle, 0, 0), frac);
+          svg_set_gradient_vals(job, clrs[1],
+                                late_int(sg, G_gradientangle, 0, 0), frac);
         else
-          gvrender_set_gradient_vals(job, DEFAULT_COLOR,
-                                     late_int(sg, G_gradientangle, 0, 0), frac);
+          svg_set_gradient_vals(job, DEFAULT_COLOR,
+                                late_int(sg, G_gradientangle, 0, 0), frac);
         if (istyle.radial)
           filled = RGRADIENT;
         else
           filled = GRADIENT;
       } else
-        gvrender_set_fillcolor(job, fillcolor);
+        svg_set_fillcolor(job, fillcolor);
     }
 
     if (G_penwidth && ((s = ag_xget(sg, G_penwidth)) && s[0])) {
       penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
-      gvrender_set_penwidth(job, penwidth);
+      svg_set_penwidth(job, penwidth);
     }
 
     if (istyle.rounded) {
@@ -2646,9 +2646,9 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
         AF[3].x = AF[0].x;
         AF[3].y = AF[2].y;
         if (doPerim)
-          gvrender_set_pencolor(job, pencolor);
+          svg_set_pencolor(job, pencolor);
         else
-          gvrender_set_pencolor(job, "transparent");
+          svg_set_pencolor(job, "transparent");
         round_corners(job, AF, 4, istyle, filled);
       }
     } else if (istyle.striped) {
@@ -2659,18 +2659,18 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
       AF[3].x = AF[0].x;
       AF[3].y = AF[2].y;
       if (late_int(sg, G_peripheries, 1, 0) == 0)
-        gvrender_set_pencolor(job, "transparent");
+        svg_set_pencolor(job, "transparent");
       else
-        gvrender_set_pencolor(job, pencolor);
+        svg_set_pencolor(job, pencolor);
       if (stripedBox(job, AF, fillcolor, 0) > 1)
         agerr(AGPREV, "in cluster %s\n", agnameof(sg));
       svg_box(job, GD_bb(sg), 0);
     } else {
       if (late_int(sg, G_peripheries, 1, 0)) {
-        gvrender_set_pencolor(job, pencolor);
+        svg_set_pencolor(job, pencolor);
         svg_box(job, GD_bb(sg), filled);
       } else if (filled != 0) {
-        gvrender_set_pencolor(job, "transparent");
+        svg_set_pencolor(job, "transparent");
         svg_box(job, GD_bb(sg), filled);
       }
     }
