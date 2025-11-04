@@ -315,7 +315,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   job->render.id = FORMAT_SVG;
 
-  svg_begin_job(job);
+  jobsvg_begin_job(job);
 
   gvc->active_jobs = job;  /* first job of new list */
   job->next_active = NULL; /* terminate active list */

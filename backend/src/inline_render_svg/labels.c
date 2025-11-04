@@ -226,7 +226,7 @@ void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
   if (lp->u.txt.nspans < 1)
     return;
 
-  svg_set_pencolor(job, lp->fontcolor);
+  jobsvg_set_pencolor(job, lp->fontcolor);
 
   /* position for first span */
   switch (lp->valign) {
@@ -256,7 +256,7 @@ void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
       p.x = lp->pos.x;
       break;
     }
-    svg_textspan(job, p, &lp->u.txt.span[i]);
+    jobsvg_textspan(job, p, &lp->u.txt.span[i]);
 
     /* UL position for next span */
     p.y -= lp->u.txt.span[i].size.y;

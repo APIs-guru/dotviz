@@ -8,36 +8,70 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
-void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
-void svg_ellipse(GVJ_t *job, pointf *A, int filled);
-void svg_polyline(GVJ_t *job, pointf *A, size_t n);
-void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
-void svg_box(GVJ_t *job, boxf B, int filled);
-void svg_begin_node(GVJ_t *job);
-void svg_end_node(GVJ_t *job);
-void svg_comment(GVJ_t *job, char *str);
-void svg_begin_edge(GVJ_t *job);
-void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
-                      char *id);
-void svg_end_anchor(GVJ_t *job);
-void svg_end_edge(GVJ_t *job);
-void svg_begin_graph(GVJ_t *job);
-void svg_end_graph(GVJ_t *job);
-void svg_begin_page(GVJ_t *job);
-void svg_end_page(GVJ_t *job);
-void svg_begin_cluster(GVJ_t *job);
-void svg_end_cluster(GVJ_t *job);
-void svg_begin_layer(GVJ_t *job, char *layername, int layerNum, int numLayers);
-void svg_end_layer(GVJ_t *job);
+void jobsvg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
+void jobsvg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
+void jobsvg_ellipse(GVJ_t *job, pointf *A, int filled);
+void jobsvg_polyline(GVJ_t *job, pointf *A, size_t n);
+void jobsvg_textspan(GVJ_t *job, pointf p, textspan_t *span);
+void jobsvg_box(GVJ_t *job, boxf B, int filled);
+void jobsvg_begin_node(GVJ_t *job);
+void jobsvg_end_node(GVJ_t *job);
+void jobsvg_comment(GVJ_t *job, char *str);
+void jobsvg_begin_edge(GVJ_t *job);
+void jobsvg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
+                         char *id);
+void jobsvg_end_anchor(GVJ_t *job);
+void jobsvg_end_edge(GVJ_t *job);
+void jobsvg_begin_graph(GVJ_t *job);
+void jobsvg_end_graph(GVJ_t *job);
+void jobsvg_begin_page(GVJ_t *job);
+void jobsvg_end_page(GVJ_t *job);
+void jobsvg_begin_cluster(GVJ_t *job);
+void jobsvg_end_cluster(GVJ_t *job);
+void jobsvg_begin_layer(GVJ_t *job, char *layername, int layerNum,
+                        int numLayers);
+void jobsvg_end_layer(GVJ_t *job);
 
-void svg_begin_job(GVJ_t *job);
+void jobsvg_begin_job(GVJ_t *job);
 
-void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
-                   char *imagescale, char *imagepos);
-void svg_set_pencolor(GVJ_t *job, char *name);
-void svg_set_fillcolor(GVJ_t *job, char *name);
-void svg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle, double frac);
-void svg_set_style(GVJ_t *job, char **s);
+void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
+                      char *imagescale, char *imagepos);
+void jobsvg_set_pencolor(GVJ_t *job, char *name);
+void jobsvg_set_fillcolor(GVJ_t *job, char *name);
+void jobsvg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
+                              double frac);
+void jobsvg_set_style(GVJ_t *job, char **s);
+
+// void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
+// void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
+// void svg_ellipse(GVJ_t *job, pointf *A, int filled);
+// void svg_polyline(GVJ_t *job, pointf *A, size_t n);
+// void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
+// void svg_box(GVJ_t *job, boxf B, int filled);
+// void svg_begin_node(GVJ_t *job);
+// void svg_end_node(GVJ_t *job);
+// void svg_comment(GVJ_t *job, char *str);
+// void svg_begin_edge(GVJ_t *job);
+// void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
+//                       char *id);
+// void svg_end_anchor(GVJ_t *job);
+// void svg_end_edge(GVJ_t *job);
+// void svg_begin_graph(GVJ_t *job);
+// void svg_end_graph(GVJ_t *job);
+// void svg_begin_page(GVJ_t *job);
+// void svg_end_page(GVJ_t *job);
+// void svg_begin_cluster(GVJ_t *job);
+// void svg_end_cluster(GVJ_t *job);
+// void svg_begin_layer(GVJ_t *job, char *layername, int layerNum, int
+// numLayers); void svg_end_layer(GVJ_t *job);
+
+// void svg_begin_job(GVJ_t *job);
+
+// void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
+//                    char *imagescale, char *imagepos);
+// void svg_set_pencolor(GVJ_t *job, char *name);
+// void svg_set_fillcolor(GVJ_t *job, char *name);
+// void svg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle, double
+// frac); void svg_set_style(GVJ_t *job, char **s);
 void svg_set_penwidth(obj_state_t *obj, double penwidth);
 #endif

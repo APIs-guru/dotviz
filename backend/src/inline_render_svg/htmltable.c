@@ -166,7 +166,7 @@ static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
       else
         tf.flags = 0;
 
-      svg_set_pencolor(job, tf.color);
+      jobsvg_set_pencolor(job, tf.color);
 
       tl.str = ti->str;
       tl.font = &tf;
@@ -182,7 +182,7 @@ static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
       tl.just = 'l';
 
       p_.x = p.x;
-      svg_textspan(job, p_, &tl);
+      jobsvg_textspan(job, p_, &tl);
       p.x += ti->size.x;
       ti++;
     }
@@ -211,7 +211,7 @@ static void doSide(GVJ_t *job, pointf p, double wd, double ht) {
   BF.LL = p;
   BF.UR.x = p.x + wd;
   BF.UR.y = p.y + ht;
-  svg_box(job, BF, 1);
+  jobsvg_box(job, BF, 1);
 }
 
 /* Convert boxf into four corner points
@@ -249,16 +249,16 @@ static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
   unsigned short sides;
 
-  svg_set_pencolor(job, color);
+  jobsvg_set_pencolor(job, color);
   if (dp->style.dashed || dp->style.dotted) {
     sptr[0] = sptr[1] = NULL;
     if (dp->style.dashed)
       sptr[0] = "dashed";
     else if (dp->style.dotted)
       sptr[0] = "dotted";
-    svg_set_style(job, sptr);
+    jobsvg_set_style(job, sptr);
   } else
-    svg_set_style(job, job->gvc->defaultlinestyle);
+    jobsvg_set_style(job, job->gvc->defaultlinestyle);
   svg_set_penwidth(obj, dp->border);
 
   if (dp->style.rounded)
@@ -268,56 +268,56 @@ static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
     mkPts(AF + 1, b, dp->border); /* AF[1-4] has LL=SW,SE,UR=NE,NW */
     switch (sides) {
     case BORDER_BOTTOM:
-      svg_polyline(job, AF + 1, 2);
+      jobsvg_polyline(job, AF + 1, 2);
       break;
     case BORDER_RIGHT:
-      svg_polyline(job, AF + 2, 2);
+      jobsvg_polyline(job, AF + 2, 2);
       break;
     case BORDER_TOP:
-      svg_polyline(job, AF + 3, 2);
+      jobsvg_polyline(job, AF + 3, 2);
       break;
     case BORDER_LEFT:
       AF[0] = AF[4];
-      svg_polyline(job, AF, 2);
+      jobsvg_polyline(job, AF, 2);
       break;
     case BORDER_BOTTOM | BORDER_RIGHT:
-      svg_polyline(job, AF + 1, 3);
+      jobsvg_polyline(job, AF + 1, 3);
       break;
     case BORDER_RIGHT | BORDER_TOP:
-      svg_polyline(job, AF + 2, 3);
+      jobsvg_polyline(job, AF + 2, 3);
       break;
     case BORDER_TOP | BORDER_LEFT:
       AF[5] = AF[1];
-      svg_polyline(job, AF + 3, 3);
+      jobsvg_polyline(job, AF + 3, 3);
       break;
     case BORDER_LEFT | BORDER_BOTTOM:
       AF[0] = AF[4];
-      svg_polyline(job, AF, 3);
+      jobsvg_polyline(job, AF, 3);
       break;
     case BORDER_BOTTOM | BORDER_RIGHT | BORDER_TOP:
-      svg_polyline(job, AF + 1, 4);
+      jobsvg_polyline(job, AF + 1, 4);
       break;
     case BORDER_RIGHT | BORDER_TOP | BORDER_LEFT:
       AF[5] = AF[1];
-      svg_polyline(job, AF + 2, 4);
+      jobsvg_polyline(job, AF + 2, 4);
       break;
     case BORDER_TOP | BORDER_LEFT | BORDER_BOTTOM:
       AF[5] = AF[1];
       AF[6] = AF[2];
-      svg_polyline(job, AF + 3, 4);
+      jobsvg_polyline(job, AF + 3, 4);
       break;
     case BORDER_LEFT | BORDER_BOTTOM | BORDER_RIGHT:
       AF[0] = AF[4];
-      svg_polyline(job, AF, 4);
+      jobsvg_polyline(job, AF, 4);
       break;
     case BORDER_TOP | BORDER_BOTTOM:
-      svg_polyline(job, AF + 1, 2);
-      svg_polyline(job, AF + 3, 2);
+      jobsvg_polyline(job, AF + 1, 2);
+      jobsvg_polyline(job, AF + 3, 2);
       break;
     case BORDER_LEFT | BORDER_RIGHT:
       AF[0] = AF[4];
-      svg_polyline(job, AF, 2);
-      svg_polyline(job, AF + 2, 2);
+      jobsvg_polyline(job, AF, 2);
+      jobsvg_polyline(job, AF + 2, 2);
       break;
     default:
       break;
@@ -330,7 +330,7 @@ static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
       b.UR.x -= delta;
       b.UR.y -= delta;
     }
-    svg_box(job, b, 0);
+    jobsvg_box(job, b, 0);
   }
 }
 
@@ -342,20 +342,20 @@ static int setFill(GVJ_t *job, char *color, int angle, htmlstyle_t style,
   int filled;
   double frac;
   if (findStopColor(color, clrs, &frac)) {
-    svg_set_fillcolor(job, clrs[0]);
+    jobsvg_set_fillcolor(job, clrs[0]);
     if (clrs[1])
-      svg_set_gradient_vals(job, clrs[1], angle, frac);
+      jobsvg_set_gradient_vals(job, clrs[1], angle, frac);
     else
-      svg_set_gradient_vals(job, DEFAULT_COLOR, angle, frac);
+      jobsvg_set_gradient_vals(job, DEFAULT_COLOR, angle, frac);
     if (style.radial)
       filled = RGRADIENT;
     else
       filled = GRADIENT;
   } else {
-    svg_set_fillcolor(job, color);
+    jobsvg_set_fillcolor(job, color);
     filled = FILL;
   }
-  svg_set_pencolor(job, "transparent");
+  jobsvg_set_pencolor(job, "transparent");
   return filled;
 }
 
@@ -397,7 +397,7 @@ static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
   if (changed) {
     if (obj->url || obj->explicit_tooltip) {
       emit_map_rect(job, b);
-      svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+      jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     }
   }
   return changed;
@@ -423,7 +423,7 @@ static void endAnchor(GVJ_t *job, htmlmap_data_t *save) {
   obj_state_t *obj = job->obj;
 
   if (obj->url || obj->explicit_tooltip)
-    svg_end_anchor(job);
+    jobsvg_end_anchor(job);
   RESET(url);
   RESET(tooltip);
   RESET(target);
@@ -446,8 +446,8 @@ static void emit_html_rules(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env,
 
   if (!color)
     color = DEFAULT_COLOR;
-  svg_set_fillcolor(job, color);
-  svg_set_pencolor(job, color);
+  jobsvg_set_fillcolor(job, color);
+  jobsvg_set_pencolor(job, color);
 
   pts = cp->data.box;
   pts.LL.x += pos.x;
@@ -542,7 +542,7 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
         round_corners(job, mkPts(AF, pts, tbl->data.border), 4,
                       (graphviz_polygon_style_t){.rounded = true}, filled);
       } else
-        svg_box(job, pts, filled);
+        jobsvg_box(job, pts, filled);
       free(clrs[0]);
       free(clrs[1]);
     }
@@ -602,7 +602,7 @@ static void emit_html_img(GVJ_t *job, htmlimg_t *cp, htmlenv_t *env) {
     scale = env->imgscale;
   assert(cp->src);
   assert(cp->src[0]);
-  svg_usershape(job, cp->src, A, 4, true, scale, "mc");
+  jobsvg_usershape(job, cp->src, A, 4, true, scale, "mc");
 }
 
 static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {
@@ -632,7 +632,7 @@ static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {
         round_corners(job, mkPts(AF, pts, cp->data.border), 4,
                       (graphviz_polygon_style_t){.rounded = true}, filled);
       } else
-        svg_box(job, pts, filled);
+        jobsvg_box(job, pts, filled);
       free(clrs[0]);
     }
 
@@ -747,11 +747,11 @@ void emit_html_label(GVJ_t *job, htmllabel_t *lp, textlabel_t *tp) {
 
     /* set basic graphics context */
     /* Need to override line style set by node. */
-    svg_set_style(job, job->gvc->defaultlinestyle);
+    jobsvg_set_style(job, job->gvc->defaultlinestyle);
     if (tbl->data.pencolor)
-      svg_set_pencolor(job, tbl->data.pencolor);
+      jobsvg_set_pencolor(job, tbl->data.pencolor);
     else
-      svg_set_pencolor(job, DEFAULT_COLOR);
+      jobsvg_set_pencolor(job, DEFAULT_COLOR);
     emit_html_tbl(job, tbl, &env);
   } else {
     emit_html_txt(job, lp->u.txt, &env);

@@ -533,14 +533,14 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
       break;
     if (s.t <= 0)
       continue;
-    svg_set_fillcolor(job, s.color);
+    jobsvg_set_fillcolor(job, s.color);
 
     if (i + 1 == colorsegs_size(&segs))
       angle1 = 2 * M_PI;
     else
       angle1 = angle0 + 2 * M_PI * s.t;
     pp = ellipticWedge(ctr, semi.x, semi.y, angle0, angle1);
-    svg_bezier(job, pp->ps, pp->pn, 1);
+    jobsvg_bezier(job, pp->ps, pp->pn, 1);
     angle0 = angle1;
     freePath(pp);
   }
@@ -592,12 +592,12 @@ int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
       break;
     if (s.t <= 0)
       continue;
-    svg_set_fillcolor(job, s.color);
+    jobsvg_set_fillcolor(job, s.color);
     if (i + 1 == colorsegs_size(&segs))
       pts[1].x = pts[2].x = lastx;
     else
       pts[1].x = pts[2].x = pts[0].x + xdelta * (s.t);
-    svg_polygon(job, pts, 4, FILL);
+    jobsvg_polygon(job, pts, 4, FILL);
     pts[0].x = pts[3].x = pts[1].x;
   }
   if (save_penwidth > THIN_LINE)
@@ -849,7 +849,7 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
                          .y = op->op.u.ellipse.y - op->op.u.ellipse.h},
                         {.x = op->op.u.ellipse.x + op->op.u.ellipse.w,
                          .y = op->op.u.ellipse.y + op->op.u.ellipse.h}};
-        svg_ellipse(job, pts, op->op.kind == xd_filled_ellipse ? filled : 0);
+        jobsvg_ellipse(job, pts, op->op.kind == xd_filled_ellipse ? filled : 0);
       }
       break;
     case xd_filled_polygon:
@@ -858,8 +858,8 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
         pointf *pts = copyPts(op->op.u.polygon.pts, op->op.u.polygon.cnt);
         assert(op->op.u.polygon.cnt <= INT_MAX &&
                "polygon count exceeds svg_polygon support");
-        svg_polygon(job, pts, op->op.u.polygon.cnt,
-                    op->op.kind == xd_filled_polygon ? filled : 0);
+        jobsvg_polygon(job, pts, op->op.u.polygon.cnt,
+                       op->op.kind == xd_filled_polygon ? filled : 0);
         free(pts);
       }
       break;
@@ -867,30 +867,30 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
     case xd_unfilled_bezier:
       if (boxf_overlap(op->bb, job->clip)) {
         pointf *pts = copyPts(op->op.u.bezier.pts, op->op.u.bezier.cnt);
-        svg_bezier(job, pts, op->op.u.bezier.cnt,
-                   op->op.kind == xd_filled_bezier ? filled : 0);
+        jobsvg_bezier(job, pts, op->op.u.bezier.cnt,
+                      op->op.kind == xd_filled_bezier ? filled : 0);
         free(pts);
       }
       break;
     case xd_polyline:
       if (boxf_overlap(op->bb, job->clip)) {
         pointf *pts = copyPts(op->op.u.polyline.pts, op->op.u.polyline.cnt);
-        svg_polyline(job, pts, op->op.u.polyline.cnt);
+        jobsvg_polyline(job, pts, op->op.u.polyline.cnt);
         free(pts);
       }
       break;
     case xd_text:
       if (boxf_overlap(op->bb, job->clip)) {
         pointf pt = {.x = op->op.u.text.x, .y = op->op.u.text.y};
-        svg_textspan(job, pt, op->span);
+        jobsvg_textspan(job, pt, op->span);
       }
       break;
     case xd_fill_color:
-      svg_set_fillcolor(job, op->op.u.color);
+      jobsvg_set_fillcolor(job, op->op.u.color);
       filled = FILL;
       break;
     case xd_pen_color:
-      svg_set_pencolor(job, op->op.u.color);
+      jobsvg_set_pencolor(job, op->op.u.color);
       filled = FILL;
       break;
     case xd_grad_fill_color:
@@ -904,8 +904,8 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
         } else {
           angle = (int)(180 * acos((p->x0 - p->x1) / p->r0) / M_PI);
         }
-        svg_set_fillcolor(job, clr0);
-        svg_set_gradient_vals(job, clr1, angle, frac);
+        jobsvg_set_fillcolor(job, clr0);
+        jobsvg_set_gradient_vals(job, clr1, angle, frac);
         filled = RGRADIENT;
       } else {
         xdot_linear_grad *p = &op->op.u.grad_color.u.ling;
@@ -913,8 +913,8 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
         char *const clr1 = p->stops[1].color;
         const double frac = p->stops[1].frac;
         angle = (int)(180 * atan2(p->y1 - p->y0, p->x1 - p->x0) / M_PI);
-        svg_set_fillcolor(job, clr0);
-        svg_set_gradient_vals(job, clr1, angle, frac);
+        jobsvg_set_fillcolor(job, clr0);
+        jobsvg_set_gradient_vals(job, clr1, angle, frac);
         filled = GRADIENT;
       }
       break;
@@ -926,7 +926,7 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
       break;
     case xd_style:
       styles = parse_style(op->op.u.style);
-      svg_set_style(job, styles);
+      jobsvg_set_style(job, styles);
       break;
     case xd_fontchar:
       /* font characteristics already encoded via xdotBB */
@@ -943,7 +943,7 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
     op++;
   }
   if (styles)
-    svg_set_style(job, job->gvc->defaultlinestyle);
+    jobsvg_set_style(job, job->gvc->defaultlinestyle);
 }
 
 static void emit_background(GVJ_t *job, graph_t *g) {
@@ -964,26 +964,26 @@ static void emit_background(GVJ_t *job, graph_t *g) {
     if ((findStopColor(str, clrs, &frac))) {
       int filled;
       graphviz_polygon_style_t istyle = {0};
-      svg_set_fillcolor(job, clrs[0]);
-      svg_set_pencolor(job, "transparent");
+      jobsvg_set_fillcolor(job, clrs[0]);
+      jobsvg_set_pencolor(job, "transparent");
       checkClusterStyle(g, &istyle);
       if (clrs[1])
-        svg_set_gradient_vals(job, clrs[1], late_int(g, G_gradientangle, 0, 0),
-                              frac);
+        jobsvg_set_gradient_vals(job, clrs[1],
+                                 late_int(g, G_gradientangle, 0, 0), frac);
       else
-        svg_set_gradient_vals(job, DEFAULT_COLOR,
-                              late_int(g, G_gradientangle, 0, 0), frac);
+        jobsvg_set_gradient_vals(job, DEFAULT_COLOR,
+                                 late_int(g, G_gradientangle, 0, 0), frac);
       if (istyle.radial)
         filled = RGRADIENT;
       else
         filled = GRADIENT;
-      svg_box(job, job->clip, filled);
+      jobsvg_box(job, job->clip, filled);
       free(clrs[0]);
       free(clrs[1]);
     } else {
-      svg_set_fillcolor(job, str);
-      svg_set_pencolor(job, "transparent");
-      svg_box(job, job->clip, FILL); /* filled */
+      jobsvg_set_fillcolor(job, str);
+      jobsvg_set_pencolor(job, "transparent");
+      jobsvg_box(job, job->clip, FILL); /* filled */
     }
   }
 
@@ -1132,11 +1132,11 @@ static void emit_begin_node(GVJ_t *job, node_t *n) {
   }
 
   saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
-  svg_begin_node(job);
+  jobsvg_begin_node(job);
 }
 
 static void emit_end_node(GVJ_t *job) {
-  svg_end_node(job);
+  jobsvg_end_node(job);
 
   char *color_scheme = setColorScheme(saved_color_scheme);
   free(color_scheme);
@@ -1161,9 +1161,9 @@ static void emit_node(GVJ_t *job, node_t *n) {
   {
     ND_state(n) = gvc->common.viewNum; /* mark node as drawn */
 
-    svg_comment(job, agnameof(n));
+    jobsvg_comment(job, agnameof(n));
     s = late_string(n, N_comment, "");
-    svg_comment(job, s);
+    jobsvg_comment(job, s);
 
     style = late_string(n, N_style, "");
     if (style[0]) {
@@ -1232,13 +1232,13 @@ static void emit_attachment(GVJ_t *job, textlabel_t *lp, splines *spl) {
   AF[1] = (pointf){AF[0].x - sz.x, AF[0].y};
   AF[2] = dotneato_closest(spl, lp->pos);
   /* Don't use edge style to draw attachment */
-  svg_set_style(job, job->gvc->defaultlinestyle);
+  jobsvg_set_style(job, job->gvc->defaultlinestyle);
   /* Use font color to draw attachment
      - need something unambiguous in case of multicolored parallel edges
      - defaults to black for html-like labels
    */
-  svg_set_pencolor(job, lp->fontcolor);
-  svg_polyline(job, AF, 3);
+  jobsvg_set_pencolor(job, lp->fontcolor);
+  jobsvg_polyline(job, AF, 3);
 }
 
 /* edges’ colors can be multiple colors separated by ":"
@@ -1353,27 +1353,27 @@ static int multicolor(GVJ_t *job, edge_t *e, char **styles, const char *colors,
         break;
       if (AEQ0(s.t))
         continue;
-      svg_set_pencolor(job, s.color);
+      jobsvg_set_pencolor(job, s.color);
       left -= s.t;
       endcolor = s.color;
       if (first) {
         first = 0;
         splitBSpline(&bz, s.t, &bz_l, &bz_r);
-        svg_bezier(job, bz_l.list, bz_l.size, 0);
+        jobsvg_bezier(job, bz_l.list, bz_l.size, 0);
         free(bz_l.list);
         if (AEQ0(left)) {
           free(bz_r.list);
           break;
         }
       } else if (AEQ0(left)) {
-        svg_bezier(job, bz_r.list, bz_r.size, 0);
+        jobsvg_bezier(job, bz_r.list, bz_r.size, 0);
         free(bz_r.list);
         break;
       } else {
         bz0 = bz_r;
         splitBSpline(&bz0, s.t / (left + s.t), &bz_l, &bz_r);
         free(bz0.list);
-        svg_bezier(job, bz_l.list, bz_l.size, 0);
+        jobsvg_bezier(job, bz_l.list, bz_l.size, 0);
         free(bz_l.list);
       }
     }
@@ -1382,19 +1382,19 @@ static int multicolor(GVJ_t *job, edge_t *e, char **styles, const char *colors,
      * Use local copy of penwidth to work around reset.
      */
     if (bz.sflag) {
-      svg_set_pencolor(job, colorsegs_front(&segs)->color);
-      svg_set_fillcolor(job, colorsegs_front(&segs)->color);
+      jobsvg_set_pencolor(job, colorsegs_front(&segs)->color);
+      jobsvg_set_fillcolor(job, colorsegs_front(&segs)->color);
       arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                 bz.sflag);
     }
     if (bz.eflag) {
-      svg_set_pencolor(job, endcolor);
-      svg_set_fillcolor(job, endcolor);
+      jobsvg_set_pencolor(job, endcolor);
+      jobsvg_set_fillcolor(job, endcolor);
       arrow_gen(job, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
                 penwidth, bz.eflag);
     }
     if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-      svg_set_style(job, styles);
+      jobsvg_set_style(job, styles);
   }
   colorsegs_free(&segs);
   return 0;
@@ -1503,9 +1503,9 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
     } else
       fillcolor = late_nnstring(e, E_fillcolor, color);
     if (pencolor != color)
-      svg_set_pencolor(job, pencolor);
+      jobsvg_set_pencolor(job, pencolor);
     if (fillcolor != color)
-      svg_set_fillcolor(job, fillcolor);
+      jobsvg_set_fillcolor(job, fillcolor);
     color = pencolor;
 
     if (tapered) {
@@ -1513,16 +1513,16 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
         color = DEFAULT_COLOR;
       if (*fillcolor == '\0')
         fillcolor = DEFAULT_COLOR;
-      svg_set_pencolor(job, "transparent");
-      svg_set_fillcolor(job, color);
+      jobsvg_set_pencolor(job, "transparent");
+      jobsvg_set_fillcolor(job, color);
       bz = ED_spl(e)->list[0];
       stroke_t stp = taper(&bz, taperfun(e), penwidth);
       assert(stp.nvertices <= INT_MAX);
-      svg_polygon(job, stp.vertices, stp.nvertices, 1);
+      jobsvg_polygon(job, stp.vertices, stp.nvertices, 1);
       free_stroke(stp);
-      svg_set_pencolor(job, color);
+      jobsvg_set_pencolor(job, color);
       if (fillcolor != color)
-        svg_set_fillcolor(job, fillcolor);
+        jobsvg_set_fillcolor(job, fillcolor);
       if (bz.sflag) {
         arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                   bz.sflag);
@@ -1580,8 +1580,8 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
           color = DEFAULT_COLOR;
         if (color != lastcolor) {
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            svg_set_pencolor(job, color);
-            svg_set_fillcolor(job, color);
+            jobsvg_set_pencolor(job, color);
+            jobsvg_set_fillcolor(job, color);
           }
           lastcolor = color;
         }
@@ -1596,15 +1596,15 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
             tmplist[j].x += offlist[j].x;
             tmplist[j].y += offlist[j].y;
           }
-          svg_bezier(job, tmplist, tmpspl.list[i].size, 0);
+          jobsvg_bezier(job, tmplist, tmpspl.list[i].size, 0);
         }
       }
       if (bz.sflag) {
         if (color != tailcolor) {
           color = tailcolor;
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            svg_set_pencolor(job, color);
-            svg_set_fillcolor(job, color);
+            jobsvg_set_pencolor(job, color);
+            jobsvg_set_fillcolor(job, color);
           }
         }
         arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
@@ -1614,8 +1614,8 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
         if (color != headcolor) {
           color = headcolor;
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            svg_set_pencolor(job, color);
-            svg_set_fillcolor(job, color);
+            jobsvg_set_pencolor(job, color);
+            jobsvg_set_fillcolor(job, color);
           }
         }
         arrow_gen(job, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
@@ -1631,19 +1631,19 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
     } else {
       if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
         if (color[0]) {
-          svg_set_pencolor(job, color);
-          svg_set_fillcolor(job, fillcolor);
+          jobsvg_set_pencolor(job, color);
+          jobsvg_set_fillcolor(job, fillcolor);
         } else {
-          svg_set_pencolor(job, DEFAULT_COLOR);
+          jobsvg_set_pencolor(job, DEFAULT_COLOR);
           if (fillcolor[0])
-            svg_set_fillcolor(job, fillcolor);
+            jobsvg_set_fillcolor(job, fillcolor);
           else
-            svg_set_fillcolor(job, DEFAULT_COLOR);
+            jobsvg_set_fillcolor(job, DEFAULT_COLOR);
         }
       }
       for (size_t i = 0; i < ED_spl(e)->size; i++) {
         bz = ED_spl(e)->list[i];
-        svg_bezier(job, bz.list, bz.size, 0);
+        jobsvg_bezier(job, bz.list, bz.size, 0);
         if (bz.sflag) {
           arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                     bz.sflag);
@@ -1653,7 +1653,7 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
                     penwidth, bz.eflag);
         }
         if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-          svg_set_style(job, styles);
+          jobsvg_set_style(job, styles);
       }
     }
   }
@@ -1702,7 +1702,7 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
    * is needed below for calculating polygonal image maps
    */
   if (styles && ED_spl(e))
-    svg_set_style(job, styles);
+    jobsvg_set_style(job, styles);
 
   if (E_penwidth && (s = agxget(e, E_penwidth)) && s[0]) {
     penwidth = late_double(e, E_penwidth, 1.0, 0.0);
@@ -1808,9 +1808,9 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
   free(dflt_url);
   free(dflt_target);
 
-  svg_begin_edge(job);
+  jobsvg_begin_edge(job);
   if (obj->url || obj->explicit_tooltip)
-    svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+    jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
 }
 
 static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
@@ -1845,13 +1845,13 @@ static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
   job->obj->emit_state = lkind;
   if (url || explicit) {
     map_label(job, lbl);
-    svg_begin_anchor(job, url, tooltip, target, newid);
+    jobsvg_begin_anchor(job, url, tooltip, target, newid);
   }
   emit_label(job, lkind, lbl);
   if (spl)
     emit_attachment(job, lbl, spl);
   if (url || explicit) {
-    svg_end_anchor(job);
+    jobsvg_end_anchor(job);
   }
   agxbfree(&xb);
   job->obj->emit_state = old_emit_state;
@@ -1896,15 +1896,15 @@ static void emit_end_edge(GVJ_t *job) {
   edge_t *e = obj->u.e;
 
   if (obj->url || obj->explicit_tooltip) {
-    svg_end_anchor(job);
+    jobsvg_end_anchor(job);
     if (obj->url_bsplinemap_poly_n) {
       for (size_t nump = obj->url_bsplinemap_n[0], i = 1;
            i < obj->url_bsplinemap_poly_n; i++) {
         /* additional polygon maps around remaining bezier pieces */
         obj->url_map_n = obj->url_bsplinemap_n[i];
         obj->url_map_p = &(obj->url_bsplinemap_p[nump]);
-        svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
-        svg_end_anchor(job);
+        jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+        jobsvg_end_anchor(job);
         nump += obj->url_bsplinemap_n[i];
       }
     }
@@ -1950,7 +1950,7 @@ static void emit_end_edge(GVJ_t *job) {
   emit_edge_label(job, ED_tail_label(e), EMIT_TLABEL, obj->explicit_tailtooltip,
                   obj->tailurl, obj->tailtooltip, obj->tailtarget, obj->id, 0);
 
-  svg_end_edge(job);
+  jobsvg_end_edge(job);
   pop_obj_state(job);
 }
 
@@ -1970,11 +1970,11 @@ static void emit_edge(GVJ_t *job, edge_t *e) {
     else
       agxbput(&edge, "--");
     agxbput(&edge, agnameof(aghead(e)));
-    svg_comment(job, agxbuse(&edge));
+    jobsvg_comment(job, agxbuse(&edge));
     agxbfree(&edge);
 
     s = late_string(e, E_comment, "");
-    svg_comment(job, s);
+    jobsvg_comment(job, s);
 
     style = late_string(e, E_style, "");
     /* We shortcircuit drawing an invisible edge because the arrowhead
@@ -2041,11 +2041,11 @@ void emit_begin_graph(GVJ_t *job, graph_t *g) {
 
   initObjMapData(job, GD_label(g), g);
 
-  svg_begin_graph(job);
+  jobsvg_begin_graph(job);
 }
 
 void emit_end_graph(GVJ_t *job) {
-  svg_end_graph(job);
+  jobsvg_end_graph(job);
   pop_obj_state(job);
 }
 
@@ -2077,9 +2077,9 @@ void emit_page(GVJ_t *job, graph_t *g) {
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
   setup_page(job);
-  svg_begin_page(job);
-  svg_set_pencolor(job, DEFAULT_COLOR);
-  svg_set_fillcolor(job, DEFAULT_FILL);
+  jobsvg_begin_page(job);
+  jobsvg_set_pencolor(job, DEFAULT_COLOR);
+  jobsvg_set_fillcolor(job, DEFAULT_FILL);
   if (obj->url || obj->explicit_tooltip) {
     obj->url_map_p = p;
     obj->url_map_n = nump;
@@ -2095,15 +2095,15 @@ void emit_page(GVJ_t *job, graph_t *g) {
    */
   if (obj->url || obj->explicit_tooltip) {
     emit_map_rect(job, job->clip);
-    svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+    jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
   }
   emit_background(job, g);
   if (GD_label(g))
     emit_label(job, EMIT_GLABEL, GD_label(g));
   if (obj->url || obj->explicit_tooltip)
-    svg_end_anchor(job);
+    jobsvg_end_anchor(job);
   emit_view(job, g, flags);
-  svg_end_page(job);
+  jobsvg_end_page(job);
   if (obj_id_needs_restore) {
     obj->id = saveid;
   }
@@ -2147,11 +2147,11 @@ static void emit_begin_cluster(GVJ_t *job, Agraph_t *sg) {
 
   initObjMapData(job, GD_label(sg), sg);
 
-  svg_begin_cluster(job);
+  jobsvg_begin_cluster(job);
 }
 
 static void emit_end_cluster(GVJ_t *job) {
-  svg_end_cluster(job);
+  jobsvg_end_cluster(job);
   pop_obj_state(job);
 }
 
@@ -2174,12 +2174,12 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     char *previous_color_scheme = setColorScheme(agget(sg, "colorscheme"));
     if (doAnchor) {
       emit_map_rect(job, GD_bb(sg));
-      svg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+      jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     }
     filled = 0;
     graphviz_polygon_style_t istyle = {0};
     if ((style = checkClusterStyle(sg, &istyle))) {
-      svg_set_style(job, style);
+      jobsvg_set_style(job, style);
       if (istyle.filled)
         filled = FILL;
     }
@@ -2227,19 +2227,19 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     if (filled != 0) {
       double frac;
       if (findStopColor(fillcolor, clrs, &frac)) {
-        svg_set_fillcolor(job, clrs[0]);
+        jobsvg_set_fillcolor(job, clrs[0]);
         if (clrs[1])
-          svg_set_gradient_vals(job, clrs[1],
-                                late_int(sg, G_gradientangle, 0, 0), frac);
+          jobsvg_set_gradient_vals(job, clrs[1],
+                                   late_int(sg, G_gradientangle, 0, 0), frac);
         else
-          svg_set_gradient_vals(job, DEFAULT_COLOR,
-                                late_int(sg, G_gradientangle, 0, 0), frac);
+          jobsvg_set_gradient_vals(job, DEFAULT_COLOR,
+                                   late_int(sg, G_gradientangle, 0, 0), frac);
         if (istyle.radial)
           filled = RGRADIENT;
         else
           filled = GRADIENT;
       } else
-        svg_set_fillcolor(job, fillcolor);
+        jobsvg_set_fillcolor(job, fillcolor);
     }
 
     if (G_penwidth && ((s = ag_xget(sg, G_penwidth)) && s[0])) {
@@ -2256,9 +2256,9 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
         AF[3].x = AF[0].x;
         AF[3].y = AF[2].y;
         if (doPerim)
-          svg_set_pencolor(job, pencolor);
+          jobsvg_set_pencolor(job, pencolor);
         else
-          svg_set_pencolor(job, "transparent");
+          jobsvg_set_pencolor(job, "transparent");
         round_corners(job, AF, 4, istyle, filled);
       }
     } else if (istyle.striped) {
@@ -2269,19 +2269,19 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
       AF[3].x = AF[0].x;
       AF[3].y = AF[2].y;
       if (late_int(sg, G_peripheries, 1, 0) == 0)
-        svg_set_pencolor(job, "transparent");
+        jobsvg_set_pencolor(job, "transparent");
       else
-        svg_set_pencolor(job, pencolor);
+        jobsvg_set_pencolor(job, pencolor);
       if (stripedBox(job, AF, fillcolor, 0) > 1)
         agerr(AGPREV, "in cluster %s\n", agnameof(sg));
-      svg_box(job, GD_bb(sg), 0);
+      jobsvg_box(job, GD_bb(sg), 0);
     } else {
       if (late_int(sg, G_peripheries, 1, 0)) {
-        svg_set_pencolor(job, pencolor);
-        svg_box(job, GD_bb(sg), filled);
+        jobsvg_set_pencolor(job, pencolor);
+        jobsvg_box(job, GD_bb(sg), filled);
       } else if (filled != 0) {
-        svg_set_pencolor(job, "transparent");
-        svg_box(job, GD_bb(sg), filled);
+        jobsvg_set_pencolor(job, "transparent");
+        jobsvg_box(job, GD_bb(sg), filled);
       }
     }
 
@@ -2291,7 +2291,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
       emit_label(job, EMIT_CLABEL, lab);
 
     if (doAnchor) {
-      svg_end_anchor(job);
+      jobsvg_end_anchor(job);
     }
 
     emit_end_cluster(job);
@@ -2495,7 +2495,7 @@ void emit_graph(GVJ_t *job, graph_t *g) {
   }
 
   s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
-  svg_comment(job, s);
+  jobsvg_comment(job, s);
 
   job->layerNum = 0;
   emit_begin_graph(job, g);
@@ -2506,8 +2506,8 @@ void emit_graph(GVJ_t *job, graph_t *g) {
   /* iterate layers */
   for (firstlayer(job, &lp); validlayer(job); nextlayer(job, &lp)) {
     if (numPhysicalLayers(job) > 1) {
-      svg_begin_layer(job, job->gvc->layerIDs[job->layerNum], job->layerNum,
-                      job->numLayers);
+      jobsvg_begin_layer(job, job->gvc->layerIDs[job->layerNum], job->layerNum,
+                         job->numLayers);
     }
 
     /* iterate pages */
@@ -2515,7 +2515,7 @@ void emit_graph(GVJ_t *job, graph_t *g) {
       emit_page(job, g);
 
     if (numPhysicalLayers(job) > 1)
-      svg_end_layer(job);
+      jobsvg_end_layer(job);
   }
   emit_end_graph(job);
 }

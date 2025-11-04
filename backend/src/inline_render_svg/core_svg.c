@@ -122,8 +122,8 @@ extern point get_dimensions_by_name(const char *name, pointf dpi);
  * Scale image to fill polygon bounding box accordingus to "imagescale",
  * positioned at "imagepos"
  */
-void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
-                   char *imagescale, char *imagepos) {
+void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
+                      char *imagescale, char *imagepos) {
   assert(job);
   assert(name);
   assert(name[0]);
@@ -368,7 +368,7 @@ static void svg_grstyle(output_string *output, obj_state_t *obj, int filled,
   out_putc(output, '"');
 }
 
-void svg_comment(GVJ_t *job, char *str) {
+void jobsvg_comment(GVJ_t *job, char *str) {
   if (!str || !str[0])
     return;
 
@@ -379,7 +379,7 @@ void svg_comment(GVJ_t *job, char *str) {
   output_string2job(job, &output);
 }
 
-void svg_begin_job(GVJ_t *job) {
+void jobsvg_begin_job(GVJ_t *job) {
   output_string output = job2output_string(job);
 
   char *s;
@@ -404,7 +404,7 @@ void svg_begin_job(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_begin_graph(GVJ_t *job) {
+void jobsvg_begin_graph(GVJ_t *job) {
   output_string output = job2output_string(job);
 
   obj_state_t *obj = job->obj;
@@ -436,13 +436,14 @@ void svg_begin_graph(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_end_graph(GVJ_t *job) {
+void jobsvg_end_graph(GVJ_t *job) {
   output_string output = job2output_string(job);
   out_puts(&output, "</svg>\n");
   output_string2job(job, &output);
 }
 
-void svg_begin_layer(GVJ_t *job, char *layername, int layerNum, int numLayers) {
+void jobsvg_begin_layer(GVJ_t *job, char *layername, int layerNum,
+                        int numLayers) {
   (void)layerNum;
   (void)numLayers;
   output_string output = job2output_string(job);
@@ -454,7 +455,7 @@ void svg_begin_layer(GVJ_t *job, char *layername, int layerNum, int numLayers) {
   output_string2job(job, &output);
 }
 
-void svg_end_layer(GVJ_t *job) {
+void jobsvg_end_layer(GVJ_t *job) {
   output_string output = job2output_string(job);
   out_puts(&output, "</g>\n");
   output_string2job(job, &output);
@@ -464,7 +465,7 @@ void svg_end_layer(GVJ_t *job) {
  * Currently, svg output does not support pages.
  * FIX: If implemented, we must guarantee the id is unique.
  */
-void svg_begin_page(GVJ_t *job) {
+void jobsvg_begin_page(GVJ_t *job) {
   output_string output = job2output_string(job);
 
   obj_state_t *obj = job->obj;
@@ -490,13 +491,13 @@ void svg_begin_page(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_end_page(GVJ_t *job) {
+void jobsvg_end_page(GVJ_t *job) {
   output_string output = job2output_string(job);
   out_puts(&output, "</g>\n");
   output_string2job(job, &output);
 }
 
-void svg_begin_cluster(GVJ_t *job) {
+void jobsvg_begin_cluster(GVJ_t *job) {
   output_string output = job2output_string(job);
 
   obj_state_t *obj = job->obj;
@@ -509,13 +510,13 @@ void svg_begin_cluster(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_end_cluster(GVJ_t *job) {
+void jobsvg_end_cluster(GVJ_t *job) {
   output_string output = job2output_string(job);
   out_puts(&output, "</g>\n");
   output_string2job(job, &output);
 }
 
-void svg_begin_node(GVJ_t *job) {
+void jobsvg_begin_node(GVJ_t *job) {
   output_string output = job2output_string(job);
 
   obj_state_t *obj = job->obj;
@@ -533,13 +534,13 @@ void svg_begin_node(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_end_node(GVJ_t *job) {
+void jobsvg_end_node(GVJ_t *job) {
   output_string output = job2output_string(job);
   out_puts(&output, "</g>\n");
   output_string2job(job, &output);
 }
 
-void svg_begin_edge(GVJ_t *job) {
+void jobsvg_begin_edge(GVJ_t *job) {
   output_string output = job2output_string(job);
 
   obj_state_t *obj = job->obj;
@@ -557,14 +558,14 @@ void svg_begin_edge(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_end_edge(GVJ_t *job) {
+void jobsvg_end_edge(GVJ_t *job) {
   output_string output = job2output_string(job);
   out_puts(&output, "</g>\n");
   output_string2job(job, &output);
 }
 
-void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
-                      char *id) {
+void jobsvg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
+                         char *id) {
   output_string output = job2output_string(job);
   out_puts(&output, "<g");
   if (id) {
@@ -596,14 +597,14 @@ void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
   output_string2job(job, &output);
 }
 
-void svg_end_anchor(GVJ_t *job) {
+void jobsvg_end_anchor(GVJ_t *job) {
   output_string output = job2output_string(job);
   out_puts(&output, "</a>\n"
                     "</g>\n");
   output_string2job(job, &output);
 }
 
-void svg_textspan(GVJ_t *job, pointf p, textspan_t *span) {
+void jobsvg_textspan(GVJ_t *job, pointf p, textspan_t *span) {
   output_string output = job2output_string(job);
 
   if (!(span->str && span->str[0] &&
@@ -821,7 +822,7 @@ static int svg_rgradstyle(output_string *output, obj_state_t *obj) {
   return id;
 }
 
-void svg_ellipse(GVJ_t *job, pointf *pf, int filled) {
+void jobsvg_ellipse(GVJ_t *job, pointf *pf, int filled) {
   output_string output = job2output_string(job);
   obj_state_t *obj = job->obj;
 
@@ -857,7 +858,7 @@ void svg_ellipse(GVJ_t *job, pointf *pf, int filled) {
   output_string2job(job, &output);
 }
 
-void svg_bezier(GVJ_t *job, pointf *af, size_t n, int filled) {
+void jobsvg_bezier(GVJ_t *job, pointf *af, size_t n, int filled) {
   output_string output = job2output_string(job);
   obj_state_t *obj = job->obj;
 
@@ -883,7 +884,7 @@ void svg_bezier(GVJ_t *job, pointf *af, size_t n, int filled) {
   output_string2job(job, &output);
 }
 
-void svg_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
+void jobsvg_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
   output_string output = job2output_string(job);
   obj_state_t *obj = job->obj;
 
@@ -925,7 +926,7 @@ void svg_polygon(GVJ_t *job, pointf *af, size_t n, int filled) {
   output_string2job(job, &output);
 }
 
-void svg_box(GVJ_t *job, boxf B, int filled) {
+void jobsvg_box(GVJ_t *job, boxf B, int filled) {
   pointf A[4];
 
   A[0] = B.LL;
@@ -935,10 +936,10 @@ void svg_box(GVJ_t *job, boxf B, int filled) {
   A[3].x = A[2].x;
   A[3].y = A[0].y;
 
-  svg_polygon(job, A, 4, filled);
+  jobsvg_polygon(job, A, 4, filled);
 }
 
-void svg_polyline(GVJ_t *job, pointf *af, size_t n) {
+void jobsvg_polyline(GVJ_t *job, pointf *af, size_t n) {
   output_string output = job2output_string(job);
   obj_state_t *obj = job->obj;
 
@@ -1112,35 +1113,35 @@ char *svg_knowncolors[] = {"aliceblue",
                            "yellowgreen"};
 
 gvrender_engine_t svg_engine = {
-    svg_begin_job,
+    jobsvg_begin_job,
     0, /* svg_end_job */
-    svg_begin_graph,
-    svg_end_graph,
-    svg_begin_layer,
-    svg_end_layer,
-    svg_begin_page,
-    svg_end_page,
-    svg_begin_cluster,
-    svg_end_cluster,
+    jobsvg_begin_graph,
+    jobsvg_end_graph,
+    jobsvg_begin_layer,
+    jobsvg_end_layer,
+    jobsvg_begin_page,
+    jobsvg_end_page,
+    jobsvg_begin_cluster,
+    jobsvg_end_cluster,
     0, /* svg_begin_nodes */
     0, /* svg_end_nodes */
     0, /* svg_begin_edges */
     0, /* svg_end_edges */
-    svg_begin_node,
-    svg_end_node,
-    svg_begin_edge,
-    svg_end_edge,
-    svg_begin_anchor,
-    svg_end_anchor,
+    jobsvg_begin_node,
+    jobsvg_end_node,
+    jobsvg_begin_edge,
+    jobsvg_end_edge,
+    jobsvg_begin_anchor,
+    jobsvg_end_anchor,
     0, /* svg_begin_anchor */
     0, /* svg_end_anchor */
-    svg_textspan,
+    jobsvg_textspan,
     0, /* svg_resolve_color */
-    svg_ellipse,
-    svg_polygon,
-    svg_bezier,
-    svg_polyline,
-    svg_comment,
+    jobsvg_ellipse,
+    jobsvg_polygon,
+    jobsvg_bezier,
+    jobsvg_polyline,
+    jobsvg_comment,
     0, /* svg_library_shape */
 };
 
@@ -1221,7 +1222,7 @@ static void svg_resolve_color(char *name, gvcolor_t *color) {
   }
 }
 
-void svg_set_pencolor(GVJ_t *job, char *name) {
+void jobsvg_set_pencolor(GVJ_t *job, char *name) {
   gvcolor_t *color = &(job->obj->pencolor);
   char *cp = NULL;
 
@@ -1234,7 +1235,7 @@ void svg_set_pencolor(GVJ_t *job, char *name) {
     *cp = ':';
 }
 
-void svg_set_fillcolor(GVJ_t *job, char *name) {
+void jobsvg_set_fillcolor(GVJ_t *job, char *name) {
   gvcolor_t *color = &(job->obj->fillcolor);
   char *cp = NULL;
 
@@ -1247,8 +1248,8 @@ void svg_set_fillcolor(GVJ_t *job, char *name) {
     *cp = ':';
 }
 
-void svg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
-                           double frac) {
+void jobsvg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
+                              double frac) {
   gvcolor_t *color = &(job->obj->stopcolor);
 
   svg_resolve_color(stopcolor, color);
@@ -1257,7 +1258,7 @@ void svg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
   job->obj->gradient_frac = frac;
 }
 
-void svg_set_style(GVJ_t *job, char **s) {
+void jobsvg_set_style(GVJ_t *job, char **s) {
   obj_state_t *obj = job->obj;
   char *line, *p;
 

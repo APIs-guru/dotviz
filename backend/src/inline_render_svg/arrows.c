@@ -657,11 +657,11 @@ static pointf arrow_type_normal(GVJ_t *job, pointf p, pointf u,
   pointf q = arrow_type_normal0(p, u, penwidth, flag, a);
 
   if (flag & ARR_MOD_LEFT)
-    svg_polygon(job, a, 3, !(flag & ARR_MOD_OPEN));
+    jobsvg_polygon(job, a, 3, !(flag & ARR_MOD_OPEN));
   else if (flag & ARR_MOD_RIGHT)
-    svg_polygon(job, &a[2], 3, !(flag & ARR_MOD_OPEN));
+    jobsvg_polygon(job, &a[2], 3, !(flag & ARR_MOD_OPEN));
   else
-    svg_polygon(job, &a[1], 3, !(flag & ARR_MOD_OPEN));
+    jobsvg_polygon(job, &a[1], 3, !(flag & ARR_MOD_OPEN));
 
   return q;
 }
@@ -827,11 +827,11 @@ static pointf arrow_type_crow(GVJ_t *job, pointf p, pointf u, double arrowsize,
 
   pointf q = arrow_type_crow0(p, u, arrowsize, penwidth, flag, a);
   if (flag & ARR_MOD_LEFT)
-    svg_polygon(job, a, 5, 1);
+    jobsvg_polygon(job, a, 5, 1);
   else if (flag & ARR_MOD_RIGHT)
-    svg_polygon(job, &a[4], 5, 1);
+    jobsvg_polygon(job, &a[4], 5, 1);
   else
-    svg_polygon(job, a, 8, 1);
+    jobsvg_polygon(job, a, 8, 1);
 
   return q;
 }
@@ -848,7 +848,7 @@ static pointf arrow_type_gap(GVJ_t *job, pointf p, pointf u, double arrowsize,
   q.y = p.y + u.y;
   a[0] = p;
   a[1] = q;
-  svg_polyline(job, a, 2);
+  jobsvg_polyline(job, a, 2);
 
   return q;
 }
@@ -903,10 +903,10 @@ static pointf arrow_type_tee(GVJ_t *job, pointf p, pointf u, double arrowsize,
     a[1] = m;
     a[2] = n;
   }
-  svg_polygon(job, a, 4, 1);
+  jobsvg_polygon(job, a, 4, 1);
   a[0] = p;
   a[1] = q;
-  svg_polyline(job, a, 2);
+  jobsvg_polyline(job, a, 2);
 
   // A polyline doesn't extend visually beyond its starting point, so we
   // return the starting point as it is, without taking penwidth into account
@@ -961,10 +961,10 @@ static pointf arrow_type_box(GVJ_t *job, pointf p, pointf u, double arrowsize,
     a[1] = p;
     a[2] = m;
   }
-  svg_polygon(job, a, 4, !(flag & ARR_MOD_OPEN));
+  jobsvg_polygon(job, a, 4, !(flag & ARR_MOD_OPEN));
   a[0] = m;
   a[1] = q;
-  svg_polyline(job, a, 2);
+  jobsvg_polyline(job, a, 2);
 
   // A polyline doesn't extend visually beyond its starting point, so we
   // return the starting point as it is, without taking penwidth into account
@@ -1025,11 +1025,11 @@ static pointf arrow_type_diamond(GVJ_t *job, pointf p, pointf u,
   pointf q = arrow_type_diamond0(p, u, penwidth, flag, a);
 
   if (flag & ARR_MOD_LEFT)
-    svg_polygon(job, &a[2], 3, !(flag & ARR_MOD_OPEN));
+    jobsvg_polygon(job, &a[2], 3, !(flag & ARR_MOD_OPEN));
   else if (flag & ARR_MOD_RIGHT)
-    svg_polygon(job, a, 3, !(flag & ARR_MOD_OPEN));
+    jobsvg_polygon(job, a, 3, !(flag & ARR_MOD_OPEN));
   else
-    svg_polygon(job, a, 4, !(flag & ARR_MOD_OPEN));
+    jobsvg_polygon(job, a, 4, !(flag & ARR_MOD_OPEN));
 
   return q;
 }
@@ -1062,7 +1062,7 @@ static pointf arrow_type_dot(GVJ_t *job, pointf p, pointf u, double arrowsize,
   AF[0].y = p.y + u.y / 2. - r;
   AF[1].x = p.x + u.x / 2. + r;
   AF[1].y = p.y + u.y / 2. + r;
-  svg_ellipse(job, AF, !(flag & ARR_MOD_OPEN));
+  jobsvg_ellipse(job, AF, !(flag & ARR_MOD_OPEN));
 
   pointf q = {p.x + u.x, p.y + u.y};
 
@@ -1127,12 +1127,12 @@ static pointf arrow_type_curve(GVJ_t *job, pointf p, pointf u, double arrowsize,
     AF[2].y = AF[3].y - w.y * 4.0 / 3.0;
   }
 
-  svg_polyline(job, a, 2);
+  jobsvg_polyline(job, a, 2);
   if (flag & ARR_MOD_LEFT)
     Bezier(AF, 0.5, NULL, AF);
   else if (flag & ARR_MOD_RIGHT)
     Bezier(AF, 0.5, AF, NULL);
-  svg_bezier(job, AF, sizeof(AF) / sizeof(pointf), 0);
+  jobsvg_bezier(job, AF, sizeof(AF) / sizeof(pointf), 0);
 
   return q;
 }
@@ -1201,7 +1201,7 @@ void arrow_gen(GVJ_t *job, emit_state_t emit_state, pointf p, pointf u,
 
   /* Dotted and dashed styles on the arrowhead are ugly (dds) */
   /* linewidth needs to be reset */
-  svg_set_style(job, job->gvc->defaultlinestyle);
+  jobsvg_set_style(job, job->gvc->defaultlinestyle);
 
   svg_set_penwidth(obj, penwidth);
 
