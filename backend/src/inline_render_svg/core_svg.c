@@ -1235,8 +1235,8 @@ void jobsvg_set_pencolor(GVJ_t *job, char *name) {
     *cp = ':';
 }
 
-void jobsvg_set_fillcolor(GVJ_t *job, char *name) {
-  gvcolor_t *color = &(job->obj->fillcolor);
+void svg_set_fillcolor(obj_state_t *obj, char *name) {
+  gvcolor_t *color = &(obj->fillcolor);
   char *cp = NULL;
 
   if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
@@ -1248,18 +1248,26 @@ void jobsvg_set_fillcolor(GVJ_t *job, char *name) {
     *cp = ':';
 }
 
-void jobsvg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
-                              double frac) {
-  gvcolor_t *color = &(job->obj->stopcolor);
+void jobsvg_set_fillcolor(GVJ_t *job, char *name) {
+  svg_set_fillcolor(job->obj, name);
+}
+
+void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,
+                           double frac) {
+  gvcolor_t *color = &(obj->stopcolor);
 
   svg_resolve_color(stopcolor, color);
 
-  job->obj->gradient_angle = angle;
-  job->obj->gradient_frac = frac;
+  obj->gradient_angle = angle;
+  obj->gradient_frac = frac;
 }
 
-void jobsvg_set_style(GVJ_t *job, char **s) {
-  obj_state_t *obj = job->obj;
+void jobsvg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
+                              double frac) {
+  svg_set_gradient_vals(job->obj, stopcolor, angle, frac);
+}
+
+void svg_set_style(obj_state_t *obj, char **s) {
   char *line, *p;
 
   obj->rawstyle = s;
@@ -1291,6 +1299,8 @@ void jobsvg_set_style(GVJ_t *job, char **s) {
       }
     }
 }
+
+void jobsvg_set_style(GVJ_t *job, char **s) { svg_set_style(job->obj, s); }
 
 void svg_set_penwidth(obj_state_t *obj, double penwidth) {
   obj->penwidth = penwidth;
