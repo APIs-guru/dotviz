@@ -1203,7 +1203,7 @@ void arrow_gen(GVJ_t *job, emit_state_t emit_state, pointf p, pointf u,
   /* linewidth needs to be reset */
   svg_set_style(job, job->gvc->defaultlinestyle);
 
-  svg_set_penwidth(job, penwidth);
+  svg_set_penwidth(obj, penwidth);
 
   /* generate arrowhead vector */
   u.x -= p.x;

@@ -1291,6 +1291,6 @@ void svg_set_style(GVJ_t *job, char **s) {
     }
 }
 
-void svg_set_penwidth(GVJ_t *job, double penwidth) {
-  job->obj->penwidth = penwidth;
+void svg_set_penwidth(obj_state_t *obj, double penwidth) {
+  obj->penwidth = penwidth;
 }

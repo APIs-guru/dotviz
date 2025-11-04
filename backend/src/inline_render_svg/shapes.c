@@ -498,6 +498,7 @@ static char **checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
 }
 
 static graphviz_polygon_style_t stylenode(GVJ_t *job, node_t *n) {
+  obj_state_t *obj = job->obj;
   char **pstyle, *s;
   graphviz_polygon_style_t istyle = {0};
   double penwidth;
@@ -507,7 +508,7 @@ static graphviz_polygon_style_t stylenode(GVJ_t *job, node_t *n) {
 
   if (N_penwidth && (s = agxget(n, N_penwidth)) && s[0]) {
     penwidth = late_double(n, N_penwidth, 1.0, 0.0);
-    svg_set_penwidth(job, penwidth);
+    svg_set_penwidth(obj, penwidth);
   }
 
   return istyle;
@@ -3240,7 +3241,7 @@ static void point_gencode(GVJ_t *job, node_t *n) {
   else
     svg_set_style(job, &point_style[1]);
   if (N_penwidth)
-    svg_set_penwidth(job, late_double(n, N_penwidth, 1.0, 0.0));
+    svg_set_penwidth(obj, late_double(n, N_penwidth, 1.0, 0.0));
 
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     color = DEFAULT_ACTIVEPENCOLOR;

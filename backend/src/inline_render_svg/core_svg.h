@@ -3,6 +3,7 @@
 
 #include "geom.h"
 #include "gvcext.h"
+#include "gvcjob.h"
 #include "textspan.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -38,5 +39,5 @@ void svg_set_pencolor(GVJ_t *job, char *name);
 void svg_set_fillcolor(GVJ_t *job, char *name);
 void svg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle, double frac);
 void svg_set_style(GVJ_t *job, char **s);
-void svg_set_penwidth(GVJ_t *job, double penwidth);
+void svg_set_penwidth(obj_state_t *obj, double penwidth);
 #endif

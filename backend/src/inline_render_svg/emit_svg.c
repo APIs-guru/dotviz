@@ -511,6 +511,7 @@ static int parseSegs(const char *clrs, colorsegs_t *psegs) {
  *  3 => warning message
  */
 int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
+  obj_state_t *obj = job->obj;
   colorsegs_t segs;
   int rv;
   double save_penwidth = job->obj->penwidth;
@@ -523,7 +524,7 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
   const pointf ctr = mid_pointf(pf[0], pf[1]);
   const pointf semi = sub_pointf(pf[1], ctr);
   if (save_penwidth > THIN_LINE)
-    svg_set_penwidth(job, THIN_LINE);
+    svg_set_penwidth(obj, THIN_LINE);
 
   angle0 = 0;
   for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
@@ -545,7 +546,7 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
   }
 
   if (save_penwidth > THIN_LINE)
-    svg_set_penwidth(job, save_penwidth);
+    svg_set_penwidth(obj, save_penwidth);
   colorsegs_free(&segs);
   return rv;
 }
@@ -557,6 +558,7 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
  * message 3 => warning message
  */
 int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
+  obj_state_t *obj = job->obj;
   colorsegs_t segs;
   int rv;
   double xdelta;
@@ -583,7 +585,7 @@ int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
   pts[1].x = pts[2].x = pts[0].x;
 
   if (save_penwidth > THIN_LINE)
-    svg_set_penwidth(job, THIN_LINE);
+    svg_set_penwidth(obj, THIN_LINE);
   for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
     const colorseg_t s = colorsegs_get(&segs, i);
     if (s.color == NULL)
@@ -599,7 +601,7 @@ int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
     pts[0].x = pts[3].x = pts[1].x;
   }
   if (save_penwidth > THIN_LINE)
-    svg_set_penwidth(job, save_penwidth);
+    svg_set_penwidth(obj, save_penwidth);
   colorsegs_free(&segs);
   return rv;
 }
@@ -1683,14 +1685,13 @@ static bool edge_in_box(edge_t *e, boxf b) {
 }
 
 static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
-  obj_state_t *obj;
   char *s;
   textlabel_t *lab = NULL, *tlab = NULL, *hlab = NULL;
   char *dflt_url = NULL;
   char *dflt_target = NULL;
   double penwidth;
 
-  obj = push_obj_state(job);
+  obj_state_t *obj = push_obj_state(job);
   obj->type = EDGE_OBJTYPE;
   obj->u.e = e;
   obj->emit_state = EMIT_EDRAW;
@@ -1705,7 +1706,7 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
 
   if (E_penwidth && (s = agxget(e, E_penwidth)) && s[0]) {
     penwidth = late_double(e, E_penwidth, 1.0, 0.0);
-    svg_set_penwidth(job, penwidth);
+    svg_set_penwidth(obj, penwidth);
   }
 
   if ((lab = ED_label(e)))
@@ -2159,7 +2160,6 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
   pointf AF[4];
   char *color, *fillcolor, *pencolor, **style, *s;
   graph_t *sg;
-  obj_state_t *obj;
   textlabel_t *lab;
   int doAnchor;
   double penwidth;
@@ -2169,7 +2169,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     if (!clust_in_layer(job, sg))
       continue;
     emit_begin_cluster(job, sg);
-    obj = job->obj;
+    obj_state_t *obj = job->obj;
     doAnchor = obj->url || obj->explicit_tooltip;
     char *previous_color_scheme = setColorScheme(agget(sg, "colorscheme"));
     if (doAnchor) {
@@ -2244,7 +2244,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
 
     if (G_penwidth && ((s = ag_xget(sg, G_penwidth)) && s[0])) {
       penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
-      svg_set_penwidth(job, penwidth);
+      svg_set_penwidth(obj, penwidth);
     }
 
     if (istyle.rounded) {

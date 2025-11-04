@@ -243,6 +243,7 @@ static pointf *mkPts(pointf *AF, boxf b, int border) {
  * Assume dp->border > 0
  */
 static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
+  obj_state_t *obj = job->obj;
   pointf AF[7];
   char *sptr[2];
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
@@ -258,7 +259,7 @@ static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
     svg_set_style(job, sptr);
   } else
     svg_set_style(job, job->gvc->defaultlinestyle);
-  svg_set_penwidth(job, dp->border);
+  svg_set_penwidth(obj, dp->border);
 
   if (dp->style.rounded)
     round_corners(job, mkPts(AF, b, dp->border), 4,
@@ -506,6 +507,7 @@ static void emit_html_rules(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env,
 }
 
 static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
+  obj_state_t *obj = job->obj;
   boxf pts = tbl->data.box;
   pointf pos = env->pos;
   htmlcell_t **cells = tbl->u.n.cells;
@@ -556,7 +558,7 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
      * calculations to take into account wider rules.
      */
     cells = tbl->u.n.cells;
-    svg_set_penwidth(job, 1.0);
+    svg_set_penwidth(obj, 1.0);
     while ((cp = *cells++)) {
       if (cp->hruled || cp->vruled)
         emit_html_rules(job, cp, env, tbl->data.pencolor, *cells);
