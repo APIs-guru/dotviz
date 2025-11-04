@@ -1198,14 +1198,12 @@ static int svg_comparestr(const void *s1, const void *s2) {
  * as an argument of the compare function, while the arguments to
  * strcasecmp are both char*.
  */
-extern gvrender_features_t my_render_features_svg;
-static void svg_resolve_color(gvrender_features_t *features, char *name,
-                              gvcolor_t *color) {
+static void svg_resolve_color(char *name, gvcolor_t *color) {
   int rc;
   color->u.string = name;
   color->type = COLOR_STRING;
-  if (bsearch(name, my_render_features_svg.knowncolors,
-              my_render_features_svg.sz_knowncolors, sizeof(char *),
+  const size_t sz_knowncolors = sizeof(svg_knowncolors) / sizeof(char *);
+  if (bsearch(name, svg_knowncolors, sz_knowncolors, sizeof(char *),
               svg_comparestr) == NULL) {
     /* if name was not found in known_colors */
     rc = colorxlate(name, color, RGBA_BYTE);
@@ -1224,92 +1222,75 @@ static void svg_resolve_color(gvrender_features_t *features, char *name,
 }
 
 void svg_set_pencolor(GVJ_t *job, char *name) {
-  gvrender_engine_t *gvre = job->render.engine;
   gvcolor_t *color = &(job->obj->pencolor);
   char *cp = NULL;
 
   if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
     *cp = '\0';
-  if (gvre) {
-    svg_resolve_color(job->render.features, name, color);
-    // if (gvre->resolve_color)
-    //   gvre->resolve_color(job, color);
-  }
+
+  svg_resolve_color(name, color);
+
   if (cp) /* restore color list */
     *cp = ':';
 }
 
 void svg_set_fillcolor(GVJ_t *job, char *name) {
-  gvrender_engine_t *gvre = job->render.engine;
   gvcolor_t *color = &(job->obj->fillcolor);
   char *cp = NULL;
 
   if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
     *cp = '\0';
-  if (gvre) {
-    svg_resolve_color(job->render.features, name, color);
-    // if (gvre->resolve_color)
-    //   gvre->resolve_color(job, color);
-  }
+
+  svg_resolve_color(name, color);
+
   if (cp)
     *cp = ':';
 }
 
 void svg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
                            double frac) {
-  gvrender_engine_t *gvre = job->render.engine;
   gvcolor_t *color = &(job->obj->stopcolor);
 
-  if (gvre) {
-    svg_resolve_color(job->render.features, stopcolor, color);
-    // if (gvre->resolve_color)
-    //   gvre->resolve_color(job, color);
-  }
+  svg_resolve_color(stopcolor, color);
+
   job->obj->gradient_angle = angle;
   job->obj->gradient_frac = frac;
 }
 
 void svg_set_style(GVJ_t *job, char **s) {
-  gvrender_engine_t *gvre = job->render.engine;
   obj_state_t *obj = job->obj;
   char *line, *p;
 
   obj->rawstyle = s;
-  if (gvre) {
-    if (s)
-      while ((p = line = *s++)) {
-        if (streq(line, "solid"))
-          obj->pen = PEN_SOLID;
-        else if (streq(line, "dashed"))
-          obj->pen = PEN_DASHED;
-        else if (streq(line, "dotted"))
-          obj->pen = PEN_DOTTED;
-        else if (streq(line, "invis") || streq(line, "invisible"))
-          obj->pen = PEN_NONE;
-        else if (streq(line, "bold"))
-          obj->penwidth = PENWIDTH_BOLD;
-        else if (streq(line, "setlinewidth")) {
-          while (*p)
-            p++;
+  if (s)
+    while ((p = line = *s++)) {
+      if (streq(line, "solid"))
+        obj->pen = PEN_SOLID;
+      else if (streq(line, "dashed"))
+        obj->pen = PEN_DASHED;
+      else if (streq(line, "dotted"))
+        obj->pen = PEN_DOTTED;
+      else if (streq(line, "invis") || streq(line, "invisible"))
+        obj->pen = PEN_NONE;
+      else if (streq(line, "bold"))
+        obj->penwidth = PENWIDTH_BOLD;
+      else if (streq(line, "setlinewidth")) {
+        while (*p)
           p++;
-          obj->penwidth = atof(p);
-        } else if (streq(line, "filled"))
-          obj->fill = FILL_SOLID;
-        else if (streq(line, "unfilled"))
-          obj->fill = FILL_NONE;
-        else if (streq(line, "tapered"))
-          ;
-        else {
-          agwarningf("svg_set_style: unsupported style %s - ignoring\n", line);
-        }
+        p++;
+        obj->penwidth = atof(p);
+      } else if (streq(line, "filled"))
+        obj->fill = FILL_SOLID;
+      else if (streq(line, "unfilled"))
+        obj->fill = FILL_NONE;
+      else if (streq(line, "tapered"))
+        ;
+      else {
+        agwarningf("svg_set_style: unsupported style %s - ignoring\n", line);
       }
-  }
+    }
 }
 
 void svg_set_penwidth(GVJ_t *job, double penwidth) {
-  gvrender_engine_t *gvre = job->render.engine;
-
-  if (gvre) {
-    job->obj->penwidth = penwidth;
-  }
+  job->obj->penwidth = penwidth;
 }
