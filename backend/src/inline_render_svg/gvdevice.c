@@ -258,44 +258,6 @@ void gvprintf(output_string *output, const char *format, ...) {
  *	cc -DGVPRINTNUM_TEST gvprintnum.c -o gvprintnum
  */
 
-/* use macro so maxnegnum is stated just once for both double and string
- * versions */
-#define val_str(n, x)                                                          \
-  static double n = x;                                                         \
-  static char n##str[] = #x;
-val_str(maxnegnum, -999999999999999.99)
-
-    static void gvprintnum(agxbuf *xb, double number) {
-  /*
-      number limited to a working range: maxnegnum >= n >= -maxnegnum
-      suppressing trailing "0" and "."
-   */
-
-  if (number < maxnegnum) { /* -ve limit */
-    agxbput(xb, maxnegnumstr);
-    return;
-  }
-  if (number > -maxnegnum) {       /* +ve limit */
-    agxbput(xb, maxnegnumstr + 1); // +1 to skip the '-' sign
-    return;
-  }
-
-  agxbprint(xb, "%.03f", number);
-  agxbuf_trim_zeros(xb);
-
-  // strip off unnecessary leading '0'
-  {
-    char *staging = agxbdisown(xb);
-    if (startswith(staging, "0.")) {
-      memmove(staging, &staging[1], strlen(staging));
-    } else if (startswith(staging, "-0.")) {
-      memmove(&staging[1], &staging[2], strlen(&staging[1]));
-    }
-    agxbput(xb, staging);
-    free(staging);
-  }
-}
-
 /* gv_trim_zeros
  * Identify Trailing zeros and decimal point, if possible.
  * Assumes the input is the result of %.02f printing.

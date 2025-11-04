@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const flags = [_][]const u8{ "-Wall", "-Werror", "-Wextra" };
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{
         .default_target = .{
@@ -38,23 +40,26 @@ pub fn build(b: *std.Build) void {
     lib.linkLibrary(graphviz_build);
 
     lib.addIncludePath(b.path("src"));
-    lib.addCSourceFile(.{ .file = b.path("src/agrw.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/layout_inline.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/context_inline.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/output_string.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/gvdevice.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/inner_render_svg.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/render_svg.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/emit_svg.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/core_svg.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/htmltable.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/shapes.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/arrows.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_svg/labels.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/render_inline_dot.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/output_dot.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/inline_render_dot/write_c_inline.c") });
-    lib.addCSourceFile(.{ .file = b.path("src/gvusershape_size.c") });
+    lib.addCSourceFiles(.{
+        // zig fmt: off
+        .files = &.{ "src/agrw.c", "src/layout_inline.c", 
+        "src/context_inline.c", "src/output_string.c", 
+        "src/inline_render_svg/gvdevice.c", 
+        "src/inline_render_svg/inner_render_svg.c", 
+        "src/inline_render_svg/render_svg.c", 
+        "src/inline_render_svg/emit_svg.c", 
+        "src/inline_render_svg/core_svg.c", 
+        "src/inline_render_svg/htmltable.c", 
+        "src/inline_render_svg/shapes.c", 
+        "src/inline_render_svg/arrows.c", 
+        "src/inline_render_svg/labels.c", 
+        "src/inline_render_dot/render_inline_dot.c", 
+        "src/inline_render_dot/output_dot.c", 
+        "src/inline_render_dot/write_c_inline.c", "src/gvusershape_size.c" },
+        // zig fmt: on
+        .flags = &flags,
+    });
+
     lib.root_module.export_symbol_names = &.{
         "wasm_alloc",
         "wasm_free",

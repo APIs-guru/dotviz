@@ -133,8 +133,6 @@ void my_attach_attrs_and_arrows(graph_t *g) {
   Agsym_t *lwsym = NULL;
   Agsym_t *lhsym = NULL;
 
-  bool e_arrows = false; // graph has edges with end arrows
-  bool s_arrows = false; // graph has edges with start arrows
   const offsets_t offsets = setYInvert(g);
   agxbuf xb = {0};
   safe_dcl(g, AGNODE, "pos", "");
@@ -227,12 +225,10 @@ void my_attach_attrs_and_arrows(graph_t *g) {
           if (i > 0)
             agxbputc(&xb, ';');
           if (ED_spl(e)->list[i].sflag) {
-            s_arrows = true;
             agxbprint(&xb, "s,%.5g,%.5g ", ED_spl(e)->list[i].sp.x,
                       yDir(ED_spl(e)->list[i].sp.y, offsets.Y));
           }
           if (ED_spl(e)->list[i].eflag) {
-            e_arrows = true;
             agxbprint(&xb, "e,%.5g,%.5g ", ED_spl(e)->list[i].ep.x,
                       yDir(ED_spl(e)->list[i].ep.y, offsets.Y));
           }

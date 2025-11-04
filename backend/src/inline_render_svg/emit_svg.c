@@ -32,7 +32,6 @@
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
-#include "gvcproc.h"
 #include "textspan.h"
 #include "geom.h"
 #include "textspan.h"
@@ -43,7 +42,6 @@
 #include <pathgeom.h>
 #include <util/agxbuf.h>
 #include <util/alloc.h>
-#include <util/debug.h>
 #include <util/gv_ctype.h>
 #include <util/gv_math.h>
 #include <util/list.h>
@@ -97,8 +95,6 @@ void *init_xdot(Agraph_t *g) {
 
   return xd;
 }
-
-static char *defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
 
 /* push empty graphic state for current object */
 obj_state_t *push_obj_state(GVJ_t *job) {
@@ -634,52 +630,6 @@ static void map_label(GVJ_t *job, textlabel_t *lab) {
   rect2poly(p);
 }
 
-/* isRect function returns true when polygon has
- * regular rectangular shape. Rectangle is regular when
- * it is not skewed and distorted and orientation is almost zero
- */
-static bool isRect(polygon_t *p) {
-  return p->sides == 4 && fabs(fmod(p->orientation, 90)) < 0.5 &&
-         is_exactly_zero(p->distortion) && is_exactly_zero(p->skew);
-}
-
-/*
- * isFilled function returns true if filled style has been set for node 'n'
- * otherwise returns false. it accepts pointer to node_t as an argument
- */
-static bool isFilled(node_t *n) {
-  char *style, *p, **pp;
-  bool r = false;
-  style = late_nnstring(n, N_style, "");
-  if (style[0]) {
-    pp = parse_style(style);
-    while ((p = *pp)) {
-      if (strcmp(p, "filled") == 0)
-        r = true;
-      pp++;
-    }
-  }
-  return r;
-}
-
-/* pEllipse function returns 'np' points from the circumference
- * of ellipse described by radii 'a' and 'b'.
- * Assumes 'np' is greater than zero.
- * 'np' should be at least 4 to sample polygon from ellipse
- */
-static pointf *pEllipse(double a, double b, size_t np) {
-  double theta = 0.0;
-  double deltheta = 2 * M_PI / (double)np;
-
-  pointf *ps = gv_calloc(np, sizeof(pointf));
-  for (size_t i = 0; i < np; i++) {
-    ps[i].x = a * cos(theta);
-    ps[i].y = b * sin(theta);
-    theta += deltheta;
-  }
-  return ps;
-}
-
 #define HW 2.0 /* maximum distance away from line, in points */
 
 /* check_control_points function checks the size of quadrilateral
@@ -752,162 +702,7 @@ typedef struct segitem_s {
     (L)->p = P;                                                                \
   }
 
-static segitem_t *appendSeg(pointf p, segitem_t *lp) {
-  segitem_t *s = gv_alloc(sizeof(segitem_t));
-  INIT_SEG(p, s);
-  lp->next = s;
-  return s;
-}
-
 DEFINE_LIST(pbs_size, size_t)
-
-/* Output the polygon determined by the n points in p1, followed
- * by the n points in p2 in reverse order. Assumes n <= 50.
- */
-static void map_bspline_poly(points_t *pbs_p, pbs_size_t *pbs_n, size_t n,
-                             pointf *p1, pointf *p2) {
-  pbs_size_append(pbs_n, 2 * n);
-
-  const UNUSED size_t nump = points_size(pbs_p);
-  for (size_t i = 0; i < n; i++) {
-    points_append(pbs_p, p1[i]);
-  }
-  for (size_t i = 0; i < n; i++) {
-    points_append(pbs_p, p2[n - i - 1]);
-  }
-#if defined(DEBUG) && DEBUG == 2
-  psmapOutput(pbs_p, nump, 2 * n);
-#endif
-}
-
-/* Approximate Bezier by line segments. If the four points are
- * almost colinear, as determined by check_control_points, we store
- * the segment cp[0]-cp[3]. Otherwise we split the Bezier into 2 and recurse.
- * Since 2 contiguous segments share an endpoint, we actually store
- * the segments as a list of points.
- * New points are appended to the list given by lp. The tail of the
- * list is returned.
- */
-static segitem_t *approx_bezier(pointf *cp, segitem_t *lp) {
-  pointf left[4], right[4];
-
-  if (check_control_points(cp)) {
-    if (FIRST_SEG(lp))
-      INIT_SEG(cp[0], lp);
-    lp = appendSeg(cp[3], lp);
-  } else {
-    Bezier(cp, 0.5, left, right);
-    lp = approx_bezier(left, lp);
-    lp = approx_bezier(right, lp);
-  }
-  return lp;
-}
-
-/* Return the angle of the bisector between the two rays
- * pp-cp and cp-np. The bisector returned is always to the
- * left of pp-cp-np.
- */
-static double bisect(pointf pp, pointf cp, pointf np) {
-  double ang, theta, phi;
-  theta = atan2(np.y - cp.y, np.x - cp.x);
-  phi = atan2(pp.y - cp.y, pp.x - cp.x);
-  ang = theta - phi;
-  if (ang > 0)
-    ang -= 2 * M_PI;
-
-  return phi + ang / 2.0;
-}
-
-/* Determine polygon points related to 2 segments prv-cur and cur-nxt.
- * The points lie on the bisector of the 2 segments, passing through cur,
- * and distance w2 from cur. The points are stored in p1 and p2.
- * If p1 is NULL, we use the normal to cur-nxt.
- * If p2 is NULL, we use the normal to prv-cur.
- * Assume at least one of prv or nxt is non-NULL.
- */
-static void mkSegPts(segitem_t *prv, segitem_t *cur, segitem_t *nxt, pointf *p1,
-                     pointf *p2, double w2) {
-  pointf cp, pp, np;
-  double theta, delx, dely;
-  pointf p;
-
-  cp = cur->p;
-  /* if prv or nxt are NULL, use the one given to create a collinear
-   * prv or nxt. This could be more efficiently done with special case code,
-   * but this way is more uniform.
-   */
-  if (prv) {
-    pp = prv->p;
-    if (nxt)
-      np = nxt->p;
-    else {
-      np.x = 2 * cp.x - pp.x;
-      np.y = 2 * cp.y - pp.y;
-    }
-  } else {
-    np = nxt->p;
-    pp.x = 2 * cp.x - np.x;
-    pp.y = 2 * cp.y - np.y;
-  }
-  theta = bisect(pp, cp, np);
-  delx = w2 * cos(theta);
-  dely = w2 * sin(theta);
-  p.x = cp.x + delx;
-  p.y = cp.y + dely;
-  *p1 = p;
-  p.x = cp.x - delx;
-  p.y = cp.y - dely;
-  *p2 = p;
-}
-
-/* Construct and output a closed polygon approximating the input
- * B-spline bp. We do this by first approximating bp by a sequence
- * of line segments. We then use the sequence of segments to determine
- * the polygon.
- * In cmapx, polygons are limited to 100 points, so we output polygons
- * in chunks of 100.
- */
-static void map_output_bspline(points_t *pbs, pbs_size_t *pbs_n, bezier *bp,
-                               double w2) {
-  segitem_t *segl = gv_alloc(sizeof(segitem_t));
-  segitem_t *segp = segl;
-  segitem_t *segprev;
-  segitem_t *segnext;
-  pointf pts[4], pt1[50], pt2[50];
-
-  MARK_FIRST_SEG(segl);
-  const size_t nc = (bp->size - 1) / 3; // nc is number of bezier curves
-  for (size_t j = 0; j < nc; j++) {
-    for (size_t k = 0; k < 4; k++) {
-      pts[k] = bp->list[3 * j + k];
-    }
-    segp = approx_bezier(pts, segp);
-  }
-
-  segp = segl;
-  segprev = 0;
-  size_t cnt = 0;
-  while (segp) {
-    segnext = segp->next;
-    mkSegPts(segprev, segp, segnext, pt1 + cnt, pt2 + cnt, w2);
-    cnt++;
-    if (segnext == NULL || cnt == 50) {
-      map_bspline_poly(pbs, pbs_n, cnt, pt1, pt2);
-      pt1[0] = pt1[cnt - 1];
-      pt2[0] = pt2[cnt - 1];
-      cnt = 1;
-    }
-    segprev = segp;
-    segp = segnext;
-  }
-
-  /* free segl */
-  while (segl) {
-    segp = segl->next;
-    free(segl);
-    segl = segp;
-  }
-}
 
 static bool is_natural_number(const char *sstr) {
   const char *str = sstr;
@@ -973,125 +768,7 @@ static bool selectedlayer(GVJ_t *job, char *spec) {
   return selectedLayer(job->gvc, job->layerNum, job->numLayers, spec);
 }
 
-/* Parse the graph's layerselect attribute, which determines
- * which layers are emitted. The specification is the same used
- * by the layer attribute.
- *
- * If we find n layers, we return an array arr of n+2 ints. arr[0]=n.
- * arr[n+1]=numLayers+1, acting as a sentinel. The other entries give
- * the desired layer indices.
- *
- * If no layers are detected, NULL is returned.
- *
- * This implementation does a linear walk through each layer index and
- * uses selectedLayer to match it against p. There is probably a more
- * efficient way to do this, but this is simple and until we find people
- * using huge numbers of layers, it should be adequate.
- */
-static int *parse_layerselect(GVC_t *gvc, char *p) {
-  int *laylist = gv_calloc(gvc->numLayers + 2, sizeof(int));
-  int i, cnt = 0;
-  for (i = 1; i <= gvc->numLayers; i++) {
-    if (selectedLayer(gvc, i, gvc->numLayers, p)) {
-      laylist[++cnt] = i;
-    }
-  }
-  if (cnt) {
-    laylist[0] = cnt;
-    laylist[cnt + 1] = gvc->numLayers + 1;
-  } else {
-    agwarningf("The layerselect attribute \"%s\" does not match any layer "
-               "specifed by the layers attribute - ignored.\n",
-               p);
-    free(laylist);
-    laylist = NULL;
-  }
-  return laylist;
-}
-
 DEFINE_LIST(layer_names, char *)
-
-/* Split input string into tokens, with separators specified by
- * the layersep attribute. Store the values in the gvc->layerIDs array,
- * starting at index 1, and return the count.
- * Note that there is no mechanism
- * to free the memory before exit.
- */
-static int parse_layers(GVC_t *gvc, graph_t *g, char *p) {
-  char *tok;
-
-  gvc->layerDelims = agget(g, "layersep");
-  if (!gvc->layerDelims)
-    gvc->layerDelims = DEFAULT_LAYERSEP;
-  gvc->layerListDelims = agget(g, "layerlistsep");
-  if (!gvc->layerListDelims)
-    gvc->layerListDelims = DEFAULT_LAYERLISTSEP;
-  if ((tok =
-           strpbrk(gvc->layerDelims,
-                   gvc->layerListDelims))) { /* conflict in delimiter strings */
-    agwarningf("The character \'%c\' appears in both the layersep and "
-               "layerlistsep attributes - layerlistsep ignored.\n",
-               *tok);
-    gvc->layerListDelims = "";
-  }
-
-  gvc->layers = gv_strdup(p);
-  layer_names_t layerIDs = {0};
-
-  // inferred entry for the first (unnamed) layer
-  layer_names_append(&layerIDs, NULL);
-
-  for (tok = strtok(gvc->layers, gvc->layerDelims); tok;
-       tok = strtok(NULL, gvc->layerDelims)) {
-    layer_names_append(&layerIDs, tok);
-  }
-
-  assert(layer_names_size(&layerIDs) - 1 <= INT_MAX);
-  int ntok = (int)(layer_names_size(&layerIDs) - 1);
-
-  // if we found layers, save them for later reference
-  if (layer_names_size(&layerIDs) > 1) {
-    layer_names_append(&layerIDs, NULL); // add a terminating entry
-    gvc->layerIDs = layer_names_detach(&layerIDs);
-  }
-  layer_names_free(&layerIDs);
-
-  return ntok;
-}
-
-/* Determine order of output.
- * Output usually in breadth first graph walk order
- */
-static int chkOrder(graph_t *g) {
-  char *p = agget(g, "outputorder");
-  if (p) {
-    if (!strcmp(p, "nodesfirst"))
-      return EMIT_SORTED;
-    if (!strcmp(p, "edgesfirst"))
-      return EMIT_EDGE_SORTED;
-  }
-  return 0;
-}
-
-static void init_layering(GVC_t *gvc, graph_t *g) {
-  char *str;
-
-  /* free layer strings and pointers from previous graph */
-  free(gvc->layers);
-  gvc->layers = NULL;
-  free(gvc->layerIDs);
-  gvc->layerIDs = NULL;
-  free(gvc->layerlist);
-  gvc->layerlist = NULL;
-  if ((str = agget(g, "layers")) != 0) {
-    gvc->numLayers = parse_layers(gvc, g, str);
-    if ((str = agget(g, "layerselect")) != 0 && *str) {
-      gvc->layerlist = parse_layerselect(gvc, str);
-    }
-  } else {
-    gvc->numLayers = 1;
-  }
-}
 
 /// Return number of physical layers to be emitted.
 int numPhysicalLayers(GVJ_t *job) {
@@ -1105,7 +782,7 @@ void firstlayer(GVJ_t *job, int **listp) {
   job->numLayers = job->gvc->numLayers;
   if (job->gvc->layerlist) {
     int *list = job->gvc->layerlist;
-    int cnt = *list++;
+    (void)*list++;
     job->layerNum = *list++;
     *listp = list;
   } else {
@@ -1143,30 +820,6 @@ void nextpage(GVJ_t *job) {
       job->pagesArrayElem.y = job->pagesArrayFirst.y;
     job->pagesArrayElem = add_point(job->pagesArrayElem, job->pagesArrayMajor);
   }
-}
-
-static bool write_edge_test(Agraph_t *g, Agedge_t *e) {
-  Agraph_t *sg;
-  int c;
-
-  for (c = 1; c <= GD_n_cluster(g); c++) {
-    sg = GD_clust(g)[c];
-    if (agcontains(sg, e))
-      return false;
-  }
-  return true;
-}
-
-static bool write_node_test(Agraph_t *g, Agnode_t *n) {
-  Agraph_t *sg;
-  int c;
-
-  for (c = 1; c <= GD_n_cluster(g); c++) {
-    sg = GD_clust(g)[c];
-    if (agcontains(sg, n))
-      return false;
-  }
-  return true;
 }
 
 static pointf *copyPts(xdot_point *inpts, size_t numpts) {
@@ -1294,14 +947,11 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
 static void emit_background(GVJ_t *job, graph_t *g) {
   xdot *xd;
   char *str;
-  int dfltColor;
 
   /* if no bgcolor specified - first assume default of "white" */
   if (!((str = agget(g, "bgcolor")) && str[0])) {
     str = "white";
-    dfltColor = 1;
-  } else
-    dfltColor = 0;
+  }
 
   /* except for "transparent" on truecolor, or default "white" on (assumed)
    * white paper, paint background */
@@ -1442,12 +1092,9 @@ static char *saved_color_scheme;
 
 static void emit_begin_node(GVJ_t *job, node_t *n) {
   obj_state_t *obj;
-  int shape;
   size_t nump = 0;
-  polygon_t *poly = NULL;
-  pointf *vertices, *p = NULL;
+  pointf *p = NULL;
   pointf coord;
-  char *s;
 
   obj = push_obj_state(job);
   obj->type = NODE_OBJTYPE;
@@ -1457,21 +1104,8 @@ static void emit_begin_node(GVJ_t *job, node_t *n) {
   initObjMapData(job, ND_label(n), n);
   if (obj->url || obj->explicit_tooltip) {
 
-    /* checking shape of node */
-    shape = shapeOf(n);
     /* node coordinate */
     coord = ND_coord(n);
-    /* checking if filled style has been set for node */
-    bool filled = isFilled(n);
-
-    bool is_rect = false;
-    if (shape == SH_POLY || shape == SH_POINT) {
-      poly = ND_shape_info(n);
-
-      /* checking if polygon is regular rectangle */
-      if (isRect(poly) && (poly->peripheries || filled))
-        is_rect = true;
-    }
 
     /* When node has polygon shape and requested output supports polygons
      * we use a polygon to map the clickable region that is a:
@@ -2181,7 +1815,6 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
 static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
                             int explicit, char *url, char *tooltip,
                             char *target, char *id, splines *spl) {
-  int flags = job->flags;
   emit_state_t old_emit_state;
   char *newid;
   agxbuf xb = {0};
@@ -2362,27 +1995,6 @@ static void emit_edge(GVJ_t *job, edge_t *e) {
   }
 }
 
-static void emit_cluster_colors(GVJ_t *job, graph_t *g) {
-  graph_t *sg;
-  int c;
-  char *str;
-
-  for (c = 1; c <= GD_n_cluster(g); c++) {
-    sg = GD_clust(g)[c];
-    emit_cluster_colors(job, sg);
-    if (((str = agget(sg, "color")) != 0) && str[0])
-      svg_set_pencolor(job, str);
-    if (((str = agget(sg, "pencolor")) != 0) && str[0])
-      svg_set_pencolor(job, str);
-    if (((str = agget(sg, "bgcolor")) != 0) && str[0])
-      svg_set_pencolor(job, str);
-    if (((str = agget(sg, "fillcolor")) != 0) && str[0])
-      svg_set_fillcolor(job, str);
-    if (((str = agget(sg, "fontcolor")) != 0) && str[0])
-      svg_set_pencolor(job, str);
-  }
-}
-
 static void emit_view(GVJ_t *job, graph_t *g, int flags) {
   GVC_t *gvc = job->gvc;
   node_t *n;
@@ -2547,8 +2159,6 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
   pointf AF[4];
   char *color, *fillcolor, *pencolor, **style, *s;
   graph_t *sg;
-  node_t *n;
-  edge_t *e;
   obj_state_t *obj;
   textlabel_t *lab;
   int doAnchor;
@@ -2865,7 +2475,6 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
 void emit_graph(GVJ_t *job, graph_t *g) {
   node_t *n;
   char *s;
-  int flags = job->flags;
   int *lp;
 
   /* device dpi is now known */

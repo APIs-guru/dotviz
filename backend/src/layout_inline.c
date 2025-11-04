@@ -308,9 +308,6 @@ extern gvlayout_features_t dotgen_features;
  * Return 0 on success.
  */
 int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g) {
-  char *p;
-  int rc;
-
   agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
   GD_gvc(g) = gvc;
   if (g != agroot(g)) {
@@ -338,8 +335,6 @@ int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
       return -1;
     }
   }
-
-  int rc;
 
   if (my_gvLayoutJobs(gvc, g) == -1)
     return -1;

@@ -58,21 +58,6 @@ static double late_double(void *obj, attrsym_t *attr, double defaultValue,
   return rv;
 }
 
-static int late_int(void *obj, attrsym_t *attr, int defaultValue, int minimum) {
-  if (attr == NULL)
-    return defaultValue;
-  char *p = ag_xget(obj, attr);
-  if (!p || p[0] == '\0')
-    return defaultValue;
-  char *endp;
-  long rv = strtol(p, &endp, 10);
-  if (p == endp || rv > INT_MAX)
-    return defaultValue; /* invalid int format */
-  if (rv < minimum)
-    return minimum;
-  return (int)rv;
-}
-
 static char *late_string(void *obj, attrsym_t *attr, char *defaultValue) {
   if (!attr || !obj)
     return defaultValue;
@@ -144,10 +129,6 @@ static bool selectedLayer(GVC_t *gvc, int layerNum, int numLayers, char *spec) {
   }
   free(spec_copy);
   return rval;
-}
-
-static bool selectedlayer(GVJ_t *job, char *spec) {
-  return selectedLayer(job->gvc, job->layerNum, job->numLayers, spec);
 }
 
 /* Parse the graph's layerselect attribute, which determines
