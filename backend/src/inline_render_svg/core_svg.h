@@ -36,7 +36,7 @@ void jobsvg_end_layer(GVJ_t *job);
 
 void jobsvg_begin_job(GVJ_t *job);
 
-void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
+void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n,
                       char *imagescale, char *imagepos);
 void jobsvg_set_pencolor(GVJ_t *job, char *name);
 void jobsvg_set_fillcolor(GVJ_t *job, char *name);
@@ -53,7 +53,7 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
 void svg_polyline(output_string *output, obj_state_t *obj, pointf *A, size_t n);
 void svg_textspan(output_string *output, fontname_kind fontnames,
                   obj_state_t *obj, pointf p, textspan_t *span);
-void svg_box(GVJ_t *job, boxf B, int filled);
+void svg_box(output_string *output, obj_state_t *obj, boxf B, int filled);
 // void svg_begin_node(GVJ_t *job);
 void svg_end_node(output_string *output);
 // void svg_comment(GVJ_t *job, char *str);

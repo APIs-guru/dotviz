@@ -602,7 +602,7 @@ static void emit_html_img(GVJ_t *job, htmlimg_t *cp, htmlenv_t *env) {
     scale = env->imgscale;
   assert(cp->src);
   assert(cp->src[0]);
-  jobsvg_usershape(job, cp->src, A, 4, true, scale, "mc");
+  jobsvg_usershape(job, cp->src, A, 4, scale, "mc");
 }
 
 static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {

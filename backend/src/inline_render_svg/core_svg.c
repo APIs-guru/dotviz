@@ -47,6 +47,7 @@
 #include "render_svg.h"
 #include "streq.h"
 #include "types.h"
+#include "core_svg.h"
 
 static imagescale_t get_imagescale(char *s) {
   if (*s == '\0')
@@ -86,36 +87,32 @@ static imagepos_t get_imagepos(char *s) {
   return IMAGEPOS_MIDDLE_CENTER;
 }
 
-static void core_loadimage_svg(GVJ_t *job, const char *name, boxf b,
-                               bool filled) {
-  output_string output = job2output_string(job);
-  (void)filled;
-
+static void core_loadimage_svg(output_string *output, int rotation_deg,
+                               const char *name, boxf b) {
   double width = (b.UR.x - b.LL.x);
   double height = (b.UR.y - b.LL.y);
   double originx = (b.UR.x + b.LL.x - width) / 2;
   double originy = (b.UR.y + b.LL.y + height) / 2;
 
-  out_puts(&output, "<image xlink:href=\"");
-  out_puts(&output, name);
-  if (job->rotation) {
+  out_puts(output, "<image xlink:href=\"");
+  out_puts(output, name);
+  if (rotation_deg != 0) {
 
     // FIXME - this is messed up >>>
-    gvprintf(&output,
+    gvprintf(output,
              "\" width=\"%gpx\" height=\"%gpx\" preserveAspectRatio=\"xMidYMid "
              "meet\" x=\"%g\" y=\"%g\"",
              height, width, originx, -originy);
-    gvprintf(&output, " transform=\"rotate(%d %g %g)\"", job->rotation, originx,
+    gvprintf(output, " transform=\"rotate(%d %g %g)\"", rotation_deg, originx,
              -originy);
     // <<<
   } else {
-    gvprintf(&output,
+    gvprintf(output,
              "\" width=\"%gpx\" height=\"%gpx\" preserveAspectRatio=\"xMinYMin "
              "meet\" x=\"%g\" y=\"%g\"",
              width, height, originx, -originy);
   }
-  out_puts(&output, "/>\n");
-  output_string2job(job, &output);
+  out_puts(output, "/>\n");
 }
 
 extern point get_dimensions_by_name(const char *name, pointf dpi);
@@ -123,8 +120,9 @@ extern point get_dimensions_by_name(const char *name, pointf dpi);
  * Scale image to fill polygon bounding box accordingus to "imagescale",
  * positioned at "imagepos"
  */
-void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
+void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n,
                       char *imagescale, char *imagepos) {
+  output_string output = job2output_string(job);
   assert(job);
   assert(name);
   assert(name[0]);
@@ -227,7 +225,8 @@ void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
     b.LL.y = b.UR.y;
     b.UR.y = d;
   }
-  core_loadimage_svg(job, name, b, filled);
+  core_loadimage_svg(&output, job->rotation, name, b);
+  output_string2job(job, &output);
 }
 
 #define LOCALNAMEPREFIX '%'
