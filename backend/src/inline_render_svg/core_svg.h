@@ -7,6 +7,8 @@
 #include "textspan.h"
 #include <stdbool.h>
 #include <stddef.h>
+#include "../output_string.h"
+#include "types.h"
 
 void jobsvg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
 void jobsvg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
@@ -42,12 +44,16 @@ void jobsvg_set_gradient_vals(GVJ_t *job, char *stopcolor, int angle,
                               double frac);
 void jobsvg_set_style(GVJ_t *job, char **s);
 
-// void svg_bezier(GVJ_t *job, pointf *A, size_t n, int filled);
-// void svg_polygon(GVJ_t *job, pointf *A, size_t n, int filled);
-// void svg_ellipse(GVJ_t *job, pointf *A, int filled);
-// void svg_polyline(GVJ_t *job, pointf *A, size_t n);
-// void svg_textspan(GVJ_t *job, pointf p, textspan_t *span);
-// void svg_box(GVJ_t *job, boxf B, int filled);
+void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
+                int filled);
+void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
+                 int filled);
+void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
+                 int filled);
+void svg_polyline(output_string *output, obj_state_t *obj, pointf *A, size_t n);
+void svg_textspan(output_string *output, fontname_kind fontnames,
+                  obj_state_t *obj, pointf p, textspan_t *span);
+void svg_box(GVJ_t *job, boxf B, int filled);
 // void svg_begin_node(GVJ_t *job);
 // void svg_end_node(GVJ_t *job);
 // void svg_comment(GVJ_t *job, char *str);
@@ -69,7 +75,7 @@ void jobsvg_set_style(GVJ_t *job, char **s);
 
 // void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
 //                    char *imagescale, char *imagepos);
-// void svg_set_pencolor(GVJ_t *job, char *name);
+void svg_set_pencolor(obj_state_t *obj, char *name);
 void svg_set_fillcolor(obj_state_t *obj, char *name);
 void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,
                            double frac);
