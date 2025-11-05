@@ -535,73 +535,87 @@ void jobsvg_begin_node(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
+void svg_end_node(output_string *output) { out_puts(output, "</g>\n"); }
+
 void jobsvg_end_node(GVJ_t *job) {
   output_string output = job2output_string(job);
-  out_puts(&output, "</g>\n");
+  svg_end_node(&output);
   output_string2job(job, &output);
+}
+
+void svg_begin_edge(output_string *output, obj_state_t *obj) {
+  char *ename;
+
+  svg_print_id_class(output, obj->id, NULL, "edge", obj->u.e);
+  out_puts(output, ">\n"
+
+                   "<title>");
+  ename = strdup_and_subst_obj("\\E", obj->u.e);
+  gvputs_xml(output, ename);
+  free(ename);
+  out_puts(output, "</title>\n");
 }
 
 void jobsvg_begin_edge(GVJ_t *job) {
   output_string output = job2output_string(job);
-
-  obj_state_t *obj = job->obj;
-  char *ename;
-
-  svg_print_id_class(&output, obj->id, NULL, "edge", obj->u.e);
-  out_puts(&output, ">\n"
-
-                    "<title>");
-  ename = strdup_and_subst_obj("\\E", obj->u.e);
-  gvputs_xml(&output, ename);
-  free(ename);
-  out_puts(&output, "</title>\n");
-
+  svg_begin_edge(&output, job->obj);
   output_string2job(job, &output);
 }
 
+void svg_end_edge(output_string *output) { out_puts(output, "</g>\n"); }
+
 void jobsvg_end_edge(GVJ_t *job) {
   output_string output = job2output_string(job);
-  out_puts(&output, "</g>\n");
+  svg_end_edge(&output);
   output_string2job(job, &output);
+}
+
+void svg_begin_anchor(output_string *output, char *href, char *tooltip,
+                      char *target, char *id) {
+  out_puts(output, "<g");
+  if (id) {
+    out_puts(output, " id=\"a_");
+    gvputs_xml(output, id);
+    out_putc(output, '"');
+  }
+  out_puts(output, ">"
+
+                   "<a");
+  if (href && href[0]) {
+    out_puts(output, " xlink:href=\"");
+    const xml_flags_t flags = {0};
+    gvputs_xml_with_flags(output, href, flags);
+    out_putc(output, '"');
+  }
+  if (tooltip && tooltip[0]) {
+    out_puts(output, " xlink:title=\"");
+    const xml_flags_t flags = {.raw = 1, .dash = 1, .nbsp = 1};
+    gvputs_xml_with_flags(output, tooltip, flags);
+    out_putc(output, '"');
+  }
+  if (target && target[0]) {
+    out_puts(output, " target=\"");
+    gvputs_xml(output, target);
+    out_putc(output, '"');
+  }
+  out_puts(output, ">\n");
 }
 
 void jobsvg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
                          char *id) {
   output_string output = job2output_string(job);
-  out_puts(&output, "<g");
-  if (id) {
-    out_puts(&output, " id=\"a_");
-    gvputs_xml(&output, id);
-    out_putc(&output, '"');
-  }
-  out_puts(&output, ">"
-
-                    "<a");
-  if (href && href[0]) {
-    out_puts(&output, " xlink:href=\"");
-    const xml_flags_t flags = {0};
-    gvputs_xml_with_flags(&output, href, flags);
-    out_putc(&output, '"');
-  }
-  if (tooltip && tooltip[0]) {
-    out_puts(&output, " xlink:title=\"");
-    const xml_flags_t flags = {.raw = 1, .dash = 1, .nbsp = 1};
-    gvputs_xml_with_flags(&output, tooltip, flags);
-    out_putc(&output, '"');
-  }
-  if (target && target[0]) {
-    out_puts(&output, " target=\"");
-    gvputs_xml(&output, target);
-    out_putc(&output, '"');
-  }
-  out_puts(&output, ">\n");
+  svg_begin_anchor(&output, href, tooltip, target, id);
   output_string2job(job, &output);
+}
+
+void svg_end_anchor(output_string *output) {
+  out_puts(output, "</a>\n"
+                   "</g>\n");
 }
 
 void jobsvg_end_anchor(GVJ_t *job) {
   output_string output = job2output_string(job);
-  out_puts(&output, "</a>\n"
-                    "</g>\n");
+  svg_end_anchor(&output);
   output_string2job(job, &output);
 }
 

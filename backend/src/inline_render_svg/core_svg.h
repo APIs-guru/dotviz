@@ -55,13 +55,13 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
                   obj_state_t *obj, pointf p, textspan_t *span);
 void svg_box(GVJ_t *job, boxf B, int filled);
 // void svg_begin_node(GVJ_t *job);
-// void svg_end_node(GVJ_t *job);
+void svg_end_node(output_string *output);
 // void svg_comment(GVJ_t *job, char *str);
-// void svg_begin_edge(GVJ_t *job);
-// void svg_begin_anchor(GVJ_t *job, char *href, char *tooltip, char *target,
-//                       char *id);
-// void svg_end_anchor(GVJ_t *job);
-// void svg_end_edge(GVJ_t *job);
+void svg_begin_edge(output_string *output, obj_state_t *obj);
+void svg_begin_anchor(output_string *output, char *href, char *tooltip,
+                      char *target, char *id);
+void svg_end_anchor(output_string *output);
+void svg_end_edge(output_string *output);
 // void svg_begin_graph(GVJ_t *job);
 // void svg_end_graph(GVJ_t *job);
 // void svg_begin_page(GVJ_t *job);
