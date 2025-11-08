@@ -73,8 +73,9 @@ void svg_end_edge(output_string *output);
 
 // void svg_begin_job(GVJ_t *job);
 
-// void svg_usershape(GVJ_t *job, char *name, pointf *a, size_t n, bool filled,
-//                    char *imagescale, char *imagepos);
+void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
+                   char *name, pointf *a, size_t n, char *imagescale,
+                   char *imagepos);
 void svg_set_pencolor(obj_state_t *obj, char *name);
 void svg_set_fillcolor(obj_state_t *obj, char *name);
 void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,

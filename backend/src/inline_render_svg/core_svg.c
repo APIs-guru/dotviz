@@ -120,14 +120,13 @@ extern point get_dimensions_by_name(const char *name, pointf dpi);
  * Scale image to fill polygon bounding box accordingus to "imagescale",
  * positioned at "imagepos"
  */
-void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n,
-                      char *imagescale, char *imagepos) {
-  output_string output = job2output_string(job);
-  assert(job);
+void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
+                   char *name, pointf *a, size_t n, char *imagescale,
+                   char *imagepos) {
   assert(name);
   assert(name[0]);
 
-  point isz = get_dimensions_by_name(name, job->dpi);
+  point isz = get_dimensions_by_name(name, dpi);
 
   if ((isz.x <= 0) && (isz.y <= 0))
     return;
@@ -225,7 +224,14 @@ void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n,
     b.LL.y = b.UR.y;
     b.UR.y = d;
   }
-  core_loadimage_svg(&output, job->rotation, name, b);
+  core_loadimage_svg(output, rotation_deg, name, b);
+}
+
+void jobsvg_usershape(GVJ_t *job, char *name, pointf *a, size_t n,
+                      char *imagescale, char *imagepos) {
+  output_string output = job2output_string(job);
+  svg_usershape(&output, job->rotation, job->dpi, name, a, n, imagescale,
+                imagepos);
   output_string2job(job, &output);
 }
 
