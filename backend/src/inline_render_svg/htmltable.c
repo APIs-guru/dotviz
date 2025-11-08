@@ -53,6 +53,7 @@
 #include "render_svg.h"
 #include <htmltable.h>
 #include "core_svg.h"
+#include "safe_job.h"
 // clang-format on
 
 #define DEFAULT_BORDER 1
@@ -113,7 +114,8 @@ static void popFontInfo(htmlenv_t *env, textfont_t *savp) {
     env->finfo.size = savp->size;
 }
 
-static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
+static void emit_htextspans(output_string *output, fontname_kind fontnames,
+                            obj_state_t *obj, size_t nspans, htextspan_t *spans,
                             pointf p, double halfwidth_x, textfont_t finfo,
                             boxf b, int simple) {
   double center_x, left_x, right_x;
@@ -166,7 +168,7 @@ static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
       else
         tf.flags = 0;
 
-      jobsvg_set_pencolor(job, tf.color);
+      svg_set_pencolor(obj, tf.color);
 
       tl.str = ti->str;
       tl.font = &tf;
@@ -182,14 +184,15 @@ static void emit_htextspans(GVJ_t *job, size_t nspans, htextspan_t *spans,
       tl.just = 'l';
 
       p_.x = p.x;
-      jobsvg_textspan(job, p_, &tl);
+      svg_textspan(output, fontnames, obj, p_, &tl);
       p.x += ti->size.x;
       ti++;
     }
   }
 }
 
-static void emit_html_txt(GVJ_t *job, htmltxt_t *tp, htmlenv_t *env) {
+static void emit_html_txt(output_string *output, fontname_kind fontnames,
+                          obj_state_t *obj, htmltxt_t *tp, htmlenv_t *env) {
   double halfwidth_x;
   pointf p;
 
@@ -201,17 +204,18 @@ static void emit_html_txt(GVJ_t *job, htmltxt_t *tp, htmlenv_t *env) {
   p.x = env->pos.x + (tp->box.UR.x + tp->box.LL.x) / 2.0;
   p.y = env->pos.y + (tp->box.UR.y + tp->box.LL.y) / 2.0;
 
-  emit_htextspans(job, tp->nspans, tp->spans, p, halfwidth_x, env->finfo,
-                  tp->box, tp->simple);
+  emit_htextspans(output, fontnames, obj, tp->nspans, tp->spans, p, halfwidth_x,
+                  env->finfo, tp->box, tp->simple);
 }
 
-static void doSide(GVJ_t *job, pointf p, double wd, double ht) {
+static void doSide(output_string *output, obj_state_t *obj, pointf p, double wd,
+                   double ht) {
   boxf BF;
 
   BF.LL = p;
   BF.UR.x = p.x + wd;
   BF.UR.y = p.y + ht;
-  jobsvg_box(job, BF, 1);
+  svg_box(output, obj, BF, 1);
 }
 
 /* Convert boxf into four corner points
@@ -242,82 +246,82 @@ static pointf *mkPts(pointf *AF, boxf b, int border) {
  * Also handles thick lines.
  * Assume dp->border > 0
  */
-static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
-  obj_state_t *obj = job->obj;
+static void doBorder(output_string *output, SafeJob *safe_job, obj_state_t *obj,
+                     htmldata_t *dp, boxf b) {
   pointf AF[7];
   char *sptr[2];
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
   unsigned short sides;
 
-  jobsvg_set_pencolor(job, color);
+  svg_set_pencolor(obj, color);
   if (dp->style.dashed || dp->style.dotted) {
     sptr[0] = sptr[1] = NULL;
     if (dp->style.dashed)
       sptr[0] = "dashed";
     else if (dp->style.dotted)
       sptr[0] = "dotted";
-    jobsvg_set_style(job, sptr);
+    svg_set_style(obj, sptr);
   } else
-    jobsvg_set_style(job, job->gvc->defaultlinestyle);
+    svg_set_style(obj, safe_job->defaultlinestyle);
   svg_set_penwidth(obj, dp->border);
 
   if (dp->style.rounded)
-    job_round_corners(job, mkPts(AF, b, dp->border), 4,
-                      (graphviz_polygon_style_t){.rounded = true}, 0);
+    round_corners(output, obj, mkPts(AF, b, dp->border), 4,
+                  (graphviz_polygon_style_t){.rounded = true}, 0);
   else if ((sides = (dp->flags & BORDER_MASK))) {
     mkPts(AF + 1, b, dp->border); /* AF[1-4] has LL=SW,SE,UR=NE,NW */
     switch (sides) {
     case BORDER_BOTTOM:
-      jobsvg_polyline(job, AF + 1, 2);
+      svg_polyline(output, obj, AF + 1, 2);
       break;
     case BORDER_RIGHT:
-      jobsvg_polyline(job, AF + 2, 2);
+      svg_polyline(output, obj, AF + 2, 2);
       break;
     case BORDER_TOP:
-      jobsvg_polyline(job, AF + 3, 2);
+      svg_polyline(output, obj, AF + 3, 2);
       break;
     case BORDER_LEFT:
       AF[0] = AF[4];
-      jobsvg_polyline(job, AF, 2);
+      svg_polyline(output, obj, AF, 2);
       break;
     case BORDER_BOTTOM | BORDER_RIGHT:
-      jobsvg_polyline(job, AF + 1, 3);
+      svg_polyline(output, obj, AF + 1, 3);
       break;
     case BORDER_RIGHT | BORDER_TOP:
-      jobsvg_polyline(job, AF + 2, 3);
+      svg_polyline(output, obj, AF + 2, 3);
       break;
     case BORDER_TOP | BORDER_LEFT:
       AF[5] = AF[1];
-      jobsvg_polyline(job, AF + 3, 3);
+      svg_polyline(output, obj, AF + 3, 3);
       break;
     case BORDER_LEFT | BORDER_BOTTOM:
       AF[0] = AF[4];
-      jobsvg_polyline(job, AF, 3);
+      svg_polyline(output, obj, AF, 3);
       break;
     case BORDER_BOTTOM | BORDER_RIGHT | BORDER_TOP:
-      jobsvg_polyline(job, AF + 1, 4);
+      svg_polyline(output, obj, AF + 1, 4);
       break;
     case BORDER_RIGHT | BORDER_TOP | BORDER_LEFT:
       AF[5] = AF[1];
-      jobsvg_polyline(job, AF + 2, 4);
+      svg_polyline(output, obj, AF + 2, 4);
       break;
     case BORDER_TOP | BORDER_LEFT | BORDER_BOTTOM:
       AF[5] = AF[1];
       AF[6] = AF[2];
-      jobsvg_polyline(job, AF + 3, 4);
+      svg_polyline(output, obj, AF + 3, 4);
       break;
     case BORDER_LEFT | BORDER_BOTTOM | BORDER_RIGHT:
       AF[0] = AF[4];
-      jobsvg_polyline(job, AF, 4);
+      svg_polyline(output, obj, AF, 4);
       break;
     case BORDER_TOP | BORDER_BOTTOM:
-      jobsvg_polyline(job, AF + 1, 2);
-      jobsvg_polyline(job, AF + 3, 2);
+      svg_polyline(output, obj, AF + 1, 2);
+      svg_polyline(output, obj, AF + 3, 2);
       break;
     case BORDER_LEFT | BORDER_RIGHT:
       AF[0] = AF[4];
-      jobsvg_polyline(job, AF, 2);
-      jobsvg_polyline(job, AF + 2, 2);
+      svg_polyline(output, obj, AF, 2);
+      svg_polyline(output, obj, AF + 2, 2);
       break;
     default:
       break;
@@ -330,32 +334,32 @@ static void doBorder(GVJ_t *job, htmldata_t *dp, boxf b) {
       b.UR.x -= delta;
       b.UR.y -= delta;
     }
-    jobsvg_box(job, b, 0);
+    svg_box(output, obj, b, 0);
   }
 }
 
 /* Set up fill values from given color; make pen transparent.
  * Return type of fill required.
  */
-static int setFill(GVJ_t *job, char *color, int angle, htmlstyle_t style,
+static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
                    char *clrs[2]) {
   int filled;
   double frac;
   if (findStopColor(color, clrs, &frac)) {
-    jobsvg_set_fillcolor(job, clrs[0]);
+    svg_set_fillcolor(obj, clrs[0]);
     if (clrs[1])
-      jobsvg_set_gradient_vals(job, clrs[1], angle, frac);
+      svg_set_gradient_vals(obj, clrs[1], angle, frac);
     else
-      jobsvg_set_gradient_vals(job, DEFAULT_COLOR, angle, frac);
+      svg_set_gradient_vals(obj, DEFAULT_COLOR, angle, frac);
     if (style.radial)
       filled = RGRADIENT;
     else
       filled = GRADIENT;
   } else {
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
     filled = FILL;
   }
-  jobsvg_set_pencolor(job, "transparent");
+  svg_set_pencolor(obj, "transparent");
   return filled;
 }
 
@@ -369,9 +373,9 @@ static int setFill(GVJ_t *job, char *color, int angle, htmlstyle_t style,
  * FIX: Should we provide a tooltip if none is set, as is done
  * for nodes, edges, etc. ?
  */
-static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
-                      htmlmap_data_t *save) {
-  obj_state_t *obj = job->obj;
+static int initAnchor(output_string *output, SafeJob *safe_job,
+                      obj_state_t *obj, htmlenv_t *env, htmldata_t *data,
+                      boxf b, htmlmap_data_t *save) {
   char *id;
   static int anchorId;
   agxbuf xb = {0};
@@ -384,20 +388,20 @@ static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
   id = data->id;
   if (!id || !*id) { /* no external id, so use the internal one */
     if (!env->objid) {
-      env->objid = gv_strdup(getObjId(job, obj->u.n, &xb));
+      env->objid = gv_strdup(getObjId(safe_job, obj->u.n, &xb));
       env->objid_set = true;
     }
     agxbprint(&xb, "%s_%d", env->objid, anchorId++);
     id = agxbuse(&xb);
   }
-  const bool changed = initMapData(job, NULL, data->href, data->title,
+  const bool changed = initMapData(obj, NULL, data->href, data->title,
                                    data->target, id, obj->u.g);
   agxbfree(&xb);
 
   if (changed) {
     if (obj->url || obj->explicit_tooltip) {
-      emit_map_rect(job, b);
-      jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+      emit_map_rect(obj, b);
+      svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
     }
   }
   return changed;
@@ -419,11 +423,10 @@ static int initAnchor(GVJ_t *job, htmlenv_t *env, htmldata_t *data, boxf b,
  * top-down. For ordinary map anchors, this is all done bottom-up, so
  * the geometric map info at the higher level hasn't been emitted yet.
  */
-static void endAnchor(GVJ_t *job, htmlmap_data_t *save) {
-  obj_state_t *obj = job->obj;
-
+static void endAnchor(output_string *output, obj_state_t *obj,
+                      htmlmap_data_t *save) {
   if (obj->url || obj->explicit_tooltip)
-    jobsvg_end_anchor(job);
+    svg_end_anchor(output);
   RESET(url);
   RESET(tooltip);
   RESET(target);
@@ -431,13 +434,15 @@ static void endAnchor(GVJ_t *job, htmlmap_data_t *save) {
   obj->explicit_tooltip = save->explicit_tooltip;
 }
 
-static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env);
+static void emit_html_cell(output_string *output, SafeJob *safe_job,
+                           obj_state_t *obj, htmlcell_t *cp, htmlenv_t *env);
 
 /* place vertical and horizontal lines between adjacent cells and
  * extend the lines to intersect the rounded table boundary
  */
-static void emit_html_rules(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env,
-                            char *color, htmlcell_t *nextc) {
+static void emit_html_rules(output_string *output, obj_state_t *obj,
+                            htmlcell_t *cp, htmlenv_t *env, char *color,
+                            htmlcell_t *nextc) {
   pointf rule_pt;
   double rule_length;
   double base;
@@ -446,8 +451,8 @@ static void emit_html_rules(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env,
 
   if (!color)
     color = DEFAULT_COLOR;
-  jobsvg_set_fillcolor(job, color);
-  jobsvg_set_pencolor(job, color);
+  svg_set_fillcolor(obj, color);
+  svg_set_pencolor(obj, color);
 
   pts = cp->data.box;
   pts.LL.x += pos.x;
@@ -471,7 +476,7 @@ static void emit_html_rules(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env,
     }
     rule_pt.x = pts.UR.x + cp->parent->data.space / 2;
     rule_length = base + pts.UR.y - pts.LL.y + cp->parent->data.space;
-    doSide(job, rule_pt, 0, rule_length);
+    doSide(output, obj, rule_pt, 0, rule_length);
   }
   // Determine the horizontal coordinate and length
   if (cp->hruled && cp->row + cp->rowspan < cp->parent->row_count) {
@@ -502,12 +507,12 @@ static void emit_html_rules(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env,
     }
     rule_pt.y = pts.LL.y - cp->parent->data.space / 2;
     rule_length = base + pts.UR.x - pts.LL.x + cp->parent->data.space;
-    doSide(job, rule_pt, rule_length, 0);
+    doSide(output, obj, rule_pt, rule_length, 0);
   }
 }
 
-static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
-  obj_state_t *obj = job->obj;
+static void emit_html_tbl(output_string *output, SafeJob *safe_job,
+                          obj_state_t *obj, htmltbl_t *tbl, htmlenv_t *env) {
   boxf pts = tbl->data.box;
   pointf pos = env->pos;
   htmlcell_t **cells = tbl->u.n.cells;
@@ -527,7 +532,7 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
   pts.UR.y += pos.y;
 
   if (doAnchor)
-    anchor = initAnchor(job, env, &tbl->data, pts, &saved);
+    anchor = initAnchor(output, safe_job, obj, env, &tbl->data, pts, &saved);
   else
     anchor = 0;
 
@@ -536,19 +541,19 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
     /* Fill first */
     if (tbl->data.bgcolor) {
       char *clrs[2] = {0};
-      int filled = setFill(job, tbl->data.bgcolor, tbl->data.gradientangle,
+      int filled = setFill(obj, tbl->data.bgcolor, tbl->data.gradientangle,
                            tbl->data.style, clrs);
       if (tbl->data.style.rounded) {
-        job_round_corners(job, mkPts(AF, pts, tbl->data.border), 4,
-                          (graphviz_polygon_style_t){.rounded = true}, filled);
+        round_corners(output, obj, mkPts(AF, pts, tbl->data.border), 4,
+                      (graphviz_polygon_style_t){.rounded = true}, filled);
       } else
-        jobsvg_box(job, pts, filled);
+        svg_box(output, obj, pts, filled);
       free(clrs[0]);
       free(clrs[1]);
     }
 
     while (*cells) {
-      emit_html_cell(job, *cells, env);
+      emit_html_cell(output, safe_job, obj, *cells, env);
       cells++;
     }
 
@@ -561,15 +566,15 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
     svg_set_penwidth(obj, 1.0);
     while ((cp = *cells++)) {
       if (cp->hruled || cp->vruled)
-        emit_html_rules(job, cp, env, tbl->data.pencolor, *cells);
+        emit_html_rules(output, obj, cp, env, tbl->data.pencolor, *cells);
     }
 
     if (tbl->data.border)
-      doBorder(job, &tbl->data, pts);
+      doBorder(output, safe_job, obj, &tbl->data, pts);
   }
 
   if (anchor)
-    endAnchor(job, &saved);
+    endAnchor(output, obj, &saved);
 
   if (tbl->font)
     popFontInfo(env, &savef);
@@ -579,7 +584,8 @@ static void emit_html_tbl(GVJ_t *job, htmltbl_t *tbl, htmlenv_t *env) {
  * Scaling is determined by either the image's scale attribute,
  * or the imagescale attribute of the graph object being drawn.
  */
-static void emit_html_img(GVJ_t *job, htmlimg_t *cp, htmlenv_t *env) {
+static void emit_html_img(output_string *output, int rotation_deg, pointf dpi,
+                          htmlimg_t *cp, htmlenv_t *env) {
   pointf A[4];
   boxf bb = cp->box;
   char *scale;
@@ -602,10 +608,11 @@ static void emit_html_img(GVJ_t *job, htmlimg_t *cp, htmlenv_t *env) {
     scale = env->imgscale;
   assert(cp->src);
   assert(cp->src[0]);
-  jobsvg_usershape(job, cp->src, A, 4, scale, "mc");
+  svg_usershape(output, rotation_deg, dpi, cp->src, A, 4, scale, "mc");
 }
 
-static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {
+static void emit_html_cell(output_string *output, SafeJob *safe_job,
+                           obj_state_t *obj, htmlcell_t *cp, htmlenv_t *env) {
   htmlmap_data_t saved;
   boxf pts = cp->data.box;
   pointf pos = env->pos;
@@ -619,36 +626,39 @@ static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {
   pts.UR.y += pos.y;
 
   if (doAnchor)
-    inAnchor = initAnchor(job, env, &cp->data, pts, &saved);
+    inAnchor = initAnchor(output, safe_job, obj, env, &cp->data, pts, &saved);
   else
     inAnchor = 0;
 
   if (!cp->data.style.invisible) {
     if (cp->data.bgcolor) {
       char *clrs[2];
-      int filled = setFill(job, cp->data.bgcolor, cp->data.gradientangle,
+      int filled = setFill(obj, cp->data.bgcolor, cp->data.gradientangle,
                            cp->data.style, clrs);
       if (cp->data.style.rounded) {
-        job_round_corners(job, mkPts(AF, pts, cp->data.border), 4,
-                          (graphviz_polygon_style_t){.rounded = true}, filled);
+        round_corners(output, obj, mkPts(AF, pts, cp->data.border), 4,
+                      (graphviz_polygon_style_t){.rounded = true}, filled);
       } else
-        jobsvg_box(job, pts, filled);
+        svg_box(output, obj, pts, filled);
       free(clrs[0]);
     }
 
     if (cp->data.border)
-      doBorder(job, &cp->data, pts);
+      doBorder(output, safe_job, obj, &cp->data, pts);
 
     if (cp->child.kind == HTML_TBL)
-      emit_html_tbl(job, cp->child.u.tbl, env);
+      emit_html_tbl(output, safe_job, obj, cp->child.u.tbl, env);
     else if (cp->child.kind == HTML_IMAGE)
-      emit_html_img(job, cp->child.u.img, env);
-    else
-      emit_html_txt(job, cp->child.u.txt, env);
+      emit_html_img(output, safe_job->rotation, safe_job->dpi, cp->child.u.img,
+                    env);
+    else {
+      emit_html_txt(output, GD_fontnames(safe_job->graph), obj, cp->child.u.txt,
+                    env);
+    }
   }
 
   if (inAnchor)
-    endAnchor(job, &saved);
+    endAnchor(output, obj, &saved);
 }
 
 /* Push new obj on stack to be used in common by all
@@ -657,11 +667,8 @@ static void emit_html_cell(GVJ_t *job, htmlcell_t *cp, htmlenv_t *env) {
  * parent, as well as the url, explicit, target and tooltip.
  */
 static void allocObj(GVJ_t *job) {
-  obj_state_t *obj;
-  obj_state_t *parent;
-
-  obj = push_obj_state(job);
-  parent = obj->parent;
+  obj_state_t *obj = push_obj_state(job);
+  obj_state_t *parent = obj->parent;
   obj->type = parent->type;
   obj->emit_state = parent->emit_state;
   switch (obj->type) {
@@ -715,11 +722,11 @@ static double heightOfLbl(htmllabel_t *lp) {
   return sz;
 }
 
-void emit_html_label(GVJ_t *job, htmllabel_t *lp, textlabel_t *tp) {
+static void emit_html_label_impl(output_string *output, SafeJob *safe_job,
+                                 obj_state_t *obj, htmllabel_t *lp,
+                                 textlabel_t *tp) {
   htmlenv_t env;
   pointf p;
-
-  allocObj(job);
 
   p = tp->pos;
   switch (tp->valign) {
@@ -737,8 +744,8 @@ void emit_html_label(GVJ_t *job, htmllabel_t *lp, textlabel_t *tp) {
   env.finfo.color = tp->fontcolor;
   env.finfo.name = tp->fontname;
   env.finfo.size = tp->fontsize;
-  env.imgscale = agget(job->obj->u.n, "imagescale");
-  env.objid = job->obj->id;
+  env.imgscale = agget(obj->u.n, "imagescale");
+  env.objid = obj->id;
   env.objid_set = false;
   if (env.imgscale == NULL || env.imgscale[0] == '\0')
     env.imgscale = "false";
@@ -747,17 +754,25 @@ void emit_html_label(GVJ_t *job, htmllabel_t *lp, textlabel_t *tp) {
 
     /* set basic graphics context */
     /* Need to override line style set by node. */
-    jobsvg_set_style(job, job->gvc->defaultlinestyle);
+    svg_set_style(obj, safe_job->defaultlinestyle);
     if (tbl->data.pencolor)
-      jobsvg_set_pencolor(job, tbl->data.pencolor);
+      svg_set_pencolor(obj, tbl->data.pencolor);
     else
-      jobsvg_set_pencolor(job, DEFAULT_COLOR);
-    emit_html_tbl(job, tbl, &env);
+      svg_set_pencolor(obj, DEFAULT_COLOR);
+    emit_html_tbl(output, safe_job, obj, tbl, &env);
   } else {
-    emit_html_txt(job, lp->u.txt, &env);
+    emit_html_txt(output, GD_fontnames(safe_job->graph), obj, lp->u.txt, &env);
   }
   if (env.objid_set)
     free(env.objid);
+}
+
+void emit_html_label(GVJ_t *job, htmllabel_t *lp, textlabel_t *tp) {
+  allocObj(job);
+  SafeJob safe_job = to_safe_job(job);
+  output_string output = job2output_string(job);
+  emit_html_label_impl(&output, &safe_job, job->obj, lp, tp);
+  output_string2job(job, &output);
   freeObj(job);
 }
 

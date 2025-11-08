@@ -17,6 +17,7 @@
 // clang-format off
 #include "const.h"
 #include "gvplugin_render.h" // IWYU pragma: keep
+#include "safe_job.h"
 #include "types.h"
 #include "config.h"
 #include <assert.h>
@@ -149,9 +150,8 @@ void pop_obj_state(GVJ_t *job) {
  * names.
  * @return True if an assignment was made for ID, URL, tooltip, or target
  */
-bool initMapData(GVJ_t *job, char *lbl, char *url, char *tooltip, char *target,
-                 char *id, void *gobj) {
-  obj_state_t *obj = job->obj;
+bool initMapData(obj_state_t *obj, char *lbl, char *url, char *tooltip,
+                 char *target, char *id, void *gobj) {
   bool assigned = false;
 
   if (lbl)
@@ -178,24 +178,25 @@ bool initMapData(GVJ_t *job, char *lbl, char *url, char *tooltip, char *target,
   return assigned;
 }
 
-static void layerPagePrefix(GVJ_t *job, agxbuf *xb) {
-  if (job->layerNum > 1) {
-    agxbprint(xb, "%s_", job->gvc->layerIDs[job->layerNum]);
+static void layerPagePrefix(const SafeJob *safe_job, agxbuf *xb) {
+  if (safe_job->layerNum > 1) {
+    agxbprint(xb, "%s_", safe_job->layerIDs[safe_job->layerNum]);
   }
-  if (job->pagesArrayElem.x > 0 || job->pagesArrayElem.y > 0) {
-    agxbprint(xb, "page%d,%d_", job->pagesArrayElem.x, job->pagesArrayElem.y);
+  if (safe_job->pagesArrayElem.x > 0 || safe_job->pagesArrayElem.y > 0) {
+    agxbprint(xb, "page%d,%d_", safe_job->pagesArrayElem.x,
+              safe_job->pagesArrayElem.y);
   }
 }
 
 /// Use id of root graph if any, plus kind and internal id of object
-char *getObjId(GVJ_t *job, void *obj, agxbuf *xb) {
+char *getObjId(const SafeJob *safe_job, void *obj, agxbuf *xb) {
   char *id;
-  graph_t *root = job->gvc->g;
+  const graph_t *const root = safe_job->graph;
   char *gid = GD_drawing(root)->id;
   long idnum = 0;
   char *pfx = NULL;
 
-  layerPagePrefix(job, xb);
+  layerPagePrefix(safe_job, xb);
 
   id = agget(obj, "id");
   if (id && *id != '\0') {
@@ -228,6 +229,11 @@ char *getObjId(GVJ_t *job, void *obj, agxbuf *xb) {
   agxbprint(xb, "%s%ld", pfx, idnum);
 
   return agxbuse(xb);
+}
+
+char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb) {
+  SafeJob safe_job = to_safe_job(job);
+  return getObjId(&safe_job, obj, xb);
 }
 
 /* Map "\n" to ^J, "\r" to ^M and "\l" to ^J.
@@ -306,10 +312,10 @@ void initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj) {
     lbl = NULL;
   if (!url || !*url) /* try URL as an alias for href */
     url = agget(gobj, "URL");
-  id = getObjId(job, gobj, &xb);
+  id = job_getObjId(job, gobj, &xb);
   if (tooltip)
     tooltip = preprocessTooltip(tooltip, gobj);
-  initMapData(job, lbl, url, tooltip, target, id, gobj);
+  initMapData(job->obj, lbl, url, tooltip, target, id, gobj);
 
   free(tooltip);
   agxbfree(&xb);
@@ -613,8 +619,7 @@ int job_stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
   return rv;
 }
 
-void emit_map_rect(GVJ_t *job, boxf b) {
-  obj_state_t *obj = job->obj;
+void emit_map_rect(obj_state_t *obj, boxf b) {
   pointf *p;
 
   obj->url_map_shape = MAP_POLYGON;
@@ -1728,7 +1733,7 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
 
   agxbuf xb = {0};
 
-  s = getObjId(job, e, &xb);
+  s = job_getObjId(job, e, &xb);
   obj->id = strdup_and_subst_obj(s, e);
   agxbfree(&xb);
 
@@ -2075,7 +2080,10 @@ void emit_page(GVJ_t *job, graph_t *g) {
   bool obj_id_needs_restore = false;
   if (NotFirstPage(job)) {
     saveid = obj->id;
-    layerPagePrefix(job, &xb);
+    {
+      SafeJob safe_job = to_safe_job(job);
+      layerPagePrefix(&safe_job, &xb);
+    }
     agxbput(&xb, saveid == NULL ? "layer" : saveid);
     obj->id = agxbuse(&xb);
     obj_id_needs_restore = true;
@@ -2101,7 +2109,7 @@ void emit_page(GVJ_t *job, graph_t *g) {
    * or end_page of renderer.
    */
   if (obj->url || obj->explicit_tooltip) {
-    emit_map_rect(job, job->clip);
+    emit_map_rect(obj, job->clip);
     jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
   }
   emit_background(job, g);
@@ -2180,7 +2188,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     doAnchor = obj->url || obj->explicit_tooltip;
     char *previous_color_scheme = setColorScheme(agget(sg, "colorscheme"));
     if (doAnchor) {
-      emit_map_rect(job, GD_bb(sg));
+      emit_map_rect(obj, GD_bb(sg));
       jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
     }
     filled = 0;

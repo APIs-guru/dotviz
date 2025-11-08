@@ -26,6 +26,7 @@
 
 #include <inttypes.h>
 
+#include "safe_job.h"
 #include "types.h"
 #include "macros.h"
 #include "const.h"
@@ -96,12 +97,13 @@ RENDER_API void gv_postprocess(Agraph_t *, int);
 RENDER_API Ppolyline_t *ellipticWedge(pointf ctr, double major, double minor,
                                       double angle0, double angle1);
 RENDER_API void emit_clusters(GVJ_t *job, Agraph_t *g, int flags);
-RENDER_API char *getObjId(GVJ_t *job, void *obj, agxbuf *xb);
+RENDER_API char *getObjId(const SafeJob *safe_job, void *obj, agxbuf *xb);
+RENDER_API char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb);
 RENDER_API void emit_graph(GVJ_t *job, graph_t *g);
 RENDER_API void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *);
 RENDER_API bool emit_once(char *message);
 RENDER_API void emit_once_reset(void);
-RENDER_API void emit_map_rect(GVJ_t *job, boxf b);
+RENDER_API void emit_map_rect(obj_state_t *obj, boxf b);
 RENDER_API void endpath(path *, Agedge_t *, int, pathend_t *, bool);
 RENDER_API void epsf_init(node_t *n);
 RENDER_API void epsf_free(node_t *n);
@@ -115,8 +117,8 @@ RENDER_API void gv_free_splines(edge_t *e);
 RENDER_API void gv_cleanup_edge(Agedge_t *e);
 RENDER_API void gv_cleanup_node(Agnode_t *n);
 RENDER_API void *init_xdot(Agraph_t *g);
-RENDER_API bool initMapData(GVJ_t *, char *, char *, char *, char *, char *,
-                            void *);
+RENDER_API bool initMapData(obj_state_t *, char *, char *, char *, char *,
+                            char *, void *);
 RENDER_API bool isPolygon(node_t *);
 RENDER_API void makeSelfEdge(edge_t *edges[], size_t ind, size_t cnt,
                              double sizex, double sizey, splineInfo *sinfo);
@@ -138,6 +140,9 @@ RENDER_API port resolvePort(node_t *n, node_t *other, port *oldport);
 RENDER_API void resolvePorts(edge_t *e);
 RENDER_API void job_round_corners(GVJ_t *job, pointf *AF, size_t sides,
                                   graphviz_polygon_style_t style, int filled);
+RENDER_API void round_corners(output_string *output, obj_state_t *obj,
+                              pointf *AF, size_t sides,
+                              graphviz_polygon_style_t style, int filled);
 RENDER_API int routesplinesinit(void);
 RENDER_API pointf *routesplines(path *, size_t *);
 RENDER_API void routesplinesterm(void);
