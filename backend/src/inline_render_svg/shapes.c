@@ -26,6 +26,8 @@
 #include <util/streq.h>
 #include <util/unreachable.h>
 #include "core_svg.h"
+#include "gvcjob.h"
+
 // clang-format on
 
 extern const char **Lib;
@@ -101,7 +103,8 @@ static poly_desc_t star_gen = {
 
 static pointf cylinder_size(pointf);
 static void cylinder_vertices(pointf *, pointf *);
-static void cylinder_draw(GVJ_t *job, pointf *AF, size_t sides, int filled);
+static void cylinder_draw(output_string *output, obj_state_t *obj, pointf *AF,
+                          size_t sides, int filled);
 static poly_desc_t cylinder_gen = {
     cylinder_size,
     cylinder_vertices,
@@ -362,13 +365,13 @@ static int same_side(pointf p0, pointf p1, pointf L0, pointf L1) {
   return s0 == s1;
 }
 
-static char *penColor(GVJ_t *job, node_t *n) {
+static char *penColor(obj_state_t *obj, node_t *n) {
   char *color;
 
   color = late_nnstring(n, N_color, "");
   if (!color[0])
     color = DEFAULT_COLOR;
-  jobsvg_set_pencolor(job, color);
+  svg_set_pencolor(obj, color);
   return color;
 }
 
@@ -497,14 +500,13 @@ static char **checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
   return pstyle;
 }
 
-static graphviz_polygon_style_t stylenode(GVJ_t *job, node_t *n) {
-  obj_state_t *obj = job->obj;
+static graphviz_polygon_style_t stylenode(obj_state_t *obj, node_t *n) {
   char **pstyle, *s;
   graphviz_polygon_style_t istyle = {0};
   double penwidth;
 
   if ((pstyle = checkStyle(n, &istyle)))
-    jobsvg_set_style(job, pstyle);
+    svg_set_style(obj, pstyle);
 
   if (N_penwidth && (s = agxget(n, N_penwidth)) && s[0]) {
     penwidth = late_double(n, N_penwidth, 1.0, 0.0);
@@ -514,7 +516,7 @@ static graphviz_polygon_style_t stylenode(GVJ_t *job, node_t *n) {
   return istyle;
 }
 
-static void Mcircle_hack(GVJ_t *job, node_t *n) {
+static void Mcircle_hack(output_string *output, obj_state_t *obj, node_t *n) {
   double x, y;
   pointf AF[2], p;
 
@@ -526,10 +528,10 @@ static void Mcircle_hack(GVJ_t *job, node_t *n) {
   AF[0] = add_pointf(p, ND_coord(n));
   AF[1].y = AF[0].y;
   AF[1].x = AF[0].x - 2 * p.x;
-  jobsvg_polyline(job, AF, 2);
+  svg_polyline(output, obj, AF, 2);
   AF[0].y -= 2 * p.y;
   AF[1].y = AF[0].y;
-  jobsvg_polyline(job, AF, 2);
+  svg_polyline(output, obj, AF, 2);
 }
 
 static pointf *alloc_interpolation_points(pointf *AF, size_t sides,
@@ -590,14 +592,15 @@ static pointf *alloc_interpolation_points(pointf *AF, size_t sides,
  *
  * Diagonals are weird. Rewrite someday.
  */
-static void diagonals_draw(GVJ_t *job, pointf *AF, size_t sides,
-                           graphviz_polygon_style_t style, int filled) {
+static void diagonals_draw(output_string *output, obj_state_t *obj, pointf *AF,
+                           size_t sides, graphviz_polygon_style_t style,
+                           int filled) {
   pointf *B = alloc_interpolation_points(AF, sides, style, false);
-  jobsvg_polygon(job, AF, sides, filled);
+  svg_polygon(output, obj, AF, sides, filled);
 
   for (size_t seg = 0; seg < sides; seg++) {
     pointf C[] = {B[3 * seg + 2], B[3 * seg + 4]};
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
   }
   free(B);
 }
@@ -608,8 +611,9 @@ static void diagonals_draw(GVJ_t *job, pointf *AF, size_t sides,
  *
  * For example, a rounded star looks like a cartoon starfish.
  */
-static void rounded_draw(GVJ_t *job, pointf *AF, size_t sides,
-                         graphviz_polygon_style_t style, int filled) {
+static void rounded_draw(output_string *output, obj_state_t *obj, pointf *AF,
+                         size_t sides, graphviz_polygon_style_t style,
+                         int filled) {
   size_t i = 0;
 
   pointf *B = alloc_interpolation_points(AF, sides, style, true);
@@ -624,7 +628,7 @@ static void rounded_draw(GVJ_t *job, pointf *AF, size_t sides,
   }
   pts[i++] = pts[0];
   pts[i++] = pts[1];
-  jobsvg_bezier(job, pts + 1, i - 1, filled);
+  svg_bezier(output, obj, pts + 1, i - 1, filled);
   free(pts);
   free(B);
 }
@@ -673,9 +677,8 @@ static double mid_y(const pointf line[2]) {
  * consist of a region, filled or unfilled, followed by additional line
  * segments. A single fill is necessary for gradient colors to work.
  */
-void round_corners(GVJ_t *job, pointf *AF, size_t sides,
-                   graphviz_polygon_style_t style, int filled) {
-  assert(job != NULL);
+void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
+                   size_t sides, graphviz_polygon_style_t style, int filled) {
   assert(AF != NULL);
   assert(sides > 0);
   assert(memcmp(&style, &(graphviz_polygon_style_t){0}, sizeof(style)) != 0);
@@ -687,19 +690,19 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
   } mode = {0};
 
   if (style.diagonals) {
-    diagonals_draw(job, AF, sides, style, filled);
+    diagonals_draw(output, obj, AF, sides, style, filled);
     return;
   } else if (style.shape != 0) {
     mode.shape = style.shape;
   } else if (style.rounded) {
-    rounded_draw(job, AF, sides, style, filled);
+    rounded_draw(output, obj, AF, sides, style, filled);
     return;
   } else {
     UNREACHABLE();
   }
 
   if (mode.shape == CYLINDER) {
-    cylinder_draw(job, AF, sides, filled);
+    cylinder_draw(output, obj, AF, sides, filled);
     return;
   }
   B = alloc_interpolation_points(AF, sides, style, false);
@@ -711,7 +714,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
       D[seg] = AF[seg];
     D[0] = B[3 * (sides - 1) + 4];
     D[sides] = B[3 * (sides - 1) + 2];
-    jobsvg_polygon(job, D, sides + 1, filled);
+    svg_polygon(output, obj, D, sides + 1, filled);
     free(D);
 
     /* Draw the inner edge. */
@@ -720,9 +723,9 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     C[1] = B[3 * sseg + 4];
     C[2].x = C[1].x + (C[0].x - B[3 * sseg + 3].x);
     C[2].y = C[1].y + (C[0].y - B[3 * sseg + 3].y);
-    jobsvg_polyline(job, C + 1, 2);
+    svg_polyline(output, obj, C + 1, 2);
     C[1] = C[2];
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     break;
   case TAB:
     /*
@@ -748,13 +751,13 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[3].y = B[3].y + (B[3].y - B[4].y) / 3;
     for (size_t seg = 4; seg < sides + 2; seg++)
       D[seg] = AF[seg - 2];
-    jobsvg_polygon(job, D, sides + 2, filled);
+    svg_polygon(output, obj, D, sides + 2, filled);
     free(D);
 
     /* Draw the inner edge. */
     C[0] = B[3];
     C[1] = B[2];
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     break;
   case FOLDER:
     /*
@@ -783,7 +786,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[4].y = B[3].y;
     for (size_t seg = 4; seg < sides + 3; seg++)
       D[seg] = AF[seg - 3];
-    jobsvg_polygon(job, D, sides + 3, filled);
+    svg_polygon(output, obj, D, sides + 3, filled);
     free(D);
     break;
   case BOX3D:
@@ -796,18 +799,18 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[3] = AF[2];
     D[4] = B[8];
     D[5] = B[10];
-    jobsvg_polygon(job, D, sides + 2, filled);
+    svg_polygon(output, obj, D, sides + 2, filled);
     free(D);
 
     /* Draw the inner vertices. */
     C[0].x = B[1].x + (B[11].x - B[0].x);
     C[0].y = B[1].y + (B[11].y - B[0].y);
     C[1] = B[4];
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     C[1] = B[8];
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     C[1] = B[0];
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     break;
   case COMPONENT:
     assert(sides == 4);
@@ -850,7 +853,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
 
     D[10] = AF[2];
     D[11] = AF[3];
-    jobsvg_polygon(job, D, sides + 8, filled);
+    svg_polygon(output, obj, D, sides + 8, filled);
 
     /* Draw the internal vertices. */
     C[0] = D[2];
@@ -859,14 +862,14 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     C[2].x = C[1].x + (D[4].x - D[3].x);
     C[2].y = C[1].y + (D[4].y - D[3].y);
     C[3] = D[5];
-    jobsvg_polyline(job, C, 4);
+    svg_polyline(output, obj, C, 4);
     C[0] = D[6];
     C[1].x = D[6].x - (D[7].x - D[6].x);
     C[1].y = D[6].y - (D[7].y - D[6].y);
     C[2].x = C[1].x + (D[8].x - D[7].x);
     C[2].y = C[1].y + (D[8].y - D[7].y);
     C[3] = D[9];
-    jobsvg_polyline(job, C, 4);
+    svg_polyline(output, obj, C, 4);
 
     free(D);
     break;
@@ -910,14 +913,14 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[7].y = D[6].y + (B[3].y - B[4].y) / 2; // D[6].y + width
     D[8].x = D[0].x;
     D[8].y = D[0].y + (B[3].y - B[4].y) / 4; // D[0].y + width/2
-    jobsvg_polygon(job, D, sides + 5, filled);
+    svg_polygon(output, obj, D, sides + 5, filled);
 
     /*dsDNA line*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -949,7 +952,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[4].y = AF[0].y - (AF[0].y - AF[3].y) / 2;
     D[4].x = AF[0].x;
 
-    jobsvg_polygon(job, D, sides + 1, filled);
+    svg_polygon(output, obj, D, sides + 1, filled);
     free(D);
 
     break;
@@ -989,14 +992,14 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[6].y = D[1].y;
     D[7].x = D[6].x;
     D[7].y = D[0].y;
-    jobsvg_polygon(job, D, sides + 4, filled);
+    svg_polygon(output, obj, D, sides + 4, filled);
 
     /*dsDNA line*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1031,14 +1034,14 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[4].y = D[1].y;
     D[5].x = D[4].x;
     D[5].y = D[0].y;
-    jobsvg_polygon(job, D, sides + 2, filled);
+    svg_polygon(output, obj, D, sides + 2, filled);
 
     /*dsDNA line*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1071,14 +1074,14 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[3].y = D[2].y;
     D[4].x = D[3].x;
     D[4].y = D[0].y;
-    jobsvg_polygon(job, D, sides + 1, filled);
+    svg_polygon(output, obj, D, sides + 1, filled);
 
     /*dsDNA line*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1117,21 +1120,21 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[6].y = D[5].y - (B[3].y - B[4].y) / 2;
     D[7].x = D[0].x;
     D[7].y = D[6].y;
-    jobsvg_polygon(job, D, sides + 4, filled);
+    svg_polygon(output, obj, D, sides + 4, filled);
 
     /*dsDNA line left half*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = D[4].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*dsDNA line right half*/
     C[0].x = D[7].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1161,7 +1164,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*second, lower shape*/
     free(D);
@@ -1174,14 +1177,14 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*dsDNA line right half*/
     C[0].x = D[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1211,7 +1214,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y;
     D[3].x = D[2].x;
     D[3].y = D[0].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*second, lower shape*/
     free(D);
@@ -1224,14 +1227,14 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y;
     D[3].x = D[2].x;
     D[3].y = D[0].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*dsDNA line left half*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = D[3].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1264,7 +1267,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*lower, left rectangle*/
     free(D);
@@ -1279,7 +1282,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*lower, right rectangle*/
     free(D);
@@ -1293,7 +1296,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*upper, right rectangle*/
     free(D);
@@ -1307,14 +1310,14 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*dsDNA line right half*/
     C[0].x = D[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*dsDNA line left half*/
     C[0].x = mid_x(AF) -
@@ -1322,7 +1325,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[1].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1351,7 +1354,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*second, lower shape*/
     free(D);
@@ -1365,21 +1368,21 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /*dsDNA line right half*/
     C[0].x = D[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*dsDNA line left half*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = D[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1405,28 +1408,28 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = AF[2].y + (B[3].y - B[4].y) / 2;
     D[3].x = AF[0].x;
     D[3].y = AF[2].y + (B[3].y - B[4].y) / 2;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
 
     /* "\" of the X*/
     C[0].x = AF[1].x + (B[2].x - B[3].x) / 4;
     C[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 8; // y_center + 1/4 width
     C[1].x = C[0].x + (B[2].x - B[3].x) / 4;        // C[0].x + width/2
     C[1].y = C[0].y - (B[3].y - B[4].y) / 4;        // C[0].y - width/2
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*"/" of the X*/
     C[0].x = AF[1].x + (B[2].x - B[3].x) / 4;
     C[0].y = mid_y(&AF[1]) - (B[3].y - B[4].y) / 8; // y_center - 1/4 width
     C[1].x = C[0].x + (B[2].x - B[3].x) / 4;        // C[0].x + width/2
     C[1].y = C[0].y + (B[3].y - B[4].y) / 4;        // C[0].y + width/2
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*bottom line*/
     C[0].x = AF[1].x + (B[2].x - B[3].x) / 4;
     C[0].y = AF[2].y + (B[3].y - B[4].y) * 3 / 4;
     C[1].x = AF[0].x - (B[2].x - B[3].x) / 4;
     C[1].y = C[0].y;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1450,7 +1453,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[2].y = D[1].y;
     D[3].x = D[2].x;
     D[3].y = D[0].y;
-    jobsvg_polygon(job, D, sides, filled);
+    svg_polygon(output, obj, D, sides, filled);
     free(D);
 
     /*outer square line*/
@@ -1463,21 +1466,21 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     C[3].x = C[2].x;
     C[3].y = C[0].y;
     C[4] = C[0];
-    jobsvg_polyline(job, C, 5);
+    svg_polyline(output, obj, C, 5);
 
     /*dsDNA line right half*/
     C[0].x = mid_x(AF) + (B[2].x - B[3].x) * 3 / 4;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*dsDNA line left half*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = mid_x(AF) - (B[2].x - B[3].x) * 3 / 4;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     break;
   case RIBOSITE:
@@ -1527,7 +1530,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[14].y = D[1].y;
     D[15].x = D[2].x;
     D[15].y = D[0].y;
-    jobsvg_polygon(job, D, sides + 12, filled);
+    svg_polygon(output, obj, D, sides + 12, filled);
 
     // 2-part dash line
 
@@ -1536,21 +1539,21 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     C[0].y = mid_y(&AF[1]);
     C[1].x = C[0].x;
     C[1].y = C[0].y + (B[3].y - B[4].y) / 8; // y_center + 1/4*width
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*line below the x, top dash*/
     C[0].x = D[14].x; // x_center
     C[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 4;
     C[1].x = C[0].x;
     C[1].y = C[0].y + (B[3].y - B[4].y) / 8;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*dsDNA line*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1584,7 +1587,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[6].y = D[1].y; // left side
     D[7].x = D[4].x;
     D[7].y = D[0].y; // bottom
-    jobsvg_polygon(job, D, sides + 4, filled);
+    svg_polygon(output, obj, D, sides + 4, filled);
 
     // 2-part dash line
 
@@ -1593,21 +1596,21 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     C[0].y = mid_y(&AF[1]);
     C[1].x = C[0].x;
     C[1].y = C[0].y + (B[3].y - B[4].y) / 8; // y_center + 1/4*width
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*line below the x, top dash*/
     C[0].x = mid_x(AF);
     C[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 4;
     C[1].x = C[0].x;
     C[1].y = C[0].y + (B[3].y - B[4].y) / 8;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*dsDNA line*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1657,20 +1660,20 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[14].y = D[1].y;
     D[15].x = D[2].x;
     D[15].y = D[0].y;
-    jobsvg_polygon(job, D, sides + 12, filled);
+    svg_polygon(output, obj, D, sides + 12, filled);
 
     /*line below the x*/
     C[0] = D[14];
     C[1].x = C[0].x;
     C[1].y = mid_y(&AF[1]);
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*dsDNA line*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1704,21 +1707,21 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[6].y = D[1].y; // left side
     D[7].x = D[4].x;
     D[7].y = D[0].y; // bottom
-    jobsvg_polygon(job, D, sides + 4, filled);
+    svg_polygon(output, obj, D, sides + 4, filled);
 
     /*line below the x*/
     C[0].x = mid_x(AF);
     C[0].y = D[0].y;
     C[1].x = C[0].x;
     C[1].y = mid_y(&AF[1]);
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
 
     /*dsDNA line*/
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
-    jobsvg_polyline(job, C, 2);
+    svg_polyline(output, obj, C, 2);
     free(D);
 
     break;
@@ -1759,7 +1762,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[8].y = AF[0].y;
     D[8].x = B[1].x - (B[2].x - B[3].x) / 2;
 
-    jobsvg_polygon(job, D, sides + 5, filled);
+    svg_polygon(output, obj, D, sides + 5, filled);
     free(D);
     break;
 
@@ -1795,7 +1798,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[6].y = AF[0].y;
     D[6].x = B[1].x - (B[2].x - B[3].x) / 2;
 
-    jobsvg_polygon(job, D, sides + 3, filled);
+    svg_polygon(output, obj, D, sides + 3, filled);
     free(D);
     break;
 
@@ -1829,7 +1832,7 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[6].y = AF[3].y + (B[3].y - B[4].y) / 2;
     D[6].x = AF[0].x; /*D[0]*/
 
-    jobsvg_polygon(job, D, sides + 3, filled);
+    svg_polygon(output, obj, D, sides + 3, filled);
     free(D);
     break;
 
@@ -1869,11 +1872,19 @@ void round_corners(GVJ_t *job, pointf *AF, size_t sides,
     D[8].x = AF[3].x;
     D[8].y = AF[3].y;
 
-    jobsvg_polygon(job, D, sides + 5, filled);
+    svg_polygon(output, obj, D, sides + 5, filled);
     free(D);
     break;
   }
   free(B);
+}
+
+void job_round_corners(GVJ_t *tmp_job, pointf *AF, size_t sides,
+                       graphviz_polygon_style_t style, int filled) {
+  assert(tmp_job != NULL);
+  output_string output = job2output_string(tmp_job);
+  round_corners(&output, tmp_job->obj, AF, sides, style, filled);
+  output_string2job(tmp_job, &output);
 }
 
 /*=============================poly start=========================*/
@@ -2889,9 +2900,12 @@ static port poly_port(node_t *n, char *portname, char *compass) {
 }
 
 static bool multicolor(const char *f) { return strchr(f, ':') != NULL; }
+
 /* generic polygon gencode routine */
-static void poly_gencode(GVJ_t *job, node_t *n) {
-  obj_state_t *obj = job->obj;
+static void poly_gencode(GVJ_t *tmp_job, node_t *n) {
+  output_string output_obj = job2output_string(tmp_job);
+  output_string *output = &output_obj;
+  obj_state_t *obj = tmp_job->obj;
   polygon_t *poly;
   double xsize, ysize;
   pointf P, *vertices;
@@ -2904,7 +2918,7 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
   char *pencolor = NULL;
 
   if (doMap)
-    jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
 
   poly = ND_shape_info(n);
   vertices = poly->vertices;
@@ -2918,51 +2932,51 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
   xsize = (ND_lw(n) + ND_rw(n)) / INCH2PS(ND_width(n));
   ysize = ND_ht(n) / INCH2PS(ND_height(n));
 
-  const graphviz_polygon_style_t style = stylenode(job, n);
+  const graphviz_polygon_style_t style = stylenode(obj, n);
 
   char *clrs[2] = {0};
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     pencolor = DEFAULT_ACTIVEPENCOLOR;
-    jobsvg_set_pencolor(job, pencolor);
+    svg_set_pencolor(obj, pencolor);
     color = DEFAULT_ACTIVEFILLCOLOR;
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
     pencolor = DEFAULT_SELECTEDPENCOLOR;
-    jobsvg_set_pencolor(job, pencolor);
+    svg_set_pencolor(obj, pencolor);
     color = DEFAULT_SELECTEDFILLCOLOR;
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
     pencolor = DEFAULT_DELETEDPENCOLOR;
-    jobsvg_set_pencolor(job, pencolor);
+    svg_set_pencolor(obj, pencolor);
     color = DEFAULT_DELETEDFILLCOLOR;
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
     pencolor = DEFAULT_VISITEDPENCOLOR;
-    jobsvg_set_pencolor(job, pencolor);
+    svg_set_pencolor(obj, pencolor);
     color = DEFAULT_VISITEDFILLCOLOR;
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
     filled = FILL;
   } else {
     if (style.filled) {
       double frac;
       fillcolor = findFill(n);
       if (findStopColor(fillcolor, clrs, &frac)) {
-        jobsvg_set_fillcolor(job, clrs[0]);
+        svg_set_fillcolor(obj, clrs[0]);
         if (clrs[1])
-          jobsvg_set_gradient_vals(job, clrs[1],
-                                   late_int(n, N_gradientangle, 0, 0), frac);
+          svg_set_gradient_vals(obj, clrs[1],
+                                late_int(n, N_gradientangle, 0, 0), frac);
         else
-          jobsvg_set_gradient_vals(job, DEFAULT_COLOR,
-                                   late_int(n, N_gradientangle, 0, 0), frac);
+          svg_set_gradient_vals(obj, DEFAULT_COLOR,
+                                late_int(n, N_gradientangle, 0, 0), frac);
         if (style.radial)
           filled = RGRADIENT;
         else
           filled = GRADIENT;
       } else {
-        jobsvg_set_fillcolor(job, fillcolor);
+        svg_set_fillcolor(obj, fillcolor);
         filled = FILL;
       }
     } else if (style.striped || style.wedged) {
@@ -2971,7 +2985,7 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
     } else {
       filled = 0;
     }
-    pencolor = penColor(job, n); /* emit pen color */
+    pencolor = penColor(obj, n); /* emit pen color */
   }
 
   pfilled = !ND_shape(n)->usershape || streq(ND_shape(n)->name, "custom");
@@ -2979,7 +2993,7 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
   /* if no boundary but filled, set boundary color to transparent */
   if (peripheries == 0 && filled != 0 && pfilled) {
     peripheries = 1;
-    jobsvg_set_pencolor(job, "transparent");
+    svg_set_pencolor(obj, "transparent");
   }
 
   /* draw peripheries first */
@@ -2992,31 +3006,31 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
     }
     if (sides <= 2) {
       if (style.wedged && j == 0 && multicolor(fillcolor)) {
-        int rv = wedgedEllipse(job, AF, fillcolor);
+        int rv = wedgedEllipse(output, obj, AF, fillcolor);
         if (rv > 1)
           agerr(AGPREV, "in node %s\n", agnameof(n));
         filled = 0;
       }
-      jobsvg_ellipse(job, AF, filled);
+      svg_ellipse(output, obj, AF, filled);
       if (style.diagonals) {
-        Mcircle_hack(job, n);
+        Mcircle_hack(output, obj, n);
       }
     } else if (style.striped) {
       if (j == 0) {
-        int rv = stripedBox(job, AF, fillcolor, 1);
+        int rv = stripedBox(output, obj, AF, fillcolor, 1);
         if (rv > 1)
           agerr(AGPREV, "in node %s\n", agnameof(n));
       }
-      jobsvg_polygon(job, AF, sides, 0);
+      svg_polygon(output, obj, AF, sides, 0);
     } else if (style.underline) {
-      jobsvg_set_pencolor(job, "transparent");
-      jobsvg_polygon(job, AF, sides, filled);
-      jobsvg_set_pencolor(job, pencolor);
-      jobsvg_polyline(job, AF + 2, 2);
+      svg_set_pencolor(obj, "transparent");
+      svg_polygon(output, obj, AF, sides, filled);
+      svg_set_pencolor(obj, pencolor);
+      svg_polyline(output, obj, AF + 2, 2);
     } else if (SPECIAL_CORNERS(style)) {
-      round_corners(job, AF, sides, style, filled);
+      round_corners(output, obj, AF, sides, style, filled);
     } else {
-      jobsvg_polygon(job, AF, sides, filled);
+      svg_polygon(output, obj, AF, sides, filled);
     }
     /* fill innermost periphery only */
     filled = 0;
@@ -3044,29 +3058,29 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
     if (filled != 0 && pfilled) {
       if (sides <= 2) {
         if (style.wedged && j == 0 && multicolor(fillcolor)) {
-          int rv = wedgedEllipse(job, AF, fillcolor);
+          int rv = wedgedEllipse(output, obj, AF, fillcolor);
           if (rv > 1)
             agerr(AGPREV, "in node %s\n", agnameof(n));
           filled = 0;
         }
-        jobsvg_ellipse(job, AF, filled);
+        svg_ellipse(output, obj, AF, filled);
         if (style.diagonals) {
-          Mcircle_hack(job, n);
+          Mcircle_hack(output, obj, n);
         }
       } else if (style.striped) {
-        int rv = stripedBox(job, AF, fillcolor, 1);
+        int rv = stripedBox(output, obj, AF, fillcolor, 1);
         if (rv > 1)
           agerr(AGPREV, "in node %s\n", agnameof(n));
-        jobsvg_polygon(job, AF, sides, 0);
+        svg_polygon(output, obj, AF, sides, 0);
       } else if (style.rounded || style.diagonals) {
-        round_corners(job, AF, sides, style, filled);
+        round_corners(output, obj, AF, sides, style, filled);
       } else {
-        jobsvg_polygon(job, AF, sides, filled);
+        svg_polygon(output, obj, AF, sides, filled);
       }
     }
-    jobsvg_usershape(job, name, AF, sides,
-                     late_string(n, N_imagescale, "false"),
-                     late_string(n, N_imagepos, "mc"));
+    svg_usershape(output, tmp_job->rotation, tmp_job->dpi, name, AF, sides,
+                  late_string(n, N_imagescale, "false"),
+                  late_string(n, N_imagepos, "mc"));
     filled = 0; /* with user shapes, we have done the fill if needed */
   }
 
@@ -3074,9 +3088,14 @@ static void poly_gencode(GVJ_t *job, node_t *n) {
   free(clrs[0]);
   free(clrs[1]);
 
-  emit_label(job, EMIT_NLABEL, ND_label(n));
+  output_string2job(tmp_job, &output_obj);
+
+  emit_label(tmp_job, EMIT_NLABEL, ND_label(n));
   if (doMap) {
-    jobsvg_end_anchor(job);
+    output_string output_obj = job2output_string(tmp_job);
+    output_string *output = &output_obj;
+    svg_end_anchor(output);
+    output_string2job(tmp_job, &output_obj);
   }
 }
 
@@ -3218,8 +3237,10 @@ static bool point_inside(inside_t *inside_context, pointf p) {
   return hypot(P.x, P.y) <= inside_context->s.radius;
 }
 
-static void point_gencode(GVJ_t *job, node_t *n) {
-  obj_state_t *obj = job->obj;
+static void point_gencode(GVJ_t *tmp_job, node_t *n) {
+  output_string output_obj = job2output_string(tmp_job);
+  output_string *output = &output_obj;
+  obj_state_t *obj = tmp_job->obj;
   polygon_t *poly;
   pointf P, *vertices;
   bool filled;
@@ -3227,7 +3248,7 @@ static void point_gencode(GVJ_t *job, node_t *n) {
   int doMap = obj->url || obj->explicit_tooltip;
 
   if (doMap)
-    jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
 
   poly = ND_shape_info(n);
   vertices = poly->vertices;
@@ -3237,36 +3258,36 @@ static void point_gencode(GVJ_t *job, node_t *n) {
   graphviz_polygon_style_t style = {0};
   checkStyle(n, &style);
   if (style.invisible)
-    jobsvg_set_style(job, point_style);
+    svg_set_style(obj, point_style);
   else
-    jobsvg_set_style(job, &point_style[1]);
+    svg_set_style(obj, &point_style[1]);
   if (N_penwidth)
     svg_set_penwidth(obj, late_double(n, N_penwidth, 1.0, 0.0));
 
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     color = DEFAULT_ACTIVEPENCOLOR;
-    jobsvg_set_pencolor(job, color);
+    svg_set_pencolor(obj, color);
     color = DEFAULT_ACTIVEFILLCOLOR;
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
   } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
     color = DEFAULT_SELECTEDPENCOLOR;
-    jobsvg_set_pencolor(job, color);
+    svg_set_pencolor(obj, color);
     color = DEFAULT_SELECTEDFILLCOLOR;
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
   } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
     color = DEFAULT_DELETEDPENCOLOR;
-    jobsvg_set_pencolor(job, color);
+    svg_set_pencolor(obj, color);
     color = DEFAULT_DELETEDFILLCOLOR;
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
   } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
     color = DEFAULT_VISITEDPENCOLOR;
-    jobsvg_set_pencolor(job, color);
+    svg_set_pencolor(obj, color);
     color = DEFAULT_VISITEDFILLCOLOR;
-    jobsvg_set_fillcolor(job, color);
+    svg_set_fillcolor(obj, color);
   } else {
     color = findFillDflt(n, "black");
-    jobsvg_set_fillcolor(job, color); /* emit fill color */
-    penColor(job, n);                 /* emit pen color */
+    svg_set_fillcolor(obj, color); /* emit fill color */
+    penColor(obj, n);              /* emit pen color */
   }
   filled = true;
 
@@ -3274,7 +3295,7 @@ static void point_gencode(GVJ_t *job, node_t *n) {
   if (peripheries == 0) {
     peripheries = 1;
     if (color[0])
-      jobsvg_set_pencolor(job, color);
+      svg_set_pencolor(obj, color);
   }
 
   for (size_t j = 0; j < peripheries; j++) {
@@ -3287,14 +3308,15 @@ static void point_gencode(GVJ_t *job, node_t *n) {
         AF[i].y = P.y + ND_coord(n).y;
       }
     }
-    jobsvg_ellipse(job, AF, filled);
+    svg_ellipse(output, obj, AF, filled);
     /* fill innermost periphery only */
     filled = false;
   }
 
   if (doMap) {
-    jobsvg_end_anchor(job);
+    svg_end_anchor(output);
   }
+  output_string2job(tmp_job, &output_obj);
 }
 
 /* the "record" shape is a rudimentary table formatter */
@@ -3802,14 +3824,14 @@ static int record_path(node_t *n, port *prt, int side, boxf rv[], int *kptr) {
   return side;
 }
 
-static void gen_fields(GVJ_t *job, node_t *n, field_t *f) {
+static void gen_fields(GVJ_t *tmp_job, node_t *n, field_t *f) {
   int i;
   pointf AF[2], coord;
 
   if (f->lp) {
     f->lp->pos = add_pointf(mid_pointf(f->b.LL, f->b.UR), ND_coord(n));
-    emit_label(job, EMIT_NLABEL, f->lp);
-    penColor(job, n);
+    emit_label(tmp_job, EMIT_NLABEL, f->lp);
+    penColor(tmp_job->obj, n);
   }
 
   coord = ND_coord(n);
@@ -3826,14 +3848,16 @@ static void gen_fields(GVJ_t *job, node_t *n, field_t *f) {
       }
       AF[0] = add_pointf(AF[0], coord);
       AF[1] = add_pointf(AF[1], coord);
-      jobsvg_polyline(job, AF, 2);
+      output_string output_obj = job2output_string(tmp_job);
+      svg_polyline(&output_obj, tmp_job->obj, AF, 2);
+      output_string2job(tmp_job, &output_obj);
     }
-    gen_fields(job, n, f->fld[i]);
+    gen_fields(tmp_job, n, f->fld[i]);
   }
 }
 
-static void record_gencode(GVJ_t *job, node_t *n) {
-  obj_state_t *obj = job->obj;
+static void record_gencode(GVJ_t *tmp_job, node_t *n) {
+  obj_state_t *obj = tmp_job->obj;
   boxf BF;
   pointf AF[4];
   field_t *f;
@@ -3847,30 +3871,33 @@ static void record_gencode(GVJ_t *job, node_t *n) {
   BF.UR.x += ND_coord(n).x;
   BF.UR.y += ND_coord(n).y;
 
-  if (doMap)
-    jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
-  graphviz_polygon_style_t style = stylenode(job, n);
-  penColor(job, n);
+  if (doMap) {
+    output_string output = job2output_string(tmp_job);
+    svg_begin_anchor(&output, obj->url, obj->tooltip, obj->target, obj->id);
+    output_string2job(tmp_job, &output);
+  }
+  graphviz_polygon_style_t style = stylenode(obj, n);
+  penColor(obj, n);
   char *clrs[2] = {0};
   if (style.filled) {
     char *fillcolor = findFill(n);
     double frac;
 
     if (findStopColor(fillcolor, clrs, &frac)) {
-      jobsvg_set_fillcolor(job, clrs[0]);
+      svg_set_fillcolor(obj, clrs[0]);
       if (clrs[1])
-        jobsvg_set_gradient_vals(job, clrs[1],
-                                 late_int(n, N_gradientangle, 0, 0), frac);
+        svg_set_gradient_vals(obj, clrs[1], late_int(n, N_gradientangle, 0, 0),
+                              frac);
       else
-        jobsvg_set_gradient_vals(job, DEFAULT_COLOR,
-                                 late_int(n, N_gradientangle, 0, 0), frac);
+        svg_set_gradient_vals(obj, DEFAULT_COLOR,
+                              late_int(n, N_gradientangle, 0, 0), frac);
       if (style.radial)
         filled = RGRADIENT;
       else
         filled = GRADIENT;
     } else {
       filled = FILL;
-      jobsvg_set_fillcolor(job, fillcolor);
+      svg_set_fillcolor(obj, fillcolor);
     }
   } else
     filled = 0;
@@ -3884,18 +3911,22 @@ static void record_gencode(GVJ_t *job, node_t *n) {
     AF[1].y = AF[0].y;
     AF[3].x = AF[0].x;
     AF[3].y = AF[2].y;
-    round_corners(job, AF, 4, style, filled);
+    job_round_corners(tmp_job, AF, 4, style, filled);
   } else {
-    jobsvg_box(job, BF, filled);
+    output_string output = job2output_string(tmp_job);
+    svg_box(&output, obj, BF, filled);
+    output_string2job(tmp_job, &output);
   }
 
-  gen_fields(job, n, f);
+  gen_fields(tmp_job, n, f);
 
   free(clrs[0]);
   free(clrs[1]);
 
   if (doMap) {
-    jobsvg_end_anchor(job);
+    output_string output = job2output_string(tmp_job);
+    svg_end_anchor(&output);
+    output_string2job(tmp_job, &output);
   }
 }
 
@@ -3963,8 +3994,8 @@ static bool epsf_inside(inside_t *inside_context, pointf p) {
   return P.y >= -x2 && P.y <= x2 && P.x >= -ND_lw(n) && P.x <= ND_rw(n);
 }
 
-static void epsf_gencode(GVJ_t *job, node_t *n) {
-  obj_state_t *obj = job->obj;
+static void epsf_gencode(GVJ_t *tmp_job, node_t *n) {
+  obj_state_t *obj = tmp_job->obj;
   epsf_t *desc;
   int doMap = obj->url || obj->explicit_tooltip;
 
@@ -3972,17 +4003,24 @@ static void epsf_gencode(GVJ_t *job, node_t *n) {
   if (!desc)
     return;
 
-  if (doMap)
-    jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+  if (doMap) {
+    output_string output_obj = job2output_string(tmp_job);
+    output_string *output = &output_obj;
+    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
+    output_string2job(tmp_job, &output_obj);
+  }
   if (desc)
-    fprintf(job->output_file, "%.5g %.5g translate newpath user_shape_%d\n",
+    fprintf(tmp_job->output_file, "%.5g %.5g translate newpath user_shape_%d\n",
             ND_coord(n).x + desc->offset.x, ND_coord(n).y + desc->offset.y,
             desc->macro_id);
   ND_label(n)->pos = ND_coord(n);
 
-  emit_label(job, EMIT_NLABEL, ND_label(n));
+  emit_label(tmp_job, EMIT_NLABEL, ND_label(n));
   if (doMap) {
-    jobsvg_end_anchor(job);
+    output_string output_obj = job2output_string(tmp_job);
+    output_string *output = &output_obj;
+    svg_end_anchor(output);
+    output_string2job(tmp_job, &output_obj);
   }
 }
 
@@ -4146,7 +4184,8 @@ static void cylinder_vertices(pointf *vertices, pointf *bb) {
   vertices[18] = vertices[17] = vertices[0];
 }
 
-static void cylinder_draw(GVJ_t *job, pointf *AF, size_t sides, int filled) {
+static void cylinder_draw(output_string *output, obj_state_t *obj, pointf *AF,
+                          size_t sides, int filled) {
   pointf vertices[7];
   double y0 = AF[0].y;
   double y02 = y0 + y0;
@@ -4164,8 +4203,8 @@ static void cylinder_draw(GVJ_t *job, pointf *AF, size_t sides, int filled) {
   vertices[5].y = y02 - AF[5].y;
   vertices[6] = AF[6];
 
-  jobsvg_bezier(job, AF, sides, filled);
-  jobsvg_bezier(job, vertices, 7, 0);
+  svg_bezier(output, obj, AF, sides, filled);
+  svg_bezier(output, obj, vertices, 7, 0);
 }
 
 static const char *side_port[] = {"s", "e", "n", "w"};

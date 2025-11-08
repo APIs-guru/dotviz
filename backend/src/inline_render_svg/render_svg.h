@@ -36,6 +36,7 @@
 #include "gvcjob.h"		/* must follow gvcext.h (in types.h) */
 #include "gvcint.h"		/* must follow gvcext.h (in types.h) */
 #include "gvcproc.h"		/* must follow gvcext.h (in types.h) */
+#include "../output_string.h"
 // clang-format on
 
 #ifdef __cplusplus
@@ -135,8 +136,8 @@ RENDER_API int rank(graph_t *g, int balance, int maxiter);
 RENDER_API int rank2(graph_t *g, int balance, int maxiter, int search_size);
 RENDER_API port resolvePort(node_t *n, node_t *other, port *oldport);
 RENDER_API void resolvePorts(edge_t *e);
-RENDER_API void round_corners(GVJ_t *job, pointf *AF, size_t sides,
-                              graphviz_polygon_style_t style, int filled);
+RENDER_API void job_round_corners(GVJ_t *job, pointf *AF, size_t sides,
+                                  graphviz_polygon_style_t style, int filled);
 RENDER_API int routesplinesinit(void);
 RENDER_API pointf *routesplines(path *, size_t *);
 RENDER_API void routesplinesterm(void);
@@ -146,14 +147,18 @@ RENDER_API double selfRightSpace(edge_t *e);
 RENDER_API shape_kind shapeOf(node_t *);
 RENDER_API void shape_clip(node_t *n, pointf curve[4]);
 RENDER_API void make_simple_label(GVC_t *gvc, textlabel_t *rv);
-RENDER_API int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate);
+RENDER_API int job_stripedBox(GVJ_t *job, pointf *AF, const char *clrs,
+                              int rotate);
+int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
+               const char *clrs, int rotate);
 RENDER_API stroke_t taper(bezier *, double (*radfunc_t)(double, double, double),
                           double initwid);
 RENDER_API pointf textspan_size(GVC_t *gvc, textspan_t *span);
 RENDER_API void textfont_dict_open(GVC_t *gvc);
 RENDER_API void textfont_dict_close(GVC_t *gvc);
 RENDER_API void translate_bb(Agraph_t *, int);
-RENDER_API int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs);
+RENDER_API int wedgedEllipse(output_string *output, obj_state_t *obj,
+                             pointf *pf, const char *clrs);
 RENDER_API void update_bb_bz(boxf *bb, pointf *cp);
 RENDER_API boxf xdotBB(graph_t *g);
 

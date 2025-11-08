@@ -510,11 +510,11 @@ static int parseSegs(const char *clrs, colorsegs_t *psegs) {
  *  2 => error with message
  *  3 => warning message
  */
-int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
-  obj_state_t *obj = job->obj;
+int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
+                  const char *clrs) {
   colorsegs_t segs;
   int rv;
-  double save_penwidth = job->obj->penwidth;
+  double save_penwidth = obj->penwidth;
   Ppolyline_t *pp;
   double angle0, angle1;
 
@@ -533,14 +533,14 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
       break;
     if (s.t <= 0)
       continue;
-    jobsvg_set_fillcolor(job, s.color);
+    svg_set_fillcolor(obj, s.color);
 
     if (i + 1 == colorsegs_size(&segs))
       angle1 = 2 * M_PI;
     else
       angle1 = angle0 + 2 * M_PI * s.t;
     pp = ellipticWedge(ctr, semi.x, semi.y, angle0, angle1);
-    jobsvg_bezier(job, pp->ps, pp->pn, 1);
+    svg_bezier(output, obj, pp->ps, pp->pn, 1);
     angle0 = angle1;
     freePath(pp);
   }
@@ -557,14 +557,14 @@ int wedgedEllipse(GVJ_t *job, pointf *pf, const char *clrs) {
  * boundaries are drawn. 0 => okay 1 => error without message 2 => error with
  * message 3 => warning message
  */
-int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
-  obj_state_t *obj = job->obj;
+int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
+               const char *clrs, int rotate) {
   colorsegs_t segs;
   int rv;
   double xdelta;
   pointf pts[4];
   double lastx;
-  double save_penwidth = job->obj->penwidth;
+  double save_penwidth = obj->penwidth;
 
   rv = parseSegs(clrs, &segs);
   if (rv == 1 || rv == 2)
@@ -592,17 +592,24 @@ int stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
       break;
     if (s.t <= 0)
       continue;
-    jobsvg_set_fillcolor(job, s.color);
+    svg_set_fillcolor(obj, s.color);
     if (i + 1 == colorsegs_size(&segs))
       pts[1].x = pts[2].x = lastx;
     else
       pts[1].x = pts[2].x = pts[0].x + xdelta * (s.t);
-    jobsvg_polygon(job, pts, 4, FILL);
+    svg_polygon(output, obj, pts, 4, FILL);
     pts[0].x = pts[3].x = pts[1].x;
   }
   if (save_penwidth > THIN_LINE)
     svg_set_penwidth(obj, save_penwidth);
   colorsegs_free(&segs);
+  return rv;
+}
+
+int job_stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
+  output_string output = job2output_string(job);
+  int rv = stripedBox(&output, job->obj, AF, clrs, rotate);
+  output_string2job(job, &output);
   return rv;
 }
 
@@ -2259,7 +2266,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
           jobsvg_set_pencolor(job, pencolor);
         else
           jobsvg_set_pencolor(job, "transparent");
-        round_corners(job, AF, 4, istyle, filled);
+        job_round_corners(job, AF, 4, istyle, filled);
       }
     } else if (istyle.striped) {
       AF[0] = GD_bb(sg).LL;
@@ -2272,7 +2279,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
         jobsvg_set_pencolor(job, "transparent");
       else
         jobsvg_set_pencolor(job, pencolor);
-      if (stripedBox(job, AF, fillcolor, 0) > 1)
+      if (job_stripedBox(job, AF, fillcolor, 0) > 1)
         agerr(AGPREV, "in cluster %s\n", agnameof(sg));
       jobsvg_box(job, GD_bb(sg), 0);
     } else {
