@@ -3090,7 +3090,7 @@ static void poly_gencode(GVJ_t *tmp_job, node_t *n) {
 
   output_string2job(tmp_job, &output_obj);
 
-  emit_label(tmp_job, EMIT_NLABEL, ND_label(n));
+  job_emit_label(tmp_job, EMIT_NLABEL, ND_label(n));
   if (doMap) {
     output_string output_obj = job2output_string(tmp_job);
     output_string *output = &output_obj;
@@ -3830,7 +3830,7 @@ static void gen_fields(GVJ_t *tmp_job, node_t *n, field_t *f) {
 
   if (f->lp) {
     f->lp->pos = add_pointf(mid_pointf(f->b.LL, f->b.UR), ND_coord(n));
-    emit_label(tmp_job, EMIT_NLABEL, f->lp);
+    job_emit_label(tmp_job, EMIT_NLABEL, f->lp);
     penColor(tmp_job->obj, n);
   }
 
@@ -4015,7 +4015,7 @@ static void epsf_gencode(GVJ_t *tmp_job, node_t *n) {
             desc->macro_id);
   ND_label(n)->pos = ND_coord(n);
 
-  emit_label(tmp_job, EMIT_NLABEL, ND_label(n));
+  job_emit_label(tmp_job, EMIT_NLABEL, ND_label(n));
   if (doMap) {
     output_string output_obj = job2output_string(tmp_job);
     output_string *output = &output_obj;

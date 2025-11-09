@@ -1232,7 +1232,7 @@ static void emit_node(GVJ_t *job, node_t *n) {
     emit_begin_node(job, n);
     ND_shape(n)->fns->codefn(job, n);
     if (ND_xlabel(n) && ND_xlabel(n)->set)
-      emit_label(job, EMIT_NLABEL, ND_xlabel(n));
+      job_emit_label(job, EMIT_NLABEL, ND_xlabel(n));
     emit_end_node(job);
   }
 }
@@ -1901,7 +1901,7 @@ static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
     map_label(job, lbl);
     jobsvg_begin_anchor(job, url, tooltip, target, newid);
   }
-  emit_label(job, lkind, lbl);
+  job_emit_label(job, lkind, lbl);
   if (spl)
     emit_attachment(job, lbl, spl);
   if (url || explicit) {
@@ -2156,7 +2156,7 @@ void emit_page(GVJ_t *job, graph_t *g) {
   }
   emit_background(job, g);
   if (GD_label(g))
-    emit_label(job, EMIT_GLABEL, GD_label(g));
+    job_emit_label(job, EMIT_GLABEL, GD_label(g));
   if (obj->url || obj->explicit_tooltip)
     jobsvg_end_anchor(job);
   emit_view(job, g, flags);
@@ -2345,7 +2345,7 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     free(clrs[0]);
     free(clrs[1]);
     if ((lab = GD_label(sg)))
-      emit_label(job, EMIT_CLABEL, lab);
+      job_emit_label(job, EMIT_CLABEL, lab);
 
     if (doAnchor) {
       jobsvg_end_anchor(job);

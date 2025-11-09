@@ -18,6 +18,7 @@
 #include <util/agxbuf.h>
 #include <util/alloc.h>
 #include "core_svg.h"
+#include "safe_job.h"
 
 static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash);
 
@@ -211,8 +212,8 @@ void free_label(textlabel_t *p) {
 extern void svg_html_label(output_string *output, SafeJob *safe_job,
                            obj_state_t *parent, htmllabel_t *lp,
                            textlabel_t *tp);
-void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
-  obj_state_t *obj = job->obj;
+void emit_label(output_string *output, SafeJob *safe_job, obj_state_t *obj,
+                emit_state_t emit_state, textlabel_t *lp) {
   pointf p;
   emit_state_t old_emit_state;
 
@@ -220,10 +221,7 @@ void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
   obj->emit_state = emit_state;
 
   if (lp->html) {
-    SafeJob safe_job = to_safe_job(job);
-    output_string output = job2output_string(job);
-    svg_html_label(&output, &safe_job, job->obj, lp->u.html, lp);
-    output_string2job(job, &output);
+    svg_html_label(output, safe_job, obj, lp->u.html, lp);
 
     obj->emit_state = old_emit_state;
     return;
@@ -263,13 +261,21 @@ void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
       p.x = lp->pos.x;
       break;
     }
-    jobsvg_textspan(job, p, &lp->u.txt.span[i]);
+    svg_textspan(output, GD_fontnames(safe_job->graph), obj, p,
+                 &lp->u.txt.span[i]);
 
     /* UL position for next span */
     p.y -= lp->u.txt.span[i].size.y;
   }
 
   obj->emit_state = old_emit_state;
+}
+
+void job_emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
+  output_string output = job2output_string(job);
+  SafeJob safe_job = to_safe_job(job);
+  emit_label(&output, &safe_job, job->obj, emit_state, lp);
+  output_string2job(job, &output);
 }
 
 /* strdup_and_subst_obj0:

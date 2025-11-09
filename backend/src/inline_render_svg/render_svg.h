@@ -100,7 +100,11 @@ RENDER_API void emit_clusters(GVJ_t *job, Agraph_t *g, int flags);
 RENDER_API char *getObjId(const SafeJob *safe_job, void *obj, agxbuf *xb);
 RENDER_API char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb);
 RENDER_API void emit_graph(GVJ_t *job, graph_t *g);
-RENDER_API void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *);
+RENDER_API void job_emit_label(GVJ_t *job, emit_state_t emit_state,
+                               textlabel_t *);
+RENDER_API void emit_label(output_string *output, SafeJob *safe_job,
+                           obj_state_t *obj, emit_state_t emit_state,
+                           textlabel_t *lp);
 RENDER_API bool emit_once(char *message);
 RENDER_API void emit_once_reset(void);
 RENDER_API void emit_map_rect(obj_state_t *obj, boxf b);
