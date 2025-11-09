@@ -11,7 +11,12 @@ SafeJob to_safe_job(GVJ_t *job) {
       .defaultlinestyle = job->gvc->defaultlinestyle,
       .dpi = job->dpi,
       .rotation = job->rotation,
+      .pagesArraySize = job->pagesArraySize,
+      .pageBoundingBox = job->pageBoundingBox,
+      .height = job->height,
+      .width = job->width,
+      .scale = job->scale,
+      .translation = job->translation,
   };
-
   return safe_job;
 }

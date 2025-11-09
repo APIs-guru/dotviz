@@ -2568,8 +2568,7 @@ void emit_graph(GVJ_t *job, graph_t *g) {
   /* iterate layers */
   for (firstlayer(job, &lp); validlayer(job); nextlayer(job, &lp)) {
     if (numPhysicalLayers(job) > 1) {
-      jobsvg_begin_layer(job, job->gvc->layerIDs[job->layerNum], job->layerNum,
-                         job->numLayers);
+      jobsvg_begin_layer(job, job->gvc->layerIDs[job->layerNum]);
     }
 
     /* iterate pages */
