@@ -27,6 +27,7 @@
 #include <util/unreachable.h>
 #include "core_svg.h"
 #include "gvcjob.h"
+#include "safe_job.h"
 
 // clang-format on
 
@@ -2903,6 +2904,7 @@ static bool multicolor(const char *f) { return strchr(f, ':') != NULL; }
 
 /* generic polygon gencode routine */
 static void poly_gencode(GVJ_t *tmp_job, node_t *n) {
+  SafeJob safe_job = to_safe_job(tmp_job);
   output_string output_obj = job2output_string(tmp_job);
   output_string *output = &output_obj;
   obj_state_t *obj = tmp_job->obj;
@@ -3078,7 +3080,7 @@ static void poly_gencode(GVJ_t *tmp_job, node_t *n) {
         svg_polygon(output, obj, AF, sides, filled);
       }
     }
-    svg_usershape(output, tmp_job->rotation, tmp_job->dpi, name, AF, sides,
+    svg_usershape(output, safe_job.rotation, safe_job.dpi, name, AF, sides,
                   late_string(n, N_imagescale, "false"),
                   late_string(n, N_imagepos, "mc"));
     filled = 0; /* with user shapes, we have done the fill if needed */
@@ -3088,15 +3090,11 @@ static void poly_gencode(GVJ_t *tmp_job, node_t *n) {
   free(clrs[0]);
   free(clrs[1]);
 
-  output_string2job(tmp_job, &output_obj);
-
-  job_emit_label(tmp_job, EMIT_NLABEL, ND_label(n));
+  emit_label(output, &safe_job, tmp_job->obj, EMIT_NLABEL, ND_label(n));
   if (doMap) {
-    output_string output_obj = job2output_string(tmp_job);
-    output_string *output = &output_obj;
     svg_end_anchor(output);
-    output_string2job(tmp_job, &output_obj);
   }
+  output_string2job(tmp_job, &output_obj);
 }
 
 /*=======================end poly======================================*/
@@ -3824,14 +3822,15 @@ static int record_path(node_t *n, port *prt, int side, boxf rv[], int *kptr) {
   return side;
 }
 
-static void gen_fields(GVJ_t *tmp_job, node_t *n, field_t *f) {
+static void gen_fields(output_string *output, SafeJob *safe_job,
+                       obj_state_t *obj, node_t *n, field_t *f) {
   int i;
   pointf AF[2], coord;
 
   if (f->lp) {
     f->lp->pos = add_pointf(mid_pointf(f->b.LL, f->b.UR), ND_coord(n));
-    job_emit_label(tmp_job, EMIT_NLABEL, f->lp);
-    penColor(tmp_job->obj, n);
+    emit_label(output, safe_job, obj, EMIT_NLABEL, f->lp);
+    penColor(obj, n);
   }
 
   coord = ND_coord(n);
@@ -3848,15 +3847,15 @@ static void gen_fields(GVJ_t *tmp_job, node_t *n, field_t *f) {
       }
       AF[0] = add_pointf(AF[0], coord);
       AF[1] = add_pointf(AF[1], coord);
-      output_string output_obj = job2output_string(tmp_job);
-      svg_polyline(&output_obj, tmp_job->obj, AF, 2);
-      output_string2job(tmp_job, &output_obj);
+      svg_polyline(output, obj, AF, 2);
     }
-    gen_fields(tmp_job, n, f->fld[i]);
+    gen_fields(output, safe_job, obj, n, f->fld[i]);
   }
 }
 
 static void record_gencode(GVJ_t *tmp_job, node_t *n) {
+  output_string output = job2output_string(tmp_job);
+  SafeJob safe_job = to_safe_job(tmp_job);
   obj_state_t *obj = tmp_job->obj;
   boxf BF;
   pointf AF[4];
@@ -3872,9 +3871,7 @@ static void record_gencode(GVJ_t *tmp_job, node_t *n) {
   BF.UR.y += ND_coord(n).y;
 
   if (doMap) {
-    output_string output = job2output_string(tmp_job);
     svg_begin_anchor(&output, obj->url, obj->tooltip, obj->target, obj->id);
-    output_string2job(tmp_job, &output);
   }
   graphviz_polygon_style_t style = stylenode(obj, n);
   penColor(obj, n);
@@ -3911,23 +3908,20 @@ static void record_gencode(GVJ_t *tmp_job, node_t *n) {
     AF[1].y = AF[0].y;
     AF[3].x = AF[0].x;
     AF[3].y = AF[2].y;
-    job_round_corners(tmp_job, AF, 4, style, filled);
+    round_corners(&output, obj, AF, 4, style, filled);
   } else {
-    output_string output = job2output_string(tmp_job);
     svg_box(&output, obj, BF, filled);
-    output_string2job(tmp_job, &output);
   }
 
-  gen_fields(tmp_job, n, f);
+  gen_fields(&output, &safe_job, obj, n, f);
 
   free(clrs[0]);
   free(clrs[1]);
 
   if (doMap) {
-    output_string output = job2output_string(tmp_job);
     svg_end_anchor(&output);
-    output_string2job(tmp_job, &output);
   }
+  output_string2job(tmp_job, &output);
 }
 
 static shape_desc **UserShape;
@@ -3995,6 +3989,8 @@ static bool epsf_inside(inside_t *inside_context, pointf p) {
 }
 
 static void epsf_gencode(GVJ_t *tmp_job, node_t *n) {
+  output_string output = job2output_string(tmp_job);
+  SafeJob safe_job = to_safe_job(tmp_job);
   obj_state_t *obj = tmp_job->obj;
   epsf_t *desc;
   int doMap = obj->url || obj->explicit_tooltip;
@@ -4004,10 +4000,7 @@ static void epsf_gencode(GVJ_t *tmp_job, node_t *n) {
     return;
 
   if (doMap) {
-    output_string output_obj = job2output_string(tmp_job);
-    output_string *output = &output_obj;
-    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
-    output_string2job(tmp_job, &output_obj);
+    svg_begin_anchor(&output, obj->url, obj->tooltip, obj->target, obj->id);
   }
   if (desc)
     fprintf(tmp_job->output_file, "%.5g %.5g translate newpath user_shape_%d\n",
@@ -4015,13 +4008,11 @@ static void epsf_gencode(GVJ_t *tmp_job, node_t *n) {
             desc->macro_id);
   ND_label(n)->pos = ND_coord(n);
 
-  job_emit_label(tmp_job, EMIT_NLABEL, ND_label(n));
+  emit_label(&output, &safe_job, obj, EMIT_NLABEL, ND_label(n));
   if (doMap) {
-    output_string output_obj = job2output_string(tmp_job);
-    output_string *output = &output_obj;
-    svg_end_anchor(output);
-    output_string2job(tmp_job, &output_obj);
+    svg_end_anchor(&output);
   }
+  output_string2job(tmp_job, &output);
 }
 
 #define alpha (M_PI / 10.0)
