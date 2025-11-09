@@ -666,41 +666,39 @@ static void emit_html_cell(output_string *output, SafeJob *safe_job,
  * This inherits the type, emit_state, and object of the
  * parent, as well as the url, explicit, target and tooltip.
  */
-static void allocObj(GVJ_t *job) {
-  obj_state_t *obj = push_obj_state(job);
-  obj_state_t *parent = obj->parent;
-  obj->type = parent->type;
-  obj->emit_state = parent->emit_state;
-  switch (obj->type) {
+static obj_state_t allocObj(obj_state_t *parent) {
+  obj_state_t child = child_obj_state(parent);
+  child.type = parent->type;
+  child.emit_state = parent->emit_state;
+  switch (child.type) {
   case NODE_OBJTYPE:
-    obj->u.n = parent->u.n;
+    child.u.n = parent->u.n;
     break;
   case ROOTGRAPH_OBJTYPE:
-    obj->u.g = parent->u.g;
+    child.u.g = parent->u.g;
     break;
   case CLUSTER_OBJTYPE:
-    obj->u.sg = parent->u.sg;
+    child.u.sg = parent->u.sg;
     break;
   case EDGE_OBJTYPE:
-    obj->u.e = parent->u.e;
+    child.u.e = parent->u.e;
     break;
   default:
     UNREACHABLE();
   }
-  obj->url = parent->url;
-  obj->tooltip = parent->tooltip;
-  obj->target = parent->target;
-  obj->explicit_tooltip = parent->explicit_tooltip;
+  child.url = parent->url;
+  child.tooltip = parent->tooltip;
+  child.target = parent->target;
+  child.explicit_tooltip = parent->explicit_tooltip;
+  return child;
 }
 
-static void freeObj(GVJ_t *job) {
-  obj_state_t *obj = job->obj;
-
-  obj->url = NULL;
-  obj->tooltip = NULL;
-  obj->target = NULL;
-  obj->id = NULL;
-  pop_obj_state(job);
+static void freeObj(obj_state_t *child) {
+  child->url = NULL;
+  child->tooltip = NULL;
+  child->target = NULL;
+  child->id = NULL;
+  free_child_obj(child);
 }
 
 static double heightOfLbl(htmllabel_t *lp) {
@@ -722,9 +720,9 @@ static double heightOfLbl(htmllabel_t *lp) {
   return sz;
 }
 
-static void emit_html_label_impl(output_string *output, SafeJob *safe_job,
-                                 obj_state_t *obj, htmllabel_t *lp,
-                                 textlabel_t *tp) {
+void svg_html_label(output_string *output, SafeJob *safe_job,
+                    obj_state_t *parent, htmllabel_t *lp, textlabel_t *tp) {
+  obj_state_t obj = allocObj(parent);
   htmlenv_t env;
   pointf p;
 
@@ -744,8 +742,8 @@ static void emit_html_label_impl(output_string *output, SafeJob *safe_job,
   env.finfo.color = tp->fontcolor;
   env.finfo.name = tp->fontname;
   env.finfo.size = tp->fontsize;
-  env.imgscale = agget(obj->u.n, "imagescale");
-  env.objid = obj->id;
+  env.imgscale = agget(obj.u.n, "imagescale");
+  env.objid = obj.id;
   env.objid_set = false;
   if (env.imgscale == NULL || env.imgscale[0] == '\0')
     env.imgscale = "false";
@@ -754,26 +752,19 @@ static void emit_html_label_impl(output_string *output, SafeJob *safe_job,
 
     /* set basic graphics context */
     /* Need to override line style set by node. */
-    svg_set_style(obj, safe_job->defaultlinestyle);
+    svg_set_style(&obj, safe_job->defaultlinestyle);
     if (tbl->data.pencolor)
-      svg_set_pencolor(obj, tbl->data.pencolor);
+      svg_set_pencolor(&obj, tbl->data.pencolor);
     else
-      svg_set_pencolor(obj, DEFAULT_COLOR);
-    emit_html_tbl(output, safe_job, obj, tbl, &env);
+      svg_set_pencolor(&obj, DEFAULT_COLOR);
+    emit_html_tbl(output, safe_job, &obj, tbl, &env);
   } else {
-    emit_html_txt(output, GD_fontnames(safe_job->graph), obj, lp->u.txt, &env);
+    emit_html_txt(output, GD_fontnames(safe_job->graph), &obj, lp->u.txt, &env);
   }
   if (env.objid_set)
     free(env.objid);
-}
 
-void emit_html_label(GVJ_t *job, htmllabel_t *lp, textlabel_t *tp) {
-  allocObj(job);
-  SafeJob safe_job = to_safe_job(job);
-  output_string output = job2output_string(job);
-  emit_html_label_impl(&output, &safe_job, job->obj, lp, tp);
-  output_string2job(job, &output);
-  freeObj(job);
+  freeObj(&obj);
 }
 
 void free_html_data(htmldata_t *dp) {

@@ -119,6 +119,26 @@ obj_state_t *push_obj_state(GVJ_t *job) {
   return obj;
 }
 
+/* push empty graphic state for current object */
+obj_state_t child_obj_state(obj_state_t *parent) {
+  obj_state_t child = {0};
+  child.parent = parent;
+  if (parent) {
+    child.pencolor = parent->pencolor; /* default styles to parent's style */
+    child.fillcolor = parent->fillcolor;
+    child.pen = parent->pen;
+    child.fill = parent->fill;
+    child.penwidth = parent->penwidth;
+    child.gradient_angle = parent->gradient_angle;
+    child.stopcolor = parent->stopcolor;
+  } else {
+    child.pen = PEN_SOLID;
+    child.fill = FILL_NONE;
+    child.penwidth = PENWIDTH_NORMAL;
+  }
+  return child;
+}
+
 /* pop graphic state of current object */
 void pop_obj_state(GVJ_t *job) {
   obj_state_t *obj = job->obj;
@@ -144,6 +164,28 @@ void pop_obj_state(GVJ_t *job) {
 
   job->obj = obj->parent;
   free(obj);
+}
+
+/* pop graphic state of current object */
+void free_child_obj(obj_state_t *child) {
+  assert(child);
+
+  free(child->id);
+  free(child->url);
+  free(child->labelurl);
+  free(child->tailurl);
+  free(child->headurl);
+  free(child->tooltip);
+  free(child->labeltooltip);
+  free(child->tailtooltip);
+  free(child->headtooltip);
+  free(child->target);
+  free(child->labeltarget);
+  free(child->tailtarget);
+  free(child->headtarget);
+  free(child->url_map_p);
+  free(child->url_bsplinemap_p);
+  free(child->url_bsplinemap_n);
 }
 
 /* Store image map data into job, substituting for node, edge, etc.

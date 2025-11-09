@@ -134,6 +134,8 @@ RENDER_API pointf edgeMidpoint(graph_t *g, edge_t *e);
 RENDER_API void addEdgeLabels(edge_t *e);
 RENDER_API void pop_obj_state(GVJ_t *job);
 RENDER_API obj_state_t *push_obj_state(GVJ_t *job);
+RENDER_API obj_state_t child_obj_state(obj_state_t *parent);
+RENDER_API void free_child_obj(obj_state_t *child);
 RENDER_API int rank(graph_t *g, int balance, int maxiter);
 RENDER_API int rank2(graph_t *g, int balance, int maxiter, int search_size);
 RENDER_API port resolvePort(node_t *n, node_t *other, port *oldport);

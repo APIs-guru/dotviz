@@ -208,6 +208,9 @@ void free_label(textlabel_t *p) {
   }
 }
 
+extern void svg_html_label(output_string *output, SafeJob *safe_job,
+                           obj_state_t *parent, htmllabel_t *lp,
+                           textlabel_t *tp);
 void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
   obj_state_t *obj = job->obj;
   pointf p;
@@ -217,7 +220,11 @@ void emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
   obj->emit_state = emit_state;
 
   if (lp->html) {
-    emit_html_label(job, lp->u.html, lp);
+    SafeJob safe_job = to_safe_job(job);
+    output_string output = job2output_string(job);
+    svg_html_label(&output, &safe_job, job->obj, lp->u.html, lp);
+    output_string2job(job, &output);
+
     obj->emit_state = old_emit_state;
     return;
   }
