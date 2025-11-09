@@ -340,7 +340,8 @@ static char *preprocessTooltip(char *s, void *gobj) {
   return interpretCRNL(news);
 }
 
-void initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj) {
+static void initObjMapData(SafeJob *safe_job, obj_state_t *obj,
+                           textlabel_t *lab, void *gobj) {
   char *lbl;
   char *url = agget(gobj, "href");
   char *tooltip = agget(gobj, "tooltip");
@@ -354,13 +355,18 @@ void initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj) {
     lbl = NULL;
   if (!url || !*url) /* try URL as an alias for href */
     url = agget(gobj, "URL");
-  id = job_getObjId(job, gobj, &xb);
+  id = getObjId(safe_job, gobj, &xb);
   if (tooltip)
     tooltip = preprocessTooltip(tooltip, gobj);
-  initMapData(job->obj, lbl, url, tooltip, target, id, gobj);
+  initMapData(obj, lbl, url, tooltip, target, id, gobj);
 
   free(tooltip);
   agxbfree(&xb);
+}
+
+static void job_initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj) {
+  SafeJob safe_job = to_safe_job(job);
+  initObjMapData(&safe_job, job->obj, lab, gobj);
 }
 
 static void map_point(GVJ_t *job, pointf pf) {
@@ -1157,7 +1163,7 @@ static void emit_begin_node(GVJ_t *job, node_t *n) {
   obj->u.n = n;
   obj->emit_state = EMIT_NDRAW;
 
-  initObjMapData(job, ND_label(n), n);
+  job_initObjMapData(job, ND_label(n), n);
   if (obj->url || obj->explicit_tooltip) {
 
     /* node coordinate */
@@ -2098,7 +2104,7 @@ void emit_begin_graph(GVJ_t *job, graph_t *g) {
   obj->u.g = g;
   obj->emit_state = EMIT_GDRAW;
 
-  initObjMapData(job, GD_label(g), g);
+  job_initObjMapData(job, GD_label(g), g);
 
   jobsvg_begin_graph(job);
 }
@@ -2207,7 +2213,7 @@ static void emit_begin_cluster(GVJ_t *job, Agraph_t *sg) {
   obj->u.sg = sg;
   obj->emit_state = EMIT_CDRAW;
 
-  initObjMapData(job, GD_label(sg), sg);
+  job_initObjMapData(job, GD_label(sg), sg);
 
   jobsvg_begin_cluster(job);
 }
