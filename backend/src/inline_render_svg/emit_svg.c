@@ -1230,7 +1230,12 @@ static void emit_node(GVJ_t *job, node_t *n) {
     }
 
     emit_begin_node(job, n);
-    ND_shape(n)->fns->codefn(job, n);
+    {
+      output_string output = job2output_string(job);
+      SafeJob safe_job = to_safe_job(job);
+      ND_shape(n)->fns->codefn(&output, &safe_job, job->obj, n);
+      output_string2job(job, &output);
+    }
     if (ND_xlabel(n) && ND_xlabel(n)->set)
       job_emit_label(job, EMIT_NLABEL, ND_xlabel(n));
     emit_end_node(job);

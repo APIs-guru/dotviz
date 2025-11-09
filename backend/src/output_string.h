@@ -2,7 +2,7 @@
 #define OUTPUT_STRING_H
 
 #include <stddef.h>
-typedef struct {
+typedef struct output_string_s {
   char *data;
   size_t data_allocated;
   size_t data_position;
