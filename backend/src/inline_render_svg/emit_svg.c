@@ -1152,18 +1152,17 @@ static bool node_in_box(node_t *n, boxf b) { return boxf_overlap(ND_bb(n), b); }
 
 static char *saved_color_scheme;
 
-static void emit_begin_node(GVJ_t *job, node_t *n) {
-  obj_state_t *obj;
+static void emit_begin_node(output_string *output, SafeJob *safe_job,
+                            obj_state_t *obj, node_t *n) {
   size_t nump = 0;
   pointf *p = NULL;
   pointf coord;
 
-  obj = push_obj_state(job);
   obj->type = NODE_OBJTYPE;
   obj->u.n = n;
   obj->emit_state = EMIT_NDRAW;
 
-  job_initObjMapData(job, ND_label(n), n);
+  initObjMapData(safe_job, obj, ND_label(n), n);
   if (obj->url || obj->explicit_tooltip) {
 
     /* node coordinate */
@@ -1192,18 +1191,16 @@ static void emit_begin_node(GVJ_t *job, node_t *n) {
   }
 
   saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
-  jobsvg_begin_node(job);
+  svg_begin_node(output, safe_job, obj);
 }
 
-static void emit_end_node(GVJ_t *job) {
-  jobsvg_end_node(job);
+static void emit_end_node(output_string *output) {
+  svg_end_node(output);
 
   char *color_scheme = setColorScheme(saved_color_scheme);
   free(color_scheme);
   free(saved_color_scheme);
   saved_color_scheme = NULL;
-
-  pop_obj_state(job);
 }
 
 static void emit_node(GVJ_t *job, node_t *n) {
@@ -1234,17 +1231,21 @@ static void emit_node(GVJ_t *job, node_t *n) {
           return;
       }
     }
-
-    emit_begin_node(job, n);
     {
       output_string output = job2output_string(job);
       SafeJob safe_job = to_safe_job(job);
-      ND_shape(n)->fns->codefn(&output, &safe_job, job->obj, n);
+      obj_state_t obj = child_obj_state(job->obj);
+
+      emit_begin_node(&output, &safe_job, &obj, n);
+      ND_shape(n)->fns->codefn(&output, &safe_job, &obj, n);
+
+      if (ND_xlabel(n) && ND_xlabel(n)->set)
+        emit_label(&output, &safe_job, &obj, EMIT_NLABEL, ND_xlabel(n));
+
+      emit_end_node(&output);
+      free_child_obj(&obj);
       output_string2job(job, &output);
     }
-    if (ND_xlabel(n) && ND_xlabel(n)->set)
-      job_emit_label(job, EMIT_NLABEL, ND_xlabel(n));
-    emit_end_node(job);
   }
 }
 
