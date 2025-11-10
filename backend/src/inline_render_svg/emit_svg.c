@@ -25,6 +25,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -775,21 +776,22 @@ static bool is_natural_number(const char *sstr) {
   return true;
 }
 
-static int layer_index(GVC_t *gvc, char *str, int all) {
+static int layer_index(SafeJob *safe_job, char *str, int all) {
   int i;
 
   if (streq(str, "all"))
     return all;
   if (is_natural_number(str))
     return atoi(str);
-  if (gvc->layerIDs)
-    for (i = 1; i <= gvc->numLayers; i++)
-      if (streq(str, gvc->layerIDs[i]))
+  if (safe_job->layerIDs)
+    for (i = 1; i <= safe_job->numLayers; i++)
+      if (streq(str, safe_job->layerIDs[i]))
         return i;
   return -1;
 }
 
-static bool selectedLayer(GVC_t *gvc, int layerNum, int numLayers, char *spec) {
+static bool selectedLayer(SafeJob *safe_job, int layerNum, int numLayers,
+                          char *spec) {
   int n0, n1;
   char *w0, *w1;
   char *buf_part_p = NULL, *buf_p = NULL, *cur, *part_in_p;
@@ -800,14 +802,14 @@ static bool selectedLayer(GVC_t *gvc, int layerNum, int numLayers, char *spec) {
   part_in_p = spec_copy;
 
   while (!rval &&
-         (cur = strtok_r(part_in_p, gvc->layerListDelims, &buf_part_p))) {
-    w1 = w0 = strtok_r(cur, gvc->layerDelims, &buf_p);
+         (cur = strtok_r(part_in_p, safe_job->layerListDelims, &buf_part_p))) {
+    w1 = w0 = strtok_r(cur, safe_job->layerDelims, &buf_p);
     if (w0)
-      w1 = strtok_r(NULL, gvc->layerDelims, &buf_p);
+      w1 = strtok_r(NULL, safe_job->layerDelims, &buf_p);
     if (w1 != NULL) {
       assert(w0 != NULL);
-      n0 = layer_index(gvc, w0, 0);
-      n1 = layer_index(gvc, w1, numLayers);
+      n0 = layer_index(safe_job, w0, 0);
+      n1 = layer_index(safe_job, w1, numLayers);
       if (n0 >= 0 || n1 >= 0) {
         if (n0 > n1) {
           SWAP(&n0, &n1);
@@ -815,7 +817,7 @@ static bool selectedLayer(GVC_t *gvc, int layerNum, int numLayers, char *spec) {
         rval = BETWEEN(n0, layerNum, n1);
       }
     } else if (w0 != NULL) {
-      n0 = layer_index(gvc, w0, layerNum);
+      n0 = layer_index(safe_job, w0, layerNum);
       rval = (n0 == layerNum);
     } else {
       rval = false;
@@ -826,8 +828,8 @@ static bool selectedLayer(GVC_t *gvc, int layerNum, int numLayers, char *spec) {
   return rval;
 }
 
-static bool selectedlayer(GVJ_t *job, char *spec) {
-  return selectedLayer(job->gvc, job->layerNum, job->numLayers, spec);
+static bool selectedlayer(SafeJob *safe_job, char *spec) {
+  return selectedLayer(safe_job, safe_job->layerNum, safe_job->numLayers, spec);
 }
 
 DEFINE_LIST(layer_names, char *)
@@ -1091,14 +1093,14 @@ static void setup_page(GVJ_t *job) {
   }
 }
 
-static bool node_in_layer(GVJ_t *job, graph_t *g, node_t *n) {
+static bool node_in_layer(SafeJob *safe_job, graph_t *g, node_t *n) {
   char *pn, *pe;
   edge_t *e;
 
-  if (job->numLayers <= 1)
+  if (safe_job->numLayers <= 1)
     return true;
   pn = late_string(n, N_layer, "");
-  if (selectedlayer(job, pn))
+  if (selectedlayer(safe_job, pn))
     return true;
   if (pn[0])
     return false; /* Only check edges if pn = "" */
@@ -1106,44 +1108,46 @@ static bool node_in_layer(GVJ_t *job, graph_t *g, node_t *n) {
     return true;
   for (e = agfstedge(g, n); e; e = agnxtedge(g, e, n)) {
     pe = late_string(e, E_layer, "");
-    if (pe[0] == '\0' || selectedlayer(job, pe))
+    if (pe[0] == '\0' || selectedlayer(safe_job, pe))
       return true;
   }
   return false;
 }
 
 static bool edge_in_layer(GVJ_t *job, edge_t *e) {
+  SafeJob safe_job = to_safe_job(job);
   char *pe, *pn;
   int cnt;
 
-  if (job->numLayers <= 1)
+  if (safe_job.numLayers <= 1)
     return true;
   pe = late_string(e, E_layer, "");
-  if (selectedlayer(job, pe))
+  if (selectedlayer(&safe_job, pe))
     return true;
   if (pe[0])
     return false;
   for (cnt = 0; cnt < 2; cnt++) {
     pn = late_string(cnt < 1 ? agtail(e) : aghead(e), N_layer, "");
-    if (pn[0] == '\0' || selectedlayer(job, pn))
+    if (pn[0] == '\0' || selectedlayer(&safe_job, pn))
       return true;
   }
   return false;
 }
 
 static bool clust_in_layer(GVJ_t *job, graph_t *sg) {
+  SafeJob safe_job = to_safe_job(job);
   char *pg;
   node_t *n;
 
-  if (job->numLayers <= 1)
+  if (safe_job.numLayers <= 1)
     return true;
   pg = late_string(sg, agattr_text(sg, AGRAPH, "layer", 0), "");
-  if (selectedlayer(job, pg))
+  if (selectedlayer(&safe_job, pg))
     return true;
   if (pg[0])
     return false;
   for (n = agfstnode(sg); n; n = agnxtnode(sg, n))
-    if (node_in_layer(job, sg, n))
+    if (node_in_layer(&safe_job, sg, n))
       return true;
   return false;
 }
@@ -1204,49 +1208,45 @@ static void emit_end_node(output_string *output) {
 }
 
 static void emit_node(GVJ_t *job, node_t *n) {
-  GVC_t *gvc = job->gvc;
-  char *s;
-  char *style;
-  char **styles = NULL;
-  char **sp;
-  char *p;
+  output_string output = job2output_string(job);
+  SafeJob safe_job = to_safe_job(job);
 
-  if (ND_shape(n)                            /* node has a shape */
-      && node_in_layer(job, agraphof(n), n)  /* and is in layer */
-      && node_in_box(n, job->clip)           /* and is in page/view */
-      && ND_state(n) != gvc->common.viewNum) /* and not already drawn */
+  if (ND_shape(n)                                 /* node has a shape */
+      && node_in_layer(&safe_job, agraphof(n), n) /* and is in layer */
+      && node_in_box(n, safe_job.clip)            /* and is in page/view */
+      && ND_state(n) != safe_job.viewNum)         /* and not already drawn */
   {
-    ND_state(n) = gvc->common.viewNum; /* mark node as drawn */
+    ND_state(n) = safe_job.viewNum; /* mark node as drawn */
 
-    jobsvg_comment(job, agnameof(n));
-    s = late_string(n, N_comment, "");
-    jobsvg_comment(job, s);
+    svg_comment(&output, agnameof(n));
+    char *s = late_string(n, N_comment, "");
+    svg_comment(&output, s);
 
-    style = late_string(n, N_style, "");
+    char *style = late_string(n, N_style, "");
     if (style[0]) {
-      styles = parse_style(style);
-      sp = styles;
+      char **styles = parse_style(style);
+      char **sp = styles;
+      char *p;
       while ((p = *sp++)) {
-        if (streq(p, "invis"))
+        if (streq(p, "invis")) {
+          output_string2job(job, &output);
           return;
+        }
       }
     }
-    {
-      output_string output = job2output_string(job);
-      SafeJob safe_job = to_safe_job(job);
-      obj_state_t obj = child_obj_state(job->obj);
 
-      emit_begin_node(&output, &safe_job, &obj, n);
-      ND_shape(n)->fns->codefn(&output, &safe_job, &obj, n);
+    obj_state_t obj = child_obj_state(job->obj);
+    emit_begin_node(&output, &safe_job, &obj, n);
+    ND_shape(n)->fns->codefn(&output, &safe_job, &obj, n);
 
-      if (ND_xlabel(n) && ND_xlabel(n)->set)
-        emit_label(&output, &safe_job, &obj, EMIT_NLABEL, ND_xlabel(n));
-
-      emit_end_node(&output);
-      free_child_obj(&obj);
-      output_string2job(job, &output);
+    if (ND_xlabel(n) && ND_xlabel(n)->set) {
+      emit_label(&output, &safe_job, &obj, EMIT_NLABEL, ND_xlabel(n));
     }
+
+    emit_end_node(&output);
+    free_child_obj(&obj);
   }
+  output_string2job(job, &output);
 }
 
 /* calculate an offset vector, length d, perpendicular to line p,q */

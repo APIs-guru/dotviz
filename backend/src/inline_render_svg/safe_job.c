@@ -4,11 +4,8 @@
 
 SafeJob to_safe_job(GVJ_t *job) {
   SafeJob safe_job = {
-      .graph = job->gvc->g,
       .layerNum = job->layerNum,
-      .layerIDs = job->gvc->layerIDs,
       .pagesArrayElem = job->pagesArrayElem,
-      .defaultlinestyle = job->gvc->defaultlinestyle,
       .dpi = job->dpi,
       .rotation = job->rotation,
       .pagesArraySize = job->pagesArraySize,
@@ -17,6 +14,17 @@ SafeJob to_safe_job(GVJ_t *job) {
       .width = job->width,
       .scale = job->scale,
       .translation = job->translation,
+      .clip = job->clip,
+
+      // from gvc
+      .graph = job->gvc->g,
+      .defaultlinestyle = job->gvc->defaultlinestyle,
+      .viewNum = job->gvc->common.viewNum,
+      .layerIDs = job->gvc->layerIDs,
+      .layerDelims = job->gvc->layerDelims,
+      .layerListDelims = job->gvc->layerListDelims,
+      .numLayers = job->gvc->numLayers,
   };
+
   return safe_job;
 }
