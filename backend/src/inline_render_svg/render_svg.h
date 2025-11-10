@@ -64,7 +64,8 @@ typedef struct epsf_s {
 RENDER_API void add_box(path *, boxf);
 RENDER_API void arrow_flags(Agedge_t *e, uint32_t *sflag, uint32_t *eflag);
 RENDER_API boxf arrow_bb(pointf p, pointf u, double arrowsize);
-RENDER_API void arrow_gen(GVJ_t *job, emit_state_t emit_state, pointf p,
+RENDER_API void arrow_gen(output_string *output, SafeJob *safe_job,
+                          obj_state_t *obj, emit_state_t emit_state, pointf p,
                           pointf u, double arrowsize, double penwidth,
                           uint32_t flag);
 RENDER_API size_t arrowEndClip(edge_t *, pointf *, size_t, size_t, bezier *,

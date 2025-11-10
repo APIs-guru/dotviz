@@ -21,6 +21,7 @@
 #include <util/startswith.h>
 #include <util/streq.h>
 #include "core_svg.h"
+#include "types.h"
 
 extern Agsym_t *E_dir, *E_penwidth, *E_arrowsz;
 
@@ -1203,10 +1204,9 @@ boxf arrow_bb(pointf p, pointf u, double arrowsize) {
   return bb;
 }
 
-void arrow_gen(GVJ_t *job, emit_state_t emit_state, pointf p, pointf u,
-               double arrowsize, double penwidth, uint32_t flag) {
-  output_string output = job2output_string(job);
-  obj_state_t *obj = job->obj;
+void arrow_gen(output_string *output, SafeJob *safe_job, obj_state_t *obj,
+               emit_state_t emit_state, pointf p, pointf u, double arrowsize,
+               double penwidth, uint32_t flag) {
   double s;
   int i;
   emit_state_t old_emit_state;
@@ -1216,7 +1216,7 @@ void arrow_gen(GVJ_t *job, emit_state_t emit_state, pointf p, pointf u,
 
   /* Dotted and dashed styles on the arrowhead are ugly (dds) */
   /* linewidth needs to be reset */
-  svg_set_style(obj, job->gvc->defaultlinestyle);
+  svg_set_style(obj, safe_job->defaultlinestyle);
 
   svg_set_penwidth(obj, penwidth);
 
@@ -1235,11 +1235,10 @@ void arrow_gen(GVJ_t *job, emit_state_t emit_state, pointf p, pointf u,
     uint32_t f = (flag >> (i * BITS_PER_ARROW)) & ((1 << BITS_PER_ARROW) - 1);
     if (f == ARR_TYPE_NONE)
       break;
-    p = arrow_gen_type(&output, obj, p, u, arrowsize, penwidth, f);
+    p = arrow_gen_type(output, obj, p, u, arrowsize, penwidth, f);
   }
 
   obj->emit_state = old_emit_state;
-  output_string2job(job, &output);
 }
 
 static double arrow_length_generic(double lenfact, double arrowsize,

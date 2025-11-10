@@ -370,8 +370,7 @@ static void job_initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj) {
   initObjMapData(&safe_job, job->obj, lab, gobj);
 }
 
-static void map_point(GVJ_t *job, pointf pf) {
-  obj_state_t *obj = job->obj;
+static void map_point(obj_state_t *obj, pointf pf) {
   pointf *p;
 
   obj->url_map_shape = MAP_POLYGON;
@@ -680,8 +679,7 @@ void emit_map_rect(obj_state_t *obj, boxf b) {
   rect2poly(p);
 }
 
-static void map_label(GVJ_t *job, textlabel_t *lab) {
-  obj_state_t *obj = job->obj;
+static void map_label(obj_state_t *obj, textlabel_t *lab) {
   pointf *p;
 
   obj->url_map_shape = MAP_POLYGON;
@@ -1114,21 +1112,20 @@ static bool node_in_layer(SafeJob *safe_job, graph_t *g, node_t *n) {
   return false;
 }
 
-static bool edge_in_layer(GVJ_t *job, edge_t *e) {
-  SafeJob safe_job = to_safe_job(job);
+static bool edge_in_layer(SafeJob *safe_job, edge_t *e) {
   char *pe, *pn;
   int cnt;
 
-  if (safe_job.numLayers <= 1)
+  if (safe_job->numLayers <= 1)
     return true;
   pe = late_string(e, E_layer, "");
-  if (selectedlayer(&safe_job, pe))
+  if (selectedlayer(safe_job, pe))
     return true;
   if (pe[0])
     return false;
   for (cnt = 0; cnt < 2; cnt++) {
     pn = late_string(cnt < 1 ? agtail(e) : aghead(e), N_layer, "");
-    if (pn[0] == '\0' || selectedlayer(&safe_job, pn))
+    if (pn[0] == '\0' || selectedlayer(safe_job, pn))
       return true;
   }
   return false;
@@ -1278,7 +1275,8 @@ static pointf computeoffset_qr(pointf p, pointf q, pointf r, pointf s,
   return res;
 }
 
-static void emit_attachment(GVJ_t *job, textlabel_t *lp, splines *spl) {
+static void emit_attachment(output_string *output, SafeJob *safe_job,
+                            obj_state_t *obj, textlabel_t *lp, splines *spl) {
   pointf sz, AF[3];
   const char *s;
 
@@ -1294,13 +1292,13 @@ static void emit_attachment(GVJ_t *job, textlabel_t *lp, splines *spl) {
   AF[1] = (pointf){AF[0].x - sz.x, AF[0].y};
   AF[2] = dotneato_closest(spl, lp->pos);
   /* Don't use edge style to draw attachment */
-  jobsvg_set_style(job, job->gvc->defaultlinestyle);
+  svg_set_style(obj, safe_job->defaultlinestyle);
   /* Use font color to draw attachment
      - need something unambiguous in case of multicolored parallel edges
      - defaults to black for html-like labels
    */
-  jobsvg_set_pencolor(job, lp->fontcolor);
-  jobsvg_polyline(job, AF, 3);
+  svg_set_pencolor(obj, lp->fontcolor);
+  svg_polyline(output, obj, AF, 3);
 }
 
 /* edges’ colors can be multiple colors separated by ":"
@@ -1384,8 +1382,9 @@ static void splitBSpline(bezier *bz, double t, bezier *left, bezier *right) {
  * implementation.
  * Return non-zero if color spec is incorrect
  */
-static int multicolor(GVJ_t *job, edge_t *e, char **styles, const char *colors,
-                      double arrowsize, double penwidth) {
+static int multicolor(output_string *output, SafeJob *safe_job,
+                      obj_state_t *obj, edge_t *e, char **styles,
+                      const char *colors, double arrowsize, double penwidth) {
   bezier bz;
   bezier bz0, bz_l, bz_r;
   int rv;
@@ -1415,27 +1414,27 @@ static int multicolor(GVJ_t *job, edge_t *e, char **styles, const char *colors,
         break;
       if (AEQ0(s.t))
         continue;
-      jobsvg_set_pencolor(job, s.color);
+      svg_set_pencolor(obj, s.color);
       left -= s.t;
       endcolor = s.color;
       if (first) {
         first = 0;
         splitBSpline(&bz, s.t, &bz_l, &bz_r);
-        jobsvg_bezier(job, bz_l.list, bz_l.size, 0);
+        svg_bezier(output, obj, bz_l.list, bz_l.size, 0);
         free(bz_l.list);
         if (AEQ0(left)) {
           free(bz_r.list);
           break;
         }
       } else if (AEQ0(left)) {
-        jobsvg_bezier(job, bz_r.list, bz_r.size, 0);
+        svg_bezier(output, obj, bz_r.list, bz_r.size, 0);
         free(bz_r.list);
         break;
       } else {
         bz0 = bz_r;
         splitBSpline(&bz0, s.t / (left + s.t), &bz_l, &bz_r);
         free(bz0.list);
-        jobsvg_bezier(job, bz_l.list, bz_l.size, 0);
+        svg_bezier(output, obj, bz_l.list, bz_l.size, 0);
         free(bz_l.list);
       }
     }
@@ -1444,19 +1443,19 @@ static int multicolor(GVJ_t *job, edge_t *e, char **styles, const char *colors,
      * Use local copy of penwidth to work around reset.
      */
     if (bz.sflag) {
-      jobsvg_set_pencolor(job, colorsegs_front(&segs)->color);
-      jobsvg_set_fillcolor(job, colorsegs_front(&segs)->color);
-      arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
-                bz.sflag);
+      svg_set_pencolor(obj, colorsegs_front(&segs)->color);
+      svg_set_fillcolor(obj, colorsegs_front(&segs)->color);
+      arrow_gen(output, safe_job, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
+                penwidth, bz.sflag);
     }
     if (bz.eflag) {
-      jobsvg_set_pencolor(job, endcolor);
-      jobsvg_set_fillcolor(job, endcolor);
-      arrow_gen(job, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
-                penwidth, bz.eflag);
+      svg_set_pencolor(obj, endcolor);
+      svg_set_fillcolor(obj, endcolor);
+      arrow_gen(output, safe_job, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
+                arrowsize, penwidth, bz.eflag);
     }
     if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-      jobsvg_set_style(job, styles);
+      svg_set_style(obj, styles);
   }
   colorsegs_free(&segs);
   return 0;
@@ -1503,7 +1502,8 @@ static radfunc_t taperfun(edge_t *e) {
   return agisdirected(agraphof(aghead(e))) ? forfunc : nonefunc;
 }
 
-static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
+static void emit_edge_graphics(output_string *output, SafeJob *safe_job,
+                               obj_state_t *obj, edge_t *e, char **styles) {
   int cnum, numsemi = 0;
   char *color, *pencolor, *fillcolor;
   char *headcolor, *tailcolor, *lastcolor;
@@ -1511,7 +1511,7 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
   bezier bz;
   splines offspl, tmpspl;
   pointf pf0, pf1, pf2 = {0, 0}, pf3, *offlist, *tmplist;
-  double arrowsize, numc2, penwidth = job->obj->penwidth;
+  double arrowsize, numc2, penwidth = obj->penwidth;
   char *p;
   bool tapered = false;
   agxbuf buf = {0};
@@ -1543,7 +1543,8 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
     }
 
     if (numsemi && numc) {
-      if (multicolor(job, e, styles, color, arrowsize, penwidth)) {
+      if (multicolor(output, safe_job, obj, e, styles, color, arrowsize,
+                     penwidth)) {
         color = DEFAULT_COLOR;
       } else
         goto done;
@@ -1565,9 +1566,9 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
     } else
       fillcolor = late_nnstring(e, E_fillcolor, color);
     if (pencolor != color)
-      jobsvg_set_pencolor(job, pencolor);
+      svg_set_pencolor(obj, pencolor);
     if (fillcolor != color)
-      jobsvg_set_fillcolor(job, fillcolor);
+      svg_set_fillcolor(obj, fillcolor);
     color = pencolor;
 
     if (tapered) {
@@ -1575,23 +1576,23 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
         color = DEFAULT_COLOR;
       if (*fillcolor == '\0')
         fillcolor = DEFAULT_COLOR;
-      jobsvg_set_pencolor(job, "transparent");
-      jobsvg_set_fillcolor(job, color);
+      svg_set_pencolor(obj, "transparent");
+      svg_set_fillcolor(obj, color);
       bz = ED_spl(e)->list[0];
       stroke_t stp = taper(&bz, taperfun(e), penwidth);
       assert(stp.nvertices <= INT_MAX);
-      jobsvg_polygon(job, stp.vertices, stp.nvertices, 1);
+      svg_polygon(output, obj, stp.vertices, stp.nvertices, 1);
       free_stroke(stp);
-      jobsvg_set_pencolor(job, color);
+      svg_set_pencolor(obj, color);
       if (fillcolor != color)
-        jobsvg_set_fillcolor(job, fillcolor);
+        svg_set_fillcolor(obj, fillcolor);
       if (bz.sflag) {
-        arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
-                  bz.sflag);
+        arrow_gen(output, safe_job, obj, EMIT_TDRAW, bz.sp, bz.list[0],
+                  arrowsize, penwidth, bz.sflag);
       }
       if (bz.eflag) {
-        arrow_gen(job, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
-                  penwidth, bz.eflag);
+        arrow_gen(output, safe_job, obj, EMIT_HDRAW, bz.ep,
+                  bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
       }
     }
     /* if more than one color - then generate parallel beziers, one per color */
@@ -1642,8 +1643,8 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
           color = DEFAULT_COLOR;
         if (color != lastcolor) {
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            jobsvg_set_pencolor(job, color);
-            jobsvg_set_fillcolor(job, color);
+            svg_set_pencolor(obj, color);
+            svg_set_fillcolor(obj, color);
           }
           lastcolor = color;
         }
@@ -1658,30 +1659,30 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
             tmplist[j].x += offlist[j].x;
             tmplist[j].y += offlist[j].y;
           }
-          jobsvg_bezier(job, tmplist, tmpspl.list[i].size, 0);
+          svg_bezier(output, obj, tmplist, tmpspl.list[i].size, 0);
         }
       }
       if (bz.sflag) {
         if (color != tailcolor) {
           color = tailcolor;
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            jobsvg_set_pencolor(job, color);
-            jobsvg_set_fillcolor(job, color);
+            svg_set_pencolor(obj, color);
+            svg_set_fillcolor(obj, color);
           }
         }
-        arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
-                  bz.sflag);
+        arrow_gen(output, safe_job, obj, EMIT_TDRAW, bz.sp, bz.list[0],
+                  arrowsize, penwidth, bz.sflag);
       }
       if (bz.eflag) {
         if (color != headcolor) {
           color = headcolor;
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            jobsvg_set_pencolor(job, color);
-            jobsvg_set_fillcolor(job, color);
+            svg_set_pencolor(obj, color);
+            svg_set_fillcolor(obj, color);
           }
         }
-        arrow_gen(job, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
-                  penwidth, bz.eflag);
+        arrow_gen(output, safe_job, obj, EMIT_HDRAW, bz.ep,
+                  bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
       }
       free(colors);
       for (size_t i = 0; i < offspl.size; i++) {
@@ -1693,29 +1694,29 @@ static void emit_edge_graphics(GVJ_t *job, edge_t *e, char **styles) {
     } else {
       if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
         if (color[0]) {
-          jobsvg_set_pencolor(job, color);
-          jobsvg_set_fillcolor(job, fillcolor);
+          svg_set_pencolor(obj, color);
+          svg_set_fillcolor(obj, fillcolor);
         } else {
-          jobsvg_set_pencolor(job, DEFAULT_COLOR);
+          svg_set_pencolor(obj, DEFAULT_COLOR);
           if (fillcolor[0])
-            jobsvg_set_fillcolor(job, fillcolor);
+            svg_set_fillcolor(obj, fillcolor);
           else
-            jobsvg_set_fillcolor(job, DEFAULT_COLOR);
+            svg_set_fillcolor(obj, DEFAULT_COLOR);
         }
       }
       for (size_t i = 0; i < ED_spl(e)->size; i++) {
         bz = ED_spl(e)->list[i];
-        jobsvg_bezier(job, bz.list, bz.size, 0);
+        svg_bezier(output, obj, bz.list, bz.size, 0);
         if (bz.sflag) {
-          arrow_gen(job, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
-                    bz.sflag);
+          arrow_gen(output, safe_job, obj, EMIT_TDRAW, bz.sp, bz.list[0],
+                    arrowsize, penwidth, bz.sflag);
         }
         if (bz.eflag) {
-          arrow_gen(job, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
-                    penwidth, bz.eflag);
+          arrow_gen(output, safe_job, obj, EMIT_HDRAW, bz.ep,
+                    bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
         }
         if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-          jobsvg_set_style(job, styles);
+          svg_set_style(obj, styles);
       }
     }
   }
@@ -1746,14 +1747,14 @@ static bool edge_in_box(edge_t *e, boxf b) {
   return false;
 }
 
-static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
+static void emit_begin_edge(output_string *output, SafeJob *safe_job,
+                            obj_state_t *obj, edge_t *e, char **styles) {
   char *s;
   textlabel_t *lab = NULL, *tlab = NULL, *hlab = NULL;
   char *dflt_url = NULL;
   char *dflt_target = NULL;
   double penwidth;
 
-  obj_state_t *obj = push_obj_state(job);
   obj->type = EDGE_OBJTYPE;
   obj->u.e = e;
   obj->emit_state = EMIT_EDRAW;
@@ -1764,7 +1765,7 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
    * is needed below for calculating polygonal image maps
    */
   if (styles && ED_spl(e))
-    jobsvg_set_style(job, styles);
+    svg_set_style(obj, styles);
 
   if (E_penwidth && (s = agxget(e, E_penwidth)) && s[0]) {
     penwidth = late_double(e, E_penwidth, 1.0, 0.0);
@@ -1783,7 +1784,7 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
 
   agxbuf xb = {0};
 
-  s = job_getObjId(job, e, &xb);
+  s = getObjId(safe_job, e, &xb);
   obj->id = strdup_and_subst_obj(s, e);
   agxbfree(&xb);
 
@@ -1870,14 +1871,16 @@ static void emit_begin_edge(GVJ_t *job, edge_t *e, char **styles) {
   free(dflt_url);
   free(dflt_target);
 
-  jobsvg_begin_edge(job);
+  svg_begin_edge(output, obj);
   if (obj->url || obj->explicit_tooltip)
-    jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
 }
 
-static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
-                            int explicit, char *url, char *tooltip,
-                            char *target, char *id, splines *spl) {
+static void emit_edge_label(output_string *output, SafeJob *safe_job,
+                            obj_state_t *obj, textlabel_t *lbl,
+                            emit_state_t lkind, int explicit, char *url,
+                            char *tooltip, char *target, char *id,
+                            splines *spl) {
   emit_state_t old_emit_state;
   char *newid;
   agxbuf xb = {0};
@@ -1903,20 +1906,20 @@ static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
     newid = agxbuse(&xb);
   } else
     newid = NULL;
-  old_emit_state = job->obj->emit_state;
-  job->obj->emit_state = lkind;
+  old_emit_state = obj->emit_state;
+  obj->emit_state = lkind;
   if (url || explicit) {
-    map_label(job, lbl);
-    jobsvg_begin_anchor(job, url, tooltip, target, newid);
+    map_label(obj, lbl);
+    svg_begin_anchor(output, url, tooltip, target, newid);
   }
-  job_emit_label(job, lkind, lbl);
+  emit_label(output, safe_job, obj, lkind, lbl);
   if (spl)
-    emit_attachment(job, lbl, spl);
+    emit_attachment(output, safe_job, obj, lbl, spl);
   if (url || explicit) {
-    jobsvg_end_anchor(job);
+    svg_end_anchor(output);
   }
   agxbfree(&xb);
-  job->obj->emit_state = old_emit_state;
+  obj->emit_state = old_emit_state;
 }
 
 /* Common logic for setting hot spots at the beginning and end of
@@ -1930,9 +1933,8 @@ static void emit_edge_label(GVJ_t *job, textlabel_t *lbl, emit_state_t lkind,
  * If the url is non-NULL or the tooltip was explicit, we set
  * a hot spot around point p.
  */
-static void nodeIntersect(GVJ_t *job, pointf p, bool explicit_iurl, char *iurl,
-                          bool explicit_itooltip) {
-  obj_state_t *obj = job->obj;
+static void nodeIntersect(obj_state_t *obj, pointf p, bool explicit_iurl,
+                          char *iurl, bool explicit_itooltip) {
   char *url;
   bool explicit;
 
@@ -1949,24 +1951,24 @@ static void nodeIntersect(GVJ_t *job, pointf p, bool explicit_iurl, char *iurl,
   }
 
   if (url || explicit) {
-    map_point(job, p);
+    map_point(obj, p);
   }
 }
 
-static void emit_end_edge(GVJ_t *job) {
-  obj_state_t *obj = job->obj;
+static void emit_end_edge(output_string *output, SafeJob *safe_job,
+                          obj_state_t *obj) {
   edge_t *e = obj->u.e;
 
   if (obj->url || obj->explicit_tooltip) {
-    jobsvg_end_anchor(job);
+    svg_end_anchor(output);
     if (obj->url_bsplinemap_poly_n) {
       for (size_t nump = obj->url_bsplinemap_n[0], i = 1;
            i < obj->url_bsplinemap_poly_n; i++) {
         /* additional polygon maps around remaining bezier pieces */
         obj->url_map_n = obj->url_bsplinemap_n[i];
         obj->url_map_p = &(obj->url_bsplinemap_p[nump]);
-        jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
-        jobsvg_end_anchor(job);
+        svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
+        svg_end_anchor(output);
         nump += obj->url_bsplinemap_n[i];
       }
     }
@@ -1984,7 +1986,7 @@ static void emit_end_edge(GVJ_t *job) {
       p = bz.sp;
     else /* No arrow at start of splines */
       p = bz.list[0];
-    nodeIntersect(job, p, obj->explicit_tailurl != 0, obj->tailurl,
+    nodeIntersect(obj, p, obj->explicit_tailurl != 0, obj->tailurl,
                   obj->explicit_tailtooltip != 0);
 
     /* process intersection with head node */
@@ -1993,37 +1995,41 @@ static void emit_end_edge(GVJ_t *job) {
       p = bz.ep;
     else /* No arrow at end of splines */
       p = bz.list[bz.size - 1];
-    nodeIntersect(job, p, obj->explicit_headurl != 0, obj->headurl,
+    nodeIntersect(obj, p, obj->explicit_headurl != 0, obj->headurl,
                   obj->explicit_headtooltip != 0);
   }
 
-  emit_edge_label(job, ED_label(e), EMIT_ELABEL, obj->explicit_labeltooltip,
-                  obj->labelurl, obj->labeltooltip, obj->labeltarget, obj->id,
+  emit_edge_label(output, safe_job, obj, ED_label(e), EMIT_ELABEL,
+                  obj->explicit_labeltooltip, obj->labelurl, obj->labeltooltip,
+                  obj->labeltarget, obj->id,
                   ((mapbool(late_string(e, E_decorate, "false")) && ED_spl(e))
                        ? ED_spl(e)
                        : 0));
-  emit_edge_label(job, ED_xlabel(e), EMIT_ELABEL, obj->explicit_labeltooltip,
-                  obj->labelurl, obj->labeltooltip, obj->labeltarget, obj->id,
+  emit_edge_label(output, safe_job, obj, ED_xlabel(e), EMIT_ELABEL,
+                  obj->explicit_labeltooltip, obj->labelurl, obj->labeltooltip,
+                  obj->labeltarget, obj->id,
                   ((mapbool(late_string(e, E_decorate, "false")) && ED_spl(e))
                        ? ED_spl(e)
                        : 0));
-  emit_edge_label(job, ED_head_label(e), EMIT_HLABEL, obj->explicit_headtooltip,
-                  obj->headurl, obj->headtooltip, obj->headtarget, obj->id, 0);
-  emit_edge_label(job, ED_tail_label(e), EMIT_TLABEL, obj->explicit_tailtooltip,
-                  obj->tailurl, obj->tailtooltip, obj->tailtarget, obj->id, 0);
+  emit_edge_label(output, safe_job, obj, ED_head_label(e), EMIT_HLABEL,
+                  obj->explicit_headtooltip, obj->headurl, obj->headtooltip,
+                  obj->headtarget, obj->id, 0);
+  emit_edge_label(output, safe_job, obj, ED_tail_label(e), EMIT_TLABEL,
+                  obj->explicit_tailtooltip, obj->tailurl, obj->tailtooltip,
+                  obj->tailtarget, obj->id, 0);
 
-  jobsvg_end_edge(job);
-  pop_obj_state(job);
+  svg_end_edge(output);
 }
 
-static void emit_edge(GVJ_t *job, edge_t *e) {
+static void emit_edge(output_string *output, SafeJob *safe_job,
+                      obj_state_t *parent, edge_t *e) {
   char *s;
   char *style;
   char **styles = NULL;
   char **sp;
   char *p;
 
-  if (edge_in_box(e, job->clip) && edge_in_layer(job, e)) {
+  if (edge_in_box(e, safe_job->clip) && edge_in_layer(safe_job, e)) {
 
     agxbuf edge = {0};
     agxbput(&edge, agnameof(agtail(e)));
@@ -2032,11 +2038,11 @@ static void emit_edge(GVJ_t *job, edge_t *e) {
     else
       agxbput(&edge, "--");
     agxbput(&edge, agnameof(aghead(e)));
-    jobsvg_comment(job, agxbuse(&edge));
+    svg_comment(output, agxbuse(&edge));
     agxbfree(&edge);
 
     s = late_string(e, E_comment, "");
-    jobsvg_comment(job, s);
+    svg_comment(output, s);
 
     style = late_string(e, E_style, "");
     /* We shortcircuit drawing an invisible edge because the arrowhead
@@ -2052,9 +2058,11 @@ static void emit_edge(GVJ_t *job, edge_t *e) {
       }
     }
 
-    emit_begin_edge(job, e, styles);
-    emit_edge_graphics(job, e, styles);
-    emit_end_edge(job);
+    obj_state_t obj = child_obj_state(parent);
+    emit_begin_edge(output, safe_job, &obj, e, styles);
+    emit_edge_graphics(output, safe_job, &obj, e, styles);
+    emit_end_edge(output, safe_job, &obj);
+    free_child_obj(&obj);
   }
 }
 
@@ -2075,14 +2083,22 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
       output_string2job(job, &output);
     }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      for (e = agfstout(g, n); e; e = agnxtout(g, e))
-        emit_edge(job, e);
+      for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
+        SafeJob safe_job = to_safe_job(job);
+        output_string output = job2output_string(job);
+        emit_edge(&output, &safe_job, job->obj, e);
+        output_string2job(job, &output);
+      }
     }
   } else if (flags & EMIT_EDGE_SORTED) {
     /* output all edges, then all nodes */
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
-      for (e = agfstout(g, n); e; e = agnxtout(g, e))
-        emit_edge(job, e);
+      for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
+        SafeJob safe_job = to_safe_job(job);
+        output_string output = job2output_string(job);
+        emit_edge(&output, &safe_job, job->obj, e);
+        output_string2job(job, &output);
+      }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       SafeJob safe_job = to_safe_job(job);
       output_string output = job2output_string(job);
@@ -2105,7 +2121,12 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
           emit_node(&output, &safe_job, job->obj, aghead(e));
           output_string2job(job, &output);
         }
-        emit_edge(job, e);
+        {
+          SafeJob safe_job = to_safe_job(job);
+          output_string output = job2output_string(job);
+          emit_edge(&output, &safe_job, job->obj, e);
+          output_string2job(job, &output);
+        }
       }
     }
   }
