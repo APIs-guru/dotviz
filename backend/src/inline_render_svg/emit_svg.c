@@ -1207,20 +1207,18 @@ static void emit_end_node(output_string *output) {
   saved_color_scheme = NULL;
 }
 
-static void emit_node(GVJ_t *job, node_t *n) {
-  output_string output = job2output_string(job);
-  SafeJob safe_job = to_safe_job(job);
-
-  if (ND_shape(n)                                 /* node has a shape */
-      && node_in_layer(&safe_job, agraphof(n), n) /* and is in layer */
-      && node_in_box(n, safe_job.clip)            /* and is in page/view */
-      && ND_state(n) != safe_job.viewNum)         /* and not already drawn */
+static void emit_node(output_string *output, SafeJob *safe_job,
+                      obj_state_t *parent, node_t *n) {
+  if (ND_shape(n)                                /* node has a shape */
+      && node_in_layer(safe_job, agraphof(n), n) /* and is in layer */
+      && node_in_box(n, safe_job->clip)          /* and is in page/view */
+      && ND_state(n) != safe_job->viewNum)       /* and not already drawn */
   {
-    ND_state(n) = safe_job.viewNum; /* mark node as drawn */
+    ND_state(n) = safe_job->viewNum; /* mark node as drawn */
 
-    svg_comment(&output, agnameof(n));
+    svg_comment(output, agnameof(n));
     char *s = late_string(n, N_comment, "");
-    svg_comment(&output, s);
+    svg_comment(output, s);
 
     char *style = late_string(n, N_style, "");
     if (style[0]) {
@@ -1229,24 +1227,22 @@ static void emit_node(GVJ_t *job, node_t *n) {
       char *p;
       while ((p = *sp++)) {
         if (streq(p, "invis")) {
-          output_string2job(job, &output);
           return;
         }
       }
     }
 
-    obj_state_t obj = child_obj_state(job->obj);
-    emit_begin_node(&output, &safe_job, &obj, n);
-    ND_shape(n)->fns->codefn(&output, &safe_job, &obj, n);
+    obj_state_t obj = child_obj_state(parent);
+    emit_begin_node(output, safe_job, &obj, n);
+    ND_shape(n)->fns->codefn(output, safe_job, &obj, n);
 
     if (ND_xlabel(n) && ND_xlabel(n)->set) {
-      emit_label(&output, &safe_job, &obj, EMIT_NLABEL, ND_xlabel(n));
+      emit_label(output, safe_job, &obj, EMIT_NLABEL, ND_xlabel(n));
     }
 
-    emit_end_node(&output);
+    emit_end_node(output);
     free_child_obj(&obj);
   }
-  output_string2job(job, &output);
 }
 
 /* calculate an offset vector, length d, perpendicular to line p,q */
@@ -2072,8 +2068,12 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
   emit_clusters(job, g, flags);
   if (flags & EMIT_SORTED) {
     /* output all nodes, then all edges */
-    for (n = agfstnode(g); n; n = agnxtnode(g, n))
-      emit_node(job, n);
+    for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
+      SafeJob safe_job = to_safe_job(job);
+      output_string output = job2output_string(job);
+      emit_node(&output, &safe_job, job->obj, n);
+      output_string2job(job, &output);
+    }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       for (e = agfstout(g, n); e; e = agnxtout(g, e))
         emit_edge(job, e);
@@ -2083,14 +2083,28 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
       for (e = agfstout(g, n); e; e = agnxtout(g, e))
         emit_edge(job, e);
-    for (n = agfstnode(g); n; n = agnxtnode(g, n))
-      emit_node(job, n);
+    for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
+      SafeJob safe_job = to_safe_job(job);
+      output_string output = job2output_string(job);
+      emit_node(&output, &safe_job, job->obj, n);
+      output_string2job(job, &output);
+    }
   } else {
     /* output in breadth first graph walk order */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(job, n);
+      {
+        SafeJob safe_job = to_safe_job(job);
+        output_string output = job2output_string(job);
+        emit_node(&output, &safe_job, job->obj, n);
+        output_string2job(job, &output);
+      }
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        emit_node(job, aghead(e));
+        {
+          SafeJob safe_job = to_safe_job(job);
+          output_string output = job2output_string(job);
+          emit_node(&output, &safe_job, job->obj, aghead(e));
+          output_string2job(job, &output);
+        }
         emit_edge(job, e);
       }
     }
