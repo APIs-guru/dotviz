@@ -2065,72 +2065,39 @@ static void emit_edge(output_string *output, SafeJob *safe_job,
   }
 }
 
-static void emit_view(GVJ_t *job, graph_t *g, int flags) {
-  GVC_t *gvc = job->gvc;
+static void emit_view(output_string *output, SafeJob *safe_job,
+                      obj_state_t *obj, graph_t *g, int flags) {
   node_t *n;
   edge_t *e;
 
-  gvc->common.viewNum++;
   /* when drawing, lay clusters down before nodes and edges */
-  {
-    SafeJob safe_job = to_safe_job(job);
-    output_string output = job2output_string(job);
-    emit_clusters(&output, &safe_job, job->obj, g, flags);
-    output_string2job(job, &output);
-  }
+  emit_clusters(output, safe_job, obj, g, flags);
   if (flags & EMIT_SORTED) {
     /* output all nodes, then all edges */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      SafeJob safe_job = to_safe_job(job);
-      output_string output = job2output_string(job);
-      emit_node(&output, &safe_job, job->obj, n);
-      output_string2job(job, &output);
+      emit_node(output, safe_job, obj, n);
     }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        SafeJob safe_job = to_safe_job(job);
-        output_string output = job2output_string(job);
-        emit_edge(&output, &safe_job, job->obj, e);
-        output_string2job(job, &output);
+        emit_edge(output, safe_job, obj, e);
       }
     }
   } else if (flags & EMIT_EDGE_SORTED) {
     /* output all edges, then all nodes */
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        SafeJob safe_job = to_safe_job(job);
-        output_string output = job2output_string(job);
-        emit_edge(&output, &safe_job, job->obj, e);
-        output_string2job(job, &output);
+        emit_edge(output, safe_job, obj, e);
       }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      SafeJob safe_job = to_safe_job(job);
-      output_string output = job2output_string(job);
-      emit_node(&output, &safe_job, job->obj, n);
-      output_string2job(job, &output);
+      emit_node(output, safe_job, obj, n);
     }
   } else {
     /* output in breadth first graph walk order */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      {
-        SafeJob safe_job = to_safe_job(job);
-        output_string output = job2output_string(job);
-        emit_node(&output, &safe_job, job->obj, n);
-        output_string2job(job, &output);
-      }
+      emit_node(output, safe_job, obj, n);
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        {
-          SafeJob safe_job = to_safe_job(job);
-          output_string output = job2output_string(job);
-          emit_node(&output, &safe_job, job->obj, aghead(e));
-          output_string2job(job, &output);
-        }
-        {
-          SafeJob safe_job = to_safe_job(job);
-          output_string output = job2output_string(job);
-          emit_edge(&output, &safe_job, job->obj, e);
-          output_string2job(job, &output);
-        }
+        emit_node(output, safe_job, obj, aghead(e));
+        emit_edge(output, safe_job, obj, e);
       }
     }
   }
@@ -2210,7 +2177,13 @@ void emit_page(GVJ_t *job, graph_t *g) {
     job_emit_label(job, EMIT_GLABEL, GD_label(g));
   if (obj->url || obj->explicit_tooltip)
     jobsvg_end_anchor(job);
-  emit_view(job, g, flags);
+  {
+    job->gvc->common.viewNum++;
+    output_string output = job2output_string(job);
+    SafeJob safe_job = to_safe_job(job);
+    emit_view(&output, &safe_job, job->obj, g, flags);
+    output_string2job(job, &output);
+  }
   jobsvg_end_page(job);
   if (obj_id_needs_restore) {
     obj->id = saveid;
