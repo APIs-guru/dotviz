@@ -329,7 +329,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_viewport(job, g);
   init_job_pagination(job, g);
 
-  emit_graph(job, g);
+  emit_graph(job, g, job->flags);
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 

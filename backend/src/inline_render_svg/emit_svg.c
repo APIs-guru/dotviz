@@ -893,7 +893,8 @@ static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   return pts;
 }
 
-static void emit_xdot(GVJ_t *job, xdot *xd) {
+static void emit_xdot(output_string *output, SafeJob *safe_job,
+                      obj_state_t *obj, xdot *xd) {
   int image_warn = 1;
   int angle;
   char **styles = NULL;
@@ -904,53 +905,54 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
     switch (op->op.kind) {
     case xd_filled_ellipse:
     case xd_unfilled_ellipse:
-      if (boxf_overlap(op->bb, job->clip)) {
+      if (boxf_overlap(op->bb, safe_job->clip)) {
         pointf pts[] = {{.x = op->op.u.ellipse.x - op->op.u.ellipse.w,
                          .y = op->op.u.ellipse.y - op->op.u.ellipse.h},
                         {.x = op->op.u.ellipse.x + op->op.u.ellipse.w,
                          .y = op->op.u.ellipse.y + op->op.u.ellipse.h}};
-        jobsvg_ellipse(job, pts, op->op.kind == xd_filled_ellipse ? filled : 0);
+        svg_ellipse(output, obj, pts,
+                    op->op.kind == xd_filled_ellipse ? filled : 0);
       }
       break;
     case xd_filled_polygon:
     case xd_unfilled_polygon:
-      if (boxf_overlap(op->bb, job->clip)) {
+      if (boxf_overlap(op->bb, safe_job->clip)) {
         pointf *pts = copyPts(op->op.u.polygon.pts, op->op.u.polygon.cnt);
         assert(op->op.u.polygon.cnt <= INT_MAX &&
                "polygon count exceeds svg_polygon support");
-        jobsvg_polygon(job, pts, op->op.u.polygon.cnt,
-                       op->op.kind == xd_filled_polygon ? filled : 0);
+        svg_polygon(output, obj, pts, op->op.u.polygon.cnt,
+                    op->op.kind == xd_filled_polygon ? filled : 0);
         free(pts);
       }
       break;
     case xd_filled_bezier:
     case xd_unfilled_bezier:
-      if (boxf_overlap(op->bb, job->clip)) {
+      if (boxf_overlap(op->bb, safe_job->clip)) {
         pointf *pts = copyPts(op->op.u.bezier.pts, op->op.u.bezier.cnt);
-        jobsvg_bezier(job, pts, op->op.u.bezier.cnt,
-                      op->op.kind == xd_filled_bezier ? filled : 0);
+        svg_bezier(output, obj, pts, op->op.u.bezier.cnt,
+                   op->op.kind == xd_filled_bezier ? filled : 0);
         free(pts);
       }
       break;
     case xd_polyline:
-      if (boxf_overlap(op->bb, job->clip)) {
+      if (boxf_overlap(op->bb, safe_job->clip)) {
         pointf *pts = copyPts(op->op.u.polyline.pts, op->op.u.polyline.cnt);
-        jobsvg_polyline(job, pts, op->op.u.polyline.cnt);
+        svg_polyline(output, obj, pts, op->op.u.polyline.cnt);
         free(pts);
       }
       break;
     case xd_text:
-      if (boxf_overlap(op->bb, job->clip)) {
+      if (boxf_overlap(op->bb, safe_job->clip)) {
         pointf pt = {.x = op->op.u.text.x, .y = op->op.u.text.y};
-        jobsvg_textspan(job, pt, op->span);
+        svg_textspan(output, GD_fontnames(safe_job->graph), obj, pt, op->span);
       }
       break;
     case xd_fill_color:
-      jobsvg_set_fillcolor(job, op->op.u.color);
+      svg_set_fillcolor(obj, op->op.u.color);
       filled = FILL;
       break;
     case xd_pen_color:
-      jobsvg_set_pencolor(job, op->op.u.color);
+      svg_set_pencolor(obj, op->op.u.color);
       filled = FILL;
       break;
     case xd_grad_fill_color:
@@ -964,8 +966,8 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
         } else {
           angle = (int)(180 * acos((p->x0 - p->x1) / p->r0) / M_PI);
         }
-        jobsvg_set_fillcolor(job, clr0);
-        jobsvg_set_gradient_vals(job, clr1, angle, frac);
+        svg_set_fillcolor(obj, clr0);
+        svg_set_gradient_vals(obj, clr1, angle, frac);
         filled = RGRADIENT;
       } else {
         xdot_linear_grad *p = &op->op.u.grad_color.u.ling;
@@ -973,8 +975,8 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
         char *const clr1 = p->stops[1].color;
         const double frac = p->stops[1].frac;
         angle = (int)(180 * atan2(p->y1 - p->y0, p->x1 - p->x0) / M_PI);
-        jobsvg_set_fillcolor(job, clr0);
-        jobsvg_set_gradient_vals(job, clr1, angle, frac);
+        svg_set_fillcolor(obj, clr0);
+        svg_set_gradient_vals(obj, clr1, angle, frac);
         filled = GRADIENT;
       }
       break;
@@ -986,7 +988,7 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
       break;
     case xd_style:
       styles = parse_style(op->op.u.style);
-      jobsvg_set_style(job, styles);
+      svg_set_style(obj, styles);
       break;
     case xd_fontchar:
       /* font characteristics already encoded via xdotBB */
@@ -1003,10 +1005,11 @@ static void emit_xdot(GVJ_t *job, xdot *xd) {
     op++;
   }
   if (styles)
-    jobsvg_set_style(job, job->gvc->defaultlinestyle);
+    svg_set_style(obj, safe_job->defaultlinestyle);
 }
 
-static void emit_background(GVJ_t *job, graph_t *g) {
+static void emit_background(output_string *output, SafeJob *safe_job,
+                            obj_state_t *obj, graph_t *g) {
   xdot *xd;
   char *str;
 
@@ -1024,31 +1027,31 @@ static void emit_background(GVJ_t *job, graph_t *g) {
     if ((findStopColor(str, clrs, &frac))) {
       int filled;
       graphviz_polygon_style_t istyle = {0};
-      jobsvg_set_fillcolor(job, clrs[0]);
-      jobsvg_set_pencolor(job, "transparent");
+      svg_set_fillcolor(obj, clrs[0]);
+      svg_set_pencolor(obj, "transparent");
       checkClusterStyle(g, &istyle);
       if (clrs[1])
-        jobsvg_set_gradient_vals(job, clrs[1],
-                                 late_int(g, G_gradientangle, 0, 0), frac);
+        svg_set_gradient_vals(obj, clrs[1], late_int(g, G_gradientangle, 0, 0),
+                              frac);
       else
-        jobsvg_set_gradient_vals(job, DEFAULT_COLOR,
-                                 late_int(g, G_gradientangle, 0, 0), frac);
+        svg_set_gradient_vals(obj, DEFAULT_COLOR,
+                              late_int(g, G_gradientangle, 0, 0), frac);
       if (istyle.radial)
         filled = RGRADIENT;
       else
         filled = GRADIENT;
-      jobsvg_box(job, job->clip, filled);
+      svg_box(output, obj, safe_job->clip, filled);
       free(clrs[0]);
       free(clrs[1]);
     } else {
-      jobsvg_set_fillcolor(job, str);
-      jobsvg_set_pencolor(job, "transparent");
-      jobsvg_box(job, job->clip, FILL); /* filled */
+      svg_set_fillcolor(obj, str);
+      svg_set_pencolor(obj, "transparent");
+      svg_box(output, obj, safe_job->clip, FILL); /* filled */
     }
   }
 
   if ((xd = GD_drawing(g)->xdots))
-    emit_xdot(job, xd);
+    emit_xdot(output, safe_job, obj, xd);
 }
 
 static void setup_page(GVJ_t *job) {
@@ -2066,14 +2069,15 @@ static void emit_edge(output_string *output, SafeJob *safe_job,
 }
 
 static void emit_view(output_string *output, SafeJob *safe_job,
-                      obj_state_t *obj, graph_t *g, int *viewNum, int flags) {
+                      obj_state_t *obj, graph_t *g, int *viewNum,
+                      int graph_outputorder) {
   node_t *n;
   edge_t *e;
 
   *viewNum += 1;
   /* when drawing, lay clusters down before nodes and edges */
-  emit_clusters(output, safe_job, obj, g, flags);
-  if (flags & EMIT_SORTED) {
+  emit_clusters(output, safe_job, obj, g);
+  if (graph_outputorder & EMIT_SORTED) {
     /* output all nodes, then all edges */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       emit_node(output, safe_job, viewNum, obj, n);
@@ -2083,7 +2087,7 @@ static void emit_view(output_string *output, SafeJob *safe_job,
         emit_edge(output, safe_job, obj, e);
       }
     }
-  } else if (flags & EMIT_EDGE_SORTED) {
+  } else if (graph_outputorder & EMIT_EDGE_SORTED) {
     /* output all edges, then all nodes */
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
@@ -2126,9 +2130,12 @@ void emit_end_graph(GVJ_t *job) {
   (((j)->layerNum > 1) || ((j)->pagesArrayElem.x > 0) ||                       \
    ((j)->pagesArrayElem.x > 0))
 
-void emit_page(GVJ_t *job, graph_t *g, int *viewNum) {
+void emit_page(GVJ_t *job, graph_t *g, int *viewNum, int graph_outputorder) {
+  SafeJob safe_job_obj = to_safe_job(job);
+  SafeJob *safe_job = &safe_job_obj;
+  output_string output_obj = job2output_string(job);
+  output_string *output = &output_obj;
   obj_state_t *obj = job->obj;
-  int flags = job->flags;
   size_t nump = 0;
   textlabel_t *lab;
   pointf *p = NULL;
@@ -2139,12 +2146,9 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum) {
    * For multiple pages, we need to generate a new id.
    */
   bool obj_id_needs_restore = false;
-  if (NotFirstPage(job)) {
+  if (NotFirstPage(safe_job)) {
     saveid = obj->id;
-    {
-      SafeJob safe_job = to_safe_job(job);
-      layerPagePrefix(&safe_job, &xb);
-    }
+    layerPagePrefix(safe_job, &xb);
     agxbput(&xb, saveid == NULL ? "layer" : saveid);
     obj->id = agxbuse(&xb);
     obj_id_needs_restore = true;
@@ -2152,10 +2156,12 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum) {
     saveid = NULL;
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
-  setup_page(job);
-  jobsvg_begin_page(job);
-  jobsvg_set_pencolor(job, DEFAULT_COLOR);
-  jobsvg_set_fillcolor(job, DEFAULT_FILL);
+  setup_page(job); // HERE
+  SafeJob safe_job_obj2 = to_safe_job(job);
+  safe_job = &safe_job_obj2;
+  svg_begin_page(output, safe_job, obj);
+  svg_set_pencolor(obj, DEFAULT_COLOR);
+  svg_set_fillcolor(obj, DEFAULT_FILL);
   if (obj->url || obj->explicit_tooltip) {
     obj->url_map_p = p;
     obj->url_map_n = nump;
@@ -2170,21 +2176,16 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum) {
    * or end_page of renderer.
    */
   if (obj->url || obj->explicit_tooltip) {
-    emit_map_rect(obj, job->clip);
-    jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+    emit_map_rect(obj, safe_job->clip);
+    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
   }
-  emit_background(job, g);
+  emit_background(output, safe_job, obj, g);
   if (GD_label(g))
-    job_emit_label(job, EMIT_GLABEL, GD_label(g));
+    emit_label(output, safe_job, obj, EMIT_GLABEL, GD_label(g));
   if (obj->url || obj->explicit_tooltip)
-    jobsvg_end_anchor(job);
-  {
-    output_string output = job2output_string(job);
-    SafeJob safe_job = to_safe_job(job);
-    emit_view(&output, &safe_job, job->obj, g, viewNum, flags);
-    output_string2job(job, &output);
-  }
-  jobsvg_end_page(job);
+    svg_end_anchor(output);
+  emit_view(output, safe_job, obj, g, viewNum, graph_outputorder);
+  svg_end_page(output);
   if (obj_id_needs_restore) {
     obj->id = saveid;
   }
@@ -2193,6 +2194,8 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum) {
   char *color_scheme = setColorScheme(previous_color_scheme);
   free(color_scheme);
   free(previous_color_scheme);
+
+  output_string2job(job, output);
 }
 
 static Dict_t *strings;
@@ -2230,7 +2233,7 @@ static void emit_begin_cluster(output_string *output, SafeJob *safe_job,
 }
 
 void emit_clusters(output_string *output, SafeJob *safe_job,
-                   obj_state_t *parent, Agraph_t *g, int flags) {
+                   obj_state_t *parent, Agraph_t *g) {
   int doPerim, c, filled;
   pointf AF[4];
   char *color, *fillcolor, *pencolor, **style, *s;
@@ -2372,7 +2375,7 @@ void emit_clusters(output_string *output, SafeJob *safe_job,
     svg_end_cluster(output);
     free_child_obj(&obj);
     /* when drawing, lay down clusters before sub_clusters */
-    emit_clusters(output, safe_job, &obj, sg, flags);
+    emit_clusters(output, safe_job, &obj, sg);
 
     char *color_scheme = setColorScheme(previous_color_scheme);
     free(color_scheme);
@@ -2548,7 +2551,7 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   return true;
 }
 
-void emit_graph(GVJ_t *job, graph_t *g) {
+void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
   int viewNum = 0; ///< current view - 1 based count of views, all pages
                    ///< in all layers
   node_t *n;
@@ -2589,7 +2592,7 @@ void emit_graph(GVJ_t *job, graph_t *g) {
 
     /* iterate pages */
     for (firstpage(job); validpage(job); nextpage(job)) {
-      emit_page(job, g, &viewNum);
+      emit_page(job, g, &viewNum, graph_outputorder);
     }
 
     if (numPhysicalLayers(job) > 1)

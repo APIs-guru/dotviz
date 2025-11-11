@@ -98,10 +98,10 @@ RENDER_API void gv_postprocess(Agraph_t *, int);
 RENDER_API Ppolyline_t *ellipticWedge(pointf ctr, double major, double minor,
                                       double angle0, double angle1);
 RENDER_API void emit_clusters(output_string *output, SafeJob *safe_job,
-                              obj_state_t *parent, Agraph_t *g, int flags);
+                              obj_state_t *parent, Agraph_t *g);
 RENDER_API char *getObjId(const SafeJob *safe_job, void *obj, agxbuf *xb);
 RENDER_API char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb);
-RENDER_API void emit_graph(GVJ_t *job, graph_t *g);
+RENDER_API void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder);
 RENDER_API void job_emit_label(GVJ_t *job, emit_state_t emit_state,
                                textlabel_t *);
 RENDER_API void emit_label(output_string *output, SafeJob *safe_job,
