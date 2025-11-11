@@ -1131,20 +1131,19 @@ static bool edge_in_layer(SafeJob *safe_job, edge_t *e) {
   return false;
 }
 
-static bool clust_in_layer(GVJ_t *job, graph_t *sg) {
-  SafeJob safe_job = to_safe_job(job);
+static bool clust_in_layer(SafeJob *safe_job, graph_t *sg) {
   char *pg;
   node_t *n;
 
-  if (safe_job.numLayers <= 1)
+  if (safe_job->numLayers <= 1)
     return true;
   pg = late_string(sg, agattr_text(sg, AGRAPH, "layer", 0), "");
-  if (selectedlayer(&safe_job, pg))
+  if (selectedlayer(safe_job, pg))
     return true;
   if (pg[0])
     return false;
   for (n = agfstnode(sg); n; n = agnxtnode(sg, n))
-    if (node_in_layer(&safe_job, sg, n))
+    if (node_in_layer(safe_job, sg, n))
       return true;
   return false;
 }
@@ -2073,7 +2072,12 @@ static void emit_view(GVJ_t *job, graph_t *g, int flags) {
 
   gvc->common.viewNum++;
   /* when drawing, lay clusters down before nodes and edges */
-  emit_clusters(job, g, flags);
+  {
+    SafeJob safe_job = to_safe_job(job);
+    output_string output = job2output_string(job);
+    emit_clusters(&output, &safe_job, job->obj, g, flags);
+    output_string2job(job, &output);
+  }
   if (flags & EMIT_SORTED) {
     /* output all nodes, then all edges */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
@@ -2241,25 +2245,19 @@ void emit_once_reset(void) {
   }
 }
 
-static void emit_begin_cluster(GVJ_t *job, Agraph_t *sg) {
-  obj_state_t *obj;
-
-  obj = push_obj_state(job);
+static void emit_begin_cluster(output_string *output, SafeJob *safe_job,
+                               obj_state_t *obj, Agraph_t *sg) {
   obj->type = CLUSTER_OBJTYPE;
   obj->u.sg = sg;
   obj->emit_state = EMIT_CDRAW;
 
-  job_initObjMapData(job, GD_label(sg), sg);
+  initObjMapData(safe_job, obj, GD_label(sg), sg);
 
-  jobsvg_begin_cluster(job);
+  svg_begin_cluster(output, obj);
 }
 
-static void emit_end_cluster(GVJ_t *job) {
-  jobsvg_end_cluster(job);
-  pop_obj_state(job);
-}
-
-void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
+void emit_clusters(output_string *output, SafeJob *safe_job,
+                   obj_state_t *parent, Agraph_t *g, int flags) {
   int doPerim, c, filled;
   pointf AF[4];
   char *color, *fillcolor, *pencolor, **style, *s;
@@ -2270,20 +2268,20 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
 
   for (c = 1; c <= GD_n_cluster(g); c++) {
     sg = GD_clust(g)[c];
-    if (!clust_in_layer(job, sg))
+    if (!clust_in_layer(safe_job, sg))
       continue;
-    emit_begin_cluster(job, sg);
-    obj_state_t *obj = job->obj;
-    doAnchor = obj->url || obj->explicit_tooltip;
+    obj_state_t obj = child_obj_state(parent);
+    emit_begin_cluster(output, safe_job, &obj, sg);
+    doAnchor = obj.url || obj.explicit_tooltip;
     char *previous_color_scheme = setColorScheme(agget(sg, "colorscheme"));
     if (doAnchor) {
-      emit_map_rect(obj, GD_bb(sg));
-      jobsvg_begin_anchor(job, obj->url, obj->tooltip, obj->target, obj->id);
+      emit_map_rect(&obj, GD_bb(sg));
+      svg_begin_anchor(output, obj.url, obj.tooltip, obj.target, obj.id);
     }
     filled = 0;
     graphviz_polygon_style_t istyle = {0};
     if ((style = checkClusterStyle(sg, &istyle))) {
-      jobsvg_set_style(job, style);
+      svg_set_style(&obj, style);
       if (istyle.filled)
         filled = FILL;
     }
@@ -2331,24 +2329,24 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
     if (filled != 0) {
       double frac;
       if (findStopColor(fillcolor, clrs, &frac)) {
-        jobsvg_set_fillcolor(job, clrs[0]);
+        svg_set_fillcolor(&obj, clrs[0]);
         if (clrs[1])
-          jobsvg_set_gradient_vals(job, clrs[1],
-                                   late_int(sg, G_gradientangle, 0, 0), frac);
+          svg_set_gradient_vals(&obj, clrs[1],
+                                late_int(sg, G_gradientangle, 0, 0), frac);
         else
-          jobsvg_set_gradient_vals(job, DEFAULT_COLOR,
-                                   late_int(sg, G_gradientangle, 0, 0), frac);
+          svg_set_gradient_vals(&obj, DEFAULT_COLOR,
+                                late_int(sg, G_gradientangle, 0, 0), frac);
         if (istyle.radial)
           filled = RGRADIENT;
         else
           filled = GRADIENT;
       } else
-        jobsvg_set_fillcolor(job, fillcolor);
+        svg_set_fillcolor(&obj, fillcolor);
     }
 
     if (G_penwidth && ((s = ag_xget(sg, G_penwidth)) && s[0])) {
       penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
-      svg_set_penwidth(obj, penwidth);
+      svg_set_penwidth(&obj, penwidth);
     }
 
     if (istyle.rounded) {
@@ -2360,10 +2358,10 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
         AF[3].x = AF[0].x;
         AF[3].y = AF[2].y;
         if (doPerim)
-          jobsvg_set_pencolor(job, pencolor);
+          svg_set_pencolor(&obj, pencolor);
         else
-          jobsvg_set_pencolor(job, "transparent");
-        job_round_corners(job, AF, 4, istyle, filled);
+          svg_set_pencolor(&obj, "transparent");
+        round_corners(output, &obj, AF, 4, istyle, filled);
       }
     } else if (istyle.striped) {
       AF[0] = GD_bb(sg).LL;
@@ -2373,34 +2371,35 @@ void emit_clusters(GVJ_t *job, Agraph_t *g, int flags) {
       AF[3].x = AF[0].x;
       AF[3].y = AF[2].y;
       if (late_int(sg, G_peripheries, 1, 0) == 0)
-        jobsvg_set_pencolor(job, "transparent");
+        svg_set_pencolor(&obj, "transparent");
       else
-        jobsvg_set_pencolor(job, pencolor);
-      if (job_stripedBox(job, AF, fillcolor, 0) > 1)
+        svg_set_pencolor(&obj, pencolor);
+      if (stripedBox(output, &obj, AF, fillcolor, 0) > 1)
         agerr(AGPREV, "in cluster %s\n", agnameof(sg));
-      jobsvg_box(job, GD_bb(sg), 0);
+      svg_box(output, &obj, GD_bb(sg), 0);
     } else {
       if (late_int(sg, G_peripheries, 1, 0)) {
-        jobsvg_set_pencolor(job, pencolor);
-        jobsvg_box(job, GD_bb(sg), filled);
+        svg_set_pencolor(&obj, pencolor);
+        svg_box(output, &obj, GD_bb(sg), filled);
       } else if (filled != 0) {
-        jobsvg_set_pencolor(job, "transparent");
-        jobsvg_box(job, GD_bb(sg), filled);
+        svg_set_pencolor(&obj, "transparent");
+        svg_box(output, &obj, GD_bb(sg), filled);
       }
     }
 
     free(clrs[0]);
     free(clrs[1]);
     if ((lab = GD_label(sg)))
-      job_emit_label(job, EMIT_CLABEL, lab);
+      emit_label(output, safe_job, &obj, EMIT_CLABEL, lab);
 
     if (doAnchor) {
-      jobsvg_end_anchor(job);
+      svg_end_anchor(output);
     }
 
-    emit_end_cluster(job);
+    svg_end_cluster(output);
+    free_child_obj(&obj);
     /* when drawing, lay down clusters before sub_clusters */
-    emit_clusters(job, sg, flags);
+    emit_clusters(output, safe_job, &obj, sg, flags);
 
     char *color_scheme = setColorScheme(previous_color_scheme);
     free(color_scheme);
