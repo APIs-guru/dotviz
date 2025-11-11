@@ -1203,14 +1203,14 @@ static void emit_end_node(output_string *output) {
   saved_color_scheme = NULL;
 }
 
-static void emit_node(output_string *output, SafeJob *safe_job,
+static void emit_node(output_string *output, SafeJob *safe_job, int *viewNum,
                       obj_state_t *parent, node_t *n) {
   if (ND_shape(n)                                /* node has a shape */
       && node_in_layer(safe_job, agraphof(n), n) /* and is in layer */
       && node_in_box(n, safe_job->clip)          /* and is in page/view */
-      && ND_state(n) != safe_job->viewNum)       /* and not already drawn */
+      && ND_state(n) != *viewNum)                /* and not already drawn */
   {
-    ND_state(n) = safe_job->viewNum; /* mark node as drawn */
+    ND_state(n) = *viewNum; /* mark node as drawn */
 
     svg_comment(output, agnameof(n));
     char *s = late_string(n, N_comment, "");
@@ -2066,16 +2066,17 @@ static void emit_edge(output_string *output, SafeJob *safe_job,
 }
 
 static void emit_view(output_string *output, SafeJob *safe_job,
-                      obj_state_t *obj, graph_t *g, int flags) {
+                      obj_state_t *obj, graph_t *g, int *viewNum, int flags) {
   node_t *n;
   edge_t *e;
 
+  *viewNum += 1;
   /* when drawing, lay clusters down before nodes and edges */
   emit_clusters(output, safe_job, obj, g, flags);
   if (flags & EMIT_SORTED) {
     /* output all nodes, then all edges */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_job, obj, n);
+      emit_node(output, safe_job, viewNum, obj, n);
     }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
@@ -2089,14 +2090,14 @@ static void emit_view(output_string *output, SafeJob *safe_job,
         emit_edge(output, safe_job, obj, e);
       }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_job, obj, n);
+      emit_node(output, safe_job, viewNum, obj, n);
     }
   } else {
     /* output in breadth first graph walk order */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_job, obj, n);
+      emit_node(output, safe_job, viewNum, obj, n);
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        emit_node(output, safe_job, obj, aghead(e));
+        emit_node(output, safe_job, viewNum, obj, aghead(e));
         emit_edge(output, safe_job, obj, e);
       }
     }
@@ -2125,7 +2126,7 @@ void emit_end_graph(GVJ_t *job) {
   (((j)->layerNum > 1) || ((j)->pagesArrayElem.x > 0) ||                       \
    ((j)->pagesArrayElem.x > 0))
 
-void emit_page(GVJ_t *job, graph_t *g) {
+void emit_page(GVJ_t *job, graph_t *g, int *viewNum) {
   obj_state_t *obj = job->obj;
   int flags = job->flags;
   size_t nump = 0;
@@ -2178,10 +2179,9 @@ void emit_page(GVJ_t *job, graph_t *g) {
   if (obj->url || obj->explicit_tooltip)
     jobsvg_end_anchor(job);
   {
-    job->gvc->common.viewNum++;
     output_string output = job2output_string(job);
     SafeJob safe_job = to_safe_job(job);
-    emit_view(&output, &safe_job, job->obj, g, flags);
+    emit_view(&output, &safe_job, job->obj, g, viewNum, flags);
     output_string2job(job, &output);
   }
   jobsvg_end_page(job);
@@ -2549,6 +2549,8 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
 }
 
 void emit_graph(GVJ_t *job, graph_t *g) {
+  int viewNum = 0; ///< current view - 1 based count of views, all pages
+                   ///< in all layers
   node_t *n;
   char *s;
   int *lp;
@@ -2586,8 +2588,9 @@ void emit_graph(GVJ_t *job, graph_t *g) {
     }
 
     /* iterate pages */
-    for (firstpage(job); validpage(job); nextpage(job))
-      emit_page(job, g);
+    for (firstpage(job); validpage(job); nextpage(job)) {
+      emit_page(job, g, &viewNum);
+    }
 
     if (numPhysicalLayers(job) > 1)
       jobsvg_end_layer(job);

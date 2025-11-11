@@ -19,7 +19,6 @@ SafeJob to_safe_job(GVJ_t *job) {
       // from gvc
       .graph = job->gvc->g,
       .defaultlinestyle = job->gvc->defaultlinestyle,
-      .viewNum = job->gvc->common.viewNum,
       .layerIDs = job->gvc->layerIDs,
       .layerDelims = job->gvc->layerDelims,
       .layerListDelims = job->gvc->layerListDelims,

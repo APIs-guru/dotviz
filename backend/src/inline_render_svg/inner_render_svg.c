@@ -340,7 +340,6 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   free(job->selected_href);
   free(job);
   gvc->jobs = gvc->job = gvc->active_jobs = NULL;
-  gvc->common.viewNum = 0;
 
   return output;
 }
