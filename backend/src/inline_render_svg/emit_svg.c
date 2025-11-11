@@ -1054,7 +1054,7 @@ static void emit_background(output_string *output, SafeJob *safe_job,
     emit_xdot(output, safe_job, obj, xd);
 }
 
-static void setup_page(GVJ_t *job) {
+static void setup_page(GVJ_t *job, int *viewNum) {
   point pagesArrayElem = job->pagesArrayElem,
         pagesArraySize = job->pagesArraySize;
 
@@ -1070,7 +1070,7 @@ static void setup_page(GVJ_t *job) {
   job->pageBox.UR.y = job->pageBox.LL.y + job->pageSize.y;
 
   /* maximum boundingBox in device units and page orientation */
-  if (job->common->viewNum == 0)
+  if (*viewNum == 0)
     job->boundingBox = job->pageBoundingBox;
   else
     EXPANDBB(&job->boundingBox, job->pageBoundingBox);
@@ -2156,7 +2156,7 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum, int graph_outputorder) {
     saveid = NULL;
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
-  setup_page(job); // HERE
+  setup_page(job, viewNum); // HERE
   SafeJob safe_job_obj2 = to_safe_job(job);
   safe_job = &safe_job_obj2;
   svg_begin_page(output, safe_job, obj);
