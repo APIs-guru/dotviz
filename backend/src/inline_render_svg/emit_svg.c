@@ -2125,18 +2125,6 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum, int graph_outputorder) {
     pagesArraySize = exch_xy(pagesArraySize);
   }
 
-  /* establish current box in graph units */
-  job->pageBox.LL.x = pagesArrayElem.x * job->pageSize.x - job->pad.x;
-  job->pageBox.LL.y = pagesArrayElem.y * job->pageSize.y - job->pad.y;
-  job->pageBox.UR.x = job->pageBox.LL.x + job->pageSize.x;
-  job->pageBox.UR.y = job->pageBox.LL.y + job->pageSize.y;
-
-  /* maximum boundingBox in device units and page orientation */
-  if (*viewNum == 0)
-    job->boundingBox = job->pageBoundingBox;
-  else
-    EXPANDBB(&job->boundingBox, job->pageBoundingBox);
-
   job->clip.LL.x = job->focus.x +
                    job->pageSize.x * (pagesArrayElem.x - pagesArraySize.x / 2.);
   job->clip.LL.y = job->focus.y +
