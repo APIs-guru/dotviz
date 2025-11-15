@@ -13,7 +13,8 @@ SafeJob to_safe_job(GVJ_t *job) {
       .height = job->height,
       .width = job->width,
       .scale = job->scale,
-      .translation = job->translation,
+      .canvasBox = job->canvasBox,
+      .zoom = job->zoom,
       .clip = job->clip,
 
       // from gvc

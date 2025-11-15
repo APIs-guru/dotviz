@@ -485,9 +485,27 @@ void svg_begin_page(output_string *output, SafeJob *safe_job,
   // cannot be gvprintdouble because 2 digits precision insufficient
   gvprintf(output, "%g %g", safe_job->scale.x, safe_job->scale.y);
   gvprintf(output, ") rotate(%d) translate(", -safe_job->rotation);
-  gvprintdouble(output, safe_job->translation.x);
+
+  /* CAUTION - job->translation was difficult to get right. */
+  // Test with and without asymmetric margins, e.g: -Gmargin="1,0"
+  double translation_y = 0;
+  double translation_x = 0;
+  if (safe_job->rotation) {
+    translation_y =
+        -safe_job->clip.UR.y - safe_job->canvasBox.LL.y / safe_job->zoom;
+    translation_x =
+        -safe_job->clip.UR.x - safe_job->canvasBox.LL.x / safe_job->zoom;
+  } else {
+    /* pre unscale margins to keep them constant under scaling */
+    translation_x =
+        -safe_job->clip.LL.x + safe_job->canvasBox.LL.x / safe_job->zoom;
+    translation_y =
+        -safe_job->clip.UR.y - safe_job->canvasBox.LL.y / safe_job->zoom;
+  }
+
+  gvprintdouble(output, translation_x);
   out_putc(output, ' ');
-  gvprintdouble(output, -safe_job->translation.y);
+  gvprintdouble(output, -translation_y);
   out_puts(output, ")\">\n");
   /* default style */
   if (agnameof(obj->u.g)[0] && agnameof(obj->u.g)[0] != LOCALNAMEPREFIX) {

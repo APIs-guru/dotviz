@@ -14,9 +14,10 @@ typedef struct SafeJob_s {
   const box pageBoundingBox;  /* rotated boundingBox - device units */
   const unsigned int width;   /* device width - device units */
   const unsigned int height;  /* device height - device units */
-  const pointf scale;       /* composite device to graph units (zoom and dpi) */
-  const pointf translation; /* composite translation */
-  const boxf clip;          /* clip region in graph units */
+  const pointf scale; /* composite device to graph units (zoom and dpi) */
+  boxf canvasBox;
+  double zoom;
+  const boxf clip; /* clip region in graph units */
 
   // from gvc:
   const graph_t *const graph;

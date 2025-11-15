@@ -1054,46 +1054,6 @@ static void emit_background(output_string *output, SafeJob *safe_job,
     emit_xdot(output, safe_job, obj, xd);
 }
 
-static void setup_page(GVJ_t *job, int *viewNum) {
-  point pagesArrayElem = job->pagesArrayElem,
-        pagesArraySize = job->pagesArraySize;
-
-  if (job->rotation) {
-    pagesArrayElem = exch_xy(pagesArrayElem);
-    pagesArraySize = exch_xy(pagesArraySize);
-  }
-
-  /* establish current box in graph units */
-  job->pageBox.LL.x = pagesArrayElem.x * job->pageSize.x - job->pad.x;
-  job->pageBox.LL.y = pagesArrayElem.y * job->pageSize.y - job->pad.y;
-  job->pageBox.UR.x = job->pageBox.LL.x + job->pageSize.x;
-  job->pageBox.UR.y = job->pageBox.LL.y + job->pageSize.y;
-
-  /* maximum boundingBox in device units and page orientation */
-  if (*viewNum == 0)
-    job->boundingBox = job->pageBoundingBox;
-  else
-    EXPANDBB(&job->boundingBox, job->pageBoundingBox);
-
-  job->clip.LL.x = job->focus.x +
-                   job->pageSize.x * (pagesArrayElem.x - pagesArraySize.x / 2.);
-  job->clip.LL.y = job->focus.y +
-                   job->pageSize.y * (pagesArrayElem.y - pagesArraySize.y / 2.);
-  job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
-  job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
-
-  /* CAUTION - job->translation was difficult to get right. */
-  // Test with and without asymmetric margins, e.g: -Gmargin="1,0"
-  if (job->rotation) {
-    job->translation.y = -job->clip.UR.y - job->canvasBox.LL.y / job->zoom;
-    job->translation.x = -job->clip.UR.x - job->canvasBox.LL.x / job->zoom;
-  } else {
-    /* pre unscale margins to keep them constant under scaling */
-    job->translation.x = -job->clip.LL.x + job->canvasBox.LL.x / job->zoom;
-    job->translation.y = -job->clip.UR.y - job->canvasBox.LL.y / job->zoom;
-  }
-}
-
 static bool node_in_layer(SafeJob *safe_job, graph_t *g, node_t *n) {
   char *pn, *pe;
   edge_t *e;
@@ -2156,7 +2116,34 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum, int graph_outputorder) {
     saveid = NULL;
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
-  setup_page(job, viewNum); // HERE
+
+  point pagesArrayElem = job->pagesArrayElem,
+        pagesArraySize = job->pagesArraySize;
+
+  if (job->rotation) {
+    pagesArrayElem = exch_xy(pagesArrayElem);
+    pagesArraySize = exch_xy(pagesArraySize);
+  }
+
+  /* establish current box in graph units */
+  job->pageBox.LL.x = pagesArrayElem.x * job->pageSize.x - job->pad.x;
+  job->pageBox.LL.y = pagesArrayElem.y * job->pageSize.y - job->pad.y;
+  job->pageBox.UR.x = job->pageBox.LL.x + job->pageSize.x;
+  job->pageBox.UR.y = job->pageBox.LL.y + job->pageSize.y;
+
+  /* maximum boundingBox in device units and page orientation */
+  if (*viewNum == 0)
+    job->boundingBox = job->pageBoundingBox;
+  else
+    EXPANDBB(&job->boundingBox, job->pageBoundingBox);
+
+  job->clip.LL.x = job->focus.x +
+                   job->pageSize.x * (pagesArrayElem.x - pagesArraySize.x / 2.);
+  job->clip.LL.y = job->focus.y +
+                   job->pageSize.y * (pagesArrayElem.y - pagesArraySize.y / 2.);
+  job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
+  job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
+
   SafeJob safe_job_obj2 = to_safe_job(job);
   safe_job = &safe_job_obj2;
   svg_begin_page(output, safe_job, obj);
