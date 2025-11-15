@@ -2090,12 +2090,8 @@ void emit_end_graph(GVJ_t *job) {
   (((j)->layerNum > 1) || ((j)->pagesArrayElem.x > 0) ||                       \
    ((j)->pagesArrayElem.x > 0))
 
-void emit_page(GVJ_t *job, graph_t *g, int *viewNum, int graph_outputorder) {
-  SafeJob safe_job_obj = to_safe_job(job);
-  SafeJob *safe_job = &safe_job_obj;
-  output_string output_obj = job2output_string(job);
-  output_string *output = &output_obj;
-  obj_state_t *obj = job->obj;
+void emit_page(output_string *output, SafeJob *safe_job, obj_state_t *obj,
+               graph_t *g, int *viewNum, int graph_outputorder) {
   size_t nump = 0;
   textlabel_t *lab;
   pointf *p = NULL;
@@ -2117,23 +2113,6 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum, int graph_outputorder) {
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
 
-  point pagesArrayElem = job->pagesArrayElem,
-        pagesArraySize = job->pagesArraySize;
-
-  if (job->rotation) {
-    pagesArrayElem = exch_xy(pagesArrayElem);
-    pagesArraySize = exch_xy(pagesArraySize);
-  }
-
-  job->clip.LL.x = job->focus.x +
-                   job->pageSize.x * (pagesArrayElem.x - pagesArraySize.x / 2.);
-  job->clip.LL.y = job->focus.y +
-                   job->pageSize.y * (pagesArrayElem.y - pagesArraySize.y / 2.);
-  job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
-  job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
-
-  SafeJob safe_job_obj2 = to_safe_job(job);
-  safe_job = &safe_job_obj2;
   svg_begin_page(output, safe_job, obj);
   svg_set_pencolor(obj, DEFAULT_COLOR);
   svg_set_fillcolor(obj, DEFAULT_FILL);
@@ -2169,8 +2148,6 @@ void emit_page(GVJ_t *job, graph_t *g, int *viewNum, int graph_outputorder) {
   char *color_scheme = setColorScheme(previous_color_scheme);
   free(color_scheme);
   free(previous_color_scheme);
-
-  output_string2job(job, output);
 }
 
 static Dict_t *strings;
@@ -2567,7 +2544,30 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
 
     /* iterate pages */
     for (firstpage(job); validpage(job); nextpage(job)) {
-      emit_page(job, g, &viewNum, graph_outputorder);
+      point pagesArrayElem = job->pagesArrayElem,
+            pagesArraySize = job->pagesArraySize;
+
+      if (job->rotation) {
+        pagesArrayElem = exch_xy(pagesArrayElem);
+        pagesArraySize = exch_xy(pagesArraySize);
+      }
+
+      /* establish current box in graph units */
+      job->pageBox.LL.x = pagesArrayElem.x * job->pageSize.x - job->pad.x;
+      job->pageBox.LL.y = pagesArrayElem.y * job->pageSize.y - job->pad.y;
+      job->pageBox.UR.x = job->pageBox.LL.x + job->pageSize.x;
+      job->pageBox.UR.y = job->pageBox.LL.y + job->pageSize.y;
+
+      job->clip.LL.x = job->focus.x + job->pageSize.x * (pagesArrayElem.x -
+                                                         pagesArraySize.x / 2.);
+      job->clip.LL.y = job->focus.y + job->pageSize.y * (pagesArrayElem.y -
+                                                         pagesArraySize.y / 2.);
+      job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
+      job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
+      output_string output = job2output_string(job);
+      SafeJob safe_job = to_safe_job(job);
+      emit_page(&output, &safe_job, job->obj, g, &viewNum, graph_outputorder);
+      output_string2job(job, &output);
     }
 
     if (numPhysicalLayers(job) > 1)
