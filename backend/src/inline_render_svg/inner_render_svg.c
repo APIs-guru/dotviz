@@ -18,34 +18,9 @@ extern bool Y_invert;
 
 extern gvdevice_callbacks_t gvdevice_callbacks;
 
-static point pagecode(char c) {
-  point rv = {0};
-  switch (c) {
-  case 'T':
-    rv.y = -1;
-    break;
-  case 'B':
-    rv.y = 1;
-    break;
-  case 'L':
-    rv.x = 1;
-    break;
-  case 'R':
-    rv.x = -1;
-    break;
-  default:
-    // ignore; will trigger a warning later in our caller
-    break;
-  }
-  return rv;
-}
-
 #define EPSILON .0001
 
 static void init_job_pagination(GVJ_t *job) {
-  GVC_t *gvc = job->gvc;
-  pointf pageSize; /* page size for the graph - points*/
-
   /* unpaginated image size - in points - in graph orientation */
   pointf imageSize = job->view; // image size on one page of the graph - points
 
@@ -59,27 +34,11 @@ static void init_job_pagination(GVJ_t *job) {
   /* determine pagination */
   job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
 
-  pageSize.x = imageSize.x;
-  pageSize.y = imageSize.y;
-
   /* initial window size */
   job->width =
-      ROUND((pageSize.x + 2 * margin.x) * job->dpi.x / POINTS_PER_INCH);
+      ROUND((imageSize.x + 2 * margin.x) * job->dpi.x / POINTS_PER_INCH);
   job->height =
-      ROUND((pageSize.y + 2 * margin.y) * job->dpi.y / POINTS_PER_INCH);
-
-  /* set up pagedir */
-  job->pagesArrayMajor = (point){0};
-  job->pagesArrayMinor = (point){0};
-  job->pagesArrayFirst = (point){0};
-  job->pagesArrayMajor = pagecode(gvc->pagedir[0]);
-  job->pagesArrayMinor = pagecode(gvc->pagedir[1]);
-  if (abs(job->pagesArrayMajor.x + job->pagesArrayMinor.x) != 1 ||
-      abs(job->pagesArrayMajor.y + job->pagesArrayMinor.y) != 1) {
-    job->pagesArrayMajor = pagecode('B');
-    job->pagesArrayMinor = pagecode('L');
-    agwarningf("pagedir=%s ignored\n", gvc->pagedir);
-  }
+      ROUND((imageSize.y + 2 * margin.y) * job->dpi.y / POINTS_PER_INCH);
 
   // FIXME: add warning about ignoring centering attribute
   // https://graphviz.org/docs/attrs/center/
@@ -87,19 +46,18 @@ static void init_job_pagination(GVJ_t *job) {
   /* rotate back into graph orientation */
   if (job->rotation) {
     imageSize = exch_xyf(imageSize);
-    pageSize = exch_xyf(pageSize);
     margin = exch_xyf(margin);
   }
 
   /* canvas area, centered if necessary */
   job->canvasBox.LL.x = margin.x;
   job->canvasBox.LL.y = margin.y;
-  job->canvasBox.UR.x = margin.x + imageSize.x;
-  job->canvasBox.UR.y = margin.y + imageSize.y;
+  job->canvasBox.UR.x = margin.x + job->view.x;
+  job->canvasBox.UR.y = margin.y + job->view.y;
 
   /* size of one page in graph units */
-  job->pageSize.x = imageSize.x / job->zoom;
-  job->pageSize.y = imageSize.y / job->zoom;
+  job->pageSize.x = job->view.x / job->zoom;
+  job->pageSize.y = job->view.y / job->zoom;
 
   /* pageBoundingBox in device units and page orientation */
   job->pageBoundingBox.LL.x =

@@ -2522,23 +2522,14 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
       jobsvg_begin_layer(job, job->gvc->layerIDs[job->layerNum]);
     }
 
-    point pagesArrayElem = (point){0}, pagesArraySize = {1, 1};
-
-    if (job->rotation) {
-      pagesArrayElem = exch_xy(pagesArrayElem);
-      pagesArraySize = exch_xy(pagesArraySize);
-    }
-
     /* establish current box in graph units */
-    job->pageBox.LL.x = pagesArrayElem.x * job->pageSize.x - job->pad.x;
-    job->pageBox.LL.y = pagesArrayElem.y * job->pageSize.y - job->pad.y;
+    job->pageBox.LL.x = -job->pad.x;
+    job->pageBox.LL.y = -job->pad.y;
     job->pageBox.UR.x = job->pageBox.LL.x + job->pageSize.x;
     job->pageBox.UR.y = job->pageBox.LL.y + job->pageSize.y;
 
-    job->clip.LL.x = job->focus.x + job->pageSize.x * (pagesArrayElem.x -
-                                                       pagesArraySize.x / 2.);
-    job->clip.LL.y = job->focus.y + job->pageSize.y * (pagesArrayElem.y -
-                                                       pagesArraySize.y / 2.);
+    job->clip.LL.x = job->focus.x + job->pageSize.x * (-1 / 2.);
+    job->clip.LL.y = job->focus.y + job->pageSize.y * (-1 / 2.);
     job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
     job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
     output_string output = job2output_string(job);
