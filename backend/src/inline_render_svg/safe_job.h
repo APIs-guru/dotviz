@@ -10,7 +10,6 @@ typedef struct SafeJob_s {
   const pointf dpi;           /* device resolution device-units-per-inch */
   const int rotation;         /* viewport rotation (degrees)  0=portrait,
 90=landscape */
-  const point pagesArraySize; /* 2D size of page array */
   const box pageBoundingBox;  /* rotated boundingBox - device units */
   const unsigned int width;   /* device width - device units */
   const unsigned int height;  /* device height - device units */

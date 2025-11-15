@@ -8,7 +8,6 @@ SafeJob to_safe_job(GVJ_t *job) {
       .pagesArrayElem = job->pagesArrayElem,
       .dpi = job->dpi,
       .rotation = job->rotation,
-      .pagesArraySize = job->pagesArraySize,
       .pageBoundingBox = job->pageBoundingBox,
       .height = job->height,
       .width = job->width,

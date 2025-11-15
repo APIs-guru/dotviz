@@ -18,11 +18,10 @@ extern bool Y_invert;
 
 extern gvdevice_callbacks_t gvdevice_callbacks;
 
-static point pagecode(GVJ_t *job, char c) {
+static point pagecode(char c) {
   point rv = {0};
   switch (c) {
   case 'T':
-    job->pagesArrayFirst.y = job->pagesArraySize.y - 1;
     rv.y = -1;
     break;
   case 'B':
@@ -32,7 +31,6 @@ static point pagecode(GVJ_t *job, char c) {
     rv.x = 1;
     break;
   case 'R':
-    job->pagesArrayFirst.x = job->pagesArraySize.x - 1;
     rv.x = -1;
     break;
   default:
@@ -44,10 +42,9 @@ static point pagecode(GVJ_t *job, char c) {
 
 #define EPSILON .0001
 
-static void init_job_pagination(GVJ_t *job, graph_t *g) {
+static void init_job_pagination(GVJ_t *job) {
   GVC_t *gvc = job->gvc;
-  pointf pageSize;        /* page size for the graph - points*/
-  pointf centering = {0}; // centering offset - points
+  pointf pageSize; /* page size for the graph - points*/
 
   /* unpaginated image size - in points - in graph orientation */
   pointf imageSize = job->view; // image size on one page of the graph - points
@@ -60,19 +57,10 @@ static void init_job_pagination(GVJ_t *job, graph_t *g) {
   pointf margin = job->margin; // margin for a page of the graph - points
 
   /* determine pagination */
-
-  /* page not set by user, use default from renderer */
-  if (job->render.features) {
-    pageSize.x = job->device.features->default_pagesize.x - 2 * margin.x;
-    pageSize.x = fmax(pageSize.x, 0);
-    pageSize.y = job->device.features->default_pagesize.y - 2 * margin.y;
-    pageSize.y = fmax(pageSize.y, 0);
-  } else
-    pageSize.x = pageSize.y = 0.;
   job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
 
-  pageSize.x = fmax(pageSize.x, imageSize.x);
-  pageSize.y = fmax(pageSize.y, imageSize.y);
+  pageSize.x = imageSize.x;
+  pageSize.y = imageSize.y;
 
   /* initial window size */
   job->width =
@@ -84,36 +72,30 @@ static void init_job_pagination(GVJ_t *job, graph_t *g) {
   job->pagesArrayMajor = (point){0};
   job->pagesArrayMinor = (point){0};
   job->pagesArrayFirst = (point){0};
-  job->pagesArrayMajor = pagecode(job, gvc->pagedir[0]);
-  job->pagesArrayMinor = pagecode(job, gvc->pagedir[1]);
+  job->pagesArrayMajor = pagecode(gvc->pagedir[0]);
+  job->pagesArrayMinor = pagecode(gvc->pagedir[1]);
   if (abs(job->pagesArrayMajor.x + job->pagesArrayMinor.x) != 1 ||
       abs(job->pagesArrayMajor.y + job->pagesArrayMinor.y) != 1) {
-    job->pagesArrayMajor = pagecode(job, 'B');
-    job->pagesArrayMinor = pagecode(job, 'L');
+    job->pagesArrayMajor = pagecode('B');
+    job->pagesArrayMinor = pagecode('L');
     agwarningf("pagedir=%s ignored\n", gvc->pagedir);
   }
 
-  /* determine page box including centering */
-  if (GD_drawing(g)->centered) {
-    if (pageSize.x > imageSize.x)
-      centering.x = (pageSize.x - imageSize.x) / 2;
-    if (pageSize.y > imageSize.y)
-      centering.y = (pageSize.y - imageSize.y) / 2;
-  }
+  // FIXME: add warning about ignoring centering attribute
+  // https://graphviz.org/docs/attrs/center/
 
   /* rotate back into graph orientation */
   if (job->rotation) {
     imageSize = exch_xyf(imageSize);
     pageSize = exch_xyf(pageSize);
     margin = exch_xyf(margin);
-    centering = exch_xyf(centering);
   }
 
   /* canvas area, centered if necessary */
-  job->canvasBox.LL.x = margin.x + centering.x;
-  job->canvasBox.LL.y = margin.y + centering.y;
-  job->canvasBox.UR.x = margin.x + centering.x + imageSize.x;
-  job->canvasBox.UR.y = margin.y + centering.y + imageSize.y;
+  job->canvasBox.LL.x = margin.x;
+  job->canvasBox.LL.y = margin.y;
+  job->canvasBox.UR.x = margin.x + imageSize.x;
+  job->canvasBox.UR.y = margin.y + imageSize.y;
 
   /* size of one page in graph units */
   job->pageSize.x = imageSize.x / job->zoom;
@@ -327,7 +309,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_margin(job);
   init_job_dpi(job, g);
   init_job_viewport(job, g);
-  init_job_pagination(job, g);
+  init_job_pagination(job);
 
   emit_graph(job, g, job->flags);
 

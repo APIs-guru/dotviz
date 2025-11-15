@@ -864,26 +864,6 @@ void nextlayer(GVJ_t *job, int **listp) {
     job->layerNum++;
 }
 
-void firstpage(GVJ_t *job) { job->pagesArrayElem = job->pagesArrayFirst; }
-
-bool validpage(GVJ_t *job) {
-  return job->pagesArrayElem.x >= 0 &&
-         job->pagesArrayElem.x < job->pagesArraySize.x &&
-         job->pagesArrayElem.y >= 0 &&
-         job->pagesArrayElem.y < job->pagesArraySize.y;
-}
-
-void nextpage(GVJ_t *job) {
-  job->pagesArrayElem = add_point(job->pagesArrayElem, job->pagesArrayMinor);
-  if (!validpage(job)) {
-    if (job->pagesArrayMajor.y)
-      job->pagesArrayElem.x = job->pagesArrayFirst.x;
-    else
-      job->pagesArrayElem.y = job->pagesArrayFirst.y;
-    job->pagesArrayElem = add_point(job->pagesArrayElem, job->pagesArrayMajor);
-  }
-}
-
 static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   pointf *pts = gv_calloc(numpts, sizeof(pointf));
   for (size_t i = 0; i < numpts; i++) {
@@ -2542,33 +2522,29 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
       jobsvg_begin_layer(job, job->gvc->layerIDs[job->layerNum]);
     }
 
-    /* iterate pages */
-    for (firstpage(job); validpage(job); nextpage(job)) {
-      point pagesArrayElem = job->pagesArrayElem,
-            pagesArraySize = job->pagesArraySize;
+    point pagesArrayElem = (point){0}, pagesArraySize = {1, 1};
 
-      if (job->rotation) {
-        pagesArrayElem = exch_xy(pagesArrayElem);
-        pagesArraySize = exch_xy(pagesArraySize);
-      }
-
-      /* establish current box in graph units */
-      job->pageBox.LL.x = pagesArrayElem.x * job->pageSize.x - job->pad.x;
-      job->pageBox.LL.y = pagesArrayElem.y * job->pageSize.y - job->pad.y;
-      job->pageBox.UR.x = job->pageBox.LL.x + job->pageSize.x;
-      job->pageBox.UR.y = job->pageBox.LL.y + job->pageSize.y;
-
-      job->clip.LL.x = job->focus.x + job->pageSize.x * (pagesArrayElem.x -
-                                                         pagesArraySize.x / 2.);
-      job->clip.LL.y = job->focus.y + job->pageSize.y * (pagesArrayElem.y -
-                                                         pagesArraySize.y / 2.);
-      job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
-      job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
-      output_string output = job2output_string(job);
-      SafeJob safe_job = to_safe_job(job);
-      emit_page(&output, &safe_job, job->obj, g, &viewNum, graph_outputorder);
-      output_string2job(job, &output);
+    if (job->rotation) {
+      pagesArrayElem = exch_xy(pagesArrayElem);
+      pagesArraySize = exch_xy(pagesArraySize);
     }
+
+    /* establish current box in graph units */
+    job->pageBox.LL.x = pagesArrayElem.x * job->pageSize.x - job->pad.x;
+    job->pageBox.LL.y = pagesArrayElem.y * job->pageSize.y - job->pad.y;
+    job->pageBox.UR.x = job->pageBox.LL.x + job->pageSize.x;
+    job->pageBox.UR.y = job->pageBox.LL.y + job->pageSize.y;
+
+    job->clip.LL.x = job->focus.x + job->pageSize.x * (pagesArrayElem.x -
+                                                       pagesArraySize.x / 2.);
+    job->clip.LL.y = job->focus.y + job->pageSize.y * (pagesArrayElem.y -
+                                                       pagesArraySize.y / 2.);
+    job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
+    job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
+    output_string output = job2output_string(job);
+    SafeJob safe_job = to_safe_job(job);
+    emit_page(&output, &safe_job, job->obj, g, &viewNum, graph_outputorder);
+    output_string2job(job, &output);
 
     if (numPhysicalLayers(job) > 1)
       jobsvg_end_layer(job);

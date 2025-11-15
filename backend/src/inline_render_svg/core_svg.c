@@ -418,8 +418,7 @@ void svg_begin_graph(output_string *output, SafeJob *safe_job,
     out_puts(output, " Title: ");
     gvputs_xml(output, agnameof(obj->u.g));
   }
-  gvprintf(output, " Pages: %d -->\n",
-           safe_job->pagesArraySize.x * safe_job->pagesArraySize.y);
+  out_puts(output, " Pages: 1 -->\n");
 
   gvprintf(output, "<svg width=\"%dpt\" height=\"%dpt\"\n", safe_job->width,
            safe_job->height);
