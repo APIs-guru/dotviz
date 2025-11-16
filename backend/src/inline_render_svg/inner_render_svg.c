@@ -275,7 +275,27 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   {
     output_string output = job2output_string(job);
-    SafeJob safe_job = to_safe_job(job);
+    SafeJob safe_job = {
+        .layerNum = job->layerNum,
+        .pagesArrayElem = job->pagesArrayElem,
+        .dpi = job->dpi,
+        .rotation = job->rotation,
+        .pageBoundingBox = job->pageBoundingBox,
+        .height = job->height,
+        .width = job->width,
+        .scale = job->scale,
+        .canvasBox = job->canvasBox,
+        .zoom = job->zoom,
+        .clip = job->clip,
+
+        // from gvc
+        .graph = job->gvc->g,
+        .defaultlinestyle = job->gvc->defaultlinestyle,
+        .layerIDs = job->gvc->layerIDs,
+        .layerDelims = job->gvc->layerDelims,
+        .layerListDelims = job->gvc->layerListDelims,
+        .numLayers = job->gvc->numLayers,
+    };
     emit_graph(&output, &safe_job, job->obj, g, job->gvc->layerlist,
                job->flags);
 
