@@ -240,7 +240,6 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   /* rotate back into graph orientation */
   if (job->rotation) {
-    imageSize = exch_xyf(imageSize);
     margin = exch_xyf(margin);
   }
 
@@ -249,10 +248,6 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   job->canvasBox.LL.y = margin.y;
   job->canvasBox.UR.x = margin.x + job->view.x;
   job->canvasBox.UR.y = margin.y + job->view.y;
-
-  /* size of one page in graph units */
-  job->pageSize.x = job->view.x / job->zoom;
-  job->pageSize.y = job->view.y / job->zoom;
 
   /* pageBoundingBox in device units and page orientation */
   job->pageBoundingBox.LL.x =
@@ -270,10 +265,13 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
     job->canvasBox.UR = exch_xyf(job->canvasBox.UR);
   }
 
-  job->clip.LL.x = job->focus.x - job->pageSize.x / 2.0;
-  job->clip.LL.y = job->focus.y - job->pageSize.y / 2.0;
-  job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
-  job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
+  /* size of one page in graph units */
+  double pageSize_x = job->view.x / job->zoom;
+  double pageSize_y = job->view.y / job->zoom;
+  job->clip.LL.x = job->focus.x - pageSize_x / 2.0;
+  job->clip.LL.y = job->focus.y - pageSize_y / 2.0;
+  job->clip.UR.x = job->clip.LL.x + pageSize_x;
+  job->clip.UR.y = job->clip.LL.y + pageSize_y;
 
   {
     output_string output = job2output_string(job);
