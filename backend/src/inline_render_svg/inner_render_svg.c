@@ -213,41 +213,9 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_margin(job);
   init_job_dpi(job, g);
   init_job_viewport(job, g);
-  /* device dpi is now known */
-  pointf scale = {0};
-  scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
-  scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
-
-  /* unpaginated image size - in points - in graph orientation */
-  pointf imageSize = job->view; // image size on one page of the graph - points
-
-  /* rotate imageSize to page orientation */
-  if (job->rotation)
-    imageSize = exch_xyf(imageSize);
 
   /* margin - in points - in page orientation */
   pointf margin = job->margin; // margin for a page of the graph - points
-
-  /* initial window size */
-  unsigned int width =
-      ROUND((imageSize.x + 2 * margin.x) * job->dpi.x / POINTS_PER_INCH);
-  unsigned int height =
-      ROUND((imageSize.y + 2 * margin.y) * job->dpi.y / POINTS_PER_INCH);
-
-  // FIXME: add warning about ignoring centering attribute
-  // https://graphviz.org/docs/attrs/center/
-
-  /* rotate back into graph orientation */
-  if (job->rotation) {
-    margin = exch_xyf(margin);
-  }
-
-  /* canvas area, centered if necessary */
-  boxf canvasBox = {0};
-  canvasBox.LL.x = margin.x;
-  canvasBox.LL.y = margin.y;
-  canvasBox.UR.x = margin.x + job->view.x;
-  canvasBox.UR.y = margin.y + job->view.y;
 
   pointf focus = job->focus;
   pointf view = job->view;
@@ -266,6 +234,39 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   {
     output_string output = job2output_string(job);
+
+    /* device dpi is now known */
+    pointf scale = {0};
+    scale.x = zoom * dpi.x / POINTS_PER_INCH;
+    scale.y = zoom * dpi.y / POINTS_PER_INCH;
+
+    /* unpaginated image size - in points - in graph orientation */
+    pointf imageSize = view; // image size on one page of the graph - points
+
+    /* rotate imageSize to page orientation */
+    if (rotation)
+      imageSize = exch_xyf(imageSize);
+
+    /* initial window size */
+    unsigned int width =
+        ROUND((imageSize.x + 2 * margin.x) * dpi.x / POINTS_PER_INCH);
+    unsigned int height =
+        ROUND((imageSize.y + 2 * margin.y) * dpi.y / POINTS_PER_INCH);
+
+    // FIXME: add warning about ignoring centering attribute
+    // https://graphviz.org/docs/attrs/center/
+
+    /* rotate back into graph orientation */
+    if (rotation) {
+      margin = exch_xyf(margin);
+    }
+
+    /* canvas area, centered if necessary */
+    boxf canvasBox = {0};
+    canvasBox.LL.x = margin.x;
+    canvasBox.LL.y = margin.y;
+    canvasBox.UR.x = margin.x + view.x;
+    canvasBox.UR.y = margin.y + view.y;
 
     /* pageBoundingBox in device units and page orientation */
     box pageBoundingBox = {0};
