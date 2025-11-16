@@ -226,9 +226,6 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* margin - in points - in page orientation */
   pointf margin = job->margin; // margin for a page of the graph - points
 
-  /* determine pagination */
-  job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
-
   /* initial window size */
   unsigned int width =
       ROUND((imageSize.x + 2 * margin.x) * job->dpi.x / POINTS_PER_INCH);
