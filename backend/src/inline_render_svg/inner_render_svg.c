@@ -249,28 +249,9 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   canvasBox.UR.x = margin.x + job->view.x;
   canvasBox.UR.y = margin.y + job->view.y;
 
-  /* pageBoundingBox in device units and page orientation */
-  box pageBoundingBox = {0};
-  pageBoundingBox.LL.x = ROUND(canvasBox.LL.x * job->dpi.x / POINTS_PER_INCH);
-  pageBoundingBox.LL.y = ROUND(canvasBox.LL.y * job->dpi.y / POINTS_PER_INCH);
-  pageBoundingBox.UR.x = ROUND(canvasBox.UR.x * job->dpi.x / POINTS_PER_INCH);
-  pageBoundingBox.UR.y = ROUND(canvasBox.UR.y * job->dpi.y / POINTS_PER_INCH);
-  if (job->rotation) {
-    pageBoundingBox.LL = exch_xy(pageBoundingBox.LL);
-    pageBoundingBox.UR = exch_xy(pageBoundingBox.UR);
-    canvasBox.LL = exch_xyf(canvasBox.LL);
-    canvasBox.UR = exch_xyf(canvasBox.UR);
-  }
-
-  /* size of one page in graph units */
-  double pageSize_x = job->view.x / job->zoom;
-  double pageSize_y = job->view.y / job->zoom;
-  boxf clip = {0};
-  clip.LL.x = job->focus.x - pageSize_x / 2.0;
-  clip.LL.y = job->focus.y - pageSize_y / 2.0;
-  clip.UR.x = clip.LL.x + pageSize_x;
-  clip.UR.y = clip.LL.y + pageSize_y;
-
+  pointf focus = job->focus;
+  pointf view = job->view;
+  // SafeJob:
   int layerNum = job->layerNum;
   point pagesArrayElem = job->pagesArrayElem;
   pointf dpi = job->dpi;
@@ -285,6 +266,29 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   {
     output_string output = job2output_string(job);
+
+    /* pageBoundingBox in device units and page orientation */
+    box pageBoundingBox = {0};
+    pageBoundingBox.LL.x = ROUND(canvasBox.LL.x * dpi.x / POINTS_PER_INCH);
+    pageBoundingBox.LL.y = ROUND(canvasBox.LL.y * dpi.y / POINTS_PER_INCH);
+    pageBoundingBox.UR.x = ROUND(canvasBox.UR.x * dpi.x / POINTS_PER_INCH);
+    pageBoundingBox.UR.y = ROUND(canvasBox.UR.y * dpi.y / POINTS_PER_INCH);
+    if (rotation) {
+      pageBoundingBox.LL = exch_xy(pageBoundingBox.LL);
+      pageBoundingBox.UR = exch_xy(pageBoundingBox.UR);
+      canvasBox.LL = exch_xyf(canvasBox.LL);
+      canvasBox.UR = exch_xyf(canvasBox.UR);
+    }
+
+    /* size of one page in graph units */
+    double pageSize_x = view.x / zoom;
+    double pageSize_y = view.y / zoom;
+    boxf clip = {0};
+    clip.LL.x = focus.x - pageSize_x / 2.0;
+    clip.LL.y = focus.y - pageSize_y / 2.0;
+    clip.UR.x = clip.LL.x + pageSize_x;
+    clip.UR.y = clip.LL.y + pageSize_y;
+
     SafeJob safe_job = {
         .layerNum = layerNum,
         .pagesArrayElem = pagesArrayElem,
