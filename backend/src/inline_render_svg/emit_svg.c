@@ -2469,10 +2469,6 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
   job->scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
   job->scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
 
-  job->devscale.x = job->dpi.x / POINTS_PER_INCH;
-  job->devscale.y = job->dpi.y / POINTS_PER_INCH;
-  job->devscale.y *= -1;
-
   /* compute current view in graph units */
   if (job->rotation) {
     job->view.y = job->width / job->scale.y;
