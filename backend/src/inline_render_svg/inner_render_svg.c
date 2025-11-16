@@ -141,14 +141,6 @@ static void init_job_viewport(GVJ_t *job, graph_t *g) {
   job->focus = xy;
 }
 
-enum { FORMAT_SVG, FORMAT_SVGZ, FORMAT_SVG_INLINE };
-
-extern gvrender_engine_t svg_engine;
-extern gvplugin_available_t svg_device_available;
-extern gvplugin_available_t svg_render_available;
-extern gvdevice_features_t my_device_features_svg;
-extern gvrender_features_t my_render_features_svg;
-
 output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* page size on Linux, Mac OS X and Windows */
   const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
@@ -160,14 +152,6 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   job->output_data = output.data;
   job->output_data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
   job->output_data_position = 0;
-
-  gvc->api[API_device] = &svg_device_available;
-  gvc->api[API_render] = &svg_render_available;
-
-  job->device.engine = NULL;
-  job->device.features = &my_device_features_svg;
-  job->device.id = FORMAT_SVG;
-  job->device.type = "svg:svg";
 
   jobsvg_begin_job(job);
   // FIXME: remove hardcode
