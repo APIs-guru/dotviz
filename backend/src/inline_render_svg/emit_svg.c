@@ -840,30 +840,6 @@ int numPhysicalLayers(GVJ_t *job) {
     return job->numLayers;
 }
 
-void firstlayer(GVJ_t *job, int **listp) {
-  job->numLayers = job->gvc->numLayers;
-  if (job->gvc->layerlist) {
-    int *list = job->gvc->layerlist;
-    (void)*list++;
-    job->layerNum = *list++;
-    *listp = list;
-  } else {
-    job->layerNum = 1;
-    *listp = NULL;
-  }
-}
-
-bool validlayer(GVJ_t *job) { return job->layerNum <= job->numLayers; }
-
-void nextlayer(GVJ_t *job, int **listp) {
-  int *list = *listp;
-  if (list) {
-    job->layerNum = *list++;
-    *listp = list;
-  } else
-    job->layerNum++;
-}
-
 static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   pointf *pts = gv_calloc(numpts, sizeof(pointf));
   for (size_t i = 0; i < numpts; i++) {
@@ -2488,7 +2464,6 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
                    ///< in all layers
   node_t *n;
   char *s;
-  int *lp;
 
   /* device dpi is now known */
   job->scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
@@ -2516,8 +2491,18 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
   /* reset node state */
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
+
+  int *lp = NULL;
+  job->layerNum = 1;
+  job->numLayers = job->gvc->numLayers;
+  if (job->gvc->layerlist) {
+    lp = job->gvc->layerlist + 1; // skip counter
+    job->layerNum = *lp;          // first layer
+    lp += 1;                      // second layer
+  }
+
   /* iterate layers */
-  for (firstlayer(job, &lp); validlayer(job); nextlayer(job, &lp)) {
+  while (job->layerNum <= job->numLayers) {
     if (numPhysicalLayers(job) > 1) {
       jobsvg_begin_layer(job, job->gvc->layerIDs[job->layerNum]);
     }
@@ -2533,6 +2518,13 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
 
     if (numPhysicalLayers(job) > 1)
       jobsvg_end_layer(job);
+
+    if (lp) {
+      job->layerNum = *lp;
+      lp += 1;
+    } else {
+      job->layerNum += 1;
+    }
   }
   emit_end_graph(job);
 }
