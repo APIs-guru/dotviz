@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { describe, it } from 'node:test';
 
 import * as VizPackage from '../src/index.ts';
@@ -27,7 +28,7 @@ describe('Viz', () => {
         errors: [],
       });
     });
-    it('layers support', async (ctx) => {
+    it.only('layers support', async (ctx) => {
       const viz = await VizPackage.instance();
       const result = viz.renderFormats(
         `digraph G {
@@ -118,6 +119,23 @@ describe('Viz', () => {
         output: { dot, svg },
         errors: [],
       });
+    });
+  });
+  it('multiple pages in ps, one in svg', async (ctx) => {
+    const viz = await VizPackage.instance();
+    const result = viz.render(
+      fs.readFileSync('./test/snapshots/multiple_pages.gv', 'utf8'),
+      { format: 'svg' },
+    );
+
+    const svg = result.output;
+    ctx.assert.fileSnapshot(svg, './test/snapshots/multiple_pages.svg', {
+      serializers: [(str: string) => str],
+    });
+    assert.deepStrictEqual(result, {
+      status: 'success',
+      output: svg,
+      errors: [],
     });
   });
 });

@@ -267,6 +267,9 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_margin(job);
   init_job_dpi(job, g);
   init_job_viewport(job, g);
+  /* device dpi is now known */
+  job->scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
+  job->scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
   init_job_pagination(job);
   job->clip.LL.x = job->focus.x - job->pageSize.x / 2.0;
   job->clip.LL.y = job->focus.y - job->pageSize.y / 2.0;

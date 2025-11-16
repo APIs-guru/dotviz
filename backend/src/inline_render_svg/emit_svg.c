@@ -2465,19 +2465,6 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
   node_t *n;
   char *s;
 
-  /* device dpi is now known */
-  job->scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
-  job->scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
-
-  /* compute current view in graph units */
-  if (job->rotation) {
-    job->view.y = job->width / job->scale.y;
-    job->view.x = job->height / job->scale.x;
-  } else {
-    job->view.x = job->width / job->scale.x;
-    job->view.y = job->height / job->scale.y;
-  }
-
   s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
   jobsvg_comment(job, s);
 
