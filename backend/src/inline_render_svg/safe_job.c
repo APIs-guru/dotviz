@@ -11,7 +11,6 @@ SafeJob to_safe_job(GVJ_t *job) {
       .pageBoundingBox = job->pageBoundingBox,
       .height = job->height,
       .width = job->width,
-      .scale = job->scale,
       .canvasBox = job->canvasBox,
       .zoom = job->zoom,
       .clip = job->clip,

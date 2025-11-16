@@ -472,13 +472,18 @@ void jobsvg_end_layer(GVJ_t *job) {
  */
 void svg_begin_page(output_string *output, SafeLayer *safe_layer,
                     obj_state_t *obj) {
+  pointf scale; /* composite device to graph units (zoom and dpi) */
+  scale.x = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi.x /
+            POINTS_PER_INCH;
+  scale.y = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi.y /
+            POINTS_PER_INCH;
+
   /* its really just a page of the graph, but its still a graph,
    * and it is the entire graph if we're not currently paging */
   svg_print_id_class(output, obj->id, NULL, "graph", obj->u.g);
   out_puts(output, " transform=\"scale(");
   // cannot be gvprintdouble because 2 digits precision insufficient
-  gvprintf(output, "%g %g", safe_layer->safe_job->scale.x,
-           safe_layer->safe_job->scale.y);
+  gvprintf(output, "%g %g", scale.x, scale.y);
   gvprintf(output, ") rotate(%d) translate(", -safe_layer->safe_job->rotation);
 
   /* CAUTION - job->translation was difficult to get right. */
