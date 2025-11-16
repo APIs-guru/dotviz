@@ -14,6 +14,7 @@
 #include <string.h>
 #include "core_svg.h"
 #include "safe_job.h"
+#include "types.h"
 
 extern bool Y_invert;
 
@@ -270,28 +271,40 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   clip.UR.x = clip.LL.x + pageSize_x;
   clip.UR.y = clip.LL.y + pageSize_y;
 
+  int layerNum = job->layerNum;
+  point pagesArrayElem = job->pagesArrayElem;
+  pointf dpi = job->dpi;
+  int rotation = job->rotation;
+  double zoom = job->zoom;
+
+  char **defaultlinestyle = gvc->defaultlinestyle;
+  char **layerIDs = gvc->layerIDs;
+  char *layerDelims = gvc->layerDelims;
+  char *layerListDelims = gvc->layerListDelims;
+  int numLayers = gvc->numLayers;
+
   {
     output_string output = job2output_string(job);
     SafeJob safe_job = {
-        .layerNum = job->layerNum,
-        .pagesArrayElem = job->pagesArrayElem,
-        .dpi = job->dpi,
-        .rotation = job->rotation,
+        .layerNum = layerNum,
+        .pagesArrayElem = pagesArrayElem,
+        .dpi = dpi,
+        .rotation = rotation,
         .pageBoundingBox = pageBoundingBox,
         .height = height,
         .width = width,
         .scale = scale,
         .canvasBox = canvasBox,
-        .zoom = job->zoom,
+        .zoom = zoom,
         .clip = clip,
 
         // from gvc
-        .graph = job->gvc->g,
-        .defaultlinestyle = job->gvc->defaultlinestyle,
-        .layerIDs = job->gvc->layerIDs,
-        .layerDelims = job->gvc->layerDelims,
-        .layerListDelims = job->gvc->layerListDelims,
-        .numLayers = job->gvc->numLayers,
+        .graph = g,
+        .defaultlinestyle = defaultlinestyle,
+        .layerIDs = layerIDs,
+        .layerDelims = layerDelims,
+        .layerListDelims = layerListDelims,
+        .numLayers = numLayers,
     };
     emit_graph(&output, &safe_job, job->obj, g, job->gvc->layerlist,
                job->flags);
