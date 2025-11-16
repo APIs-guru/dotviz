@@ -230,9 +230,9 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
 
   /* initial window size */
-  job->width =
+  unsigned int width =
       ROUND((imageSize.x + 2 * margin.x) * job->dpi.x / POINTS_PER_INCH);
-  job->height =
+  unsigned int height =
       ROUND((imageSize.y + 2 * margin.y) * job->dpi.y / POINTS_PER_INCH);
 
   // FIXME: add warning about ignoring centering attribute
@@ -280,8 +280,8 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
         .dpi = job->dpi,
         .rotation = job->rotation,
         .pageBoundingBox = pageBoundingBox,
-        .height = job->height,
-        .width = job->width,
+        .height = height,
+        .width = width,
         .scale = job->scale,
         .canvasBox = canvasBox,
         .zoom = job->zoom,
