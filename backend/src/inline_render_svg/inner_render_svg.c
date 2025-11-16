@@ -268,10 +268,11 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* size of one page in graph units */
   double pageSize_x = job->view.x / job->zoom;
   double pageSize_y = job->view.y / job->zoom;
-  job->clip.LL.x = job->focus.x - pageSize_x / 2.0;
-  job->clip.LL.y = job->focus.y - pageSize_y / 2.0;
-  job->clip.UR.x = job->clip.LL.x + pageSize_x;
-  job->clip.UR.y = job->clip.LL.y + pageSize_y;
+  boxf clip = {0};
+  clip.LL.x = job->focus.x - pageSize_x / 2.0;
+  clip.LL.y = job->focus.y - pageSize_y / 2.0;
+  clip.UR.x = clip.LL.x + pageSize_x;
+  clip.UR.y = clip.LL.y + pageSize_y;
 
   {
     output_string output = job2output_string(job);
@@ -286,7 +287,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
         .scale = job->scale,
         .canvasBox = job->canvasBox,
         .zoom = job->zoom,
-        .clip = job->clip,
+        .clip = clip,
 
         // from gvc
         .graph = job->gvc->g,
