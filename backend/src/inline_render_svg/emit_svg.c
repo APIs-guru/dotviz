@@ -221,25 +221,26 @@ bool initMapData(obj_state_t *obj, char *lbl, char *url, char *tooltip,
   return assigned;
 }
 
-static void layerPagePrefix(const SafeJob *safe_job, agxbuf *xb) {
-  if (safe_job->layerNum > 1) {
-    agxbprint(xb, "%s_", safe_job->layerIDs[safe_job->layerNum]);
+static void layerPagePrefix(const SafeLayer *safe_layer, agxbuf *xb) {
+  if (safe_layer->layerNum > 1) {
+    agxbprint(xb, "%s_", safe_layer->safe_job->layerIDs[safe_layer->layerNum]);
   }
-  if (safe_job->pagesArrayElem.x > 0 || safe_job->pagesArrayElem.y > 0) {
-    agxbprint(xb, "page%d,%d_", safe_job->pagesArrayElem.x,
-              safe_job->pagesArrayElem.y);
+  if (safe_layer->safe_job->pagesArrayElem.x > 0 ||
+      safe_layer->safe_job->pagesArrayElem.y > 0) {
+    agxbprint(xb, "page%d,%d_", safe_layer->safe_job->pagesArrayElem.x,
+              safe_layer->safe_job->pagesArrayElem.y);
   }
 }
 
 /// Use id of root graph if any, plus kind and internal id of object
-char *getObjId(const SafeJob *safe_job, void *obj, agxbuf *xb) {
+char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb) {
   char *id;
-  const graph_t *const root = safe_job->graph;
+  const graph_t *const root = safe_layer->safe_job->graph;
   char *gid = GD_drawing(root)->id;
   long idnum = 0;
   char *pfx = NULL;
 
-  layerPagePrefix(safe_job, xb);
+  layerPagePrefix(safe_layer, xb);
 
   id = agget(obj, "id");
   if (id && *id != '\0') {
@@ -276,7 +277,8 @@ char *getObjId(const SafeJob *safe_job, void *obj, agxbuf *xb) {
 
 char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb) {
   SafeJob safe_job = to_safe_job(job);
-  return getObjId(&safe_job, obj, xb);
+  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
+  return getObjId(&safe_layer, obj, xb);
 }
 
 /* Map "\n" to ^J, "\r" to ^M and "\l" to ^J.
@@ -341,7 +343,7 @@ static char *preprocessTooltip(char *s, void *gobj) {
   return interpretCRNL(news);
 }
 
-static void initObjMapData(SafeJob *safe_job, obj_state_t *obj,
+static void initObjMapData(SafeLayer *safe_layer, obj_state_t *obj,
                            textlabel_t *lab, void *gobj) {
   char *lbl;
   char *url = agget(gobj, "href");
@@ -356,7 +358,7 @@ static void initObjMapData(SafeJob *safe_job, obj_state_t *obj,
     lbl = NULL;
   if (!url || !*url) /* try URL as an alias for href */
     url = agget(gobj, "URL");
-  id = getObjId(safe_job, gobj, &xb);
+  id = getObjId(safe_layer, gobj, &xb);
   if (tooltip)
     tooltip = preprocessTooltip(tooltip, gobj);
   initMapData(obj, lbl, url, tooltip, target, id, gobj);
@@ -367,7 +369,8 @@ static void initObjMapData(SafeJob *safe_job, obj_state_t *obj,
 
 static void job_initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj) {
   SafeJob safe_job = to_safe_job(job);
-  initObjMapData(&safe_job, job->obj, lab, gobj);
+  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
+  initObjMapData(&safe_layer, job->obj, lab, gobj);
 }
 
 static void map_point(obj_state_t *obj, pointf pf) {
@@ -774,21 +777,21 @@ static bool is_natural_number(const char *sstr) {
   return true;
 }
 
-static int layer_index(SafeJob *safe_job, char *str, int all) {
+static int layer_index(SafeLayer *safe_layer, char *str, int all) {
   int i;
 
   if (streq(str, "all"))
     return all;
   if (is_natural_number(str))
     return atoi(str);
-  if (safe_job->layerIDs)
-    for (i = 1; i <= safe_job->numLayers; i++)
-      if (streq(str, safe_job->layerIDs[i]))
+  if (safe_layer->safe_job->layerIDs)
+    for (i = 1; i <= safe_layer->safe_job->numLayers; i++)
+      if (streq(str, safe_layer->safe_job->layerIDs[i]))
         return i;
   return -1;
 }
 
-static bool selectedLayer(SafeJob *safe_job, int layerNum, int numLayers,
+static bool selectedLayer(SafeLayer *safe_layer, int layerNum, int numLayers,
                           char *spec) {
   int n0, n1;
   char *w0, *w1;
@@ -800,14 +803,15 @@ static bool selectedLayer(SafeJob *safe_job, int layerNum, int numLayers,
   part_in_p = spec_copy;
 
   while (!rval &&
-         (cur = strtok_r(part_in_p, safe_job->layerListDelims, &buf_part_p))) {
-    w1 = w0 = strtok_r(cur, safe_job->layerDelims, &buf_p);
+         (cur = strtok_r(part_in_p, safe_layer->safe_job->layerListDelims,
+                         &buf_part_p))) {
+    w1 = w0 = strtok_r(cur, safe_layer->safe_job->layerDelims, &buf_p);
     if (w0)
-      w1 = strtok_r(NULL, safe_job->layerDelims, &buf_p);
+      w1 = strtok_r(NULL, safe_layer->safe_job->layerDelims, &buf_p);
     if (w1 != NULL) {
       assert(w0 != NULL);
-      n0 = layer_index(safe_job, w0, 0);
-      n1 = layer_index(safe_job, w1, numLayers);
+      n0 = layer_index(safe_layer, w0, 0);
+      n1 = layer_index(safe_layer, w1, numLayers);
       if (n0 >= 0 || n1 >= 0) {
         if (n0 > n1) {
           SWAP(&n0, &n1);
@@ -815,7 +819,7 @@ static bool selectedLayer(SafeJob *safe_job, int layerNum, int numLayers,
         rval = BETWEEN(n0, layerNum, n1);
       }
     } else if (w0 != NULL) {
-      n0 = layer_index(safe_job, w0, layerNum);
+      n0 = layer_index(safe_layer, w0, layerNum);
       rval = (n0 == layerNum);
     } else {
       rval = false;
@@ -826,8 +830,9 @@ static bool selectedLayer(SafeJob *safe_job, int layerNum, int numLayers,
   return rval;
 }
 
-static bool selectedlayer(SafeJob *safe_job, char *spec) {
-  return selectedLayer(safe_job, safe_job->layerNum, safe_job->numLayers, spec);
+static bool selectedlayer(SafeLayer *safe_layer, char *spec) {
+  return selectedLayer(safe_layer, safe_layer->layerNum,
+                       safe_layer->safe_job->numLayers, spec);
 }
 
 DEFINE_LIST(layer_names, char *)
@@ -849,7 +854,7 @@ static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   return pts;
 }
 
-static void emit_xdot(output_string *output, SafeJob *safe_job,
+static void emit_xdot(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *obj, xdot *xd) {
   int image_warn = 1;
   int angle;
@@ -861,7 +866,7 @@ static void emit_xdot(output_string *output, SafeJob *safe_job,
     switch (op->op.kind) {
     case xd_filled_ellipse:
     case xd_unfilled_ellipse:
-      if (boxf_overlap(op->bb, safe_job->clip)) {
+      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
         pointf pts[] = {{.x = op->op.u.ellipse.x - op->op.u.ellipse.w,
                          .y = op->op.u.ellipse.y - op->op.u.ellipse.h},
                         {.x = op->op.u.ellipse.x + op->op.u.ellipse.w,
@@ -872,7 +877,7 @@ static void emit_xdot(output_string *output, SafeJob *safe_job,
       break;
     case xd_filled_polygon:
     case xd_unfilled_polygon:
-      if (boxf_overlap(op->bb, safe_job->clip)) {
+      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
         pointf *pts = copyPts(op->op.u.polygon.pts, op->op.u.polygon.cnt);
         assert(op->op.u.polygon.cnt <= INT_MAX &&
                "polygon count exceeds svg_polygon support");
@@ -883,7 +888,7 @@ static void emit_xdot(output_string *output, SafeJob *safe_job,
       break;
     case xd_filled_bezier:
     case xd_unfilled_bezier:
-      if (boxf_overlap(op->bb, safe_job->clip)) {
+      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
         pointf *pts = copyPts(op->op.u.bezier.pts, op->op.u.bezier.cnt);
         svg_bezier(output, obj, pts, op->op.u.bezier.cnt,
                    op->op.kind == xd_filled_bezier ? filled : 0);
@@ -891,16 +896,17 @@ static void emit_xdot(output_string *output, SafeJob *safe_job,
       }
       break;
     case xd_polyline:
-      if (boxf_overlap(op->bb, safe_job->clip)) {
+      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
         pointf *pts = copyPts(op->op.u.polyline.pts, op->op.u.polyline.cnt);
         svg_polyline(output, obj, pts, op->op.u.polyline.cnt);
         free(pts);
       }
       break;
     case xd_text:
-      if (boxf_overlap(op->bb, safe_job->clip)) {
+      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
         pointf pt = {.x = op->op.u.text.x, .y = op->op.u.text.y};
-        svg_textspan(output, GD_fontnames(safe_job->graph), obj, pt, op->span);
+        svg_textspan(output, GD_fontnames(safe_layer->safe_job->graph), obj, pt,
+                     op->span);
       }
       break;
     case xd_fill_color:
@@ -961,10 +967,10 @@ static void emit_xdot(output_string *output, SafeJob *safe_job,
     op++;
   }
   if (styles)
-    svg_set_style(obj, safe_job->defaultlinestyle);
+    svg_set_style(obj, safe_layer->safe_job->defaultlinestyle);
 }
 
-static void emit_background(output_string *output, SafeJob *safe_job,
+static void emit_background(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, graph_t *g) {
   xdot *xd;
   char *str;
@@ -996,28 +1002,28 @@ static void emit_background(output_string *output, SafeJob *safe_job,
         filled = RGRADIENT;
       else
         filled = GRADIENT;
-      svg_box(output, obj, safe_job->clip, filled);
+      svg_box(output, obj, safe_layer->safe_job->clip, filled);
       free(clrs[0]);
       free(clrs[1]);
     } else {
       svg_set_fillcolor(obj, str);
       svg_set_pencolor(obj, "transparent");
-      svg_box(output, obj, safe_job->clip, FILL); /* filled */
+      svg_box(output, obj, safe_layer->safe_job->clip, FILL); /* filled */
     }
   }
 
   if ((xd = GD_drawing(g)->xdots))
-    emit_xdot(output, safe_job, obj, xd);
+    emit_xdot(output, safe_layer, obj, xd);
 }
 
-static bool node_in_layer(SafeJob *safe_job, graph_t *g, node_t *n) {
+static bool node_in_layer(SafeLayer *safe_layer, graph_t *g, node_t *n) {
   char *pn, *pe;
   edge_t *e;
 
-  if (safe_job->numLayers <= 1)
+  if (safe_layer->safe_job->numLayers <= 1)
     return true;
   pn = late_string(n, N_layer, "");
-  if (selectedlayer(safe_job, pn))
+  if (selectedlayer(safe_layer, pn))
     return true;
   if (pn[0])
     return false; /* Only check edges if pn = "" */
@@ -1025,44 +1031,44 @@ static bool node_in_layer(SafeJob *safe_job, graph_t *g, node_t *n) {
     return true;
   for (e = agfstedge(g, n); e; e = agnxtedge(g, e, n)) {
     pe = late_string(e, E_layer, "");
-    if (pe[0] == '\0' || selectedlayer(safe_job, pe))
+    if (pe[0] == '\0' || selectedlayer(safe_layer, pe))
       return true;
   }
   return false;
 }
 
-static bool edge_in_layer(SafeJob *safe_job, edge_t *e) {
+static bool edge_in_layer(SafeLayer *safe_layer, edge_t *e) {
   char *pe, *pn;
   int cnt;
 
-  if (safe_job->numLayers <= 1)
+  if (safe_layer->safe_job->numLayers <= 1)
     return true;
   pe = late_string(e, E_layer, "");
-  if (selectedlayer(safe_job, pe))
+  if (selectedlayer(safe_layer, pe))
     return true;
   if (pe[0])
     return false;
   for (cnt = 0; cnt < 2; cnt++) {
     pn = late_string(cnt < 1 ? agtail(e) : aghead(e), N_layer, "");
-    if (pn[0] == '\0' || selectedlayer(safe_job, pn))
+    if (pn[0] == '\0' || selectedlayer(safe_layer, pn))
       return true;
   }
   return false;
 }
 
-static bool clust_in_layer(SafeJob *safe_job, graph_t *sg) {
+static bool clust_in_layer(SafeLayer *safe_layer, graph_t *sg) {
   char *pg;
   node_t *n;
 
-  if (safe_job->numLayers <= 1)
+  if (safe_layer->safe_job->numLayers <= 1)
     return true;
   pg = late_string(sg, agattr_text(sg, AGRAPH, "layer", 0), "");
-  if (selectedlayer(safe_job, pg))
+  if (selectedlayer(safe_layer, pg))
     return true;
   if (pg[0])
     return false;
   for (n = agfstnode(sg); n; n = agnxtnode(sg, n))
-    if (node_in_layer(safe_job, sg, n))
+    if (node_in_layer(safe_layer, sg, n))
       return true;
   return false;
 }
@@ -1071,7 +1077,7 @@ static bool node_in_box(node_t *n, boxf b) { return boxf_overlap(ND_bb(n), b); }
 
 static char *saved_color_scheme;
 
-static void emit_begin_node(output_string *output, SafeJob *safe_job,
+static void emit_begin_node(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, node_t *n) {
   size_t nump = 0;
   pointf *p = NULL;
@@ -1081,7 +1087,7 @@ static void emit_begin_node(output_string *output, SafeJob *safe_job,
   obj->u.n = n;
   obj->emit_state = EMIT_NDRAW;
 
-  initObjMapData(safe_job, obj, ND_label(n), n);
+  initObjMapData(safe_layer, obj, ND_label(n), n);
   if (obj->url || obj->explicit_tooltip) {
 
     /* node coordinate */
@@ -1110,7 +1116,7 @@ static void emit_begin_node(output_string *output, SafeJob *safe_job,
   }
 
   saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
-  svg_begin_node(output, safe_job, obj);
+  svg_begin_node(output, safe_layer, obj);
 }
 
 static void emit_end_node(output_string *output) {
@@ -1122,12 +1128,12 @@ static void emit_end_node(output_string *output) {
   saved_color_scheme = NULL;
 }
 
-static void emit_node(output_string *output, SafeJob *safe_job, int *viewNum,
-                      obj_state_t *parent, node_t *n) {
-  if (ND_shape(n)                                /* node has a shape */
-      && node_in_layer(safe_job, agraphof(n), n) /* and is in layer */
-      && node_in_box(n, safe_job->clip)          /* and is in page/view */
-      && ND_state(n) != *viewNum)                /* and not already drawn */
+static void emit_node(output_string *output, SafeLayer *safe_layer,
+                      int *viewNum, obj_state_t *parent, node_t *n) {
+  if (ND_shape(n)                                   /* node has a shape */
+      && node_in_layer(safe_layer, agraphof(n), n)  /* and is in layer */
+      && node_in_box(n, safe_layer->safe_job->clip) /* and is in page/view */
+      && ND_state(n) != *viewNum)                   /* and not already drawn */
   {
     ND_state(n) = *viewNum; /* mark node as drawn */
 
@@ -1148,11 +1154,11 @@ static void emit_node(output_string *output, SafeJob *safe_job, int *viewNum,
     }
 
     obj_state_t obj = child_obj_state(parent);
-    emit_begin_node(output, safe_job, &obj, n);
-    ND_shape(n)->fns->codefn(output, safe_job, &obj, n);
+    emit_begin_node(output, safe_layer, &obj, n);
+    ND_shape(n)->fns->codefn(output, safe_layer, &obj, n);
 
     if (ND_xlabel(n) && ND_xlabel(n)->set) {
-      emit_label(output, safe_job, &obj, EMIT_NLABEL, ND_xlabel(n));
+      emit_label(output, safe_layer, &obj, EMIT_NLABEL, ND_xlabel(n));
     }
 
     emit_end_node(output);
@@ -1193,7 +1199,7 @@ static pointf computeoffset_qr(pointf p, pointf q, pointf r, pointf s,
   return res;
 }
 
-static void emit_attachment(output_string *output, SafeJob *safe_job,
+static void emit_attachment(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, textlabel_t *lp, splines *spl) {
   pointf sz, AF[3];
   const char *s;
@@ -1210,7 +1216,7 @@ static void emit_attachment(output_string *output, SafeJob *safe_job,
   AF[1] = (pointf){AF[0].x - sz.x, AF[0].y};
   AF[2] = dotneato_closest(spl, lp->pos);
   /* Don't use edge style to draw attachment */
-  svg_set_style(obj, safe_job->defaultlinestyle);
+  svg_set_style(obj, safe_layer->safe_job->defaultlinestyle);
   /* Use font color to draw attachment
      - need something unambiguous in case of multicolored parallel edges
      - defaults to black for html-like labels
@@ -1300,7 +1306,7 @@ static void splitBSpline(bezier *bz, double t, bezier *left, bezier *right) {
  * implementation.
  * Return non-zero if color spec is incorrect
  */
-static int multicolor(output_string *output, SafeJob *safe_job,
+static int multicolor(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *obj, edge_t *e, char **styles,
                       const char *colors, double arrowsize, double penwidth) {
   bezier bz;
@@ -1363,14 +1369,14 @@ static int multicolor(output_string *output, SafeJob *safe_job,
     if (bz.sflag) {
       svg_set_pencolor(obj, colorsegs_front(&segs)->color);
       svg_set_fillcolor(obj, colorsegs_front(&segs)->color);
-      arrow_gen(output, safe_job, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
-                penwidth, bz.sflag);
+      arrow_gen(output, safe_layer, obj, EMIT_TDRAW, bz.sp, bz.list[0],
+                arrowsize, penwidth, bz.sflag);
     }
     if (bz.eflag) {
       svg_set_pencolor(obj, endcolor);
       svg_set_fillcolor(obj, endcolor);
-      arrow_gen(output, safe_job, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
-                arrowsize, penwidth, bz.eflag);
+      arrow_gen(output, safe_layer, obj, EMIT_HDRAW, bz.ep,
+                bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
     }
     if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
       svg_set_style(obj, styles);
@@ -1420,7 +1426,7 @@ static radfunc_t taperfun(edge_t *e) {
   return agisdirected(agraphof(aghead(e))) ? forfunc : nonefunc;
 }
 
-static void emit_edge_graphics(output_string *output, SafeJob *safe_job,
+static void emit_edge_graphics(output_string *output, SafeLayer *safe_layer,
                                obj_state_t *obj, edge_t *e, char **styles) {
   int cnum, numsemi = 0;
   char *color, *pencolor, *fillcolor;
@@ -1461,7 +1467,7 @@ static void emit_edge_graphics(output_string *output, SafeJob *safe_job,
     }
 
     if (numsemi && numc) {
-      if (multicolor(output, safe_job, obj, e, styles, color, arrowsize,
+      if (multicolor(output, safe_layer, obj, e, styles, color, arrowsize,
                      penwidth)) {
         color = DEFAULT_COLOR;
       } else
@@ -1505,11 +1511,11 @@ static void emit_edge_graphics(output_string *output, SafeJob *safe_job,
       if (fillcolor != color)
         svg_set_fillcolor(obj, fillcolor);
       if (bz.sflag) {
-        arrow_gen(output, safe_job, obj, EMIT_TDRAW, bz.sp, bz.list[0],
+        arrow_gen(output, safe_layer, obj, EMIT_TDRAW, bz.sp, bz.list[0],
                   arrowsize, penwidth, bz.sflag);
       }
       if (bz.eflag) {
-        arrow_gen(output, safe_job, obj, EMIT_HDRAW, bz.ep,
+        arrow_gen(output, safe_layer, obj, EMIT_HDRAW, bz.ep,
                   bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
       }
     }
@@ -1588,7 +1594,7 @@ static void emit_edge_graphics(output_string *output, SafeJob *safe_job,
             svg_set_fillcolor(obj, color);
           }
         }
-        arrow_gen(output, safe_job, obj, EMIT_TDRAW, bz.sp, bz.list[0],
+        arrow_gen(output, safe_layer, obj, EMIT_TDRAW, bz.sp, bz.list[0],
                   arrowsize, penwidth, bz.sflag);
       }
       if (bz.eflag) {
@@ -1599,7 +1605,7 @@ static void emit_edge_graphics(output_string *output, SafeJob *safe_job,
             svg_set_fillcolor(obj, color);
           }
         }
-        arrow_gen(output, safe_job, obj, EMIT_HDRAW, bz.ep,
+        arrow_gen(output, safe_layer, obj, EMIT_HDRAW, bz.ep,
                   bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
       }
       free(colors);
@@ -1626,11 +1632,11 @@ static void emit_edge_graphics(output_string *output, SafeJob *safe_job,
         bz = ED_spl(e)->list[i];
         svg_bezier(output, obj, bz.list, bz.size, 0);
         if (bz.sflag) {
-          arrow_gen(output, safe_job, obj, EMIT_TDRAW, bz.sp, bz.list[0],
+          arrow_gen(output, safe_layer, obj, EMIT_TDRAW, bz.sp, bz.list[0],
                     arrowsize, penwidth, bz.sflag);
         }
         if (bz.eflag) {
-          arrow_gen(output, safe_job, obj, EMIT_HDRAW, bz.ep,
+          arrow_gen(output, safe_layer, obj, EMIT_HDRAW, bz.ep,
                     bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
         }
         if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
@@ -1665,7 +1671,7 @@ static bool edge_in_box(edge_t *e, boxf b) {
   return false;
 }
 
-static void emit_begin_edge(output_string *output, SafeJob *safe_job,
+static void emit_begin_edge(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, edge_t *e, char **styles) {
   char *s;
   textlabel_t *lab = NULL, *tlab = NULL, *hlab = NULL;
@@ -1702,7 +1708,7 @@ static void emit_begin_edge(output_string *output, SafeJob *safe_job,
 
   agxbuf xb = {0};
 
-  s = getObjId(safe_job, e, &xb);
+  s = getObjId(safe_layer, e, &xb);
   obj->id = strdup_and_subst_obj(s, e);
   agxbfree(&xb);
 
@@ -1794,7 +1800,7 @@ static void emit_begin_edge(output_string *output, SafeJob *safe_job,
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
 }
 
-static void emit_edge_label(output_string *output, SafeJob *safe_job,
+static void emit_edge_label(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, textlabel_t *lbl,
                             emit_state_t lkind, int explicit, char *url,
                             char *tooltip, char *target, char *id,
@@ -1830,9 +1836,9 @@ static void emit_edge_label(output_string *output, SafeJob *safe_job,
     map_label(obj, lbl);
     svg_begin_anchor(output, url, tooltip, target, newid);
   }
-  emit_label(output, safe_job, obj, lkind, lbl);
+  emit_label(output, safe_layer, obj, lkind, lbl);
   if (spl)
-    emit_attachment(output, safe_job, obj, lbl, spl);
+    emit_attachment(output, safe_layer, obj, lbl, spl);
   if (url || explicit) {
     svg_end_anchor(output);
   }
@@ -1873,7 +1879,7 @@ static void nodeIntersect(obj_state_t *obj, pointf p, bool explicit_iurl,
   }
 }
 
-static void emit_end_edge(output_string *output, SafeJob *safe_job,
+static void emit_end_edge(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *obj) {
   edge_t *e = obj->u.e;
 
@@ -1917,29 +1923,29 @@ static void emit_end_edge(output_string *output, SafeJob *safe_job,
                   obj->explicit_headtooltip != 0);
   }
 
-  emit_edge_label(output, safe_job, obj, ED_label(e), EMIT_ELABEL,
+  emit_edge_label(output, safe_layer, obj, ED_label(e), EMIT_ELABEL,
                   obj->explicit_labeltooltip, obj->labelurl, obj->labeltooltip,
                   obj->labeltarget, obj->id,
                   ((mapbool(late_string(e, E_decorate, "false")) && ED_spl(e))
                        ? ED_spl(e)
                        : 0));
-  emit_edge_label(output, safe_job, obj, ED_xlabel(e), EMIT_ELABEL,
+  emit_edge_label(output, safe_layer, obj, ED_xlabel(e), EMIT_ELABEL,
                   obj->explicit_labeltooltip, obj->labelurl, obj->labeltooltip,
                   obj->labeltarget, obj->id,
                   ((mapbool(late_string(e, E_decorate, "false")) && ED_spl(e))
                        ? ED_spl(e)
                        : 0));
-  emit_edge_label(output, safe_job, obj, ED_head_label(e), EMIT_HLABEL,
+  emit_edge_label(output, safe_layer, obj, ED_head_label(e), EMIT_HLABEL,
                   obj->explicit_headtooltip, obj->headurl, obj->headtooltip,
                   obj->headtarget, obj->id, 0);
-  emit_edge_label(output, safe_job, obj, ED_tail_label(e), EMIT_TLABEL,
+  emit_edge_label(output, safe_layer, obj, ED_tail_label(e), EMIT_TLABEL,
                   obj->explicit_tailtooltip, obj->tailurl, obj->tailtooltip,
                   obj->tailtarget, obj->id, 0);
 
   svg_end_edge(output);
 }
 
-static void emit_edge(output_string *output, SafeJob *safe_job,
+static void emit_edge(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *parent, edge_t *e) {
   char *s;
   char *style;
@@ -1947,7 +1953,8 @@ static void emit_edge(output_string *output, SafeJob *safe_job,
   char **sp;
   char *p;
 
-  if (edge_in_box(e, safe_job->clip) && edge_in_layer(safe_job, e)) {
+  if (edge_in_box(e, safe_layer->safe_job->clip) &&
+      edge_in_layer(safe_layer, e)) {
 
     agxbuf edge = {0};
     agxbput(&edge, agnameof(agtail(e)));
@@ -1977,14 +1984,14 @@ static void emit_edge(output_string *output, SafeJob *safe_job,
     }
 
     obj_state_t obj = child_obj_state(parent);
-    emit_begin_edge(output, safe_job, &obj, e, styles);
-    emit_edge_graphics(output, safe_job, &obj, e, styles);
-    emit_end_edge(output, safe_job, &obj);
+    emit_begin_edge(output, safe_layer, &obj, e, styles);
+    emit_edge_graphics(output, safe_layer, &obj, e, styles);
+    emit_end_edge(output, safe_layer, &obj);
     free_child_obj(&obj);
   }
 }
 
-static void emit_view(output_string *output, SafeJob *safe_job,
+static void emit_view(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *obj, graph_t *g, int *viewNum,
                       int graph_outputorder) {
   node_t *n;
@@ -1992,33 +1999,33 @@ static void emit_view(output_string *output, SafeJob *safe_job,
 
   *viewNum += 1;
   /* when drawing, lay clusters down before nodes and edges */
-  emit_clusters(output, safe_job, obj, g);
+  emit_clusters(output, safe_layer, obj, g);
   if (graph_outputorder & EMIT_SORTED) {
     /* output all nodes, then all edges */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_job, viewNum, obj, n);
+      emit_node(output, safe_layer, viewNum, obj, n);
     }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        emit_edge(output, safe_job, obj, e);
+        emit_edge(output, safe_layer, obj, e);
       }
     }
   } else if (graph_outputorder & EMIT_EDGE_SORTED) {
     /* output all edges, then all nodes */
     for (n = agfstnode(g); n; n = agnxtnode(g, n))
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        emit_edge(output, safe_job, obj, e);
+        emit_edge(output, safe_layer, obj, e);
       }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_job, viewNum, obj, n);
+      emit_node(output, safe_layer, viewNum, obj, n);
     }
   } else {
     /* output in breadth first graph walk order */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_job, viewNum, obj, n);
+      emit_node(output, safe_layer, viewNum, obj, n);
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        emit_node(output, safe_job, viewNum, obj, aghead(e));
-        emit_edge(output, safe_job, obj, e);
+        emit_node(output, safe_layer, viewNum, obj, aghead(e));
+        emit_edge(output, safe_layer, obj, e);
       }
     }
   }
@@ -2042,7 +2049,7 @@ void emit_end_graph(GVJ_t *job) {
   pop_obj_state(job);
 }
 
-static void emit_layer(output_string *output, SafeJob *safe_job,
+static void emit_layer(output_string *output, SafeLayer *safe_layer,
                        obj_state_t *obj, graph_t *g, int *viewNum,
                        int graph_outputorder) {
   size_t nump = 0;
@@ -2055,9 +2062,9 @@ static void emit_layer(output_string *output, SafeJob *safe_job,
    * For multiple pages, we need to generate a new id.
    */
   bool obj_id_needs_restore = false;
-  if (safe_job->layerNum > 1) {
+  if (safe_layer->layerNum > 1) {
     saveid = obj->id;
-    layerPagePrefix(safe_job, &xb);
+    layerPagePrefix(safe_layer, &xb);
     agxbput(&xb, saveid == NULL ? "layer" : saveid);
     obj->id = agxbuse(&xb);
     obj_id_needs_restore = true;
@@ -2066,7 +2073,7 @@ static void emit_layer(output_string *output, SafeJob *safe_job,
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
 
-  svg_begin_page(output, safe_job, obj);
+  svg_begin_page(output, safe_layer, obj);
   svg_set_pencolor(obj, DEFAULT_COLOR);
   svg_set_fillcolor(obj, DEFAULT_FILL);
   if (obj->url || obj->explicit_tooltip) {
@@ -2083,15 +2090,15 @@ static void emit_layer(output_string *output, SafeJob *safe_job,
    * or end_page of renderer.
    */
   if (obj->url || obj->explicit_tooltip) {
-    emit_map_rect(obj, safe_job->clip);
+    emit_map_rect(obj, safe_layer->safe_job->clip);
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
   }
-  emit_background(output, safe_job, obj, g);
+  emit_background(output, safe_layer, obj, g);
   if (GD_label(g))
-    emit_label(output, safe_job, obj, EMIT_GLABEL, GD_label(g));
+    emit_label(output, safe_layer, obj, EMIT_GLABEL, GD_label(g));
   if (obj->url || obj->explicit_tooltip)
     svg_end_anchor(output);
-  emit_view(output, safe_job, obj, g, viewNum, graph_outputorder);
+  emit_view(output, safe_layer, obj, g, viewNum, graph_outputorder);
   svg_end_page(output);
   if (obj_id_needs_restore) {
     obj->id = saveid;
@@ -2126,18 +2133,18 @@ void emit_once_reset(void) {
   }
 }
 
-static void emit_begin_cluster(output_string *output, SafeJob *safe_job,
+static void emit_begin_cluster(output_string *output, SafeLayer *safe_layer,
                                obj_state_t *obj, Agraph_t *sg) {
   obj->type = CLUSTER_OBJTYPE;
   obj->u.sg = sg;
   obj->emit_state = EMIT_CDRAW;
 
-  initObjMapData(safe_job, obj, GD_label(sg), sg);
+  initObjMapData(safe_layer, obj, GD_label(sg), sg);
 
   svg_begin_cluster(output, obj);
 }
 
-void emit_clusters(output_string *output, SafeJob *safe_job,
+void emit_clusters(output_string *output, SafeLayer *safe_layer,
                    obj_state_t *parent, Agraph_t *g) {
   int doPerim, c, filled;
   pointf AF[4];
@@ -2149,10 +2156,10 @@ void emit_clusters(output_string *output, SafeJob *safe_job,
 
   for (c = 1; c <= GD_n_cluster(g); c++) {
     sg = GD_clust(g)[c];
-    if (!clust_in_layer(safe_job, sg))
+    if (!clust_in_layer(safe_layer, sg))
       continue;
     obj_state_t obj = child_obj_state(parent);
-    emit_begin_cluster(output, safe_job, &obj, sg);
+    emit_begin_cluster(output, safe_layer, &obj, sg);
     doAnchor = obj.url || obj.explicit_tooltip;
     char *previous_color_scheme = setColorScheme(agget(sg, "colorscheme"));
     if (doAnchor) {
@@ -2271,7 +2278,7 @@ void emit_clusters(output_string *output, SafeJob *safe_job,
     free(clrs[0]);
     free(clrs[1]);
     if ((lab = GD_label(sg)))
-      emit_label(output, safe_job, &obj, EMIT_CLABEL, lab);
+      emit_label(output, safe_layer, &obj, EMIT_CLABEL, lab);
 
     if (doAnchor) {
       svg_end_anchor(output);
@@ -2280,7 +2287,7 @@ void emit_clusters(output_string *output, SafeJob *safe_job,
     svg_end_cluster(output);
     free_child_obj(&obj);
     /* when drawing, lay down clusters before sub_clusters */
-    emit_clusters(output, safe_job, &obj, sg);
+    emit_clusters(output, safe_layer, &obj, sg);
 
     char *color_scheme = setColorScheme(previous_color_scheme);
     free(color_scheme);
@@ -2488,7 +2495,8 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
     }
     output_string output = job2output_string(job);
     SafeJob safe_job = to_safe_job(job);
-    emit_layer(&output, &safe_job, job->obj, g, &viewNum, graph_outputorder);
+    SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
+    emit_layer(&output, &safe_layer, job->obj, g, &viewNum, graph_outputorder);
     output_string2job(job, &output);
 
     if (numPhysicalLayers(job) > 1)

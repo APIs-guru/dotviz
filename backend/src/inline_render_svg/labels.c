@@ -209,10 +209,10 @@ void free_label(textlabel_t *p) {
   }
 }
 
-extern void svg_html_label(output_string *output, SafeJob *safe_job,
+extern void svg_html_label(output_string *output, SafeLayer *safe_layer,
                            obj_state_t *parent, htmllabel_t *lp,
                            textlabel_t *tp);
-void emit_label(output_string *output, SafeJob *safe_job, obj_state_t *obj,
+void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
                 emit_state_t emit_state, textlabel_t *lp) {
   pointf p;
   emit_state_t old_emit_state;
@@ -221,7 +221,7 @@ void emit_label(output_string *output, SafeJob *safe_job, obj_state_t *obj,
   obj->emit_state = emit_state;
 
   if (lp->html) {
-    svg_html_label(output, safe_job, obj, lp->u.html, lp);
+    svg_html_label(output, safe_layer, obj, lp->u.html, lp);
 
     obj->emit_state = old_emit_state;
     return;
@@ -261,7 +261,7 @@ void emit_label(output_string *output, SafeJob *safe_job, obj_state_t *obj,
       p.x = lp->pos.x;
       break;
     }
-    svg_textspan(output, GD_fontnames(safe_job->graph), obj, p,
+    svg_textspan(output, GD_fontnames(safe_layer->safe_job->graph), obj, p,
                  &lp->u.txt.span[i]);
 
     /* UL position for next span */
@@ -269,13 +269,6 @@ void emit_label(output_string *output, SafeJob *safe_job, obj_state_t *obj,
   }
 
   obj->emit_state = old_emit_state;
-}
-
-void job_emit_label(GVJ_t *job, emit_state_t emit_state, textlabel_t *lp) {
-  output_string output = job2output_string(job);
-  SafeJob safe_job = to_safe_job(job);
-  emit_label(&output, &safe_job, job->obj, emit_state, lp);
-  output_string2job(job, &output);
 }
 
 /* strdup_and_subst_obj0:

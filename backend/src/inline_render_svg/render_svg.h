@@ -64,7 +64,7 @@ typedef struct epsf_s {
 RENDER_API void add_box(path *, boxf);
 RENDER_API void arrow_flags(Agedge_t *e, uint32_t *sflag, uint32_t *eflag);
 RENDER_API boxf arrow_bb(pointf p, pointf u, double arrowsize);
-RENDER_API void arrow_gen(output_string *output, SafeJob *safe_job,
+RENDER_API void arrow_gen(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *obj, emit_state_t emit_state, pointf p,
                           pointf u, double arrowsize, double penwidth,
                           uint32_t flag);
@@ -97,14 +97,14 @@ RENDER_API void dotneato_postprocess(Agraph_t *);
 RENDER_API void gv_postprocess(Agraph_t *, int);
 RENDER_API Ppolyline_t *ellipticWedge(pointf ctr, double major, double minor,
                                       double angle0, double angle1);
-RENDER_API void emit_clusters(output_string *output, SafeJob *safe_job,
+RENDER_API void emit_clusters(output_string *output, SafeLayer *safe_layer,
                               obj_state_t *parent, Agraph_t *g);
-RENDER_API char *getObjId(const SafeJob *safe_job, void *obj, agxbuf *xb);
+RENDER_API char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb);
 RENDER_API char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb);
 RENDER_API void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder);
 RENDER_API void job_emit_label(GVJ_t *job, emit_state_t emit_state,
                                textlabel_t *);
-RENDER_API void emit_label(output_string *output, SafeJob *safe_job,
+RENDER_API void emit_label(output_string *output, SafeLayer *safe_layer,
                            obj_state_t *obj, emit_state_t emit_state,
                            textlabel_t *lp);
 RENDER_API bool emit_once(char *message);

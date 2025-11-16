@@ -1,7 +1,9 @@
 #ifndef SAFE_JOB_H
 #define SAFE_JOB_H
 
+#include "const.h"
 #include "types.h"
+
 /// 1. ONLY CONST FIELDS!!!!!!!!!!!!!!
 /// 2. Function can receive only GVJ_t or SafeJob, not both!!!!
 typedef struct SafeJob_s {
@@ -27,6 +29,16 @@ typedef struct SafeJob_s {
   const int numLayers;         /* number of layers */
 } SafeJob;
 
+typedef struct SafeLayer_s {
+  const int layerNum; /* current layer - 1 based*/
+  SafeJob *safe_job;
+} SafeLayer;
+
+// typedef struct SafeLayer_s {
+
+// } SafeLayer;
+
 SafeJob to_safe_job(GVJ_t *job);
+SafeLayer to_safe_layer(SafeJob *safe_job, int layerNum);
 
 #endif

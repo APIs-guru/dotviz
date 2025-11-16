@@ -390,11 +390,12 @@ void jobsvg_comment(GVJ_t *job, char *str) {
   output_string2job(job, &output);
 }
 
-void svg_begin_job(output_string *output, SafeJob *safe_job) {
+void svg_begin_job(output_string *output, SafeLayer *safe_layer) {
   char *s;
   out_puts(output,
            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-  if ((s = agget((graph_t *)safe_job->graph, "stylesheet")) && s[0]) {
+  if ((s = agget((graph_t *)safe_layer->safe_job->graph, "stylesheet")) &&
+      s[0]) {
     out_puts(output, "<?xml-stylesheet href=\"");
     out_puts(output, s);
     out_puts(output, "\" type=\"text/css\"?>\n");
@@ -406,11 +407,12 @@ void svg_begin_job(output_string *output, SafeJob *safe_job) {
 void jobsvg_begin_job(GVJ_t *job) {
   output_string output = job2output_string(job);
   SafeJob safe_job = to_safe_job(job);
-  svg_begin_job(&output, &safe_job);
+  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
+  svg_begin_job(&output, &safe_layer);
   output_string2job(job, &output);
 }
 
-void svg_begin_graph(output_string *output, SafeJob *safe_job,
+void svg_begin_graph(output_string *output, SafeLayer *safe_layer,
                      obj_state_t *obj) {
 
   out_puts(output, "<!--");
@@ -420,11 +422,13 @@ void svg_begin_graph(output_string *output, SafeJob *safe_job,
   }
   out_puts(output, " Pages: 1 -->\n");
 
-  gvprintf(output, "<svg width=\"%dpt\" height=\"%dpt\"\n", safe_job->width,
-           safe_job->height);
+  gvprintf(output, "<svg width=\"%dpt\" height=\"%dpt\"\n",
+           safe_layer->safe_job->width, safe_layer->safe_job->height);
   gvprintf(output, " viewBox=\"%d.00 %d.00 %d.00 %d.00\"",
-           safe_job->pageBoundingBox.LL.x, safe_job->pageBoundingBox.LL.y,
-           safe_job->pageBoundingBox.UR.x, safe_job->pageBoundingBox.UR.y);
+           safe_layer->safe_job->pageBoundingBox.LL.x,
+           safe_layer->safe_job->pageBoundingBox.LL.y,
+           safe_layer->safe_job->pageBoundingBox.UR.x,
+           safe_layer->safe_job->pageBoundingBox.UR.y);
   // https://svgwg.org/svg2-draft/struct.html#Namespace says:
   // > There's no need to have an ‘xmlns’ attribute declaring that the
   // > element is in the SVG namespace when using the HTML parser. The HTML
@@ -440,7 +444,8 @@ void svg_begin_graph(output_string *output, SafeJob *safe_job,
 void jobsvg_begin_graph(GVJ_t *job) {
   output_string output = job2output_string(job);
   SafeJob safe_job = to_safe_job(job);
-  svg_begin_graph(&output, &safe_job, job->obj);
+  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
+  svg_begin_graph(&output, &safe_layer, job->obj);
   output_string2job(job, &output);
 }
 
@@ -475,31 +480,36 @@ void jobsvg_end_layer(GVJ_t *job) {
  * Currently, svg output does not support pages.
  * FIX: If implemented, we must guarantee the id is unique.
  */
-void svg_begin_page(output_string *output, SafeJob *safe_job,
+void svg_begin_page(output_string *output, SafeLayer *safe_layer,
                     obj_state_t *obj) {
   /* its really just a page of the graph, but its still a graph,
    * and it is the entire graph if we're not currently paging */
   svg_print_id_class(output, obj->id, NULL, "graph", obj->u.g);
   out_puts(output, " transform=\"scale(");
   // cannot be gvprintdouble because 2 digits precision insufficient
-  gvprintf(output, "%g %g", safe_job->scale.x, safe_job->scale.y);
-  gvprintf(output, ") rotate(%d) translate(", -safe_job->rotation);
+  gvprintf(output, "%g %g", safe_layer->safe_job->scale.x,
+           safe_layer->safe_job->scale.y);
+  gvprintf(output, ") rotate(%d) translate(", -safe_layer->safe_job->rotation);
 
   /* CAUTION - job->translation was difficult to get right. */
   // Test with and without asymmetric margins, e.g: -Gmargin="1,0"
   double translation_y = 0;
   double translation_x = 0;
-  if (safe_job->rotation) {
+  if (safe_layer->safe_job->rotation) {
     translation_y =
-        -safe_job->clip.UR.y - safe_job->canvasBox.LL.y / safe_job->zoom;
+        -safe_layer->safe_job->clip.UR.y -
+        safe_layer->safe_job->canvasBox.LL.y / safe_layer->safe_job->zoom;
     translation_x =
-        -safe_job->clip.UR.x - safe_job->canvasBox.LL.x / safe_job->zoom;
+        -safe_layer->safe_job->clip.UR.x -
+        safe_layer->safe_job->canvasBox.LL.x / safe_layer->safe_job->zoom;
   } else {
     /* pre unscale margins to keep them constant under scaling */
     translation_x =
-        -safe_job->clip.LL.x + safe_job->canvasBox.LL.x / safe_job->zoom;
+        -safe_layer->safe_job->clip.LL.x +
+        safe_layer->safe_job->canvasBox.LL.x / safe_layer->safe_job->zoom;
     translation_y =
-        -safe_job->clip.UR.y - safe_job->canvasBox.LL.y / safe_job->zoom;
+        -safe_layer->safe_job->clip.UR.y -
+        safe_layer->safe_job->canvasBox.LL.y / safe_layer->safe_job->zoom;
   }
 
   gvprintdouble(output, translation_x);
@@ -517,7 +527,8 @@ void svg_begin_page(output_string *output, SafeJob *safe_job,
 void jobsvg_begin_page(GVJ_t *job) {
   output_string output = job2output_string(job);
   SafeJob safe_job = to_safe_job(job);
-  svg_begin_page(&output, &safe_job, job->obj);
+  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
+  svg_begin_page(&output, &safe_layer, job->obj);
   output_string2job(job, &output);
 }
 
@@ -551,12 +562,12 @@ void jobsvg_end_cluster(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_begin_node(output_string *output, SafeJob *safe_job,
+void svg_begin_node(output_string *output, SafeLayer *safe_layer,
                     obj_state_t *obj) {
   char *idx;
 
-  if (safe_job->layerNum > 1)
-    idx = safe_job->layerIDs[safe_job->layerNum];
+  if (safe_layer->layerNum > 1)
+    idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
   else
     idx = NULL;
   svg_print_id_class(output, obj->id, idx, "node", obj->u.n);
@@ -569,7 +580,8 @@ void svg_begin_node(output_string *output, SafeJob *safe_job,
 void jobsvg_begin_node(GVJ_t *job) {
   output_string output = job2output_string(job);
   SafeJob safe_job = to_safe_job(job);
-  svg_begin_node(&output, &safe_job, job->obj);
+  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
+  svg_begin_node(&output, &safe_layer, job->obj);
   output_string2job(job, &output);
 }
 

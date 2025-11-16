@@ -246,8 +246,8 @@ static pointf *mkPts(pointf *AF, boxf b, int border) {
  * Also handles thick lines.
  * Assume dp->border > 0
  */
-static void doBorder(output_string *output, SafeJob *safe_job, obj_state_t *obj,
-                     htmldata_t *dp, boxf b) {
+static void doBorder(output_string *output, SafeLayer *safe_layer,
+                     obj_state_t *obj, htmldata_t *dp, boxf b) {
   pointf AF[7];
   char *sptr[2];
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
@@ -262,7 +262,7 @@ static void doBorder(output_string *output, SafeJob *safe_job, obj_state_t *obj,
       sptr[0] = "dotted";
     svg_set_style(obj, sptr);
   } else
-    svg_set_style(obj, safe_job->defaultlinestyle);
+    svg_set_style(obj, safe_layer->safe_job->defaultlinestyle);
   svg_set_penwidth(obj, dp->border);
 
   if (dp->style.rounded)
@@ -373,7 +373,7 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
  * FIX: Should we provide a tooltip if none is set, as is done
  * for nodes, edges, etc. ?
  */
-static int initAnchor(output_string *output, SafeJob *safe_job,
+static int initAnchor(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *obj, htmlenv_t *env, htmldata_t *data,
                       boxf b, htmlmap_data_t *save) {
   char *id;
@@ -388,7 +388,7 @@ static int initAnchor(output_string *output, SafeJob *safe_job,
   id = data->id;
   if (!id || !*id) { /* no external id, so use the internal one */
     if (!env->objid) {
-      env->objid = gv_strdup(getObjId(safe_job, obj->u.n, &xb));
+      env->objid = gv_strdup(getObjId(safe_layer, obj->u.n, &xb));
       env->objid_set = true;
     }
     agxbprint(&xb, "%s_%d", env->objid, anchorId++);
@@ -434,7 +434,7 @@ static void endAnchor(output_string *output, obj_state_t *obj,
   obj->explicit_tooltip = save->explicit_tooltip;
 }
 
-static void emit_html_cell(output_string *output, SafeJob *safe_job,
+static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
                            obj_state_t *obj, htmlcell_t *cp, htmlenv_t *env);
 
 /* place vertical and horizontal lines between adjacent cells and
@@ -511,7 +511,7 @@ static void emit_html_rules(output_string *output, obj_state_t *obj,
   }
 }
 
-static void emit_html_tbl(output_string *output, SafeJob *safe_job,
+static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *obj, htmltbl_t *tbl, htmlenv_t *env) {
   boxf pts = tbl->data.box;
   pointf pos = env->pos;
@@ -532,7 +532,7 @@ static void emit_html_tbl(output_string *output, SafeJob *safe_job,
   pts.UR.y += pos.y;
 
   if (doAnchor)
-    anchor = initAnchor(output, safe_job, obj, env, &tbl->data, pts, &saved);
+    anchor = initAnchor(output, safe_layer, obj, env, &tbl->data, pts, &saved);
   else
     anchor = 0;
 
@@ -553,7 +553,7 @@ static void emit_html_tbl(output_string *output, SafeJob *safe_job,
     }
 
     while (*cells) {
-      emit_html_cell(output, safe_job, obj, *cells, env);
+      emit_html_cell(output, safe_layer, obj, *cells, env);
       cells++;
     }
 
@@ -570,7 +570,7 @@ static void emit_html_tbl(output_string *output, SafeJob *safe_job,
     }
 
     if (tbl->data.border)
-      doBorder(output, safe_job, obj, &tbl->data, pts);
+      doBorder(output, safe_layer, obj, &tbl->data, pts);
   }
 
   if (anchor)
@@ -611,7 +611,7 @@ static void emit_html_img(output_string *output, int rotation_deg, pointf dpi,
   svg_usershape(output, rotation_deg, dpi, cp->src, A, 4, scale, "mc");
 }
 
-static void emit_html_cell(output_string *output, SafeJob *safe_job,
+static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
                            obj_state_t *obj, htmlcell_t *cp, htmlenv_t *env) {
   htmlmap_data_t saved;
   boxf pts = cp->data.box;
@@ -626,7 +626,7 @@ static void emit_html_cell(output_string *output, SafeJob *safe_job,
   pts.UR.y += pos.y;
 
   if (doAnchor)
-    inAnchor = initAnchor(output, safe_job, obj, env, &cp->data, pts, &saved);
+    inAnchor = initAnchor(output, safe_layer, obj, env, &cp->data, pts, &saved);
   else
     inAnchor = 0;
 
@@ -644,16 +644,16 @@ static void emit_html_cell(output_string *output, SafeJob *safe_job,
     }
 
     if (cp->data.border)
-      doBorder(output, safe_job, obj, &cp->data, pts);
+      doBorder(output, safe_layer, obj, &cp->data, pts);
 
     if (cp->child.kind == HTML_TBL)
-      emit_html_tbl(output, safe_job, obj, cp->child.u.tbl, env);
+      emit_html_tbl(output, safe_layer, obj, cp->child.u.tbl, env);
     else if (cp->child.kind == HTML_IMAGE)
-      emit_html_img(output, safe_job->rotation, safe_job->dpi, cp->child.u.img,
-                    env);
+      emit_html_img(output, safe_layer->safe_job->rotation, safe_layer->safe_job->dpi,
+                    cp->child.u.img, env);
     else {
-      emit_html_txt(output, GD_fontnames(safe_job->graph), obj, cp->child.u.txt,
-                    env);
+      emit_html_txt(output, GD_fontnames(safe_layer->safe_job->graph), obj,
+                    cp->child.u.txt, env);
     }
   }
 
@@ -720,7 +720,7 @@ static double heightOfLbl(htmllabel_t *lp) {
   return sz;
 }
 
-void svg_html_label(output_string *output, SafeJob *safe_job,
+void svg_html_label(output_string *output, SafeLayer *safe_layer,
                     obj_state_t *parent, htmllabel_t *lp, textlabel_t *tp) {
   obj_state_t obj = allocObj(parent);
   htmlenv_t env;
@@ -752,14 +752,15 @@ void svg_html_label(output_string *output, SafeJob *safe_job,
 
     /* set basic graphics context */
     /* Need to override line style set by node. */
-    svg_set_style(&obj, safe_job->defaultlinestyle);
+    svg_set_style(&obj, safe_layer->safe_job->defaultlinestyle);
     if (tbl->data.pencolor)
       svg_set_pencolor(&obj, tbl->data.pencolor);
     else
       svg_set_pencolor(&obj, DEFAULT_COLOR);
-    emit_html_tbl(output, safe_job, &obj, tbl, &env);
+    emit_html_tbl(output, safe_layer, &obj, tbl, &env);
   } else {
-    emit_html_txt(output, GD_fontnames(safe_job->graph), &obj, lp->u.txt, &env);
+    emit_html_txt(output, GD_fontnames(safe_layer->safe_job->graph), &obj, lp->u.txt,
+                  &env);
   }
   if (env.objid_set)
     free(env.objid);

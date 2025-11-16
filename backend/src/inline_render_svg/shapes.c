@@ -79,7 +79,7 @@ static void poly_free(node_t *n);
 static port poly_port(node_t *n, char *portname, char *);
 static bool poly_inside(inside_t *inside_context, pointf p);
 static int poly_path(node_t *n, port *p, int side, boxf rv[], int *kptr);
-static void poly_gencode(output_string *output, SafeJob *safe_job,
+static void poly_gencode(output_string *output, SafeLayer *safe_layer,
                          obj_state_t *obj, node_t *n);
 
 static void record_init(node_t *n);
@@ -87,16 +87,16 @@ static void record_free(node_t *n);
 static port record_port(node_t *n, char *portname, char *);
 static bool record_inside(inside_t *inside_context, pointf p);
 static int record_path(node_t *n, port *p, int side, boxf rv[], int *kptr);
-static void record_gencode(output_string *output, SafeJob *safe_job,
+static void record_gencode(output_string *output, SafeLayer *safe_layer,
                            obj_state_t *obj, node_t *n);
 
 static void point_init(node_t *n);
-static void point_gencode(output_string *output, SafeJob *safe_job,
+static void point_gencode(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *obj, node_t *n);
 static bool point_inside(inside_t *inside_context, pointf p);
 
 static bool epsf_inside(inside_t *inside_context, pointf p);
-static void epsf_gencode(output_string *output, SafeJob *safe_job,
+static void epsf_gencode(output_string *output, SafeLayer *safe_layer,
                          obj_state_t *obj, node_t *n);
 
 static pointf star_size(pointf);
@@ -2908,7 +2908,7 @@ static port poly_port(node_t *n, char *portname, char *compass) {
 static bool multicolor(const char *f) { return strchr(f, ':') != NULL; }
 
 /* generic polygon gencode routine */
-static void poly_gencode(output_string *output, SafeJob *safe_job,
+static void poly_gencode(output_string *output, SafeLayer *safe_layer,
                          obj_state_t *obj, node_t *n) {
   polygon_t *poly;
   double xsize, ysize;
@@ -3082,7 +3082,8 @@ static void poly_gencode(output_string *output, SafeJob *safe_job,
         svg_polygon(output, obj, AF, sides, filled);
       }
     }
-    svg_usershape(output, safe_job->rotation, safe_job->dpi, name, AF, sides,
+    svg_usershape(output, safe_layer->safe_job->rotation,
+                  safe_layer->safe_job->dpi, name, AF, sides,
                   late_string(n, N_imagescale, "false"),
                   late_string(n, N_imagepos, "mc"));
     filled = 0; /* with user shapes, we have done the fill if needed */
@@ -3092,7 +3093,7 @@ static void poly_gencode(output_string *output, SafeJob *safe_job,
   free(clrs[0]);
   free(clrs[1]);
 
-  emit_label(output, safe_job, obj, EMIT_NLABEL, ND_label(n));
+  emit_label(output, safe_layer, obj, EMIT_NLABEL, ND_label(n));
   if (doMap) {
     svg_end_anchor(output);
   }
@@ -3236,9 +3237,9 @@ static bool point_inside(inside_t *inside_context, pointf p) {
   return hypot(P.x, P.y) <= inside_context->s.radius;
 }
 
-static void point_gencode(output_string *output, SafeJob *safe_job,
+static void point_gencode(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *obj, node_t *n) {
-  (void)safe_job;
+  (void)safe_layer;
   polygon_t *poly;
   pointf P, *vertices;
   bool filled;
@@ -3821,14 +3822,14 @@ static int record_path(node_t *n, port *prt, int side, boxf rv[], int *kptr) {
   return side;
 }
 
-static void gen_fields(output_string *output, SafeJob *safe_job,
+static void gen_fields(output_string *output, SafeLayer *safe_layer,
                        obj_state_t *obj, node_t *n, field_t *f) {
   int i;
   pointf AF[2], coord;
 
   if (f->lp) {
     f->lp->pos = add_pointf(mid_pointf(f->b.LL, f->b.UR), ND_coord(n));
-    emit_label(output, safe_job, obj, EMIT_NLABEL, f->lp);
+    emit_label(output, safe_layer, obj, EMIT_NLABEL, f->lp);
     penColor(obj, n);
   }
 
@@ -3848,11 +3849,11 @@ static void gen_fields(output_string *output, SafeJob *safe_job,
       AF[1] = add_pointf(AF[1], coord);
       svg_polyline(output, obj, AF, 2);
     }
-    gen_fields(output, safe_job, obj, n, f->fld[i]);
+    gen_fields(output, safe_layer, obj, n, f->fld[i]);
   }
 }
 
-static void record_gencode(output_string *output, SafeJob *safe_job,
+static void record_gencode(output_string *output, SafeLayer *safe_layer,
                            obj_state_t *obj, node_t *n) {
   boxf BF;
   pointf AF[4];
@@ -3910,7 +3911,7 @@ static void record_gencode(output_string *output, SafeJob *safe_job,
     svg_box(output, obj, BF, filled);
   }
 
-  gen_fields(output, safe_job, obj, n, f);
+  gen_fields(output, safe_layer, obj, n, f);
 
   free(clrs[0]);
   free(clrs[1]);
@@ -3984,7 +3985,7 @@ static bool epsf_inside(inside_t *inside_context, pointf p) {
   return P.y >= -x2 && P.y <= x2 && P.x >= -ND_lw(n) && P.x <= ND_rw(n);
 }
 
-static void epsf_gencode(output_string *output, SafeJob *safe_job,
+static void epsf_gencode(output_string *output, SafeLayer *safe_layer,
                          obj_state_t *obj, node_t *n) {
   epsf_t *desc;
   int doMap = obj->url || obj->explicit_tooltip;
@@ -4004,7 +4005,7 @@ static void epsf_gencode(output_string *output, SafeJob *safe_job,
   }
   ND_label(n)->pos = ND_coord(n);
 
-  emit_label(output, safe_job, obj, EMIT_NLABEL, ND_label(n));
+  emit_label(output, safe_layer, obj, EMIT_NLABEL, ND_label(n));
   if (doMap) {
     svg_end_anchor(output);
   }

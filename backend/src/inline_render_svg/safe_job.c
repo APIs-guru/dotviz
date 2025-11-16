@@ -27,3 +27,8 @@ SafeJob to_safe_job(GVJ_t *job) {
 
   return safe_job;
 }
+
+SafeLayer to_safe_layer(SafeJob *safe_job, int layerNum) {
+  SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
+  return safe_layer;
+}
