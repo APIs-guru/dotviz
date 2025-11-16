@@ -282,18 +282,15 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
     SafeJob safe_job = to_safe_job(job);
     emit_graph(&output, &safe_job, job->obj, g, job->gvc->layerlist,
                job->flags);
-    output_string2job(job, &output);
+
+    job->gvc->common.lib =
+        NULL; /* FIXME - minimally this doesn't belong here */
+
+    free(job->active_tooltip);
+    free(job->selected_href);
+    free(job);
+    gvc->jobs = gvc->job = gvc->active_jobs = NULL;
+
+    return output;
   }
-
-  job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
-
-  output.data = job->output_data;
-  output.data_position = job->output_data_position;
-
-  free(job->active_tooltip);
-  free(job->selected_href);
-  free(job);
-  gvc->jobs = gvc->job = gvc->active_jobs = NULL;
-
-  return output;
 }
