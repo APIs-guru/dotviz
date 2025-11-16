@@ -64,83 +64,6 @@ static void init_job_margin(GVJ_t *job) {
   }
 }
 
-static void init_job_viewport(GVJ_t *job, graph_t *g) {
-  GVC_t *gvc = job->gvc;
-  pointf LL, UR, size, sz;
-  double Z;
-  int rv;
-  Agnode_t *n;
-  char *str, *nodename = NULL;
-
-  UR = gvc->bb.UR;
-  LL = gvc->bb.LL;
-  job->bb.LL = sub_pointf(
-      LL, job->pad); // job->bb is bb of graph and padding - graph units
-  job->bb.UR = add_pointf(UR, job->pad);
-  sz = sub_pointf(job->bb.UR,
-                  job->bb.LL); // size, including padding - graph units
-
-  /* determine final drawing size and scale to apply. */
-  /* N.B. size given by user is not rotated by landscape mode */
-  /* start with "natural" size of layout */
-
-  Z = 1.0;
-  if (GD_drawing(g)->size.x > 0.001 &&
-      GD_drawing(g)->size.y > 0.001) { /* graph size was given by user... */
-    size = GD_drawing(g)->size;
-    if (sz.x <= 0.001)
-      sz.x = size.x;
-    if (sz.y <= 0.001)
-      sz.y = size.y;
-    if (size.x < sz.x ||
-        size.y < sz.y             /* drawing is too big (in either axis) ... */
-        || (GD_drawing(g)->filled /* or ratio=filled requested and ... */
-            && size.x > sz.x &&
-            size.y > sz.y)) /* drawing is too small (in both axes) ... */
-      Z = fmin(size.x / sz.x, size.y / sz.y);
-  }
-
-  /* default focus, in graph units = center of bb */
-  pointf xy = scale(0.5, add_pointf(LL, UR));
-
-  /* rotate and scale bb to give default absolute size in points*/
-  job->rotation = job->gvc->rotation;
-  pointf XY = scale(Z, sz);
-
-  /* user can override */
-  if ((str = agget(g, "viewport"))) {
-    nodename = gv_alloc(strlen(str) + 1);
-    rv = sscanf(str, "%lf,%lf,%lf,\'%[^\']\'", &XY.x, &XY.y, &Z, nodename);
-    if (rv == 4) {
-      n = agfindnode(g->root, nodename);
-      if (n) {
-        xy = ND_coord(n);
-      }
-    } else {
-      rv = sscanf(str, "%lf,%lf,%lf,%[^,]%c", &XY.x, &XY.y, &Z, nodename,
-                  &(char){0});
-      if (rv == 4) {
-        n = agfindnode(g->root, nodename);
-        if (n) {
-          xy = ND_coord(n);
-        }
-      } else {
-        sscanf(str, "%lf,%lf,%lf,%lf,%lf", &XY.x, &XY.y, &Z, &xy.x, &xy.y);
-      }
-    }
-    free(nodename);
-  }
-  /* rv is ignored since args retain previous values if not scanned */
-
-  /* job->view gives port size in graph units, unscaled or rotated
-   * job->zoom gives scaling factor.
-   * job->focus gives the position in the graph of the center of the port
-   */
-  job->view = XY;
-  job->zoom = Z; /* scaling factor */
-  job->focus = xy;
-}
-
 output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* page size on Linux, Mac OS X and Windows */
   const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
@@ -166,7 +89,82 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   } else {
     job->dpi.x = job->dpi.y = 72;
   }
-  init_job_viewport(job, g);
+
+  {
+    pointf LL, UR, size, sz;
+    double Z;
+    int rv;
+    Agnode_t *n;
+    char *str, *nodename = NULL;
+
+    UR = gvc->bb.UR;
+    LL = gvc->bb.LL;
+    job->bb.LL = sub_pointf(
+        LL, job->pad); // job->bb is bb of graph and padding - graph units
+    job->bb.UR = add_pointf(UR, job->pad);
+    sz = sub_pointf(job->bb.UR,
+                    job->bb.LL); // size, including padding - graph units
+
+    /* determine final drawing size and scale to apply. */
+    /* N.B. size given by user is not rotated by landscape mode */
+    /* start with "natural" size of layout */
+
+    Z = 1.0;
+    if (GD_drawing(g)->size.x > 0.001 &&
+        GD_drawing(g)->size.y > 0.001) { /* graph size was given by user... */
+      size = GD_drawing(g)->size;
+      if (sz.x <= 0.001)
+        sz.x = size.x;
+      if (sz.y <= 0.001)
+        sz.y = size.y;
+      if (size.x < sz.x ||
+          size.y < sz.y /* drawing is too big (in either axis) ... */
+          || (GD_drawing(g)->filled /* or ratio=filled requested and ... */
+              && size.x > sz.x &&
+              size.y > sz.y)) /* drawing is too small (in both axes) ... */
+        Z = fmin(size.x / sz.x, size.y / sz.y);
+    }
+
+    /* default focus, in graph units = center of bb */
+    pointf xy = scale(0.5, add_pointf(LL, UR));
+
+    /* rotate and scale bb to give default absolute size in points*/
+    job->rotation = job->gvc->rotation;
+    pointf XY = scale(Z, sz);
+
+    /* user can override */
+    if ((str = agget(g, "viewport"))) {
+      nodename = gv_alloc(strlen(str) + 1);
+      rv = sscanf(str, "%lf,%lf,%lf,\'%[^\']\'", &XY.x, &XY.y, &Z, nodename);
+      if (rv == 4) {
+        n = agfindnode(g->root, nodename);
+        if (n) {
+          xy = ND_coord(n);
+        }
+      } else {
+        rv = sscanf(str, "%lf,%lf,%lf,%[^,]%c", &XY.x, &XY.y, &Z, nodename,
+                    &(char){0});
+        if (rv == 4) {
+          n = agfindnode(g->root, nodename);
+          if (n) {
+            xy = ND_coord(n);
+          }
+        } else {
+          sscanf(str, "%lf,%lf,%lf,%lf,%lf", &XY.x, &XY.y, &Z, &xy.x, &xy.y);
+        }
+      }
+      free(nodename);
+    }
+    /* rv is ignored since args retain previous values if not scanned */
+
+    /* job->view gives port size in graph units, unscaled or rotated
+     * job->zoom gives scaling factor.
+     * job->focus gives the position in the graph of the center of the port
+     */
+    job->view = XY;
+    job->zoom = Z; /* scaling factor */
+    job->focus = xy;
+  }
 
   /* margin - in points - in page orientation */
   pointf margin = job->margin; // margin for a page of the graph - points
