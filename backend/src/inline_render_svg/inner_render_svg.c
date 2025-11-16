@@ -21,62 +21,6 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 
 #define EPSILON .0001
 
-static void init_job_pagination(GVJ_t *job) {
-  /* unpaginated image size - in points - in graph orientation */
-  pointf imageSize = job->view; // image size on one page of the graph - points
-
-  /* rotate imageSize to page orientation */
-  if (job->rotation)
-    imageSize = exch_xyf(imageSize);
-
-  /* margin - in points - in page orientation */
-  pointf margin = job->margin; // margin for a page of the graph - points
-
-  /* determine pagination */
-  job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
-
-  /* initial window size */
-  job->width =
-      ROUND((imageSize.x + 2 * margin.x) * job->dpi.x / POINTS_PER_INCH);
-  job->height =
-      ROUND((imageSize.y + 2 * margin.y) * job->dpi.y / POINTS_PER_INCH);
-
-  // FIXME: add warning about ignoring centering attribute
-  // https://graphviz.org/docs/attrs/center/
-
-  /* rotate back into graph orientation */
-  if (job->rotation) {
-    imageSize = exch_xyf(imageSize);
-    margin = exch_xyf(margin);
-  }
-
-  /* canvas area, centered if necessary */
-  job->canvasBox.LL.x = margin.x;
-  job->canvasBox.LL.y = margin.y;
-  job->canvasBox.UR.x = margin.x + job->view.x;
-  job->canvasBox.UR.y = margin.y + job->view.y;
-
-  /* size of one page in graph units */
-  job->pageSize.x = job->view.x / job->zoom;
-  job->pageSize.y = job->view.y / job->zoom;
-
-  /* pageBoundingBox in device units and page orientation */
-  job->pageBoundingBox.LL.x =
-      ROUND(job->canvasBox.LL.x * job->dpi.x / POINTS_PER_INCH);
-  job->pageBoundingBox.LL.y =
-      ROUND(job->canvasBox.LL.y * job->dpi.y / POINTS_PER_INCH);
-  job->pageBoundingBox.UR.x =
-      ROUND(job->canvasBox.UR.x * job->dpi.x / POINTS_PER_INCH);
-  job->pageBoundingBox.UR.y =
-      ROUND(job->canvasBox.UR.y * job->dpi.y / POINTS_PER_INCH);
-  if (job->rotation) {
-    job->pageBoundingBox.LL = exch_xy(job->pageBoundingBox.LL);
-    job->pageBoundingBox.UR = exch_xy(job->pageBoundingBox.UR);
-    job->canvasBox.LL = exch_xyf(job->canvasBox.LL);
-    job->canvasBox.UR = exch_xyf(job->canvasBox.UR);
-  }
-}
-
 #define DEFAULT_DPI 96
 
 static void init_job_pad(GVJ_t *job) {
@@ -271,7 +215,61 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* device dpi is now known */
   job->scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
   job->scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
-  init_job_pagination(job);
+
+  /* unpaginated image size - in points - in graph orientation */
+  pointf imageSize = job->view; // image size on one page of the graph - points
+
+  /* rotate imageSize to page orientation */
+  if (job->rotation)
+    imageSize = exch_xyf(imageSize);
+
+  /* margin - in points - in page orientation */
+  pointf margin = job->margin; // margin for a page of the graph - points
+
+  /* determine pagination */
+  job->pagesArraySize.x = job->pagesArraySize.y = job->numPages = 1;
+
+  /* initial window size */
+  job->width =
+      ROUND((imageSize.x + 2 * margin.x) * job->dpi.x / POINTS_PER_INCH);
+  job->height =
+      ROUND((imageSize.y + 2 * margin.y) * job->dpi.y / POINTS_PER_INCH);
+
+  // FIXME: add warning about ignoring centering attribute
+  // https://graphviz.org/docs/attrs/center/
+
+  /* rotate back into graph orientation */
+  if (job->rotation) {
+    imageSize = exch_xyf(imageSize);
+    margin = exch_xyf(margin);
+  }
+
+  /* canvas area, centered if necessary */
+  job->canvasBox.LL.x = margin.x;
+  job->canvasBox.LL.y = margin.y;
+  job->canvasBox.UR.x = margin.x + job->view.x;
+  job->canvasBox.UR.y = margin.y + job->view.y;
+
+  /* size of one page in graph units */
+  job->pageSize.x = job->view.x / job->zoom;
+  job->pageSize.y = job->view.y / job->zoom;
+
+  /* pageBoundingBox in device units and page orientation */
+  job->pageBoundingBox.LL.x =
+      ROUND(job->canvasBox.LL.x * job->dpi.x / POINTS_PER_INCH);
+  job->pageBoundingBox.LL.y =
+      ROUND(job->canvasBox.LL.y * job->dpi.y / POINTS_PER_INCH);
+  job->pageBoundingBox.UR.x =
+      ROUND(job->canvasBox.UR.x * job->dpi.x / POINTS_PER_INCH);
+  job->pageBoundingBox.UR.y =
+      ROUND(job->canvasBox.UR.y * job->dpi.y / POINTS_PER_INCH);
+  if (job->rotation) {
+    job->pageBoundingBox.LL = exch_xy(job->pageBoundingBox.LL);
+    job->pageBoundingBox.UR = exch_xy(job->pageBoundingBox.UR);
+    job->canvasBox.LL = exch_xyf(job->canvasBox.LL);
+    job->canvasBox.UR = exch_xyf(job->canvasBox.UR);
+  }
+
   job->clip.LL.x = job->focus.x - job->pageSize.x / 2.0;
   job->clip.LL.y = job->focus.y - job->pageSize.y / 2.0;
   job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
