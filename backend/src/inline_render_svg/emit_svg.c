@@ -2506,11 +2506,6 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
     if (numPhysicalLayers(job) > 1) {
       jobsvg_begin_layer(job, job->gvc->layerIDs[job->layerNum]);
     }
-
-    job->clip.LL.x = job->focus.x - job->pageSize.x / 2.0;
-    job->clip.LL.y = job->focus.y - job->pageSize.y / 2.0;
-    job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
-    job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
     output_string output = job2output_string(job);
     SafeJob safe_job = to_safe_job(job);
     emit_page(&output, &safe_job, job->obj, g, &viewNum, graph_outputorder);

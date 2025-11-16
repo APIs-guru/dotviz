@@ -268,6 +268,10 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_dpi(job, g);
   init_job_viewport(job, g);
   init_job_pagination(job);
+  job->clip.LL.x = job->focus.x - job->pageSize.x / 2.0;
+  job->clip.LL.y = job->focus.y - job->pageSize.y / 2.0;
+  job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
+  job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
 
   emit_graph(job, g, job->flags);
 
