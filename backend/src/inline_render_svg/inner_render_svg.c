@@ -244,26 +244,23 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   }
 
   /* canvas area, centered if necessary */
-  job->canvasBox.LL.x = margin.x;
-  job->canvasBox.LL.y = margin.y;
-  job->canvasBox.UR.x = margin.x + job->view.x;
-  job->canvasBox.UR.y = margin.y + job->view.y;
+  boxf canvasBox = {0};
+  canvasBox.LL.x = margin.x;
+  canvasBox.LL.y = margin.y;
+  canvasBox.UR.x = margin.x + job->view.x;
+  canvasBox.UR.y = margin.y + job->view.y;
 
   /* pageBoundingBox in device units and page orientation */
   box pageBoundingBox = {0};
-  pageBoundingBox.LL.x =
-      ROUND(job->canvasBox.LL.x * job->dpi.x / POINTS_PER_INCH);
-  pageBoundingBox.LL.y =
-      ROUND(job->canvasBox.LL.y * job->dpi.y / POINTS_PER_INCH);
-  pageBoundingBox.UR.x =
-      ROUND(job->canvasBox.UR.x * job->dpi.x / POINTS_PER_INCH);
-  pageBoundingBox.UR.y =
-      ROUND(job->canvasBox.UR.y * job->dpi.y / POINTS_PER_INCH);
+  pageBoundingBox.LL.x = ROUND(canvasBox.LL.x * job->dpi.x / POINTS_PER_INCH);
+  pageBoundingBox.LL.y = ROUND(canvasBox.LL.y * job->dpi.y / POINTS_PER_INCH);
+  pageBoundingBox.UR.x = ROUND(canvasBox.UR.x * job->dpi.x / POINTS_PER_INCH);
+  pageBoundingBox.UR.y = ROUND(canvasBox.UR.y * job->dpi.y / POINTS_PER_INCH);
   if (job->rotation) {
     pageBoundingBox.LL = exch_xy(pageBoundingBox.LL);
     pageBoundingBox.UR = exch_xy(pageBoundingBox.UR);
-    job->canvasBox.LL = exch_xyf(job->canvasBox.LL);
-    job->canvasBox.UR = exch_xyf(job->canvasBox.UR);
+    canvasBox.LL = exch_xyf(canvasBox.LL);
+    canvasBox.UR = exch_xyf(canvasBox.UR);
   }
 
   /* size of one page in graph units */
@@ -286,7 +283,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
         .height = job->height,
         .width = job->width,
         .scale = job->scale,
-        .canvasBox = job->canvasBox,
+        .canvasBox = canvasBox,
         .zoom = job->zoom,
         .clip = clip,
 
