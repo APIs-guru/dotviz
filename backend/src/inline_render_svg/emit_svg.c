@@ -367,12 +367,6 @@ static void initObjMapData(SafeLayer *safe_layer, obj_state_t *obj,
   agxbfree(&xb);
 }
 
-static void job_initObjMapData(GVJ_t *job, textlabel_t *lab, void *gobj) {
-  SafeJob safe_job = to_safe_job(job);
-  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
-  initObjMapData(&safe_layer, job->obj, lab, gobj);
-}
-
 static void map_point(obj_state_t *obj, pointf pf) {
   pointf *p;
 
@@ -836,14 +830,6 @@ static bool selectedlayer(SafeLayer *safe_layer, char *spec) {
 }
 
 DEFINE_LIST(layer_names, char *)
-
-/// Return number of physical layers to be emitted.
-int numPhysicalLayers(GVJ_t *job) {
-  if (job->gvc->layerlist) {
-    return job->gvc->layerlist[0];
-  } else
-    return job->numLayers;
-}
 
 static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   pointf *pts = gv_calloc(numpts, sizeof(pointf));
@@ -2031,24 +2017,6 @@ static void emit_view(output_string *output, SafeLayer *safe_layer,
   }
 }
 
-void emit_begin_graph(GVJ_t *job, graph_t *g) {
-  obj_state_t *obj;
-
-  obj = push_obj_state(job);
-  obj->type = ROOTGRAPH_OBJTYPE;
-  obj->u.g = g;
-  obj->emit_state = EMIT_GDRAW;
-
-  job_initObjMapData(job, GD_label(g), g);
-
-  jobsvg_begin_graph(job);
-}
-
-void emit_end_graph(GVJ_t *job) {
-  jobsvg_end_graph(job);
-  pop_obj_state(job);
-}
-
 static void emit_layer(output_string *output, SafeLayer *safe_layer,
                        obj_state_t *obj, graph_t *g, int *viewNum,
                        int graph_outputorder) {
@@ -2463,51 +2431,57 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   return true;
 }
 
-void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
+void emit_graph(output_string *output, SafeJob *safe_job, obj_state_t *parent,
+                graph_t *g, int *layerlist, int graph_outputorder) {
   int viewNum = 0; ///< current view - 1 based count of views, all pages
                    ///< in all layers
   node_t *n;
   char *s;
 
   s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
-  jobsvg_comment(job, s);
+  svg_comment(output, s);
 
-  job->layerNum = 0;
-  emit_begin_graph(job, g);
+  obj_state_t obj = child_obj_state(parent);
+  obj.type = ROOTGRAPH_OBJTYPE;
+  obj.u.g = g;
+  obj.emit_state = EMIT_GDRAW;
+
+  SafeLayer dummy_layer = to_safe_layer(safe_job, 0);
+  initObjMapData(&dummy_layer, &obj, GD_label(g), g);
+
+  svg_begin_graph(output, safe_job, &obj);
 
   /* reset node state */
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
 
   int *lp = NULL;
-  job->layerNum = 1;
-  job->numLayers = job->gvc->numLayers;
-  if (job->gvc->layerlist) {
-    lp = job->gvc->layerlist + 1; // skip counter
-    job->layerNum = *lp;          // first layer
-    lp += 1;                      // second layer
+  int layerNum = 1;
+  int num_physical_layers = safe_job->numLayers;
+  if (layerlist) {
+    num_physical_layers = layerlist[0];
+    layerNum = layerlist[1]; // first layer
+    lp = layerlist + 2;      // tail layers
   }
 
   /* iterate layers */
-  while (job->layerNum <= job->numLayers) {
-    if (numPhysicalLayers(job) > 1) {
-      jobsvg_begin_layer(job, job->gvc->layerIDs[job->layerNum]);
+  while (layerNum <= safe_job->numLayers) {
+    if (num_physical_layers > 1) {
+      svg_begin_layer(output, &obj, safe_job->layerIDs[layerNum]);
     }
-    output_string output = job2output_string(job);
-    SafeJob safe_job = to_safe_job(job);
-    SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
-    emit_layer(&output, &safe_layer, job->obj, g, &viewNum, graph_outputorder);
-    output_string2job(job, &output);
+    SafeLayer safe_layer = to_safe_layer(safe_job, layerNum);
+    emit_layer(output, &safe_layer, &obj, g, &viewNum, graph_outputorder);
 
-    if (numPhysicalLayers(job) > 1)
-      jobsvg_end_layer(job);
+    if (num_physical_layers > 1)
+      svg_end_layer(output);
 
     if (lp) {
-      job->layerNum = *lp;
+      layerNum = *lp;
       lp += 1;
     } else {
-      job->layerNum += 1;
+      layerNum += 1;
     }
   }
-  emit_end_graph(job);
+  svg_end_graph(output);
+  free_child_obj(&obj);
 }

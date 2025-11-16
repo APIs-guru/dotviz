@@ -412,7 +412,7 @@ void jobsvg_begin_job(GVJ_t *job) {
   output_string2job(job, &output);
 }
 
-void svg_begin_graph(output_string *output, SafeLayer *safe_layer,
+void svg_begin_graph(output_string *output, SafeJob *safe_job,
                      obj_state_t *obj) {
 
   out_puts(output, "<!--");
@@ -422,13 +422,11 @@ void svg_begin_graph(output_string *output, SafeLayer *safe_layer,
   }
   out_puts(output, " Pages: 1 -->\n");
 
-  gvprintf(output, "<svg width=\"%dpt\" height=\"%dpt\"\n",
-           safe_layer->safe_job->width, safe_layer->safe_job->height);
+  gvprintf(output, "<svg width=\"%dpt\" height=\"%dpt\"\n", safe_job->width,
+           safe_job->height);
   gvprintf(output, " viewBox=\"%d.00 %d.00 %d.00 %d.00\"",
-           safe_layer->safe_job->pageBoundingBox.LL.x,
-           safe_layer->safe_job->pageBoundingBox.LL.y,
-           safe_layer->safe_job->pageBoundingBox.UR.x,
-           safe_layer->safe_job->pageBoundingBox.UR.y);
+           safe_job->pageBoundingBox.LL.x, safe_job->pageBoundingBox.LL.y,
+           safe_job->pageBoundingBox.UR.x, safe_job->pageBoundingBox.UR.y);
   // https://svgwg.org/svg2-draft/struct.html#Namespace says:
   // > There's no need to have an ‘xmlns’ attribute declaring that the
   // > element is in the SVG namespace when using the HTML parser. The HTML
@@ -439,14 +437,6 @@ void svg_begin_graph(output_string *output, SafeLayer *safe_layer,
                    /* namespace of xlink */
                    " xmlns:xlink=\"http://www.w3.org/1999/xlink\"");
   out_puts(output, ">\n");
-}
-
-void jobsvg_begin_graph(GVJ_t *job) {
-  output_string output = job2output_string(job);
-  SafeJob safe_job = to_safe_job(job);
-  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
-  svg_begin_graph(&output, &safe_layer, job->obj);
-  output_string2job(job, &output);
 }
 
 void svg_end_graph(output_string *output) { out_puts(output, "</svg>\n"); }
@@ -1197,7 +1187,7 @@ char *svg_knowncolors[] = {"aliceblue",
 gvrender_engine_t svg_engine = {
     jobsvg_begin_job,
     0, /* svg_end_job */
-    jobsvg_begin_graph,
+    0,
     jobsvg_end_graph,
     NULL,
     jobsvg_end_layer,

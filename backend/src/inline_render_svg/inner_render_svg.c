@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "core_svg.h"
+#include "safe_job.h"
 
 extern bool Y_invert;
 
@@ -276,7 +277,13 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   job->clip.UR.x = job->clip.LL.x + job->pageSize.x;
   job->clip.UR.y = job->clip.LL.y + job->pageSize.y;
 
-  emit_graph(job, g, job->flags);
+  {
+    output_string output = job2output_string(job);
+    SafeJob safe_job = to_safe_job(job);
+    emit_graph(&output, &safe_job, job->obj, g, job->gvc->layerlist,
+               job->flags);
+    output_string2job(job, &output);
+  }
 
   job->gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here */
 

@@ -4,6 +4,7 @@
 #include "geom.h"
 #include "gvcext.h"
 #include "gvcjob.h"
+#include "safe_job.h"
 #include "textspan.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -62,7 +63,7 @@ void svg_begin_anchor(output_string *output, char *href, char *tooltip,
                       char *target, char *id);
 void svg_end_anchor(output_string *output);
 void svg_end_edge(output_string *output);
-void svg_begin_graph(output_string *output, SafeLayer *safe_layer,
+void svg_begin_graph(output_string *output, SafeJob *safe_job,
                      obj_state_t *obj);
 void svg_end_graph(output_string *output);
 void svg_begin_page(output_string *output, SafeLayer *safe_layer,
