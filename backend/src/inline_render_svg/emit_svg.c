@@ -2042,12 +2042,9 @@ void emit_end_graph(GVJ_t *job) {
   pop_obj_state(job);
 }
 
-#define NotFirstPage(j)                                                        \
-  (((j)->layerNum > 1) || ((j)->pagesArrayElem.x > 0) ||                       \
-   ((j)->pagesArrayElem.x > 0))
-
-void emit_page(output_string *output, SafeJob *safe_job, obj_state_t *obj,
-               graph_t *g, int *viewNum, int graph_outputorder) {
+static void emit_layer(output_string *output, SafeJob *safe_job,
+                       obj_state_t *obj, graph_t *g, int *viewNum,
+                       int graph_outputorder) {
   size_t nump = 0;
   textlabel_t *lab;
   pointf *p = NULL;
@@ -2058,7 +2055,7 @@ void emit_page(output_string *output, SafeJob *safe_job, obj_state_t *obj,
    * For multiple pages, we need to generate a new id.
    */
   bool obj_id_needs_restore = false;
-  if (NotFirstPage(safe_job)) {
+  if (safe_job->layerNum > 1) {
     saveid = obj->id;
     layerPagePrefix(safe_job, &xb);
     agxbput(&xb, saveid == NULL ? "layer" : saveid);
@@ -2491,7 +2488,7 @@ void emit_graph(GVJ_t *job, graph_t *g, int graph_outputorder) {
     }
     output_string output = job2output_string(job);
     SafeJob safe_job = to_safe_job(job);
-    emit_page(&output, &safe_job, job->obj, g, &viewNum, graph_outputorder);
+    emit_layer(&output, &safe_job, job->obj, g, &viewNum, graph_outputorder);
     output_string2job(job, &output);
 
     if (numPhysicalLayers(job) > 1)
