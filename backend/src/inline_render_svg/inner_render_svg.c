@@ -213,8 +213,9 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   init_job_dpi(job, g);
   init_job_viewport(job, g);
   /* device dpi is now known */
-  job->scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
-  job->scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
+  pointf scale = {0};
+  scale.x = job->zoom * job->dpi.x / POINTS_PER_INCH;
+  scale.y = job->zoom * job->dpi.y / POINTS_PER_INCH;
 
   /* unpaginated image size - in points - in graph orientation */
   pointf imageSize = job->view; // image size on one page of the graph - points
@@ -279,7 +280,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
         .pageBoundingBox = pageBoundingBox,
         .height = height,
         .width = width,
-        .scale = job->scale,
+        .scale = scale,
         .canvasBox = canvasBox,
         .zoom = job->zoom,
         .clip = clip,
