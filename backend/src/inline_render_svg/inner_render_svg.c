@@ -22,23 +22,6 @@ extern bool Y_invert;
 
 #define DEFAULT_DPI 96
 
-static void init_job_pad(GVJ_t *job) {
-  GVC_t *gvc = job->gvc;
-
-  if (gvc->graph_sets_pad) {
-    job->pad = gvc->pad;
-  } else {
-    switch (job->output_lang) {
-    case GVRENDER_PLUGIN:
-      job->pad.x = job->pad.y = 4.;
-      break;
-    default:
-      job->pad.x = job->pad.y = DEFAULT_GRAPH_PAD;
-      break;
-    }
-  }
-}
-
 output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* page size on Linux, Mac OS X and Windows */
   const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
@@ -57,7 +40,10 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   gvc->active_jobs = job; /* first job of new list */
 
-  init_job_pad(job);
+  pointf pad = {.x = 4., .y = 4.};
+  if (gvc->graph_sets_pad) {
+    pad = gvc->pad;
+  }
 
   // SafeJob:
   int layerNum = job->layerNum;
@@ -86,9 +72,9 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
 
   pointf UR = gvc->bb.UR;
   pointf LL = gvc->bb.LL;
-  boxf bb = {.LL = sub_pointf(LL, job->pad),
+  boxf bb = {.LL = sub_pointf(LL, pad),
              .UR = add_pointf(
-                 UR, job->pad)}; // bb is bb of graph and padding - graph units
+                 UR, pad)}; // bb is bb of graph and padding - graph units
 
   pointf sz = sub_pointf(bb.UR,
                          bb.LL); // size, including padding - graph units
