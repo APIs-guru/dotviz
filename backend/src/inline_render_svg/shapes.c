@@ -3917,7 +3917,7 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
 static shape_desc **UserShape;
 static size_t N_UserShape;
 
-shape_desc *find_user_shape(const char *name) {
+static shape_desc *find_user_shape(const char *name) {
   if (UserShape) {
     for (size_t i = 0; i < N_UserShape; i++) {
       if (streq(UserShape[i]->name, name))

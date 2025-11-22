@@ -59,6 +59,7 @@ pub fn build(b: *std.Build) void {
             "src/inline_render_dot/output_dot.c",
             "src/inline_render_dot/write_c_inline.c",
             "src/gvusershape_size.c",
+            "src/graphviz_deps.c",
         },
         .flags = &flags,
     });
