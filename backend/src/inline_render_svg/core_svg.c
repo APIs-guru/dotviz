@@ -390,26 +390,16 @@ void jobsvg_comment(GVJ_t *job, char *str) {
   output_string2job(job, &output);
 }
 
-void svg_begin_job(output_string *output, SafeLayer *safe_layer) {
-  char *s;
+void svg_begin_job(output_string *output, const char *stylesheet) {
   out_puts(output,
            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-  if ((s = agget((graph_t *)safe_layer->safe_job->graph, "stylesheet")) &&
-      s[0]) {
+  if (stylesheet && stylesheet[0]) {
     out_puts(output, "<?xml-stylesheet href=\"");
-    out_puts(output, s);
+    out_puts(output, stylesheet);
     out_puts(output, "\" type=\"text/css\"?>\n");
   }
   out_puts(output, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n"
                    " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n");
-}
-
-void jobsvg_begin_job(GVJ_t *job) {
-  output_string output = job2output_string(job);
-  SafeJob safe_job = to_safe_job(job);
-  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
-  svg_begin_job(&output, &safe_layer);
-  output_string2job(job, &output);
 }
 
 void svg_begin_graph(output_string *output, SafeJob *safe_job,
