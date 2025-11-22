@@ -167,9 +167,71 @@ static int parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
   return ntok;
 }
 
+extern Agsym_t *G_gradientangle, *G_peripheries, *G_penwidth;
+extern Agsym_t *N_style, *N_layer, *N_comment, *N_fontname, *N_fontsize;
+extern Agsym_t *E_layer, *E_dir, *E_arrowsz, *E_color, *E_fillcolor,
+    *E_penwidth, *E_decorate, *E_comment, *E_style;
 output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
+  double xf, yf;
+  char *p;
+  int i;
+
+  gvc->g = g;
+
+  /* margins */
+  gvc->graph_sets_margin = false;
+  if ((p = agget(g, "margin"))) {
+    i = sscanf(p, "%lf,%lf", &xf, &yf);
+    if (i > 0) {
+      gvc->margin.x = gvc->margin.y = xf * POINTS_PER_INCH;
+      if (i > 1)
+        gvc->margin.y = yf * POINTS_PER_INCH;
+      gvc->graph_sets_margin = true;
+    }
+  }
+
+  /* pad */
+  gvc->graph_sets_pad = false;
+  if ((p = agget(g, "pad"))) {
+    i = sscanf(p, "%lf,%lf", &xf, &yf);
+    if (i > 0) {
+      gvc->pad.x = gvc->pad.y = xf * POINTS_PER_INCH;
+      if (i > 1)
+        gvc->pad.y = yf * POINTS_PER_INCH;
+      gvc->graph_sets_pad = true;
+    }
+  }
+
+  /* pagesize */
+  gvc->graph_sets_pageSize = false;
+  gvc->pageSize = GD_drawing(g)->page;
+  if (GD_drawing(g)->page.x > 0.001 && GD_drawing(g)->page.y > 0.001)
+    gvc->graph_sets_pageSize = true;
+
+  /* rotation */
+  if (GD_drawing(g)->landscape)
+    gvc->rotation = 90;
+  else
+    gvc->rotation = 0;
+
+  /* pagedir */
+  gvc->pagedir = "BL";
+  if ((p = agget(g, "pagedir")) && p[0])
+    gvc->pagedir = p;
+
+  /* bounding box */
+  gvc->bb = GD_bb(g);
+
+  /* clusters have peripheries */
+  G_peripheries = agfindgraphattr(g, "peripheries");
+  G_penwidth = agfindgraphattr(g, "penwidth");
+
+  /* default font */
+  gvc->defaultfontname = late_nnstring(NULL, N_fontname, DEFAULT_FONTNAME);
+  gvc->defaultfontsize =
+      late_double(NULL, N_fontsize, DEFAULT_FONTSIZE, MIN_FONTSIZE);
+
   int rotation = gvc->rotation;
-  char **defaultlinestyle = gvc->defaultlinestyle;
   pointf UR = gvc->bb.UR;
   pointf LL = gvc->bb.LL;
 
@@ -365,7 +427,6 @@ output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
 
       // from gvc
       .graph = g,
-      .defaultlinestyle = defaultlinestyle,
       .layerIDs = layerIDs,
       .layerDelims = layerDelims,
       .layerListDelims = layerListDelims,

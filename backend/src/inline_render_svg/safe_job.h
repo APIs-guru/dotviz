@@ -20,7 +20,6 @@ typedef struct SafeJob_s {
 
   // from gvc:
   const graph_t *const graph;
-  char **defaultlinestyle;     /* default line style */
   char **const layerIDs;       /* array of layer names */
   char *const layerDelims;     /* delimiters in layer names */
   char *const layerListDelims; /* delimiters between layer ranges */

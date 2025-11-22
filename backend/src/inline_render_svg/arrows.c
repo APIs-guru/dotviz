@@ -1204,9 +1204,9 @@ boxf arrow_bb(pointf p, pointf u, double arrowsize) {
   return bb;
 }
 
-void arrow_gen(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
-               emit_state_t emit_state, pointf p, pointf u, double arrowsize,
-               double penwidth, uint32_t flag) {
+void arrow_gen(output_string *output, obj_state_t *obj, emit_state_t emit_state,
+               pointf p, pointf u, double arrowsize, double penwidth,
+               uint32_t flag) {
   double s;
   int i;
   emit_state_t old_emit_state;
@@ -1216,7 +1216,7 @@ void arrow_gen(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
 
   /* Dotted and dashed styles on the arrowhead are ugly (dds) */
   /* linewidth needs to be reset */
-  svg_set_style(obj, safe_layer->safe_job->defaultlinestyle);
+  svg_set_style(obj, svg_defaultlinestyle);
 
   svg_set_penwidth(obj, penwidth);
 

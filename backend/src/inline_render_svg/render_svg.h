@@ -63,10 +63,9 @@ typedef struct epsf_s {
 
 void arrow_flags(Agedge_t *e, uint32_t *sflag, uint32_t *eflag);
 boxf arrow_bb(pointf p, pointf u, double arrowsize);
-void arrow_gen(output_string *output, SafeLayer *safe_layer,
-                          obj_state_t *obj, emit_state_t emit_state, pointf p,
-                          pointf u, double arrowsize, double penwidth,
-                          uint32_t flag);
+void arrow_gen(output_string *output, obj_state_t *obj, emit_state_t emit_state,
+               pointf p, pointf u, double arrowsize, double penwidth,
+               uint32_t flag);
 RENDER_API void bezier_clip(inside_t *inside_context,
                             bool (*insidefn)(inside_t *inside_context,
                                              pointf p),
@@ -75,10 +74,9 @@ RENDER_API Ppolyline_t *ellipticWedge(pointf ctr, double major, double minor,
                                       double angle0, double angle1);
 char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb);
 void emit_graph(output_string *output, SafeJob *safe_job, graph_t *g,
-                           int *layerlist, int graph_outputorder);
-void emit_label(output_string *output, SafeLayer *safe_layer,
-                           obj_state_t *obj, emit_state_t emit_state,
-                           textlabel_t *lp);
+                int *layerlist, int graph_outputorder);
+void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
+                emit_state_t emit_state, textlabel_t *lp);
 bool emit_once(char *message);
 void emit_map_rect(obj_state_t *obj, boxf b);
 RENDER_API void epsf_init(node_t *n);
@@ -86,19 +84,16 @@ RENDER_API void epsf_free(node_t *n);
 void free_label(textlabel_t *);
 void free_textspan(textspan_t *tl, size_t);
 void *init_xdot(Agraph_t *g);
-bool initMapData(obj_state_t *, char *, char *, char *, char *,
-                            char *, void *);
+bool initMapData(obj_state_t *, char *, char *, char *, char *, char *, void *);
 bool isPolygon(node_t *);
-textlabel_t *make_label(void *obj, char *str, int kind,
-                                   double fontsize, char *fontname,
-                                   char *fontcolor);
+textlabel_t *make_label(void *obj, char *str, int kind, double fontsize,
+                        char *fontname, char *fontcolor);
 char **parse_style(char *s);
 obj_state_t child_obj_state(obj_state_t *parent);
 void free_child_obj(obj_state_t *child);
 port resolvePort(node_t *n, node_t *other, port *oldport);
-void round_corners(output_string *output, obj_state_t *obj,
-                              pointf *AF, size_t sides,
-                              graphviz_polygon_style_t style, int filled);
+void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
+                   size_t sides, graphviz_polygon_style_t style, int filled);
 void make_simple_label(GVC_t *gvc, textlabel_t *rv);
 int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
                const char *clrs, int rotate);

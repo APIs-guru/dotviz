@@ -39,7 +39,7 @@ void svg_begin_cluster(output_string *output, obj_state_t *obj);
 void svg_end_cluster(output_string *output);
 void svg_begin_layer(output_string *output, obj_state_t *obj, char *layername);
 void svg_end_layer(output_string *output);
-void svg_begin_job(output_string *output, const char* stylesheet);
+void svg_begin_job(output_string *output, const char *stylesheet);
 void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
                    char *name, pointf *a, size_t n, char *imagescale,
                    char *imagepos);
@@ -49,4 +49,7 @@ void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,
                            double frac);
 void svg_set_style(obj_state_t *obj, char **s);
 void svg_set_penwidth(obj_state_t *obj, double penwidth);
+
+extern char *svg_defaultlinestyle[3];
+
 #endif

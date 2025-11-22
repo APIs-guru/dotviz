@@ -842,7 +842,7 @@ static void emit_xdot(output_string *output, SafeLayer *safe_layer,
     op++;
   }
   if (styles)
-    svg_set_style(obj, safe_layer->safe_job->defaultlinestyle);
+    svg_set_style(obj, svg_defaultlinestyle);
 }
 
 static void emit_background(output_string *output, SafeLayer *safe_layer,
@@ -1074,8 +1074,8 @@ static pointf computeoffset_qr(pointf p, pointf q, pointf r, pointf s,
   return res;
 }
 
-static void emit_attachment(output_string *output, SafeLayer *safe_layer,
-                            obj_state_t *obj, textlabel_t *lp, splines *spl) {
+static void emit_attachment(output_string *output, obj_state_t *obj,
+                            textlabel_t *lp, splines *spl) {
   pointf sz, AF[3];
   const char *s;
 
@@ -1091,7 +1091,7 @@ static void emit_attachment(output_string *output, SafeLayer *safe_layer,
   AF[1] = (pointf){AF[0].x - sz.x, AF[0].y};
   AF[2] = dotneato_closest(spl, lp->pos);
   /* Don't use edge style to draw attachment */
-  svg_set_style(obj, safe_layer->safe_job->defaultlinestyle);
+  svg_set_style(obj, svg_defaultlinestyle);
   /* Use font color to draw attachment
      - need something unambiguous in case of multicolored parallel edges
      - defaults to black for html-like labels
@@ -1181,9 +1181,9 @@ static void splitBSpline(bezier *bz, double t, bezier *left, bezier *right) {
  * implementation.
  * Return non-zero if color spec is incorrect
  */
-static int multicolor(output_string *output, SafeLayer *safe_layer,
-                      obj_state_t *obj, edge_t *e, char **styles,
-                      const char *colors, double arrowsize, double penwidth) {
+static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
+                      char **styles, const char *colors, double arrowsize,
+                      double penwidth) {
   bezier bz;
   bezier bz0, bz_l, bz_r;
   int rv;
@@ -1244,14 +1244,14 @@ static int multicolor(output_string *output, SafeLayer *safe_layer,
     if (bz.sflag) {
       svg_set_pencolor(obj, colorsegs_front(&segs)->color);
       svg_set_fillcolor(obj, colorsegs_front(&segs)->color);
-      arrow_gen(output, safe_layer, obj, EMIT_TDRAW, bz.sp, bz.list[0],
-                arrowsize, penwidth, bz.sflag);
+      arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
+                bz.sflag);
     }
     if (bz.eflag) {
       svg_set_pencolor(obj, endcolor);
       svg_set_fillcolor(obj, endcolor);
-      arrow_gen(output, safe_layer, obj, EMIT_HDRAW, bz.ep,
-                bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
+      arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
+                penwidth, bz.eflag);
     }
     if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
       svg_set_style(obj, styles);
@@ -1301,8 +1301,8 @@ static radfunc_t taperfun(edge_t *e) {
   return agisdirected(agraphof(aghead(e))) ? forfunc : nonefunc;
 }
 
-static void emit_edge_graphics(output_string *output, SafeLayer *safe_layer,
-                               obj_state_t *obj, edge_t *e, char **styles) {
+static void emit_edge_graphics(output_string *output, obj_state_t *obj,
+                               edge_t *e, char **styles) {
   int cnum, numsemi = 0;
   char *color, *pencolor, *fillcolor;
   char *headcolor, *tailcolor, *lastcolor;
@@ -1342,8 +1342,7 @@ static void emit_edge_graphics(output_string *output, SafeLayer *safe_layer,
     }
 
     if (numsemi && numc) {
-      if (multicolor(output, safe_layer, obj, e, styles, color, arrowsize,
-                     penwidth)) {
+      if (multicolor(output, obj, e, styles, color, arrowsize, penwidth)) {
         color = DEFAULT_COLOR;
       } else
         goto done;
@@ -1386,12 +1385,12 @@ static void emit_edge_graphics(output_string *output, SafeLayer *safe_layer,
       if (fillcolor != color)
         svg_set_fillcolor(obj, fillcolor);
       if (bz.sflag) {
-        arrow_gen(output, safe_layer, obj, EMIT_TDRAW, bz.sp, bz.list[0],
-                  arrowsize, penwidth, bz.sflag);
+        arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
+                  penwidth, bz.sflag);
       }
       if (bz.eflag) {
-        arrow_gen(output, safe_layer, obj, EMIT_HDRAW, bz.ep,
-                  bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
+        arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
+                  arrowsize, penwidth, bz.eflag);
       }
     }
     /* if more than one color - then generate parallel beziers, one per color */
@@ -1469,8 +1468,8 @@ static void emit_edge_graphics(output_string *output, SafeLayer *safe_layer,
             svg_set_fillcolor(obj, color);
           }
         }
-        arrow_gen(output, safe_layer, obj, EMIT_TDRAW, bz.sp, bz.list[0],
-                  arrowsize, penwidth, bz.sflag);
+        arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
+                  penwidth, bz.sflag);
       }
       if (bz.eflag) {
         if (color != headcolor) {
@@ -1480,8 +1479,8 @@ static void emit_edge_graphics(output_string *output, SafeLayer *safe_layer,
             svg_set_fillcolor(obj, color);
           }
         }
-        arrow_gen(output, safe_layer, obj, EMIT_HDRAW, bz.ep,
-                  bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
+        arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
+                  arrowsize, penwidth, bz.eflag);
       }
       free(colors);
       for (size_t i = 0; i < offspl.size; i++) {
@@ -1507,12 +1506,12 @@ static void emit_edge_graphics(output_string *output, SafeLayer *safe_layer,
         bz = ED_spl(e)->list[i];
         svg_bezier(output, obj, bz.list, bz.size, 0);
         if (bz.sflag) {
-          arrow_gen(output, safe_layer, obj, EMIT_TDRAW, bz.sp, bz.list[0],
-                    arrowsize, penwidth, bz.sflag);
+          arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
+                    penwidth, bz.sflag);
         }
         if (bz.eflag) {
-          arrow_gen(output, safe_layer, obj, EMIT_HDRAW, bz.ep,
-                    bz.list[bz.size - 1], arrowsize, penwidth, bz.eflag);
+          arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
+                    arrowsize, penwidth, bz.eflag);
         }
         if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
           svg_set_style(obj, styles);
@@ -1713,7 +1712,7 @@ static void emit_edge_label(output_string *output, SafeLayer *safe_layer,
   }
   emit_label(output, safe_layer, obj, lkind, lbl);
   if (spl)
-    emit_attachment(output, safe_layer, obj, lbl, spl);
+    emit_attachment(output, obj, lbl, spl);
   if (url || explicit) {
     svg_end_anchor(output);
   }
@@ -1860,7 +1859,7 @@ static void emit_edge(output_string *output, SafeLayer *safe_layer,
 
     obj_state_t obj = child_obj_state(parent);
     emit_begin_edge(output, safe_layer, &obj, e, styles);
-    emit_edge_graphics(output, safe_layer, &obj, e, styles);
+    emit_edge_graphics(output, &obj, e, styles);
     emit_end_edge(output, safe_layer, &obj);
     free_child_obj(&obj);
   }

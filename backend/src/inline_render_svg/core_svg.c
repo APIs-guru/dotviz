@@ -50,6 +50,8 @@
 #include "types.h"
 #include "core_svg.h"
 
+char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
+
 static imagescale_t get_imagescale(char *s) {
   if (*s == '\0')
     return IMAGESCALE_FALSE;

@@ -246,8 +246,8 @@ static pointf *mkPts(pointf *AF, boxf b, int border) {
  * Also handles thick lines.
  * Assume dp->border > 0
  */
-static void doBorder(output_string *output, SafeLayer *safe_layer,
-                     obj_state_t *obj, htmldata_t *dp, boxf b) {
+static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
+                     boxf b) {
   pointf AF[7];
   char *sptr[2];
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
@@ -262,7 +262,7 @@ static void doBorder(output_string *output, SafeLayer *safe_layer,
       sptr[0] = "dotted";
     svg_set_style(obj, sptr);
   } else
-    svg_set_style(obj, safe_layer->safe_job->defaultlinestyle);
+    svg_set_style(obj, svg_defaultlinestyle);
   svg_set_penwidth(obj, dp->border);
 
   if (dp->style.rounded)
@@ -570,7 +570,7 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
     }
 
     if (tbl->data.border)
-      doBorder(output, safe_layer, obj, &tbl->data, pts);
+      doBorder(output, obj, &tbl->data, pts);
   }
 
   if (anchor)
@@ -644,13 +644,13 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
     }
 
     if (cp->data.border)
-      doBorder(output, safe_layer, obj, &cp->data, pts);
+      doBorder(output, obj, &cp->data, pts);
 
     if (cp->child.kind == HTML_TBL)
       emit_html_tbl(output, safe_layer, obj, cp->child.u.tbl, env);
     else if (cp->child.kind == HTML_IMAGE)
-      emit_html_img(output, safe_layer->safe_job->rotation, safe_layer->safe_job->dpi,
-                    cp->child.u.img, env);
+      emit_html_img(output, safe_layer->safe_job->rotation,
+                    safe_layer->safe_job->dpi, cp->child.u.img, env);
     else {
       emit_html_txt(output, GD_fontnames(safe_layer->safe_job->graph), obj,
                     cp->child.u.txt, env);
@@ -752,15 +752,15 @@ void svg_html_label(output_string *output, SafeLayer *safe_layer,
 
     /* set basic graphics context */
     /* Need to override line style set by node. */
-    svg_set_style(&obj, safe_layer->safe_job->defaultlinestyle);
+    svg_set_style(&obj, svg_defaultlinestyle);
     if (tbl->data.pencolor)
       svg_set_pencolor(&obj, tbl->data.pencolor);
     else
       svg_set_pencolor(&obj, DEFAULT_COLOR);
     emit_html_tbl(output, safe_layer, &obj, tbl, &env);
   } else {
-    emit_html_txt(output, GD_fontnames(safe_layer->safe_job->graph), &obj, lp->u.txt,
-                  &env);
+    emit_html_txt(output, GD_fontnames(safe_layer->safe_job->graph), &obj,
+                  lp->u.txt, &env);
   }
   if (env.objid_set)
     free(env.objid);
