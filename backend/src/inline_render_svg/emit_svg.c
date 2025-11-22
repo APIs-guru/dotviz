@@ -225,11 +225,6 @@ static void layerPagePrefix(const SafeLayer *safe_layer, agxbuf *xb) {
   if (safe_layer->layerNum > 1) {
     agxbprint(xb, "%s_", safe_layer->safe_job->layerIDs[safe_layer->layerNum]);
   }
-  if (safe_layer->safe_job->pagesArrayElem.x > 0 ||
-      safe_layer->safe_job->pagesArrayElem.y > 0) {
-    agxbprint(xb, "page%d,%d_", safe_layer->safe_job->pagesArrayElem.x,
-              safe_layer->safe_job->pagesArrayElem.y);
-  }
 }
 
 /// Use id of root graph if any, plus kind and internal id of object
@@ -2431,7 +2426,7 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   return true;
 }
 
-void emit_graph(output_string *output, SafeJob *safe_job, obj_state_t *parent,
+void emit_graph(output_string *output, SafeJob *safe_job,
                 graph_t *g, int *layerlist, int graph_outputorder) {
   int viewNum = 0; ///< current view - 1 based count of views, all pages
                    ///< in all layers
@@ -2441,7 +2436,7 @@ void emit_graph(output_string *output, SafeJob *safe_job, obj_state_t *parent,
   s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
   svg_comment(output, s);
 
-  obj_state_t obj = child_obj_state(parent);
+  obj_state_t obj = child_obj_state(NULL);
   obj.type = ROOTGRAPH_OBJTYPE;
   obj.u.g = g;
   obj.emit_state = EMIT_GDRAW;

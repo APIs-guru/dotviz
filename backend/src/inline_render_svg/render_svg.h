@@ -101,9 +101,8 @@ RENDER_API void emit_clusters(output_string *output, SafeLayer *safe_layer,
                               obj_state_t *parent, Agraph_t *g);
 RENDER_API char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb);
 RENDER_API char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb);
-RENDER_API void emit_graph(output_string *output, SafeJob *safe_job,
-                           obj_state_t *parent, graph_t *g, int *layerlist,
-                           int graph_outputorder);
+RENDER_API void emit_graph(output_string *output, SafeJob *safe_job, graph_t *g,
+                           int *layerlist, int graph_outputorder);
 RENDER_API void job_emit_label(GVJ_t *job, emit_state_t emit_state,
                                textlabel_t *);
 RENDER_API void emit_label(output_string *output, SafeLayer *safe_layer,

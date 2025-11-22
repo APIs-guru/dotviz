@@ -390,20 +390,6 @@ static void init_bb(graph_t *g) {
     init_bb_node(g, n);
 }
 
-/* Determine order of output.
- * Output usually in breadth first graph walk order
- */
-static int chkOrder(graph_t *g) {
-  char *p = agget(g, "outputorder");
-  if (p) {
-    if (!strcmp(p, "nodesfirst"))
-      return EMIT_SORTED;
-    if (!strcmp(p, "edgesfirst"))
-      return EMIT_EDGE_SORTED;
-  }
-  return 0;
-}
-
 extern gvevent_key_binding_t gvevent_key_binding[];
 extern const size_t gvevent_key_binding_size;
 extern gvdevice_callbacks_t gvdevice_callbacks;
@@ -421,7 +407,7 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 
 */
 
-extern output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agrw_t graph);
+extern output_string inner_render_svg(GVC_t *gvc, Agrw_t graph);
 /* Render layout in a specified format to a malloc'ed string */
 output_string render_svg(GVC_t *gvc, Agrw_t graph) {
 
@@ -435,17 +421,11 @@ output_string render_svg(GVC_t *gvc, Agrw_t graph) {
   job->gvc = gvc;
   job = gvc->job;
 
-  job->input_filename = NULL;
   job->graph_index = 0;
   job->common = &gvc->common;
   job->layout_type = gvc->layout.type;
-  job->keybindings = NULL; // FIXME: not used
-  job->numkeys = 0;        // FIXME: not used
 
-  job->output_lang = GVRENDER_PLUGIN;
-
-  job->flags |= chkOrder(g);
-  output_string output = inner_render_svg(gvc, job, g);
+  output_string output = inner_render_svg(gvc, g);
 
   free(job->active_tooltip);
   free(job->selected_href);

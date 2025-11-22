@@ -8,7 +8,6 @@
 /// 2. Function can receive only GVJ_t or SafeJob, not both!!!!
 typedef struct SafeJob_s {
   const int layerNum;         /* current layer - 1 based*/
-  const point pagesArrayElem; /* 2D coord of current page - 0,0 based */
   const pointf dpi;           /* device resolution device-units-per-inch */
   const int rotation;         /* viewport rotation (degrees)  0=portrait,
 90=landscape */

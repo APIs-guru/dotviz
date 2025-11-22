@@ -5,7 +5,6 @@
 SafeJob to_safe_job(GVJ_t *job) {
   SafeJob safe_job = {
       .layerNum = job->layerNum,
-      .pagesArrayElem = job->pagesArrayElem,
       .dpi = job->dpi,
       .rotation = job->rotation,
       .pageBoundingBox = job->pageBoundingBox,

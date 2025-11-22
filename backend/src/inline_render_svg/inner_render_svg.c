@@ -16,7 +16,21 @@
 #include "safe_job.h"
 #include "types.h"
 
-output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
+/* Determine order of output.
+ * Output usually in breadth first graph walk order
+ */
+static int chkOrder(graph_t *g) {
+  char *p = agget(g, "outputorder");
+  if (p) {
+    if (!strcmp(p, "nodesfirst"))
+      return EMIT_SORTED;
+    if (!strcmp(p, "edgesfirst"))
+      return EMIT_EDGE_SORTED;
+  }
+  return 0;
+}
+
+output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
   /* page size on Linux, Mac OS X and Windows */
   output_string output = {.data_position = 0, .data_allocated = 4096};
   if (!(output.data = malloc(output.data_allocated))) {
@@ -35,9 +49,6 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   }
 
   // SafeJob:
-  int layerNum = job->layerNum;
-  point pagesArrayElem = job->pagesArrayElem;
-
   char **defaultlinestyle = gvc->defaultlinestyle;
   char **layerIDs = gvc->layerIDs;
   char *layerDelims = gvc->layerDelims;
@@ -177,8 +188,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   clip.UR.y = clip.LL.y + pageSize_y;
 
   SafeJob safe_job = {
-      .layerNum = layerNum,
-      .pagesArrayElem = pagesArrayElem,
+      .layerNum = 0,
       .dpi = dpi,
       .rotation = rotation,
       .pageBoundingBox = pageBoundingBox,
@@ -196,7 +206,7 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
       .layerListDelims = layerListDelims,
       .numLayers = numLayers,
   };
-  emit_graph(&output, &safe_job, job->obj, g, gvc->layerlist, job->flags);
+  emit_graph(&output, &safe_job, g, gvc->layerlist, chkOrder(g));
 
   return output;
 }
