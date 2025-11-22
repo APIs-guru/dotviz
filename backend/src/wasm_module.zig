@@ -332,7 +332,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     var responseSvg: ?[:0]const u8 = null;
     defer freeCString(responseSvg);
     if (request.renderSvg) {
-        const output = c.render_svg(gvc, graphptr);
+        const output = c.render_svg(graphptr);
         responseSvg = @ptrCast(output.data[0..output.data_position]);
     }
 

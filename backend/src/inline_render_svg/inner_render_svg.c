@@ -171,80 +171,41 @@ extern Agsym_t *G_gradientangle, *G_peripheries, *G_penwidth;
 extern Agsym_t *N_style, *N_layer, *N_comment, *N_fontname, *N_fontsize;
 extern Agsym_t *E_layer, *E_dir, *E_arrowsz, *E_color, *E_fillcolor,
     *E_penwidth, *E_decorate, *E_comment, *E_style;
-output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
+output_string inner_render_svg(Agraph_t *g) {
   double xf, yf;
   char *p;
   int i;
 
-  gvc->g = g;
-
-  /* margins */
-  gvc->graph_sets_margin = false;
+  /* margin - in points - in page orientation */
+  pointf margin = (pointf){0, 0}; // margin for a page of the graph - points
   if ((p = agget(g, "margin"))) {
     i = sscanf(p, "%lf,%lf", &xf, &yf);
     if (i > 0) {
-      gvc->margin.x = gvc->margin.y = xf * POINTS_PER_INCH;
+      margin.x = margin.y = xf * POINTS_PER_INCH;
       if (i > 1)
-        gvc->margin.y = yf * POINTS_PER_INCH;
-      gvc->graph_sets_margin = true;
+        margin.y = yf * POINTS_PER_INCH;
     }
   }
 
   /* pad */
-  gvc->graph_sets_pad = false;
+  pointf pad = {.x = 4., .y = 4.};
   if ((p = agget(g, "pad"))) {
     i = sscanf(p, "%lf,%lf", &xf, &yf);
     if (i > 0) {
-      gvc->pad.x = gvc->pad.y = xf * POINTS_PER_INCH;
+      pad.x = pad.y = xf * POINTS_PER_INCH;
       if (i > 1)
-        gvc->pad.y = yf * POINTS_PER_INCH;
-      gvc->graph_sets_pad = true;
+        pad.y = yf * POINTS_PER_INCH;
     }
   }
 
-  /* pagesize */
-  gvc->graph_sets_pageSize = false;
-  gvc->pageSize = GD_drawing(g)->page;
-  if (GD_drawing(g)->page.x > 0.001 && GD_drawing(g)->page.y > 0.001)
-    gvc->graph_sets_pageSize = true;
-
   /* rotation */
+  int rotation = 0;
   if (GD_drawing(g)->landscape)
-    gvc->rotation = 90;
-  else
-    gvc->rotation = 0;
-
-  /* pagedir */
-  gvc->pagedir = "BL";
-  if ((p = agget(g, "pagedir")) && p[0])
-    gvc->pagedir = p;
-
-  /* bounding box */
-  gvc->bb = GD_bb(g);
+    rotation = 90;
 
   /* clusters have peripheries */
-  G_peripheries = agfindgraphattr(g, "peripheries");
-  G_penwidth = agfindgraphattr(g, "penwidth");
-
-  /* default font */
-  gvc->defaultfontname = late_nnstring(NULL, N_fontname, DEFAULT_FONTNAME);
-  gvc->defaultfontsize =
-      late_double(NULL, N_fontsize, DEFAULT_FONTSIZE, MIN_FONTSIZE);
-
-  int rotation = gvc->rotation;
-  pointf UR = gvc->bb.UR;
-  pointf LL = gvc->bb.LL;
-
-  pointf pad = {.x = 4., .y = 4.};
-  if (gvc->graph_sets_pad) {
-    pad = gvc->pad;
-  }
-
-  /* margin - in points - in page orientation */
-  pointf margin = (pointf){0, 0}; // margin for a page of the graph - points
-  if (gvc->graph_sets_margin) {
-    margin = gvc->margin;
-  }
+  G_peripheries = agfindgraphattr(g, "peripheries"); // FIXME: used only once
+  G_penwidth = agfindgraphattr(g, "penwidth");       // FIXME: used only once
 
   char *str;
   /* free layer strings and pointers from previous graph */
@@ -300,9 +261,12 @@ output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
   Agnode_t *n;
   char *nodename = NULL;
 
+  /* bounding box */
+  boxf graph_bb = GD_bb(g);
   boxf bb = {
-      .LL = sub_pointf(LL, pad),
-      .UR = add_pointf(UR, pad)}; // bb is bb of graph and padding - graph units
+      .LL = sub_pointf(graph_bb.LL, pad),
+      .UR = add_pointf(graph_bb.UR,
+                       pad)}; // bb is bb of graph and padding - graph units
 
   pointf sz = sub_pointf(bb.UR,
                          bb.LL); // size, including padding - graph units
@@ -333,7 +297,7 @@ output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
   }
 
   /* default focus, in graph units = center of bb */
-  pointf focus = scale(0.5, add_pointf(LL, UR));
+  pointf focus = scale(0.5, add_pointf(graph_bb.LL, graph_bb.UR));
 
   /* rotate and scale bb to give default absolute size in points*/
   pointf view = scale(zoom, sz);

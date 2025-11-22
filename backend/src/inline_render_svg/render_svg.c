@@ -137,10 +137,10 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 
 */
 
-extern output_string inner_render_svg(GVC_t *gvc, Agrw_t graph);
+extern output_string inner_render_svg(Agrw_t graph);
 /* Render layout in a specified format to a malloc'ed string */
-output_string render_svg(GVC_t *gvc, Agrw_t graph) {
+output_string render_svg(Agrw_t graph) {
   init_bb(graph);
 
-  return inner_render_svg(gvc, graph);
+  return inner_render_svg(graph);
 }
