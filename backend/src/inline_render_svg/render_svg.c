@@ -9,32 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern bool Y_invert;
-extern Agsym_t *G_peripheries, *G_penwidth;
-extern Agsym_t *N_fontsize, *N_fontname;
-
-/// swap data referenced by two pointers
-///
-/// You can think of this macro as having the following C type:
-///
-///   void SWAP(<t1> *a, <t1> *b);
-///
-/// Both `a` and `b` are expected to be pure expressions.
-#define SWAP(a, b)                                                             \
-  do {                                                                         \
-    /* trigger a -Wcompare-distinct-pointer-types compiler warning if `a` */   \
-    /* and `b` have differing types                                       */   \
-    (void)((a) == (b));                                                        \
-                                                                               \
-    /* Swap their targets. Contemporary compilers will optimize the `memcpy`s  \
-     * into direct writes for primitive types.                                 \
-     */                                                                        \
-    char tmp_[sizeof(*(a))];                                                   \
-    memcpy(tmp_, (a), sizeof(*(a)));                                           \
-    *(a) = *(b);                                                               \
-    memcpy((b), tmp_, sizeof(*(b)));                                           \
-  } while (0)
-
 static boxf bezier_bb(bezier bz) {
   pointf p, p1, p2;
   boxf bb;
@@ -119,23 +93,6 @@ static void init_bb(graph_t *g) {
   for (n = agfstnode(g); n; n = agnxtnode(g, n))
     init_bb_node(g, n);
 }
-
-extern gvevent_key_binding_t gvevent_key_binding[];
-extern const size_t gvevent_key_binding_size;
-extern gvdevice_callbacks_t gvdevice_callbacks;
-
-/* load a plugin of type=str
-        the str can optionally contain one or more ":dependencies"
-
-        examples:
-                png
-                png:cairo
-        fully qualified:
-                png:cairo:cairo
-                png:cairo:gd
-                png:gd:gd
-
-*/
 
 extern output_string inner_render_svg(Agrw_t graph);
 /* Render layout in a specified format to a malloc'ed string */
