@@ -2364,8 +2364,8 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   return true;
 }
 
-void emit_graph(output_string *output, SafeJob *safe_job,
-                graph_t *g, int *layerlist, int graph_outputorder) {
+void emit_graph(output_string *output, SafeJob *safe_job, graph_t *g,
+                int *layerlist, int graph_outputorder) {
   int viewNum = 0; ///< current view - 1 based count of views, all pages
                    ///< in all layers
   node_t *n;
@@ -2379,7 +2379,7 @@ void emit_graph(output_string *output, SafeJob *safe_job,
   obj.u.g = g;
   obj.emit_state = EMIT_GDRAW;
 
-  SafeLayer dummy_layer = to_safe_layer(safe_job, 0);
+  SafeLayer dummy_layer = {.layerNum = 0, .safe_job = safe_job};
   initObjMapData(&dummy_layer, &obj, GD_label(g), g);
 
   svg_begin_graph(output, safe_job, &obj);
@@ -2402,7 +2402,7 @@ void emit_graph(output_string *output, SafeJob *safe_job,
     if (num_physical_layers > 1) {
       svg_begin_layer(output, &obj, safe_job->layerIDs[layerNum]);
     }
-    SafeLayer safe_layer = to_safe_layer(safe_job, layerNum);
+    SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
     emit_layer(output, &safe_layer, &obj, g, &viewNum, graph_outputorder);
 
     if (num_physical_layers > 1)

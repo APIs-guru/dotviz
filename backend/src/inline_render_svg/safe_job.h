@@ -32,10 +32,4 @@ typedef struct SafeLayer_s {
   SafeJob *safe_job;
 } SafeLayer;
 
-// typedef struct SafeLayer_s {
-
-// } SafeLayer;
-
-SafeLayer to_safe_layer(SafeJob *safe_job, int layerNum);
-
 #endif
