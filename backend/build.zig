@@ -47,7 +47,7 @@ pub fn build(b: *std.Build) void {
             "src/context_inline.c",
             "src/output_string.c",
             "src/inline_render_svg/gvdevice.c",
-            "src/inline_render_svg/inner_render_svg.c",
+            "src/inline_render_svg/init_bb.c",
             "src/inline_render_svg/render_svg.c",
             "src/inline_render_svg/emit_svg.c",
             "src/inline_render_svg/core_svg.c",

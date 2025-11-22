@@ -1,103 +1,404 @@
-#include "../agrw.h"
-#include "../gv_char_classes.h"
+#include "../output_string.h"
+#include "cgraph.h"
 #include "const.h"
+#include "geom.h"
 #include "geomprocs.h"
+#include "gv_ctype.h"
+#include "gv_math.h"
 #include "gvc.h" // IWYU pragma: keep
-#include "gvcint.h"
-#include "util/list.h"
+#include "gvcext.h"
+#include "gvcint.h" // IWYU pragma: keep
+#include "gvcjob.h"
+#include "gvplugin_render.h" // IWYU pragma: keep
+#include "render_svg.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "core_svg.h"
+#include "safe_job.h"
+#include "streq.h"
+#include "types.h"
+#include "util/list.h"
 
-static boxf bezier_bb(bezier bz) {
-  pointf p, p1, p2;
-  boxf bb;
+static bool is_natural_number(const char *sstr) {
+  const char *str = sstr;
 
-  assert(bz.size > 0);
-  assert(bz.size % 3 == 1);
-  bb.LL = bb.UR = bz.list[0];
-  for (size_t i = 1; i < bz.size;) {
-    /* take mid-point between two control points for bb calculation */
-    p1 = bz.list[i];
-    i++;
-    p2 = bz.list[i];
-    i++;
-    p.x = (p1.x + p2.x) / 2;
-    p.y = (p1.y + p2.y) / 2;
-    expandbp(&bb, p);
-
-    p = bz.list[i];
-    expandbp(&bb, p);
-    i++;
-  }
-  return bb;
+  while (*str)
+    if (!gv_isdigit(*str++))
+      return false;
+  return true;
 }
 
-extern boxf arrow_bb(pointf p, pointf u, double arrowsize);
-static void init_splines_bb(splines *spl) {
-  bezier bz;
-  boxf bb, b;
+static int layer_index(int numLayers, char **layerIDs, char *str, int all) {
+  int i;
 
-  assert(spl->size > 0);
-  bz = spl->list[0];
-  bb = bezier_bb(bz);
-  for (size_t i = 0; i < spl->size; i++) {
+  if (streq(str, "all"))
+    return all;
+  if (is_natural_number(str))
+    return atoi(str);
+  if (layerIDs)
+    for (i = 1; i <= numLayers; i++)
+      if (streq(str, layerIDs[i]))
+        return i;
+  return -1;
+}
+
+static bool selectedLayer(int layerNum, int numLayers, char *layerDelims,
+                          char *layerListDelims, char **layerIDs, char *spec) {
+  int n0, n1;
+  char *w0, *w1;
+  char *buf_part_p = NULL, *buf_p = NULL, *cur, *part_in_p;
+  bool rval = false;
+
+  // copy `spec` so we can `strtok_r` it
+  char *spec_copy = gv_strdup(spec);
+  part_in_p = spec_copy;
+
+  while (!rval && (cur = strtok_r(part_in_p, layerListDelims, &buf_part_p))) {
+    w1 = w0 = strtok_r(cur, layerDelims, &buf_p);
+    if (w0)
+      w1 = strtok_r(NULL, layerDelims, &buf_p);
+    if (w1 != NULL) {
+      assert(w0 != NULL);
+      n0 = layer_index(numLayers, layerIDs, w0, 0);
+      n1 = layer_index(numLayers, layerIDs, w1, numLayers);
+      if (n0 >= 0 || n1 >= 0) {
+        if (n0 > n1) {
+          SWAP(&n0, &n1);
+        }
+        rval = BETWEEN(n0, layerNum, n1);
+      }
+    } else if (w0 != NULL) {
+      n0 = layer_index(numLayers, layerIDs, w0, layerNum);
+      rval = (n0 == layerNum);
+    } else {
+      rval = false;
+    }
+    part_in_p = NULL;
+  }
+  free(spec_copy);
+  return rval;
+}
+
+/* Determine order of output.
+ * Output usually in breadth first graph walk order
+ */
+static int chkOrder(graph_t *g) {
+  char *p = agget(g, "outputorder");
+  if (p) {
+    if (!strcmp(p, "nodesfirst"))
+      return EMIT_SORTED;
+    if (!strcmp(p, "edgesfirst"))
+      return EMIT_EDGE_SORTED;
+  }
+  return 0;
+}
+
+DEFINE_LIST(layer_names, char *)
+
+/* Parse the graph's layerselect attribute, which determines
+ * which layers are emitted. The specification is the same used
+ * by the layer attribute.
+ *
+ * If we find n layers, we return an array arr of n+2 ints. arr[0]=n.
+ * arr[n+1]=numLayers+1, acting as a sentinel. The other entries give
+ * the desired layer indices.
+ *
+ * If no layers are detected, NULL is returned.
+ *
+ * This implementation does a linear walk through each layer index and
+ * uses selectedLayer to match it against p. There is probably a more
+ * efficient way to do this, but this is simple and until we find people
+ * using huge numbers of layers, it should be adequate.
+ */
+static int *parse_layerselect(int numLayers, char *layerDelims,
+                              char *layerListDelims, char **layerIDs, char *p) {
+  int *laylist = gv_calloc(numLayers + 2, sizeof(int));
+  int i, cnt = 0;
+  for (i = 1; i <= numLayers; i++) {
+    if (selectedLayer(i, numLayers, layerDelims, layerListDelims, layerIDs,
+                      p)) {
+      laylist[++cnt] = i;
+    }
+  }
+  if (cnt) {
+    laylist[0] = cnt;
+    laylist[cnt + 1] = numLayers + 1;
+  } else {
+    agwarningf("The layerselect attribute \"%s\" does not match any layer "
+               "specifed by the layers attribute - ignored.\n",
+               p);
+    free(laylist);
+    laylist = NULL;
+  }
+  return laylist;
+}
+
+/* Split input string into tokens, with separators specified by
+ * the layersep attribute. Store the values in the gvc->layerIDs array,
+ * starting at index 1, and return the count.
+ * Note that there is no mechanism
+ * to free the memory before exit.
+ */
+static int parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
+  char *tok;
+
+  char *layers = gv_strdup(p);
+  layer_names_t layerIDs = {0};
+
+  // inferred entry for the first (unnamed) layer
+  layer_names_append(&layerIDs, NULL);
+
+  for (tok = strtok(layers, layerDelims); tok;
+       tok = strtok(NULL, layerDelims)) {
+    layer_names_append(&layerIDs, tok);
+  }
+
+  assert(layer_names_size(&layerIDs) - 1 <= INT_MAX);
+  int ntok = (int)(layer_names_size(&layerIDs) - 1);
+
+  // if we found layers, save them for later reference
+  if (layer_names_size(&layerIDs) > 1) {
+    layer_names_append(&layerIDs, NULL); // add a terminating entry
+    *out_layerIDs = layer_names_detach(&layerIDs);
+  }
+  layer_names_free(&layerIDs);
+
+  return ntok;
+}
+
+extern Agsym_t *G_peripheries, *G_penwidth;
+
+output_string render_svg(Agraph_t *g) {
+  // FIXME: do we need it? we suspect it is used only for clip!
+  init_bb(g);
+
+  double xf, yf;
+  char *p;
+  int i;
+
+  /* margin - in points - in page orientation */
+  pointf margin = (pointf){0, 0}; // margin for a page of the graph - points
+  if ((p = agget(g, "margin"))) {
+    i = sscanf(p, "%lf,%lf", &xf, &yf);
     if (i > 0) {
-      bz = spl->list[i];
-      b = bezier_bb(bz);
-      EXPANDBB(&bb, b);
-    }
-    if (bz.sflag) {
-      b = arrow_bb(bz.sp, bz.list[0], 1);
-      EXPANDBB(&bb, b);
-    }
-    if (bz.eflag) {
-      b = arrow_bb(bz.ep, bz.list[bz.size - 1], 1);
-      EXPANDBB(&bb, b);
+      margin.x = margin.y = xf * POINTS_PER_INCH;
+      if (i > 1)
+        margin.y = yf * POINTS_PER_INCH;
     }
   }
-  spl->bb = bb;
-}
 
-static void init_bb_edge(edge_t *e) {
-  splines *spl;
+  /* pad */
+  pointf pad = {.x = 4., .y = 4.};
+  if ((p = agget(g, "pad"))) {
+    i = sscanf(p, "%lf,%lf", &xf, &yf);
+    if (i > 0) {
+      pad.x = pad.y = xf * POINTS_PER_INCH;
+      if (i > 1)
+        pad.y = yf * POINTS_PER_INCH;
+    }
+  }
 
-  spl = ED_spl(e);
-  if (spl)
-    init_splines_bb(spl);
-}
+  /* rotation */
+  int rotation = 0;
+  if (GD_drawing(g)->landscape)
+    rotation = 90;
 
-static void init_bb_node(graph_t *g, node_t *n) {
-  edge_t *e;
+  /* clusters have peripheries */
+  G_peripheries = agfindgraphattr(g, "peripheries"); // FIXME: used only once
+  G_penwidth = agfindgraphattr(g, "penwidth");       // FIXME: used only once
 
-  ND_bb(n).LL.x = ND_coord(n).x - ND_lw(n);
-  ND_bb(n).LL.y = ND_coord(n).y - ND_ht(n) / 2.;
-  ND_bb(n).UR.x = ND_coord(n).x + ND_rw(n);
-  ND_bb(n).UR.y = ND_coord(n).y + ND_ht(n) / 2.;
+  char *str;
+  /* free layer strings and pointers from previous graph */
+  char **layerIDs = NULL;
+  int *layerlist = NULL;
+  char *layerListDelims = NULL;
+  char *layerDelims = NULL;
+  int numLayers = 1;
+  char *layer_str;
+  if ((layer_str = agget(g, "layers")) != 0) {
+    layerDelims = agget(g, "layersep");
+    if (!layerDelims)
+      layerDelims = DEFAULT_LAYERSEP;
 
-  for (e = agfstout(g, n); e; e = agnxtout(g, e))
-    init_bb_edge(e);
+    layerListDelims = agget(g, "layerlistsep");
+    if (!layerListDelims)
+      layerListDelims = DEFAULT_LAYERLISTSEP;
+    char *tok;
+    if ((tok = strpbrk(layerDelims,
+                       layerListDelims))) { /* conflict in delimiter strings */
+      agwarningf("The character \'%c\' appears in both the layersep and "
+                 "layerlistsep attributes - layerlistsep ignored.\n",
+                 *tok);
+      layerListDelims = "";
+    }
 
-  /* IDEA - could also save in the node the bb of the node and
-  all of its outedges, then the scan time would be proportional
-  to just the number of nodes for many graphs.
-  Wouldn't work so well if the edges are sprawling all over the place
-  because then the boxes would overlap a lot and require more tests,
-  but perhaps that wouldn't add much to the cost before trying individual
-  nodes and edges. */
-}
+    numLayers = parse_layers(&layerIDs, layerDelims, layer_str);
+    char *layerselect_str = NULL;
+    if ((layerselect_str = agget(g, "layerselect")) != 0 && *layerselect_str) {
+      layerlist = parse_layerselect(numLayers, layerDelims, layerListDelims,
+                                    layerIDs, layerselect_str);
+    }
+  }
 
-static void init_bb(graph_t *g) {
-  node_t *n;
+  /* page size on Linux, Mac OS X and Windows */
+  output_string output = {.data_position = 0, .data_allocated = 4096};
+  if (!(output.data = malloc(output.data_allocated))) {
+    agerrorf("failure malloc'ing for result string");
+    exit(-1);
+  }
 
-  for (n = agfstnode(g); n; n = agnxtnode(g, n))
-    init_bb_node(g, n);
-}
+  const char *stylesheet = agget(g, "stylesheet");
+  svg_begin_job(&output, stylesheet);
+  // FIXME: remove hardcode
+  svg_comment(&output, "Generated by graphviz version a (a)\n");
 
-extern output_string inner_render_svg(Agrw_t graph);
-/* Render layout in a specified format to a malloc'ed string */
-output_string render_svg(Agrw_t graph) {
-  init_bb(graph);
+  pointf dpi = (pointf){72, 72}; // FIXME: make dpi single value
+  if (GD_drawing(g)->dpi != 0) {
+    dpi.x = dpi.y = GD_drawing(g)->dpi;
+  }
 
-  return inner_render_svg(graph);
+  int rv;
+  Agnode_t *n;
+  char *nodename = NULL;
+
+  /* bounding box */
+  boxf graph_bb = GD_bb(g);
+  boxf bb = {
+      .LL = sub_pointf(graph_bb.LL, pad),
+      .UR = add_pointf(graph_bb.UR,
+                       pad)}; // bb is bb of graph and padding - graph units
+
+  pointf sz = sub_pointf(bb.UR,
+                         bb.LL); // size, including padding - graph units
+
+  /* view gives port size in graph units, unscaled or rotated
+   * zoom gives scaling factor.
+   * focus gives the position in the graph of the center of the port
+   */
+  double zoom = 1.0; /* scaling factor */
+
+  /* determine final drawing size and scale to apply. */
+  /* N.B. size given by user is not rotated by landscape mode */
+  /* start with "natural" size of layout */
+
+  if (GD_drawing(g)->size.x > 0.001 &&
+      GD_drawing(g)->size.y > 0.001) { /* graph size was given by user... */
+    pointf size = GD_drawing(g)->size;
+    if (sz.x <= 0.001)
+      sz.x = size.x;
+    if (sz.y <= 0.001)
+      sz.y = size.y;
+    if (size.x < sz.x ||
+        size.y < sz.y             /* drawing is too big (in either axis) ... */
+        || (GD_drawing(g)->filled /* or ratio=filled requested and ... */
+            && size.x > sz.x &&
+            size.y > sz.y)) /* drawing is too small (in both axes) ... */
+      zoom = fmin(size.x / sz.x, size.y / sz.y);
+  }
+
+  /* default focus, in graph units = center of bb */
+  pointf focus = scale(0.5, add_pointf(graph_bb.LL, graph_bb.UR));
+
+  /* rotate and scale bb to give default absolute size in points*/
+  pointf view = scale(zoom, sz);
+
+  /* user can override */
+  if ((str = agget(g, "viewport"))) {
+    nodename = gv_alloc(strlen(str) + 1);
+    rv = sscanf(str, "%lf,%lf,%lf,\'%[^\']\'", &view.x, &view.y, &zoom,
+                nodename);
+    if (rv == 4) {
+      n = agfindnode(g->root, nodename);
+      if (n) {
+        focus = ND_coord(n);
+      }
+    } else {
+      rv = sscanf(str, "%lf,%lf,%lf,%[^,]%c", &view.x, &view.y, &zoom, nodename,
+                  &(char){0});
+      if (rv == 4) {
+        n = agfindnode(g->root, nodename);
+        if (n) {
+          focus = ND_coord(n);
+        }
+      } else {
+        sscanf(str, "%lf,%lf,%lf,%lf,%lf", &view.x, &view.y, &zoom, &focus.x,
+               &focus.y);
+      }
+    }
+    free(nodename);
+  }
+
+  /* unpaginated image size - in points - in graph orientation */
+  pointf imageSize = view; // image size on one page of the graph - points
+
+  /* rotate imageSize to page orientation */
+  if (rotation)
+    imageSize = exch_xyf(imageSize);
+
+  /* initial window size */
+  unsigned int width =
+      ROUND((imageSize.x + 2 * margin.x) * dpi.x / POINTS_PER_INCH);
+  unsigned int height =
+      ROUND((imageSize.y + 2 * margin.y) * dpi.y / POINTS_PER_INCH);
+
+  // FIXME: add warning about ignoring centering attribute
+  // https://graphviz.org/docs/attrs/center/
+
+  /* rotate back into graph orientation */
+  if (rotation) {
+    margin = exch_xyf(margin);
+  }
+
+  /* canvas area, centered if necessary */
+  boxf canvasBox = {0};
+  canvasBox.LL.x = margin.x;
+  canvasBox.LL.y = margin.y;
+  canvasBox.UR.x = margin.x + view.x;
+  canvasBox.UR.y = margin.y + view.y;
+
+  /* pageBoundingBox in device units and page orientation */
+  box pageBoundingBox = {0};
+  pageBoundingBox.LL.x = ROUND(canvasBox.LL.x * dpi.x / POINTS_PER_INCH);
+  pageBoundingBox.LL.y = ROUND(canvasBox.LL.y * dpi.y / POINTS_PER_INCH);
+  pageBoundingBox.UR.x = ROUND(canvasBox.UR.x * dpi.x / POINTS_PER_INCH);
+  pageBoundingBox.UR.y = ROUND(canvasBox.UR.y * dpi.y / POINTS_PER_INCH);
+  if (rotation) {
+    pageBoundingBox.LL = exch_xy(pageBoundingBox.LL);
+    pageBoundingBox.UR = exch_xy(pageBoundingBox.UR);
+    canvasBox.LL = exch_xyf(canvasBox.LL);
+    canvasBox.UR = exch_xyf(canvasBox.UR);
+  }
+
+  /* size of one page in graph units */
+  double pageSize_x = view.x / zoom;
+  double pageSize_y = view.y / zoom;
+  boxf clip = {0};
+  clip.LL.x = focus.x - pageSize_x / 2.0;
+  clip.LL.y = focus.y - pageSize_y / 2.0;
+  clip.UR.x = clip.LL.x + pageSize_x;
+  clip.UR.y = clip.LL.y + pageSize_y;
+
+  SafeJob safe_job = {
+      .layerNum = 0,
+      .dpi = dpi,
+      .rotation = rotation,
+      .pageBoundingBox = pageBoundingBox,
+      .height = height,
+      .width = width,
+      .canvasBox = canvasBox,
+      .zoom = zoom,
+      .clip = clip,
+
+      // from gvc
+      .graph = g,
+      .layerIDs = layerIDs,
+      .layerDelims = layerDelims,
+      .layerListDelims = layerListDelims,
+      .numLayers = numLayers,
+  };
+
+  emit_graph(&output, &safe_job, g, layerlist, chkOrder(g));
+
+  return output;
 }

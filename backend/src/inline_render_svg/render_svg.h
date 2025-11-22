@@ -102,6 +102,7 @@ RENDER_API stroke_t taper(bezier *, double (*radfunc_t)(double, double, double),
 RENDER_API pointf textspan_size(GVC_t *gvc, textspan_t *span);
 int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
                   const char *clrs);
+void init_bb(graph_t *g);
 
 #undef RENDER_API
 
