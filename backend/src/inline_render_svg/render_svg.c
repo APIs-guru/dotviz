@@ -410,27 +410,8 @@ extern gvdevice_callbacks_t gvdevice_callbacks;
 extern output_string inner_render_svg(GVC_t *gvc, Agrw_t graph);
 /* Render layout in a specified format to a malloc'ed string */
 output_string render_svg(GVC_t *gvc, Agrw_t graph) {
-
-  Agraph_t *g = graph;
-  init_bb(g);
-  init_gvc(gvc, g);
-  init_layering(gvc, g);
-  /* create a job for the required format */
-  GVJ_t *job = gvc->job = gvc->jobs = gv_alloc(sizeof(GVJ_t));
-  job->output_langname = "svg";
-  job->gvc = gvc;
-  job = gvc->job;
-
-  job->graph_index = 0;
-  job->common = &gvc->common;
-  job->layout_type = gvc->layout.type;
-
-  output_string output = inner_render_svg(gvc, g);
-
-  free(job->active_tooltip);
-  free(job->selected_href);
-  free(job);
-
-  gvc->jobs = gvc->job = NULL;
-  return output;
+  init_bb(graph);
+  init_gvc(gvc, graph);
+  init_layering(gvc, graph);
+  return inner_render_svg(gvc, graph);
 }
