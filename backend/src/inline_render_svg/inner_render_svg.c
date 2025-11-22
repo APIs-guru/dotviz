@@ -39,31 +39,6 @@ static void init_job_pad(GVJ_t *job) {
   }
 }
 
-static void init_job_margin(GVJ_t *job) {
-  GVC_t *gvc = job->gvc;
-
-  if (gvc->graph_sets_margin) {
-    job->margin = gvc->margin;
-  } else {
-    /* set default margins depending on format */
-    switch (job->output_lang) {
-    case GVRENDER_PLUGIN:
-      job->margin = (pointf){0, 0};
-      break;
-    case PCL:
-    case MIF:
-    case METAPOST:
-    case VTX:
-    case QPDF:
-      job->margin.x = job->margin.y = DEFAULT_PRINT_MARGIN;
-      break;
-    default:
-      job->margin.x = job->margin.y = DEFAULT_EMBED_MARGIN;
-      break;
-    }
-  }
-}
-
 output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   /* page size on Linux, Mac OS X and Windows */
   const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
@@ -83,11 +58,16 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
   gvc->active_jobs = job; /* first job of new list */
 
   init_job_pad(job);
-  init_job_margin(job);
+
+  /* margin - in points - in page orientation */
+  pointf margin = (pointf){0, 0}; // margin for a page of the graph - points
+  if (gvc->graph_sets_margin) {
+    margin = gvc->margin;
+  }
+
+  pointf dpi = (pointf){72, 72}; // FIXME: make dpi single value
   if (GD_drawing(g)->dpi != 0) {
-    job->dpi.x = job->dpi.y = GD_drawing(g)->dpi;
-  } else {
-    job->dpi.x = job->dpi.y = 72;
+    dpi.x = dpi.y = GD_drawing(g)->dpi;
   }
 
   {
@@ -166,15 +146,11 @@ output_string inner_render_svg(GVC_t *gvc, GVJ_t *job, Agraph_t *g) {
     job->focus = xy;
   }
 
-  /* margin - in points - in page orientation */
-  pointf margin = job->margin; // margin for a page of the graph - points
-
   pointf focus = job->focus;
   pointf view = job->view;
   // SafeJob:
   int layerNum = job->layerNum;
   point pagesArrayElem = job->pagesArrayElem;
-  pointf dpi = job->dpi;
   int rotation = job->rotation;
   double zoom = job->zoom;
 
