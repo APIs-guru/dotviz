@@ -99,28 +99,6 @@ void *init_xdot(Agraph_t *g) {
 }
 
 /* push empty graphic state for current object */
-obj_state_t *push_obj_state(GVJ_t *job) {
-  obj_state_t *obj = gv_alloc(sizeof(obj_state_t));
-
-  obj_state_t *parent = obj->parent = job->obj;
-  job->obj = obj;
-  if (parent) {
-    obj->pencolor = parent->pencolor; /* default styles to parent's style */
-    obj->fillcolor = parent->fillcolor;
-    obj->pen = parent->pen;
-    obj->fill = parent->fill;
-    obj->penwidth = parent->penwidth;
-    obj->gradient_angle = parent->gradient_angle;
-    obj->stopcolor = parent->stopcolor;
-  } else {
-    obj->pen = PEN_SOLID;
-    obj->fill = FILL_NONE;
-    obj->penwidth = PENWIDTH_NORMAL;
-  }
-  return obj;
-}
-
-/* push empty graphic state for current object */
 obj_state_t child_obj_state(obj_state_t *parent) {
   obj_state_t child = {0};
   child.parent = parent;
@@ -138,33 +116,6 @@ obj_state_t child_obj_state(obj_state_t *parent) {
     child.penwidth = PENWIDTH_NORMAL;
   }
   return child;
-}
-
-/* pop graphic state of current object */
-void pop_obj_state(GVJ_t *job) {
-  obj_state_t *obj = job->obj;
-
-  assert(obj);
-
-  free(obj->id);
-  free(obj->url);
-  free(obj->labelurl);
-  free(obj->tailurl);
-  free(obj->headurl);
-  free(obj->tooltip);
-  free(obj->labeltooltip);
-  free(obj->tailtooltip);
-  free(obj->headtooltip);
-  free(obj->target);
-  free(obj->labeltarget);
-  free(obj->tailtarget);
-  free(obj->headtarget);
-  free(obj->url_map_p);
-  free(obj->url_bsplinemap_p);
-  free(obj->url_bsplinemap_n);
-
-  job->obj = obj->parent;
-  free(obj);
 }
 
 /* pop graphic state of current object */
@@ -268,12 +219,6 @@ char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb) {
   agxbprint(xb, "%s%ld", pfx, idnum);
 
   return agxbuse(xb);
-}
-
-char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb) {
-  SafeJob safe_job = to_safe_job(job);
-  SafeLayer safe_layer = to_safe_layer(&safe_job, job->layerNum);
-  return getObjId(&safe_layer, obj, xb);
 }
 
 /* Map "\n" to ^J, "\r" to ^M and "\l" to ^J.
@@ -649,13 +594,6 @@ int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
   if (save_penwidth > THIN_LINE)
     svg_set_penwidth(obj, save_penwidth);
   colorsegs_free(&segs);
-  return rv;
-}
-
-int job_stripedBox(GVJ_t *job, pointf *AF, const char *clrs, int rotate) {
-  output_string output = job2output_string(job);
-  int rv = stripedBox(&output, job->obj, AF, clrs, rotate);
-  output_string2job(job, &output);
   return rv;
 }
 

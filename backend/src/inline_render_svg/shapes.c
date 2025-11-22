@@ -257,7 +257,8 @@ static bool SPECIAL_CORNERS(graphviz_polygon_style_t style) {
  * int		SHAPE_path(node *n, edge_t *e, int pt, boxf path[], int *nbox)
  *			create a path for the port of e that touches n,
  *			return side
- * void		SHAPE_gencode(GVJ_t *job, node_t *n)
+ * void		SHAPE_gencode(output_string *output, SafeLayer *safe_layer,
+ *                      obj_state_t *obj, node_t *n)
  *			generate graphics code for a node.
  *
  * some shapes, polygons in particular, use additional shape control data *
@@ -1883,14 +1884,6 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     break;
   }
   free(B);
-}
-
-void job_round_corners(GVJ_t *tmp_job, pointf *AF, size_t sides,
-                       graphviz_polygon_style_t style, int filled) {
-  assert(tmp_job != NULL);
-  output_string output = job2output_string(tmp_job);
-  round_corners(&output, tmp_job->obj, AF, sides, style, filled);
-  output_string2job(tmp_job, &output);
 }
 
 /*=============================poly start=========================*/

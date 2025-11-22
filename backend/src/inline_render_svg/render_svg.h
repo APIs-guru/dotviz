@@ -100,11 +100,8 @@ RENDER_API Ppolyline_t *ellipticWedge(pointf ctr, double major, double minor,
 RENDER_API void emit_clusters(output_string *output, SafeLayer *safe_layer,
                               obj_state_t *parent, Agraph_t *g);
 RENDER_API char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb);
-RENDER_API char *job_getObjId(GVJ_t *job, void *obj, agxbuf *xb);
 RENDER_API void emit_graph(output_string *output, SafeJob *safe_job, graph_t *g,
                            int *layerlist, int graph_outputorder);
-RENDER_API void job_emit_label(GVJ_t *job, emit_state_t emit_state,
-                               textlabel_t *);
 RENDER_API void emit_label(output_string *output, SafeLayer *safe_layer,
                            obj_state_t *obj, emit_state_t emit_state,
                            textlabel_t *lp);
@@ -139,16 +136,12 @@ RENDER_API int place_portlabel(edge_t *e, bool head_p);
 RENDER_API void makePortLabels(edge_t *e);
 RENDER_API pointf edgeMidpoint(graph_t *g, edge_t *e);
 RENDER_API void addEdgeLabels(edge_t *e);
-RENDER_API void pop_obj_state(GVJ_t *job);
-RENDER_API obj_state_t *push_obj_state(GVJ_t *job);
 RENDER_API obj_state_t child_obj_state(obj_state_t *parent);
 RENDER_API void free_child_obj(obj_state_t *child);
 RENDER_API int rank(graph_t *g, int balance, int maxiter);
 RENDER_API int rank2(graph_t *g, int balance, int maxiter, int search_size);
 RENDER_API port resolvePort(node_t *n, node_t *other, port *oldport);
 RENDER_API void resolvePorts(edge_t *e);
-RENDER_API void job_round_corners(GVJ_t *job, pointf *AF, size_t sides,
-                                  graphviz_polygon_style_t style, int filled);
 RENDER_API void round_corners(output_string *output, obj_state_t *obj,
                               pointf *AF, size_t sides,
                               graphviz_polygon_style_t style, int filled);
@@ -161,8 +154,6 @@ RENDER_API double selfRightSpace(edge_t *e);
 RENDER_API shape_kind shapeOf(node_t *);
 RENDER_API void shape_clip(node_t *n, pointf curve[4]);
 RENDER_API void make_simple_label(GVC_t *gvc, textlabel_t *rv);
-RENDER_API int job_stripedBox(GVJ_t *job, pointf *AF, const char *clrs,
-                              int rotate);
 int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
                const char *clrs, int rotate);
 RENDER_API stroke_t taper(bezier *, double (*radfunc_t)(double, double, double),

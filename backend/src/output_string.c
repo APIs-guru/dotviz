@@ -31,17 +31,3 @@ void out_puts(output_string *output, const char *str) {
 }
 
 void out_putc(output_string *output, const char c) { out_put(output, &c, 1); }
-
-output_string job2output_string(GVJ_t *job) {
-  output_string output;
-  output.data_allocated = job->output_data_allocated;
-  output.data_position = job->output_data_position;
-  output.data = job->output_data;
-  return output;
-}
-
-void output_string2job(GVJ_t *job, output_string *output) {
-  job->output_data_allocated = output->data_allocated;
-  job->output_data_position = output->data_position;
-  job->output_data = output->data;
-}

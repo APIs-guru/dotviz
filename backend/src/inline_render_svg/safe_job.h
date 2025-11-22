@@ -5,15 +5,15 @@
 #include "types.h"
 
 /// 1. ONLY CONST FIELDS!!!!!!!!!!!!!!
-/// 2. Function can receive only GVJ_t or SafeJob, not both!!!!
+/// no job :)
 typedef struct SafeJob_s {
-  const int layerNum;         /* current layer - 1 based*/
-  const pointf dpi;           /* device resolution device-units-per-inch */
-  const int rotation;         /* viewport rotation (degrees)  0=portrait,
+  const int layerNum;        /* current layer - 1 based*/
+  const pointf dpi;          /* device resolution device-units-per-inch */
+  const int rotation;        /* viewport rotation (degrees)  0=portrait,
 90=landscape */
-  const box pageBoundingBox;  /* rotated boundingBox - device units */
-  const unsigned int width;   /* device width - device units */
-  const unsigned int height;  /* device height - device units */
+  const box pageBoundingBox; /* rotated boundingBox - device units */
+  const unsigned int width;  /* device width - device units */
+  const unsigned int height; /* device height - device units */
   boxf canvasBox;
   double zoom;
   const boxf clip; /* clip region in graph units */
@@ -36,7 +36,6 @@ typedef struct SafeLayer_s {
 
 // } SafeLayer;
 
-SafeJob to_safe_job(GVJ_t *job);
 SafeLayer to_safe_layer(SafeJob *safe_job, int layerNum);
 
 #endif
