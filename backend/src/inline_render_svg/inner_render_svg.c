@@ -3,6 +3,8 @@
 #include "const.h"
 #include "geom.h"
 #include "geomprocs.h"
+#include "gv_ctype.h"
+#include "gv_math.h"
 #include "gvc.h" // IWYU pragma: keep
 #include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
@@ -14,7 +16,69 @@
 #include <string.h>
 #include "core_svg.h"
 #include "safe_job.h"
+#include "streq.h"
 #include "types.h"
+#include "util/list.h"
+
+static bool is_natural_number(const char *sstr) {
+  const char *str = sstr;
+
+  while (*str)
+    if (!gv_isdigit(*str++))
+      return false;
+  return true;
+}
+
+static int layer_index(int numLayers, char **layerIDs, char *str, int all) {
+  int i;
+
+  if (streq(str, "all"))
+    return all;
+  if (is_natural_number(str))
+    return atoi(str);
+  if (layerIDs)
+    for (i = 1; i <= numLayers; i++)
+      if (streq(str, layerIDs[i]))
+        return i;
+  return -1;
+}
+
+static bool selectedLayer(int layerNum, int numLayers, char *layerDelims,
+                          char *layerListDelims, char **layerIDs, char *spec) {
+  int n0, n1;
+  char *w0, *w1;
+  char *buf_part_p = NULL, *buf_p = NULL, *cur, *part_in_p;
+  bool rval = false;
+
+  // copy `spec` so we can `strtok_r` it
+  char *spec_copy = gv_strdup(spec);
+  part_in_p = spec_copy;
+
+  while (!rval && (cur = strtok_r(part_in_p, layerListDelims, &buf_part_p))) {
+    w1 = w0 = strtok_r(cur, layerDelims, &buf_p);
+    if (w0)
+      w1 = strtok_r(NULL, layerDelims, &buf_p);
+    if (w1 != NULL) {
+      assert(w0 != NULL);
+      n0 = layer_index(numLayers, layerIDs, w0, 0);
+      n1 = layer_index(numLayers, layerIDs, w1, numLayers);
+      if (n0 >= 0 || n1 >= 0) {
+        if (n0 > n1) {
+          SWAP(&n0, &n1);
+        }
+        rval = BETWEEN(n0, layerNum, n1);
+      }
+    } else if (w0 != NULL) {
+      n0 = layer_index(numLayers, layerIDs, w0, layerNum);
+      rval = (n0 == layerNum);
+    } else {
+      rval = false;
+    }
+    part_in_p = NULL;
+  }
+  free(spec_copy);
+  return rval;
+}
 
 /* Determine order of output.
  * Output usually in breadth first graph walk order
@@ -30,7 +94,113 @@ static int chkOrder(graph_t *g) {
   return 0;
 }
 
+DEFINE_LIST(layer_names, char *)
+
+/* Parse the graph's layerselect attribute, which determines
+ * which layers are emitted. The specification is the same used
+ * by the layer attribute.
+ *
+ * If we find n layers, we return an array arr of n+2 ints. arr[0]=n.
+ * arr[n+1]=numLayers+1, acting as a sentinel. The other entries give
+ * the desired layer indices.
+ *
+ * If no layers are detected, NULL is returned.
+ *
+ * This implementation does a linear walk through each layer index and
+ * uses selectedLayer to match it against p. There is probably a more
+ * efficient way to do this, but this is simple and until we find people
+ * using huge numbers of layers, it should be adequate.
+ */
+static int *parse_layerselect(int numLayers, char *layerDelims,
+                              char *layerListDelims, char **layerIDs, char *p) {
+  int *laylist = gv_calloc(numLayers + 2, sizeof(int));
+  int i, cnt = 0;
+  for (i = 1; i <= numLayers; i++) {
+    if (selectedLayer(i, numLayers, layerDelims, layerListDelims, layerIDs,
+                      p)) {
+      laylist[++cnt] = i;
+    }
+  }
+  if (cnt) {
+    laylist[0] = cnt;
+    laylist[cnt + 1] = numLayers + 1;
+  } else {
+    agwarningf("The layerselect attribute \"%s\" does not match any layer "
+               "specifed by the layers attribute - ignored.\n",
+               p);
+    free(laylist);
+    laylist = NULL;
+  }
+  return laylist;
+}
+
+/* Split input string into tokens, with separators specified by
+ * the layersep attribute. Store the values in the gvc->layerIDs array,
+ * starting at index 1, and return the count.
+ * Note that there is no mechanism
+ * to free the memory before exit.
+ */
+static int parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
+  char *tok;
+
+  char *layers = gv_strdup(p);
+  layer_names_t layerIDs = {0};
+
+  // inferred entry for the first (unnamed) layer
+  layer_names_append(&layerIDs, NULL);
+
+  for (tok = strtok(layers, layerDelims); tok;
+       tok = strtok(NULL, layerDelims)) {
+    layer_names_append(&layerIDs, tok);
+  }
+
+  assert(layer_names_size(&layerIDs) - 1 <= INT_MAX);
+  int ntok = (int)(layer_names_size(&layerIDs) - 1);
+
+  // if we found layers, save them for later reference
+  if (layer_names_size(&layerIDs) > 1) {
+    layer_names_append(&layerIDs, NULL); // add a terminating entry
+    *out_layerIDs = layer_names_detach(&layerIDs);
+  }
+  layer_names_free(&layerIDs);
+
+  return ntok;
+}
+
 output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
+  char *str;
+  /* free layer strings and pointers from previous graph */
+  char **layerIDs = NULL;
+  int *layerlist = NULL;
+  char *layerListDelims = NULL;
+  char *layerDelims = NULL;
+  int numLayers = 1;
+  char *layer_str;
+  if ((layer_str = agget(g, "layers")) != 0) {
+    layerDelims = agget(g, "layersep");
+    if (!layerDelims)
+      layerDelims = DEFAULT_LAYERSEP;
+
+    layerListDelims = agget(g, "layerlistsep");
+    if (!layerListDelims)
+      layerListDelims = DEFAULT_LAYERLISTSEP;
+    char *tok;
+    if ((tok = strpbrk(layerDelims,
+                       layerListDelims))) { /* conflict in delimiter strings */
+      agwarningf("The character \'%c\' appears in both the layersep and "
+                 "layerlistsep attributes - layerlistsep ignored.\n",
+                 *tok);
+      layerListDelims = "";
+    }
+
+    numLayers = parse_layers(&layerIDs, layerDelims, layer_str);
+    char *layerselect_str = NULL;
+    if ((layerselect_str = agget(g, "layerselect")) != 0 && *layerselect_str) {
+      layerlist = parse_layerselect(numLayers, layerDelims, layerListDelims,
+                                    layerIDs, layerselect_str);
+    }
+  }
+
   /* page size on Linux, Mac OS X and Windows */
   output_string output = {.data_position = 0, .data_allocated = 4096};
   if (!(output.data = malloc(output.data_allocated))) {
@@ -50,10 +220,6 @@ output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
 
   // SafeJob:
   char **defaultlinestyle = gvc->defaultlinestyle;
-  char **layerIDs = gvc->layerIDs;
-  char *layerDelims = gvc->layerDelims;
-  char *layerListDelims = gvc->layerListDelims;
-  int numLayers = gvc->numLayers;
 
   /* margin - in points - in page orientation */
   pointf margin = (pointf){0, 0}; // margin for a page of the graph - points
@@ -68,7 +234,7 @@ output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
 
   int rv;
   Agnode_t *n;
-  char *str, *nodename = NULL;
+  char *nodename = NULL;
 
   pointf UR = gvc->bb.UR;
   pointf LL = gvc->bb.LL;
@@ -206,7 +372,8 @@ output_string inner_render_svg(GVC_t *gvc, Agraph_t *g) {
       .layerListDelims = layerListDelims,
       .numLayers = numLayers,
   };
-  emit_graph(&output, &safe_job, g, gvc->layerlist, chkOrder(g));
+
+  emit_graph(&output, &safe_job, g, layerlist, chkOrder(g));
 
   return output;
 }
