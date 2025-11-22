@@ -446,9 +446,11 @@ output_string render_svg(GVC_t *gvc, Agrw_t graph) {
 
   job->flags |= chkOrder(g);
   output_string output = inner_render_svg(gvc, job, g);
-  if (gvc->active_jobs) {
-    gvc->common.lib = NULL; /* FIXME - minimally this doesn't belong here
-                             */
-  }
+
+  free(job->active_tooltip);
+  free(job->selected_href);
+  free(job);
+
+  gvc->jobs = gvc->job = NULL;
   return output;
 }
