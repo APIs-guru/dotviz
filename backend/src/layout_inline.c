@@ -4,6 +4,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 // undirected
 #include "const.h"           // IWYU pragma: keep
@@ -307,7 +308,11 @@ extern gvlayout_features_t dotgen_features;
  * Check that the root graph has been initialized. If not, initialize it.
  * Return 0 on success.
  */
-int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g) {
+
+extern void circo_layout(Agraph_t *g);
+extern void circo_cleanup(graph_t *g);
+
+int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, bool is_circo) {
   agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
   GD_gvc(g) = gvc;
   if (g != agroot(g)) {
@@ -315,28 +320,47 @@ int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g) {
     GD_gvc(agroot(g)) = gvc;
   }
 
-  my_graph_init(g, !!(dotgen_features.flags & LAYOUT_USES_RANKDIR));
-  GD_drawing(agroot(g)) = GD_drawing(g);
-  dot_layout(g);
+  if (is_circo) {
+    my_graph_init(g, false);
+    GD_drawing(agroot(g)) = GD_drawing(g);
+    circo_layout(g);
 
-  GD_cleanup(g) = dot_cleanup;
+    GD_cleanup(g) = circo_cleanup;
+  } else {
+    my_graph_init(g, true);
+    GD_drawing(agroot(g)) = GD_drawing(g);
+    dot_layout(g);
+
+    GD_cleanup(g) = dot_cleanup;
+  }
 
   return 0;
 }
 
-int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
+int gw_gvLayout(GVC_t *gvc, Agrw_t graph, const char *engine) {
   graph_t *g = (graph_t *)graph;
 
+  if (strcmp(engine, "dot") && strcmp(engine, "circo")) {
+    agerrorf("Layout type: \"%s\" not recognized. Use one of: dot circo\n", engine);
+    return -1;
+  }
   // FIXME: handle "layout" attribute on graph
   char *p;
-  if ((p = agget(g, "layout"))) {
-    if (strncmp(p, "dot", 3)) {
-      agerrorf("Layout type: \"%s\" not recognized. Use one of: dot\n", p);
+  if ((p = agget(g, "layout"))) { // FIXME: layout should match is_circo
+    if (strcmp(p, "dot") && strcmp(p, "circo")) {
+      agerrorf("Layout type: \"%s\" not recognized. Use one of: dot circo\n",
+               p);
       return -1;
     }
+    if (strcmp(engine, p)) {
+      agerrorf("Layouts should be the same. %s != %s\n", engine, p);
+      return -1;
+    }
+    engine = p;
   }
+  bool is_circo = !strcmp(engine, "circo");
 
-  if (my_gvLayoutJobs(gvc, g) == -1)
+  if (my_gvLayoutJobs(gvc, g, is_circo) == -1)
     return -1;
 
   /* set bb attribute for basic layout.
@@ -355,14 +379,18 @@ int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph) {
 }
 
 extern void graph_cleanup(graph_t *g);
-int gw_gvFreeLayout(Agrw_t graph) {
+int gw_gvFreeLayout(Agrw_t graph, bool is_circo) {
   graph_t *g = (graph_t *)graph;
 
   /* skip if no Agraphinfo_t yet */
   if (!agbindrec(g, "Agraphinfo_t", 0, true))
     return 0;
 
-  dot_cleanup(g);
+  if (is_circo) {
+    circo_cleanup(g);
+  } else {
+    dot_cleanup(g);
+  }
 
   graph_cleanup(g);
   return 0;

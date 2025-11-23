@@ -271,6 +271,30 @@ pub fn buildGraphviz(
     addInclude(lib_dotgen, graphviz_dep);
     lib_dotgen.addConfigHeader(config_h);
 
+    const lib_circogen = b.addLibrary(.{
+        .name = "circogen",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+    lib_circogen.addCSourceFiles(.{
+        .root = graphviz_dep.path("lib/circogen"),
+        .files = &src_circogen,
+    });
+    addInclude(lib_circogen, graphviz_dep);
+    lib_circogen.addConfigHeader(config_h);
+
+    const lib_neatogen = b.addLibrary(.{
+        .name = "neatogen",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+    lib_neatogen.addCSourceFiles(.{
+        .root = graphviz_dep.path("lib/neatogen"),
+        .files = &src_neatogen,
+    });
+    addInclude(lib_neatogen, graphviz_dep);
+    lib_neatogen.addConfigHeader(config_h);
+
     const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
         .root_module = lib_mod,
@@ -319,9 +343,10 @@ pub fn buildGraphviz(
     lib_label.addConfigHeader(config_h);
 
     inline for (&.{
-        lib,          lib_cdt,               lib_cgraph, lib_common,
-        lib_dotgen,   lib_gvc,               lib_label,  lib_pack,
-        lib_pathplan, lib_plugin_dot_layout, lib_util,   lib_xdot,
+        lib,        lib_cdt,      lib_cgraph,   lib_common,
+        lib_dotgen, lib_circogen, lib_neatogen, lib_gvc,
+        lib_label,  lib_pack,     lib_pathplan, lib_plugin_dot_layout,
+        lib_util,   lib_xdot,
     }) |library| {
         applyWasiEmulation(library);
     }
@@ -416,6 +441,18 @@ const src_dotgen = [_][]const u8{
     "mincross.c", "acyclic.c", "decomp.c", "dotsplines.c", "compound.c",
     "rank.c",     "class2.c",  "flat.c",   "sameport.c",   "conc.c",
     "position.c",
+};
+
+const src_circogen = [_][]const u8{
+    "block.c",    "blockpath.c",    "blocktree.c", "circpos.c",
+    "circular.c", "circularinit.c", "edgelist.c",  "nodelist.c",
+};
+
+const src_neatogen = [_][]const u8{
+    "neatoinit.c", "adjust.c", "neatosplines.c", "constraint.c",
+    "geometry.c",  "poly.c",   "voronoi.c",      "edges.c",
+    "info.c",      "hedges.c", "heap.c",         "site.c",
+    "memory.c",    "legal.c",
 };
 
 const src_label = [_][]const u8{

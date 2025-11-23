@@ -11,7 +11,7 @@
 typedef void *Agrw_t;
 
 GVC_t *gw_create_context(void);
-int gw_gvLayoutDot(GVC_t *gvc, Agrw_t graph);
+int gw_gvLayout(GVC_t *gvc, Agrw_t graph, const char *engine);
 point my_gvusershape_size(Agrw_t graph, const char *height, const char *width);
 
 output_string render_svg(Agrw_t graph);

@@ -310,7 +310,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         _ = c.gvFreeContext(gvc);
     }
 
-    if (c.gw_gvLayoutDot(gvc, graphptr) != 0) {
+    if (c.gw_gvLayout(gvc, graphptr, request.engine) != 0) {
         return stringifyResponseJSON(wasm_allocator, .{
             .status = .failure,
             .errors = parseAgerrMessages(

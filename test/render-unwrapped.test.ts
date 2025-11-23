@@ -27,7 +27,7 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       assert.throws(() => viz.renderString('graph { layout=invalid }'), {
         name: 'Error',
-        message: 'Layout type: "invalid" not recognized. Use one of: dot',
+        message: 'Layout type: "invalid" not recognized. Use one of: dot circo',
       });
     });
 
@@ -45,7 +45,8 @@ describe('Viz', () => {
         () => viz.renderString('graph { layout=invalid; x=1.2.3=y }'),
         {
           name: 'Error',
-          message: 'Layout type: "invalid" not recognized. Use one of: dot',
+          message:
+            'Layout type: "invalid" not recognized. Use one of: dot circo',
         },
       );
     });
@@ -67,7 +68,8 @@ describe('Viz', () => {
         () => viz.renderString('graph { }', { engine: 'invalid' }),
         {
           name: 'Error',
-          message: 'Layout type: "invalid" not recognized. Use one of: dot',
+          message:
+            'Layout type: "invalid" not recognized. Use one of: dot circo',
         },
       );
     });

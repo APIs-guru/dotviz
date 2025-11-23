@@ -28,7 +28,7 @@ describe('Viz', () => {
         errors: [],
       });
     });
-    it.only('layers support', async (ctx) => {
+    it('layers support', async (ctx) => {
       const viz = await VizPackage.instance();
       const result = viz.renderFormats(
         `digraph G {
@@ -130,6 +130,22 @@ describe('Viz', () => {
 
     const svg = result.output;
     ctx.assert.fileSnapshot(svg, './test/snapshots/multiple_pages.svg', {
+      serializers: [(str: string) => str],
+    });
+    assert.deepStrictEqual(result, {
+      status: 'success',
+      output: svg,
+      errors: [],
+    });
+  });
+  it('circo layout', async (ctx) => {
+    const viz = await VizPackage.instance();
+    const result = viz.render(fs.readFileSync("./test/snapshots/circo.gv", "utf8"),
+      { format: 'svg', engine: 'circo' },
+    );
+
+    const svg = result.output;
+    ctx.assert.fileSnapshot(svg, './test/snapshots/circo.svg', {
       serializers: [(str: string) => str],
     });
     assert.deepStrictEqual(result, {
