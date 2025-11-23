@@ -25,8 +25,6 @@ output_string render_dot(Agraph_t *g) {
     }
   }
 
-  // agwarningf("pagedir=%s ignored\n", gvc->pagedir);
-
   my_attach_attrs_and_arrows(g);
 
   /* reset node state */

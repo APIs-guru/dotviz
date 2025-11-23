@@ -333,6 +333,8 @@ int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, bool is_circo) {
 
     GD_cleanup(g) = dot_cleanup;
   }
+  // FIXME: IMPORTANT: check that we don't use GVC after this line
+  GD_gvc(g) = NULL;
 
   return 0;
 }
@@ -341,7 +343,8 @@ int gw_gvLayout(GVC_t *gvc, Agrw_t graph, const char *engine) {
   graph_t *g = (graph_t *)graph;
 
   if (strcmp(engine, "dot") && strcmp(engine, "circo")) {
-    agerrorf("Layout type: \"%s\" not recognized. Use one of: dot circo\n", engine);
+    agerrorf("Layout type: \"%s\" not recognized. Use one of: dot circo\n",
+             engine);
     return -1;
   }
   // FIXME: handle "layout" attribute on graph
