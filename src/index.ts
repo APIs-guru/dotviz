@@ -35,6 +35,13 @@ export async function instance(): Promise<Viz> {
           );
         throw new Error('no instance');
       },
+      js_image_get_dimensions(path: bigint): void {
+        if (vizInstance) {
+          vizInstance._js_image_get_dimensions(path);
+        } else {
+          throw new Error('no instance');
+        }
+      },
     },
     wasi_snapshot_preview1: {
       fd_write(

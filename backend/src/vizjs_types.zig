@@ -123,6 +123,7 @@ pub const RenderRequest = struct {
     yInvert: bool,
     reduce: bool,
     images: ImageDimensionsMap,
+    svgBasePath: ?[:0]const u8 = null,
 };
 
 const RenderStatus = enum {

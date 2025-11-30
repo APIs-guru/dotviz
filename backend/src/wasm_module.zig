@@ -241,6 +241,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     };
 
     g_image_map = request.images;
+    g_svg_basepath = if (request.svgBasePath) |str| @ptrCast(str.ptr) else @ptrFromInt(0);
 
     errors_strings = .{
         .allocator = arena_allocator,
@@ -359,17 +360,26 @@ fn freeCString(string: ?[:0]const u8) void {
 }
 
 var g_image_map: vizjs_types.ImageDimensionsMap = undefined;
+pub export var g_svg_basepath: [*c]const u8 = undefined;
+extern fn js_image_get_dimensions(name: WasmString) void;
 export fn gvusershape_size(graph: Agrw_t, name: [*c]u8) c.point {
-    const dimensions = g_image_map.map.get(std.mem.span(name)) orelse @panic("no image found");
-    return c.my_gvusershape_size(graph, dimensions.height, dimensions.width);
+    const res = g_image_map.map.get(std.mem.span(name));
+    if (res) |dim| {
+        return c.my_gvusershape_size(graph, dim.height, dim.width);
+    } else {
+        js_image_get_dimensions(WasmString.init(std.mem.span(name)));
+        return .{ .x = -1, .y = -1 };
+    }
 }
 
 export fn get_dimensions_by_name(name: [*c]u8, dpi: c.pointf) c.point {
-    const dimensions = g_image_map.map.get(std.mem.span(name)) orelse return .{
-        .x = -1,
-        .y = -1,
-    };
-    return c.convert_image_dimensions(dpi, dimensions.height, dimensions.width);
+    const dimensions = g_image_map.map.get(std.mem.span(name));
+    if (dimensions) |dim| {
+        return c.convert_image_dimensions(dpi, dim.height, dim.width);
+    } else {
+        js_image_get_dimensions(WasmString.init(std.mem.span(name)));
+        return .{ .x = -1, .y = -1 };
+    }
 }
 
 extern fn canvas_measure_text(font_name: WasmString, text: WasmString, bold: bool, italic: bool) f64;

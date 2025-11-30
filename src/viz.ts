@@ -52,6 +52,7 @@ export interface RenderOptions {
   nodeAttributes?: Attributes;
   edgeAttributes?: Attributes;
   images?: Record<string, ImageSize>;
+  svgBasePath?: string;
 }
 
 /**
@@ -89,6 +90,7 @@ export interface MultipleSuccessResult {
   status: 'success';
   output: Record<string, string>;
   errors: RenderError[];
+  unresolved_images: string[];
 }
 
 export interface RenderError {
@@ -120,6 +122,7 @@ export class Viz {
   _stderrBuf = '';
   _utf8Encoder: TextEncoder = new TextEncoder();
   _utf8Decoder: TextDecoder = new TextDecoder('utf8');
+  _unresolved_images: string[] = [];
   _wasm: {
     memory: Uint8Array;
     wasm_alloc(length: number): number;
@@ -244,6 +247,7 @@ export class Viz {
         yInvert: options.yInvert ?? false,
         reduce: options.reduce ?? false,
         images: this._normalizeImages(options.images),
+        svgBasePath: options.svgBasePath,
       },
       null,
       2,
@@ -256,6 +260,7 @@ export class Viz {
       cJson.length,
     );
     inputJSONBuf.set(cJson);
+    this._unresolved_images = [];
     const sliceU64 = this._wasm.render(
       inputJSONBuf.byteOffset,
       inputJSONBuf.length,
@@ -268,6 +273,7 @@ export class Viz {
       const response = JSON.parse(str) as MultipleRenderResult;
       let output: Record<string, string> | null = null;
       if (response.output) {
+        response.unresolved_images = this._unresolved_images;
         output = {};
         if (renderGv) {
           output.gv = response.output.dot;
@@ -372,6 +378,36 @@ export class Viz {
 
     const widthPt = widthPx / pxPerPt / sizePt;
     return widthPt;
+  }
+
+  _js_image_get_dimensions(path: bigint) {
+    const pathStr = this._decodeWasmString(path);
+    this._unresolved_images.push(pathStr);
+    // const url = 'https://www.graphviz.org/Gallery/directed/' + pathStr;
+    // const xhr = new XMLHttpRequest();
+    // xhr.open('GET', url, false);
+    // xhr.send(null);
+    // const bytes = new TextEncoder().encode(xhr.response);
+
+    // if (xhr.status === 200) {
+    //   // Manually convert the raw string (potentially binary) to a base-64 encoded string.
+    //   // This is error-prone for non-text data if the encoding is wrong.
+    //   const rawData = xhr.responseText;
+    //   const base64 = btoa(rawData);
+
+    //   // You need to manually determine the MIME type of the content.
+    //   // A better way might be to get it from the Content-Type header if the server sends it.
+    //   const contentType =
+    //     xhr.getResponseHeader('Content-Type') ?? 'application/octet-stream';
+
+    //   const dataurl = `data:${contentType};base64,${base64}`;
+    //   const image = new Image();
+    //   image.src = dataurl;
+    //   return (BigInt(image.height) << 32n) | BigInt(image.width);
+    // } else {
+    //   console.error('Error fetching data:', xhr.statusText);
+    //   return 0n;
+    // }
   }
 
   _decodeWasmString(sliceU64: bigint): string {

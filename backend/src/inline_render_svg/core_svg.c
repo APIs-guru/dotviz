@@ -90,6 +90,7 @@ static imagepos_t get_imagepos(char *s) {
   return IMAGEPOS_MIDDLE_CENTER;
 }
 
+extern const char *g_svg_basepath;
 static void core_loadimage_svg(output_string *output, int rotation_deg,
                                const char *name, boxf b) {
   double width = (b.UR.x - b.LL.x);
@@ -98,6 +99,9 @@ static void core_loadimage_svg(output_string *output, int rotation_deg,
   double originy = (b.UR.y + b.LL.y + height) / 2;
 
   out_puts(output, "<image xlink:href=\"");
+  if (g_svg_basepath) {
+    out_puts(output, g_svg_basepath);
+  }
   out_puts(output, name);
   if (rotation_deg != 0) {
 
