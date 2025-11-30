@@ -371,3 +371,8 @@ export fn get_dimensions_by_name(name: [*c]u8, dpi: c.pointf) c.point {
     };
     return c.convert_image_dimensions(dpi, dimensions.height, dimensions.width);
 }
+
+extern fn canvas_measure_text(font_name: WasmString, text: WasmString, bold: bool, italic: bool) f64;
+export fn estimate_text_width_1pt(font_name: [*c]u8, text: [*c]u8, bold: bool, italic: bool) f64 {
+    return canvas_measure_text(WasmString.init(std.mem.span(font_name)), WasmString.init(std.mem.span(text)), bold, italic);
+}

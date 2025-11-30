@@ -1,5 +1,4 @@
 import type { Attributes, Graph } from './graph.d.ts';
-
 /**
  * @property format
  * The {@link https://www.graphviz.org/docs/outputs/ | Graphviz output format} to render. For example, `"dot"` or `"svg"`.
@@ -127,6 +126,7 @@ export class Viz {
     wasm_free(ptr: number, length: number): void;
     render(jsonPtr: number, jsonLength: number): bigint;
   };
+  _canvas_ctx: OffscreenCanvasRenderingContext2D;
 
   /**
    * @internal
@@ -134,6 +134,12 @@ export class Viz {
   constructor(instance: WebAssembly.Instance) {
     // @ts-expect-error not sure how to properly type it
     this._wasm = instance.exports;
+    const canvas = new OffscreenCanvas(0, 0);
+    const canvas_ctx = canvas.getContext('2d');
+    if (canvas_ctx == null) {
+      throw new Error('canvas context is null');
+    }
+    this._canvas_ctx = canvas_ctx;
   }
 
   /**
@@ -258,7 +264,7 @@ export class Viz {
     const len = Number(BigInt.asUintN(32, sliceU64 >> 32n));
     const outputJSONBuf = new Uint8Array(this._wasm.memory.buffer, ptr, len);
     try {
-      const str: string = this._utf8Decoder.decode(outputJSONBuf);
+      const str = this._decodeWasmString(sliceU64);
       const response = JSON.parse(str) as MultipleRenderResult;
       let output: Record<string, string> | null = null;
       if (response.output) {
@@ -337,5 +343,41 @@ export class Viz {
 
     view.setUint32(nwritten_ptr, totalWritten, true);
     return 0;
+  }
+
+  _canvas_measure_text(
+    font_name_slice: bigint,
+    text_slice: bigint,
+    bold: boolean,
+    italic: boolean,
+  ): number {
+    const fontName = this._decodeWasmString(font_name_slice);
+    const text = this._decodeWasmString(text_slice);
+
+    const pxPerPt = 96 / 72;
+
+    const sizePt = 16;
+    const sizePx = sizePt * pxPerPt;
+
+    const weight = bold ? 'bold ' : '';
+    const style = italic ? 'italic ' : '';
+    const family =
+      fontName && fontName.trim().length > 0 ? fontName : 'sans-serif';
+
+    const cssFont = `${style}${weight}${sizePx.toString()}px "${family}"`;
+    this._canvas_ctx.font = cssFont;
+
+    const metrics = this._canvas_ctx.measureText(text);
+    const widthPx = metrics.width;
+
+    const widthPt = widthPx / pxPerPt / sizePt;
+    return widthPt;
+  }
+
+  _decodeWasmString(sliceU64: bigint): string {
+    const ptr = Number(BigInt.asUintN(32, sliceU64));
+    const len = Number(BigInt.asUintN(32, sliceU64 >> 32n));
+    const outputJSONBuf = new Uint8Array(this._wasm.memory.buffer, ptr, len);
+    return this._utf8Decoder.decode(outputJSONBuf);
   }
 }

@@ -77,6 +77,8 @@ pub fn build(b: *std.Build) void {
     });
     exe.addIncludePath(b.path("src"));
     exe.lto = .full;
+    exe.import_symbols = true; // FIXME: import only needed symbols
+
     applyWasiEmulation(exe);
     lib.stack_size = 16 * 1024 * 1024;
     exe.stack_size = 16 * 1024 * 1024;
@@ -416,7 +418,8 @@ const src_gvc = [_][]const u8{
 };
 
 const src_common = [_][]const u8{
-    "splines.c", "htmllex.c", "colxlate.c", "textspan_lut.c", "postproc.c",
+    "splines.c",  "htmllex.c", "colxlate.c", // "textspan_lut.c",
+    "postproc.c",
     "taper.c",    "globals.c", "timing.c", "psusershape.c", // "emit.c",
     "textspan.c", "utils.c",   "args.c",
     "routespl.c",

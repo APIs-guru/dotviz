@@ -155,4 +155,23 @@ describe('Viz', () => {
       errors: [],
     });
   });
+  it.only('check font size', async (ctx) => {
+    const viz = await VizPackage.instance();
+    const result = viz.render(
+      `digraph {
+  "Hello world"
+}`,
+      { format: 'svg' },
+    );
+
+    const svg = result.output;
+    ctx.assert.fileSnapshot(svg, './test/snapshots/font_size.svg', {
+      serializers: [(str: string) => str],
+    });
+    assert.deepStrictEqual(result, {
+      status: 'success',
+      output: svg,
+      errors: [],
+    });
+  });
 });

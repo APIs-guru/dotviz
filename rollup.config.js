@@ -50,4 +50,15 @@ export default [
     output: [{ file: 'npmDist/dotviz-worker.d.ts', format: 'es' }],
     plugins: [dts()],
   },
+  {
+    input: 'src/index.ts',
+    output: {
+      file: 'npmDist/dotviz.browser.js',
+      format: 'umd',
+      name: 'dotviz',
+      sourcemap: true,
+      banner,
+    },
+    plugins: [typescript(tsOptions), terser()],
+  },
 ];
