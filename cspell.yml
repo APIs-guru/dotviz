@@ -5,6 +5,7 @@ ignorePaths:
   # Excluded from spelling check
   - cspell.yml
   - test/graphviz
+  - test/snapshots
   # FIXME
   - backend
 dictionaries:
