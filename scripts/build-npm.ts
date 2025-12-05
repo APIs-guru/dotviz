@@ -47,8 +47,17 @@ const releasePackageJSON = {
   devDependencies: undefined,
   main: './viz.js',
   exports: {
-    types: './viz.d.ts',
-    default: './viz.js',
+    '.': {
+      default: './viz.js',
+      import: './viz.js',
+      'module-sync': './viz.js',
+      types: './index.d.ts',
+    },
+    './worker': {
+      default: './worker.js',
+      import: './worker.js',
+      types: './worker.d.ts',
+    },
   },
 };
 
