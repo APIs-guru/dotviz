@@ -140,7 +140,8 @@ describe('Viz', () => {
   });
   it('circo layout', async (ctx) => {
     const viz = await VizPackage.instance();
-    const result = viz.render(fs.readFileSync("./test/snapshots/circo.gv", "utf8"),
+    const result = viz.render(
+      fs.readFileSync('./test/snapshots/circo.gv', 'utf8'),
       { format: 'svg', engine: 'circo' },
     );
 
