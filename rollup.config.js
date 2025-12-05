@@ -36,9 +36,9 @@ export default [
     plugins: [dts()],
   },
   {
-    input: 'src/worker.ts',
+    input: 'src/dotviz-worker.ts',
     output: {
-      file: 'npmDist/worker.js',
+      file: 'npmDist/dotviz-worker.js',
       format: 'es',
       sourcemap: true,
       banner,
@@ -46,8 +46,8 @@ export default [
     plugins: [typescript(tsOptions), terser()],
   },
   {
-    input: './src/worker.ts',
-    output: [{ file: 'npmDist/worker.d.ts', format: 'es' }],
+    input: './src/dotviz-worker.ts',
+    output: [{ file: 'npmDist/dotviz-worker.d.ts', format: 'es' }],
     plugins: [dts()],
   },
 ];

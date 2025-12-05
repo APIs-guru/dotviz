@@ -45,18 +45,14 @@ const releasePackageJSON = {
   private: undefined,
   scripts: undefined,
   devDependencies: undefined,
-  main: './viz.js',
   exports: {
     '.': {
-      default: './viz.js',
-      import: './viz.js',
-      'module-sync': './viz.js',
-      types: './index.d.ts',
+      default: './dotviz.js',
+      types: './dotviz.d.ts',
     },
-    './worker': {
-      default: './worker.js',
-      import: './worker.js',
-      types: './worker.d.ts',
+    './dotviz-worker': {
+      default: './dotviz-worker.js',
+      types: './dotviz-worker.d.ts',
     },
   },
 };

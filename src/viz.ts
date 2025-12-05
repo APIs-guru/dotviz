@@ -116,7 +116,7 @@ export interface ImageSize {
 /**
  * The {@link Viz} class isn't exported, but it can be instantiated using the {@link instance} function.
  */
-class Viz {
+export class Viz {
   _stdoutBuf = '';
   _stderrBuf = '';
   _utf8Encoder: TextEncoder = new TextEncoder();
@@ -339,5 +339,3 @@ class Viz {
     return 0;
   }
 }
-
-export default Viz;
