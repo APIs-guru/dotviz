@@ -35,4 +35,19 @@ export default [
     output: [{ file: 'npmDist/dotviz.d.ts', format: 'es' }],
     plugins: [dts()],
   },
+  {
+    input: 'src/worker.ts',
+    output: {
+      file: 'npmDist/worker.js',
+      format: 'es',
+      sourcemap: true,
+      banner,
+    },
+    plugins: [typescript(tsOptions), terser()],
+  },
+  {
+    input: './src/worker.ts',
+    output: [{ file: 'npmDist/worker.d.ts', format: 'es' }],
+    plugins: [dts()],
+  },
 ];

@@ -1,6 +1,8 @@
 import { decode } from '../lib/encoded.ts';
 import Viz from './viz.ts';
 
+export { WASM_HASH } from '../lib/encoded.ts';
+
 /**
  * Returns a promise that resolves to an instance of the {@link Viz} class.
  */

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 
 import {
@@ -15,6 +16,7 @@ spawn('zig', ['build', '-Doptimize=' + zigOptimizeMode], { cwd: 'backend/' });
 fs.copyFileSync('backend/zig-out/bin/dotviz.wasm', 'lib/module.wasm');
 
 const wasm = fs.readFileSync('lib/module.wasm');
+const hash = crypto.createHash('sha256').update(wasm).digest('hex');
 const encoded_ts = `const encoded = "${wasm.toString('base64')}";
 
 export function decode(): ArrayBuffer {
@@ -25,6 +27,8 @@ export function decode(): ArrayBuffer {
   }
   return bytes.buffer;
 }
+
+export const WASM_HASH = \`${hash}\`;
 `;
 await writeGeneratedFile('lib/encoded.ts', encoded_ts);
 
