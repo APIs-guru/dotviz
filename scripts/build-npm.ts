@@ -40,6 +40,27 @@ fs.copyFileSync('./README.md', './npmDist/README.md');
 
 spawn('rollup', ['-c']);
 
+const worker = fs
+  .readFileSync('./npmDist/dotviz-worker.js', 'utf8')
+  .replaceAll('\\', '\\\\')
+  .replaceAll('`', '\\`')
+  .replaceAll('${', '\\${');
+
+const inline_worker_js = `
+  const worker_string = String.raw \`${worker}\`;
+  export default worker_string;
+`;
+await writeGeneratedFile('./npmDist/dotviz-inline-worker.js', inline_worker_js);
+
+const inline_worker_dts = `
+declare const worker_string: string;
+export default worker_string;
+`;
+await writeGeneratedFile(
+  './npmDist/dotviz-inline-worker.d.ts',
+  inline_worker_dts,
+);
+
 const releasePackageJSON = {
   ...packageJSON,
   private: undefined,
@@ -53,6 +74,10 @@ const releasePackageJSON = {
     './dotviz-worker': {
       default: './dotviz-worker.js',
       types: './dotviz-worker.d.ts',
+    },
+    './dotviz-inline-worker': {
+      default: './dotviz-inline-worker.js',
+      types: './dotviz-inline-worker.d.ts',
     },
   },
 };
