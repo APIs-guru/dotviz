@@ -47,8 +47,8 @@ const worker = fs
   .replaceAll('${', '\\${');
 
 const inline_worker_js = `
-  const worker_string = String.raw \`${worker}\`;
-  export default worker_string;
+const worker_string = \`${worker}\`;
+export default worker_string;
 `;
 await writeGeneratedFile('./npmDist/dotviz-inline-worker.js', inline_worker_js);
 
