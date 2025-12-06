@@ -131,9 +131,9 @@ export class Viz {
   /**
    * @internal
    */
-  constructor(module: WebAssembly.WebAssemblyInstantiatedSource) {
+  constructor(instance: WebAssembly.Instance) {
     // @ts-expect-error not sure how to properly type it
-    this._wasm = module.instance.exports;
+    this._wasm = instance.exports;
   }
 
   /**
