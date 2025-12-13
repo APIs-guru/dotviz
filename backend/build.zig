@@ -78,6 +78,8 @@ pub fn build(b: *std.Build) void {
     exe.addIncludePath(b.path("src"));
     exe.lto = .full;
     applyWasiEmulation(exe);
+    lib.stack_size = 16 * 1024 * 1024;
+    exe.stack_size = 16 * 1024 * 1024;
 
     b.installArtifact(exe);
 
