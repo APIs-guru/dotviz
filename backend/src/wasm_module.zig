@@ -256,8 +256,10 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         .dot => |dot_string| blk: {
             var graph: Agrw_t = null;
 
+            // FIXME: should be [:0]u8 already
+            const dot_string_z = arena_allocator.dupeZ(u8, dot_string) catch @panic("cannot alloc");
             // Try to read one graph
-            graph = c.gw_agmemread(dot_string);
+            graph = c.gw_agmemread(dot_string_z);
 
             // Consume the rest of the input
             // while (true) {

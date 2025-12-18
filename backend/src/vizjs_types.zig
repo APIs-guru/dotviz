@@ -100,7 +100,8 @@ pub const Graph = struct {
 };
 
 const GraphInput = union(enum) {
-    dot: [:0]const u8,
+    // FIXME: should be [:0]u8 but due to bug in stdlib it is:
+    dot: []u8,
     graph: Graph,
 };
 
