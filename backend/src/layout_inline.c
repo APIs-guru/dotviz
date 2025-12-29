@@ -320,12 +320,30 @@ extern gvlayout_features_t dotgen_features;
 extern void circo_layout(Agraph_t *g);
 extern void circo_cleanup(graph_t *g);
 
-void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, bool is_circo) {
-  if (is_circo) {
-    my_graph_init(gvc, g, false);
+extern void neato_layout(graph_t *g);
+extern void neato_cleanup(graph_t *g);
+
+int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
+  agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
+  GD_gvc(g) = gvc;
+  if (g != agroot(g)) {
+    agbindrec(agroot(g), "Agraphinfo_t", sizeof(Agraphinfo_t), true);
+    GD_gvc(agroot(g)) = gvc;
+  } else if (!strcmp(engine, "circo")) {
+    my_graph_init(g, false);
+    GD_drawing(agroot(g)) = GD_drawing(g);
     circo_layout(g);
-  } else {
+
+    GD_cleanup(g) = circo_cleanup;
+  } else if (!strcmp(engine, "neato")) {
+    my_graph_init(g, false);
+    GD_drawing(agroot(g)) = GD_drawing(g);
+    neato_layout(g);
+
+    GD_cleanup(g) = neato_cleanup;
+  } else { // dot
     my_graph_init(gvc, g, true);
+    GD_drawing(agroot(g)) = GD_drawing(g);
     dot_layout(g);
   }
 
@@ -345,29 +363,49 @@ void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, bool is_circo) {
   GD_gvc(g) = NULL;
 }
 
-int gw_gvLayout(GVC_t *gvc, Agraph_t *g, const char *engine) {
-  if (strcmp(engine, "dot") && strcmp(engine, "circo")) {
-    agerrorf("Layout type: \"%s\" not recognized. Use one of: dot circo\n",
-             engine);
+int gw_gvLayout(GVC_t *gvc, Agraph_t *graph, const char *engine) {
+  graph_t *g = (graph_t *)graph;
+
+  if (strcmp(engine, "dot") && strcmp(engine, "circo") &&
+      strcmp(engine, "neato")) {
+    agerrorf(
+        "Layout type: \"%s\" not recognized. Use one of: dot circo neato \n",
+        engine);
     return -1;
   }
   // FIXME: handle "layout" attribute on graph
   char *p;
   if ((p = agget(g, "layout"))) { // FIXME: layout should match is_circo
-    if (strcmp(p, "dot") && strcmp(p, "circo")) {
-      agerrorf("Layout type: \"%s\" not recognized. Use one of: dot circo\n",
-               p);
+    if (strcmp(p, "dot") && strcmp(p, "circo") && strcmp(p, "neato")) {
+      agerrorf(
+          "Layout type: \"%s\" not recognized. Use one of: dot circo neato\n",
+          p);
       return -1;
     }
-    if (strcmp(engine, p)) {
-      agerrorf("Layouts should be the same. %s != %s\n", engine, p);
-      return -1;
-    }
+    // FIXME: remove check
+    // if (strcmp(engine, p)) {
+    //   agerrorf("Layouts should be the same. %s != %s\n", engine, p);
+    //   return -1;
+    // }
     engine = p;
   }
-  bool is_circo = !strcmp(engine, "circo");
+  // bool is_circo = !strcmp(engine, "circo");
 
-  my_gvLayoutJobs(gvc, g, is_circo);
+  if (my_gvLayoutJobs(gvc, g, engine) == -1)
+    return -1;
+
+  /* set bb attribute for basic layout.
+   * doesn't yet include margins, scaling or page sizes because
+   * those depend on the renderer being used. */
+  char buf[256];
+  if (GD_drawing(g)->landscape)
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.y),
+             round(GD_bb(g).LL.x), round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
+  else
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.x),
+             round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
+  agsafeset(g, "bb", buf, "");
+
   return 0;
 }
 
