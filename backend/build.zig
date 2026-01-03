@@ -132,6 +132,7 @@ pub fn buildGraphviz(
         .DEFAULT_DPI = 96,
         .HAVE_EXPAT = 1,
         .HAVE_SYS_MMAN_H = 1,
+        .HAVE_DRAND48 = 1,
     });
     lib.installConfigHeader(config_h);
     const builddate_h = b.addConfigHeader(.{
