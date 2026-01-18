@@ -384,12 +384,12 @@ fn applyWasiEmulation(step: *std.Build.Step.Compile) void {
     if (step.root_module.resolved_target.?.result.os.tag == .wasi) {
         step.root_module.addCMacro("_WASI_EMULATED_SIGNAL", "");
         step.linkSystemLibrary("wasi-emulated-signal");
-        step.root_module.addCMacro("_WASI_EMULATED_PROCESS_CLOCKS", "");
-        step.linkSystemLibrary("wasi-emulated-process-clocks");
+        // step.root_module.addCMacro("_WASI_EMULATED_PROCESS_CLOCKS", "");
+        // step.linkSystemLibrary("wasi-emulated-process-clocks");
         step.root_module.addCMacro("_WASI_EMULATED_MMAN", "");
         step.linkSystemLibrary("wasi-emulated-mman");
-        step.root_module.addCMacro("_WASI_EMULATED_GETPID", "");
-        step.linkSystemLibrary("wasi-emulated-getpid");
+        // step.root_module.addCMacro("_WASI_EMULATED_GETPID", "");
+        // step.linkSystemLibrary("wasi-emulated-getpid");
     }
 }
 
@@ -418,7 +418,8 @@ const src_gvc = [_][]const u8{
 
 const src_common = [_][]const u8{
     "splines.c", "htmllex.c", "colxlate.c", "textspan_lut.c", "postproc.c",
-    "taper.c",    "globals.c", "timing.c", "psusershape.c", // "emit.c",
+    "taper.c",    "globals.c", // "timing.c", 
+    "psusershape.c", // "emit.c",
     "textspan.c", "utils.c",   "args.c",
     "routespl.c",
     // "shapes.c",
