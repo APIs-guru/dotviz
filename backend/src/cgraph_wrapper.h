@@ -19,7 +19,6 @@ typedef struct Agraph_s Agraph_t;
 typedef struct Agraph_s graph_t;
 typedef struct Agsym_s Agsym_t;
 
-Agraph_t *agmemread(const char *cp);
 int agclose(Agraph_t *g);
 Agraph_t *wrapped_agopen(const char *name, bool directed, bool strict);
 

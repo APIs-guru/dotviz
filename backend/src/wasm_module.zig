@@ -259,51 +259,26 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     g_image_map = request.images;
 
-    const graphptr = switch (request.graph) {
-        .dot => |dot_string| blk: {
+    const graph_json = request.graph;
+    const graph = graphviz.wrapped_agopen(
+        toCString(graph_json.name),
+        graph_json.directed,
+        graph_json.strict,
+    );
+    if (graph != null) {
+        readGraph(arena_allocator, graph, graph_json);
+    }
 
-            // FIXME: should be [:0]u8 already
-            const dot_string_z = arena_allocator.dupeZ(u8, dot_string) catch @panic("cannot alloc");
-            // Try to read one graph
-            const graph = graphviz.agmemread(dot_string_z);
-
-            // Consume the rest of the input
-            // while (true) {
-            //     // FIXME: figure out why it is here
-            //     var other_graph: ?Agrw_t = null;
-            //     other_graph = c.gw_agmemread(null);
-            //     if (other_graph) |g| {
-            //         _ = c.gw_agclose(g);
-            //     } else {
-            //         break;
-            //     }
-            // }
-
-            break :blk graph;
-        },
-        .graph => |graph_json| blk: {
-            const maybe_graph = graphviz.wrapped_agopen(
-                toCString(graph_json.name),
-                graph_json.directed,
-                graph_json.strict,
-            );
-            if (maybe_graph) |graph| {
-                readGraph(arena_allocator, graph, graph_json);
-            }
-            break :blk maybe_graph;
-        },
-    };
-
-    if (graphptr == null) {
+    if (graph == null) {
         return stringifyResponseJSON(.{
             .status = .failure,
             .errors = parseAgerrMessages(arena_allocator).items,
             .output = null,
         });
     }
-    defer _ = graphviz.agclose(graphptr);
+    defer _ = graphviz.agclose(graph);
 
-    setAllDefaultAttributes(arena_allocator, graphptr, request);
+    setAllDefaultAttributes(arena_allocator, graph, request);
 
     // FIXME: maybe call setDefaultAttributes
 
@@ -335,7 +310,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         });
     };
 
-    if (graphviz.agget(graphptr, "layout")) |layout_cstr| {
+    if (graphviz.agget(graph, "layout")) |layout_cstr| {
         const layout_str = std.mem.span(layout_cstr);
         const layout = std.meta.stringToEnum(vizjs_types.Engine, layout_str) orelse {
             const message = std.fmt.allocPrint(
@@ -378,20 +353,20 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         }
     }
 
-    layoutRender(engine, gvc, graphptr);
-    defer layoutCleanup(engine, graphptr);
+    layoutRender(engine, gvc, graph);
+    defer layoutCleanup(engine, graph);
 
     var responseDot: ?[:0]const u8 = null;
     defer freeCString(responseDot);
     if (request.renderDot) {
-        const output = graphviz.render_dot(graphptr);
+        const output = graphviz.render_dot(graph);
         responseDot = @ptrCast(output.data[0..output.data_position]);
     }
 
     var responseSvg: ?[:0]const u8 = null;
     defer freeCString(responseSvg);
     if (request.renderSvg) {
-        const output = graphviz.render_svg(graphptr);
+        const output = graphviz.render_svg(graph);
         responseSvg = @ptrCast(output.data[0..output.data_position]);
     }
 
@@ -406,32 +381,32 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     return responseJSON;
 }
 
-fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graphptr: ?*graphviz.Agraph_t) void {
+fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graph: ?*graphviz.Agraph_t) void {
     switch (engine) {
         .dot => {
-            graphviz.my_graph_init(gvc, graphptr, true);
-            graphviz.dot_layout(graphptr);
+            graphviz.my_graph_init(gvc, graph, true);
+            graphviz.dot_layout(graph);
         },
         .circo => {
-            graphviz.my_graph_init(gvc, graphptr, false);
-            graphviz.circo_layout(graphptr);
+            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.circo_layout(graph);
         },
         .neato => {
-            graphviz.my_graph_init(gvc, graphptr, false);
-            graphviz.neato_layout(graphptr);
+            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.neato_layout(graph);
         },
     }
     // FIXME: IMPORTANT: check that we don't use GVC after this line
-    graphviz.set_gvc_to_null(graphptr);
+    graphviz.set_gvc_to_null(graph);
 }
 
-fn layoutCleanup(engine: vizjs_types.Engine, graphptr: ?*graphviz.Agraph_t) void {
+fn layoutCleanup(engine: vizjs_types.Engine, graph: ?*graphviz.Agraph_t) void {
     switch (engine) {
-        .dot => graphviz.dot_cleanup(graphptr),
-        .circo => graphviz.circo_cleanup(graphptr),
-        .neato => graphviz.neato_cleanup(graphptr),
+        .dot => graphviz.dot_cleanup(graph),
+        .circo => graphviz.circo_cleanup(graph),
+        .neato => graphviz.neato_cleanup(graph),
     }
-    graphviz.graph_cleanup(graphptr);
+    graphviz.graph_cleanup(graph);
 }
 
 fn freeCString(string: ?[:0]const u8) void {
