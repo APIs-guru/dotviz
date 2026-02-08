@@ -87,7 +87,7 @@
  * ```
  */
 export interface Graph {
-  name?: string;
+  name?: string | undefined;
   strict?: boolean;
   directed?: boolean;
   graphAttributes?: Attributes;
