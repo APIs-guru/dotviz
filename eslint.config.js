@@ -74,12 +74,33 @@ export default defineConfig([
       'import-x/no-duplicates': 'error',
 
       '@typescript-eslint/unbound-method': ['error', { ignoreStatic: true }],
+      '@typescript-eslint/no-invalid-void-type': [
+        'error',
+        { allowAsThisParameter: true },
+      ],
+      '@typescript-eslint/no-floating-promises': [
+        'error',
+        {
+          allowForKnownSafeCalls: [
+            {
+              from: 'package',
+              package: 'node:test',
+              name: ['it', 'describe', 'skip', 'only'],
+            },
+          ],
+        },
+      ],
 
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/prefer-query-selector': 'off',
       'unicorn/no-null': 'off',
       'unicorn/prefer-export-from': ['error', { ignoreUsedVariables: true }],
       'unicorn/prefer-ternary': ['error', 'only-single-line'],
+      'unicorn/number-literal-case': [
+        'error',
+        { hexadecimalValue: 'lowercase' },
+      ],
+      'unicorn/switch-case-braces': ['error', 'avoid'],
     },
   },
   {

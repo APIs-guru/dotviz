@@ -99,12 +99,6 @@ pub const Graph = struct {
     }
 };
 
-const GraphInput = union(enum) {
-    // FIXME: should be [:0]u8 but due to bug in stdlib it is:
-    dot: []u8,
-    graph: Graph,
-};
-
 pub const ImageDimensions = struct {
     width: [:0]const u8,
     height: [:0]const u8,
@@ -121,7 +115,7 @@ pub const Engine = enum {
 };
 
 pub const RenderRequest = struct {
-    graph: GraphInput,
+    graph: Graph,
     graphAttributes: ?*Attributes,
     nodeAttributes: ?*Attributes,
     edgeAttributes: ?*Attributes,

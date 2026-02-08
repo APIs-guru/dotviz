@@ -50,6 +50,9 @@ overrides:
       - agseterrf
       - agreseterrors
 words:
+  # actual words missing in cSpell dictionaries :(
+  - ellipsize
+
   - testonly
   - dotviz
   - Goncharov

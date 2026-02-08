@@ -1,4 +1,5 @@
 import type { Attributes, Graph } from './graph.d.ts';
+import { parseDot } from './lexer.ts';
 
 /**
  * @property format
@@ -188,24 +189,23 @@ export class Viz {
     formats: readonly string[],
     options: RenderOptions,
   ): MultipleRenderResult {
+    const graph: Graph = typeof input === 'string' ? parseDot(input) : input;
+
     let renderGv = false;
     let renderDot = false;
     let renderSvg = false;
     for (const name of formats) {
       switch (name) {
-        case 'gv': {
+        case 'gv':
           renderGv = true;
           break;
-        }
-        case 'dot': {
+        case 'dot':
           renderDot = true;
           break;
-        }
-        case 'svg': {
+        case 'svg':
           renderSvg = true;
           break;
-        }
-        default: {
+        default:
           return {
             status: 'failure',
             output: null,
@@ -217,12 +217,11 @@ export class Viz {
               },
             ],
           };
-        }
       }
     }
     const requestJSON = JSON.stringify(
       {
-        graph: typeof input === 'string' ? { dot: input } : { graph: input },
+        graph,
         graphAttributes: options.graphAttributes ?? null,
         nodeAttributes: options.nodeAttributes ?? null,
         edgeAttributes: options.edgeAttributes ?? null,
@@ -324,10 +323,9 @@ export class Viz {
         }
         break;
       }
-      default: {
+      default:
         console.trace(`fd_write: unknown fd ${fd.toString()}`);
         return 52; // WASI_ERRNO_NOTSUP
-      }
     }
 
     view.setUint32(nwritten_ptr, totalWritten, true);
