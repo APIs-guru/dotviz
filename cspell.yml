@@ -51,6 +51,9 @@ overrides:
       - agreseterrors
 words:
   - poll_oneoff # WASI
+  # actual words missing in cSpell dictionaries :(
+  - ellipsize
+
   - testonly
   - dotviz
   - Goncharov
