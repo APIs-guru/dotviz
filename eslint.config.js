@@ -10,7 +10,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   {
-    ignores: ['npmDist/', 'lib/', 'test/types/'],
+    ignores: ['npmDist/', 'lib/', 'test/types/', "depends/"],
   },
   {
     linterOptions: {
