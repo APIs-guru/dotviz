@@ -173,13 +173,6 @@ pub fn buildGraphviz(
         .files = &src_cgraph,
     });
     lib_cgraph.root_module.addIncludePath(b.path("inc/cgraph"));
-    lib.root_module.addCSourceFiles(.{
-        .root = b.path("src/graphviz_build/src/cgraph/"),
-        .files = &.{
-            "grammar.c",
-            "scan.c",
-        },
-    });
     lib.root_module.addConfigHeader(config_h);
     lib.root_module.addIncludePath(graphviz_dep.path("lib"));
     lib.root_module.addIncludePath(b.path("src/graphviz_build/inc/cgraph/"));
@@ -425,11 +418,11 @@ pub fn buildGraphviz(
     lib_label.root_module.addConfigHeader(config_h);
 
     inline for (&.{
-        lib,          lib_cdt,       lib_cgraph,   lib_common,
-        lib_dotgen,   lib_circogen,  lib_neatogen, lib_fdpgen,
-        lib_twopigen, lib_patchwork, lib_osage,    lib_sfdpgen, lib_gvc,
-        lib_label,    lib_pack,      lib_pathplan, lib_plugin_dot_layout,
-        lib_util,     lib_xdot,
+        lib,                   lib_cdt,       lib_cgraph,   lib_common,
+        lib_dotgen,            lib_circogen,  lib_neatogen, lib_fdpgen,
+        lib_twopigen,          lib_patchwork, lib_osage,    lib_sfdpgen,
+        lib_gvc,               lib_label,     lib_pack,     lib_pathplan,
+        lib_plugin_dot_layout, lib_util,      lib_xdot,
     }) |library| {
         applyWasiEmulation(library);
     }
