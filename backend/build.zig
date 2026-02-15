@@ -170,18 +170,9 @@ pub fn buildGraphviz(
         .files = &src_cgraph,
     });
     lib_cgraph.addIncludePath(b.path("inc/cgraph"));
-    lib.addCSourceFiles(.{
-        .root = b.path("src/graphviz_build/src/cgraph/"),
-        .files = &.{
-            "grammar.c",
-            "scan.c",
-        },
-    });
     lib.addConfigHeader(config_h);
     lib.addIncludePath(graphviz_dep.path("lib"));
-    lib.addIncludePath(b.path("src/graphviz_build/inc/cgraph/"));
     lib_cgraph.addConfigHeader(config_h);
-    lib_cgraph.addIncludePath(b.path("src/graphviz_build/inc/cgraph/"));
     lib_cgraph.addIncludePath(graphviz_dep.path("lib"));
     lib_cgraph.addIncludePath(graphviz_dep.path("lib/cdt"));
     lib_cgraph.addIncludePath(graphviz_dep.path("lib/cgraph"));
