@@ -1,6 +1,6 @@
-import type { Graph } from './graph.js';
+import type { Attributes, Graph } from './graph.js';
 
-type Token =
+type KeywordOrPunctuation =
   | ','
   | ';'
   | '='
@@ -14,16 +14,24 @@ type Token =
   | 'digraph'
   | 'subgraph'
   | 'strict'
-  | 'EOF'
-  | { id: string; kind: IDKind };
+  | 'EOF';
 
-const IDKind = {
+const IDType = {
   Number: 0,
   Name: 1,
   String: 2,
   HTML: 3,
 } as const;
-type IDKind = (typeof IDKind)[keyof typeof IDKind];
+type IDType = (typeof IDType)[keyof typeof IDType];
+
+interface ID {
+  kind: 'ID';
+  value: string;
+  idType: IDType;
+}
+
+type Token = { kind: KeywordOrPunctuation } | ID;
+type TokenKind = KeywordOrPunctuation | 'ID';
 
 const Char = {
   BOM: 0xfe_ff,
@@ -78,9 +86,11 @@ class Lexer {
         case Char[']']:
         case Char['{']:
         case Char['}']: {
-          const token = String.fromCodePoint(this.#currentChar) as Token;
+          const kind = String.fromCodePoint(
+            this.#currentChar,
+          ) as KeywordOrPunctuation;
           this.#readNextChar();
-          return token;
+          return { kind };
         }
 
         // Comment
@@ -100,10 +110,10 @@ class Lexer {
       }
       this.#readNextChar();
     }
-    return 'EOF';
+    return { kind: 'EOF' };
   }
 
-  #readNameToken(): Token {
+  #readNameToken(): Token | ID {
     const start = this.#position;
     do {
       this.#readNextChar();
@@ -112,8 +122,8 @@ class Lexer {
       isNameContinue(this.#currentChar)
     );
 
-    const name = this.#dotStr.slice(start, this.#position);
-    const token = name.toLowerCase();
+    const value = this.#dotStr.slice(start, this.#position);
+    const token = value.toLowerCase();
     switch (token) {
       case 'node':
       case 'edge':
@@ -121,9 +131,9 @@ class Lexer {
       case 'digraph':
       case 'subgraph':
       case 'strict':
-        return token;
+        return { kind: token };
       default:
-        return { id: name, kind: IDKind.Name };
+        return { kind: 'ID', idType: IDType.Name, value };
     }
   }
 
@@ -143,22 +153,23 @@ class Lexer {
   }
 }
 
-function tokenStr(token: Token): string {
-  if (typeof token === 'object') {
-    switch (token.kind) {
-      case IDKind.Number:
-        return `number '${token.id}'`;
-      case IDKind.Name:
-        return `identifier '${token.id}'`;
-      case IDKind.String:
-        return `string "${ellipsize(token.id)}"`;
-      case IDKind.HTML:
-        return `html "${ellipsize(token.id)}"`;
-      default:
-        return `unknown token '${token.id}'`;
-    }
+function idStr({ idType, value }: ID): string {
+  switch (idType) {
+    case IDType.Number:
+      return `number '${value}'`;
+    case IDType.Name:
+      return `identifier '${value}'`;
+    case IDType.String:
+      return `string "${ellipsize(value)}"`;
+    case IDType.HTML:
+      return `html "${ellipsize(value)}"`;
+    default:
+      return `unknown token '${value}'`;
   }
-  switch (token) {
+}
+
+function kindStr(kind: KeywordOrPunctuation): string {
+  switch (kind) {
     case ',':
     case ';':
     case '=':
@@ -166,17 +177,20 @@ function tokenStr(token: Token): string {
     case ']':
     case '{':
     case '}':
-      return `'${token}'`;
+      return `'${kind}'`;
     case 'node':
     case 'edge':
     case 'graph':
     case 'digraph':
     case 'subgraph':
     case 'strict':
-      return `keyword '${token}'`;
+      return `keyword '${kind}'`;
     case 'EOF':
       return 'end of file';
   }
+}
+function tokenStr(token: Token): string {
+  return token.kind === 'ID' ? idStr(token) : kindStr(token.kind);
 }
 
 function ellipsize(str: string): string {
@@ -200,14 +214,13 @@ function isNameContinue(code: number): boolean {
 }
 
 class Parser {
-  #graph: Graph;
+  #graph: Graph = {};
   #lexer: Lexer;
-  #token: Token;
+  #token: Token | ID;
 
   constructor(dotStr: string) {
     this.#lexer = new Lexer(dotStr);
     this.#token = this.#lexer.nextToken();
-    this.#graph = {};
   }
 
   static parseDot(this: void, dotStr: string): Graph {
@@ -216,7 +229,7 @@ class Parser {
   }
 
   #parseGraph(): Graph {
-    if (this.#isEOF()) {
+    if (this.#peekIs('EOF')) {
       throw new Error('Missing graph definition!');
     }
 
@@ -227,73 +240,117 @@ class Parser {
     graph.name = this.#optionalID();
     this.#expectedToken('{');
     // stmt_list	:	[ stmt [ ';' ] stmt_list ]
-    while (this.#token != '}') {
-      // console.log(this.#token);
-      switch (this.#token) {
-        case 'EOF':
-          throw new Error(
-            `Unexpected ${tokenStr('EOF')}, expected ${tokenStr('}')} before the end of the graph!`,
-          );
-        // stmt:	node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
+    while (!this.#peekIs('EOF')) {
+      const token = this.#consume();
+      switch (token.kind) {
+        case '}':
+          if (!this.#peekIs('EOF')) {
+            throw new Error(
+              `Unexpected ${tokenStr(this.#token)}, after closing '}' of the graph!`,
+            );
+          }
+
+          return graph; // successfully parse the graph
+        // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
         // attr_stmt:	(graph | node | edge) attr_list
-        //
-        // case 'graph':
-        //   this.parseGraphAttributes(graph.graphAttributes);
-        // case 'node':
-        // case 'edge':
+        case 'graph':
+          graph.graphAttributes ??= {};
+          this.#parseAttrList(graph.graphAttributes);
+          break;
+        case 'node':
+          graph.nodeAttributes ??= {};
+          this.#parseAttrList(graph.nodeAttributes);
+          break;
+        case 'edge':
+          graph.edgeAttributes ??= {};
+          this.#parseAttrList(graph.edgeAttributes);
+          break;
         // default:
       }
       this.#optionalToken(';');
     }
-
-    this.#token = this.#lexer.nextToken();
-    if (!this.#isEOF()) {
-      throw new Error(
-        `Unexpected ${tokenStr(this.#token)}, after closing ${tokenStr('}')} of the graph!`,
-      );
-    }
-    return graph; // successfully parse the graph
-  }
-
-  #isEOF(): boolean {
-    return this.#token === 'EOF';
+    throw new Error(
+      `Unexpected end of file, expected ${kindStr('}')} before the end of the graph!`,
+    );
   }
 
   #parseIsDirectedGraph(): boolean {
-    switch (this.#token) {
+    const token = this.#consume();
+    switch (token.kind) {
       case 'graph':
-        this.#token = this.#lexer.nextToken();
         return false;
       case 'digraph':
-        this.#token = this.#lexer.nextToken();
         return true;
       default:
         throw new Error(
-          `Unexpected ${tokenStr(this.#token)}, expected ${tokenStr('graph')} or ${tokenStr('digraph')}!`,
+          `Unexpected ${tokenStr(token)}, expected keyword 'graph' or 'digraph'!`,
         );
     }
   }
 
-  #expectedToken(expected: Token): void {
-    if (this.#token !== expected) {
+  #parseAttrList(attributes: Attributes) {
+    // attr_list:	'[' [ a_list ] ']' [ attr_list ]
+    do {
+      this.#expectedToken('[');
+      // a_list: ID '=' ID [ (';' | ',') ] [ a_list ]
+      while (this.#peekIs('ID')) {
+        this.#parseAttr(attributes);
+        this.#optionalToken(';');
+        this.#optionalToken(',');
+      }
+      this.#expectedToken(']');
+    } while (this.#peekIs('['));
+  }
+
+  #parseAttr(attributes: Attributes) {
+    const name = this.#expectID('attribute name');
+    this.#expectedToken('=');
+    const value = this.#expectID('attribute value');
+    // FIXME: handle string escape characters
+    attributes[name.value] = value.value;
+  }
+
+  #peekIs(kind: TokenKind): boolean {
+    return this.#token.kind === kind;
+  }
+
+  #consume(): Token | ID {
+    const token = this.#token;
+    this.#token = this.#lexer.nextToken();
+    return token;
+  }
+
+  #expectID(description: string): ID {
+    const token = this.#consume();
+    if (token.kind !== 'ID') {
       throw new Error(
-        `Unexpected ${tokenStr(this.#token)}, expected ${tokenStr(expected)}!`,
+        `Unexpected ${tokenStr(this.#token)}, expected ${description}!`,
       );
     }
-    this.#token = this.#lexer.nextToken();
+    return token;
+  }
+
+  #expectedToken(kind: KeywordOrPunctuation): void {
+    const token = this.#consume();
+    if (token.kind !== kind) {
+      throw new Error(
+        `Unexpected ${tokenStr(token)}, expected ${kindStr(kind)}!`,
+      );
+    }
   }
 
   #optionalID(): string | undefined {
-    if (typeof this.#token === 'object') {
-      const { id } = this.#token;
-      this.#token = this.#lexer.nextToken();
-      return id;
+    const token = this.#token;
+    if (token.kind === 'ID') {
+      this.#consume();
+      // FIXME: handle string escape characters
+      return token.value;
     }
   }
 
-  #optionalToken(token: Token): boolean {
-    if (token === this.#token) {
-      this.#token = this.#lexer.nextToken();
+  #optionalToken(kind: KeywordOrPunctuation): boolean {
+    if (this.#peekIs(kind)) {
+      this.#consume();
       return true;
     }
     return false;
