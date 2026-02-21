@@ -8,6 +8,8 @@ type KeywordOrPunctuation =
   | ']'
   | '{'
   | '}'
+  | '--'
+  | '->'
   | 'node'
   | 'edge'
   | 'graph'
@@ -39,11 +41,14 @@ const Char = {
   '\n': 0x0a,
   '\r': 0x0d,
   ' ': 0x20,
+  '"': 0x22,
   ',': 0x2c,
+  '-': 0x2d,
   _0: 0x30,
   _9: 0x39,
   ';': 0x3b,
   '=': 0x3d,
+  '>': 0x3e,
   a: 0x41,
   z: 0x5a,
   _: 0x5f,
@@ -93,6 +98,26 @@ class Lexer {
           return { kind };
         }
 
+        case Char['-']: {
+          const line = this.#line.toString();
+          const column = (this.#position - this.#lineStart + 1).toString();
+          this.#readNextChar();
+          switch (this.#currentChar as number) {
+            case Char['-']:
+              this.#readNextChar();
+              return { kind: '--' };
+            case Char['>']:
+              this.#readNextChar();
+              return { kind: '->' };
+          }
+          throw new Error(
+            `(${line}:${column})Unexpected character: '${String.fromCodePoint(this.#currentChar)}'`,
+          );
+        }
+
+        case Char['"']:
+          return this.#readString();
+
         // Comment
         // case 0x00_23: // #
         //   return readComment(lexer, position);
@@ -111,6 +136,27 @@ class Lexer {
       this.#readNextChar();
     }
     return { kind: 'EOF' };
+  }
+
+  #readString(): ID {
+    const line = this.#line.toString();
+    const column = (this.#position - this.#lineStart + 1).toString();
+
+    this.#readNextChar(); // skip `"`
+    const start = this.#position;
+    do {
+      this.#readNextChar();
+      if (this.#currentChar === undefined) {
+        const value = this.#dotStr.slice(start, this.#position);
+        throw new Error(
+          `(${line}:${column})Unterminated string: '${ellipsize(value)}'`,
+        );
+      }
+    } while (this.#currentChar !== Char['"']);
+
+    const value = this.#dotStr.slice(start, this.#position);
+    this.#readNextChar(); // skip `"`
+    return { kind: 'ID', idType: IDType.String, value };
   }
 
   #readNameToken(): Token | ID {
@@ -177,6 +223,8 @@ function kindStr(kind: KeywordOrPunctuation): string {
     case ']':
     case '{':
     case '}':
+    case '--':
+    case '->':
       return `'${kind}'`;
     case 'node':
     case 'edge':
@@ -214,7 +262,6 @@ function isNameContinue(code: number): boolean {
 }
 
 class Parser {
-  #graph: Graph = {};
   #lexer: Lexer;
   #token: Token | ID;
 
@@ -233,45 +280,103 @@ class Parser {
       throw new Error('Missing graph definition!');
     }
 
-    const graph = this.#graph;
     // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
-    graph.strict = this.#optionalToken('strict');
-    graph.directed = this.#parseIsDirectedGraph();
-    graph.name = this.#optionalID();
+    const graph: Required<Graph> = {
+      strict: this.#optionalToken('strict'),
+      directed: this.#parseIsDirectedGraph(),
+      name: this.#optionalID(),
+      graphAttributes: {},
+      nodeAttributes: {},
+      edgeAttributes: {},
+      nodes: [],
+      edges: [],
+      subgraphs: [],
+    } as const;
+
     this.#expectedToken('{');
     // stmt_list	:	[ stmt [ ';' ] stmt_list ]
-    while (!this.#peekIs('EOF')) {
-      const token = this.#consume();
-      switch (token.kind) {
-        case '}':
-          if (!this.#peekIs('EOF')) {
-            throw new Error(
-              `Unexpected ${tokenStr(this.#token)}, after closing '}' of the graph!`,
-            );
-          }
-
-          return graph; // successfully parse the graph
-        // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
-        // attr_stmt:	(graph | node | edge) attr_list
-        case 'graph':
-          graph.graphAttributes ??= {};
-          this.#parseAttrList(graph.graphAttributes);
-          break;
-        case 'node':
-          graph.nodeAttributes ??= {};
-          this.#parseAttrList(graph.nodeAttributes);
-          break;
-        case 'edge':
-          graph.edgeAttributes ??= {};
-          this.#parseAttrList(graph.edgeAttributes);
-          break;
-        // default:
-      }
+    while (!this.#peekIs('}')) {
+      this.#parseStatement(graph);
       this.#optionalToken(';');
     }
-    throw new Error(
-      `Unexpected end of file, expected ${kindStr('}')} before the end of the graph!`,
-    );
+    this.#consume();
+
+    if (!this.#peekIs('EOF')) {
+      throw new Error(
+        `Unexpected ${tokenStr(this.#token)}, after closing '}' of the graph!`,
+      );
+    }
+    return graph;
+  }
+
+  #parseStatement(graph: Required<Graph>): void {
+    const token = this.#consume();
+    // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
+    switch (token.kind) {
+      case 'ID': {
+        if (this.#peekIs('=')) {
+          // ID '=' ID
+          this.#parseAttr(token, graph.graphAttributes);
+          break;
+        }
+
+        // node_id:	ID [ port ]
+        // FIXME: handle string escape characters
+        const nodeID = token.value;
+        // port: ':' ID [ ':' compass_pt ]
+        // FIXME
+
+        if (this.#optionalEdgeOp(graph.directed)) {
+          const head = this.#expectID('node name').value;
+          graph.edges.push({
+            head,
+            tail: nodeID,
+          });
+          // FIXME
+        } else {
+          // node_stmt: node_id [ attr_list ]
+          // FIXME
+        }
+
+        break;
+      }
+      // attr_stmt:	(graph | node | edge) attr_list
+      case 'graph':
+        this.#parseAttrList(graph.graphAttributes);
+        break;
+      case 'node':
+        this.#parseAttrList(graph.nodeAttributes);
+        break;
+      case 'edge':
+        this.#parseAttrList(graph.edgeAttributes);
+        break;
+      // case 'subgraph':
+      //   break;
+      case 'EOF':
+        throw new Error(
+          `Unexpected end of file, expected ${kindStr('}')} before the end of the graph!`,
+        );
+    }
+  }
+
+  #optionalEdgeOp(directed: boolean): boolean {
+    if (this.#optionalToken('--')) {
+      if (directed) {
+        throw new Error(
+          `Unexpected keyword '--' in directed graph, expected keyword '->'!`,
+        );
+      }
+      return true;
+    }
+    if (this.#optionalToken('->')) {
+      if (!directed) {
+        throw new Error(
+          `Unexpected keyword '->' in undirected graph, expected keyword '--'!`,
+        );
+      }
+      return true;
+    }
+    return false;
   }
 
   #parseIsDirectedGraph(): boolean {
@@ -293,17 +398,18 @@ class Parser {
     do {
       this.#expectedToken('[');
       // a_list: ID '=' ID [ (';' | ',') ] [ a_list ]
-      while (this.#peekIs('ID')) {
-        this.#parseAttr(attributes);
-        this.#optionalToken(';');
-        this.#optionalToken(',');
+      while (!this.#peekIs(']')) {
+        this.#parseAttr(this.#expectID('attribute name'), attributes);
+        // Either ';' or ',' but doesn't allow both
+        if (!this.#optionalToken(';')) {
+          this.#optionalToken(',');
+        }
       }
       this.#expectedToken(']');
     } while (this.#peekIs('['));
   }
 
-  #parseAttr(attributes: Attributes) {
-    const name = this.#expectID('attribute name');
+  #parseAttr(name: ID, attributes: Attributes) {
     this.#expectedToken('=');
     const value = this.#expectID('attribute value');
     // FIXME: handle string escape characters
