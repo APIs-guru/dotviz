@@ -90,6 +90,10 @@ export default defineConfig([
           ],
         },
       ],
+      '@typescript-eslint/no-unnecessary-condition': [
+        'error',
+        { allowConstantLoopConditions: 'only-allowed-literals' },
+      ],
 
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/prefer-query-selector': 'off',
@@ -98,7 +102,7 @@ export default defineConfig([
       'unicorn/prefer-ternary': ['error', 'only-single-line'],
       'unicorn/number-literal-case': [
         'error',
-        { hexadecimalValue: 'lowercase' },
+        { hexadecimalValue: 'lowercase' }, // required to not have conflicts with prettier
       ],
       'unicorn/switch-case-braces': ['error', 'avoid'],
     },
