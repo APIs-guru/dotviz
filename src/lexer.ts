@@ -1,5 +1,6 @@
 import type { Attributes, Edge, Graph, Node } from './graph.js';
 
+const BOM = '\uFEFF' as const;
 type LiteralToken =
   | ','
   | ';'
@@ -33,33 +34,6 @@ interface ID {
 
 type Token = { kind: LiteralToken } | ID | { kind: 'EOF' };
 
-const Char = {
-  BOM: 0xfe_ff,
-  '\t': 0x09,
-  '\n': 0x0a,
-  '\r': 0x0d,
-  ' ': 0x20,
-  '"': 0x22,
-  ',': 0x2c,
-  '-': 0x2d,
-  '.': 0x2e,
-  _0: 0x30,
-  _9: 0x39,
-  ';': 0x3b,
-  '=': 0x3d,
-  '>': 0x3e,
-  a: 0x41,
-  z: 0x5a,
-  _: 0x5f,
-  A: 0x61,
-  Z: 0x7a,
-  '[': 0x5b,
-  ']': 0x5d,
-  '{': 0x7b,
-  '}': 0x7d,
-  NON_ASCII_START: 0x80,
-} as const;
-
 class Lexer {
   #dotStr: string;
   #line = 1;
@@ -77,48 +51,33 @@ class Lexer {
       case undefined:
         return { kind: 'EOF' };
 
-      case Char[',']:
+      case ',':
+      case ';':
+      case '=':
+      case '[':
+      case ']':
+      case '{':
+      case '}':
         this.#readNextChar();
-        return { kind: ',' };
-      case Char[';']:
-        this.#readNextChar();
-        return { kind: ';' };
-      case Char['=']:
-        this.#readNextChar();
-        return { kind: '=' };
-      case Char['[']:
-        this.#readNextChar();
-        return { kind: '[' };
-      case Char[']']:
-        this.#readNextChar();
-        return { kind: ']' };
-      case Char['{']:
-        this.#readNextChar();
-        return { kind: '{' };
-      case Char['}']:
-        this.#readNextChar();
-        return { kind: '}' };
+        return { kind: tokenStartChar };
 
-      case Char['-']: {
+      case '-': {
         const nextChar = this.#peekNextChar(1);
-        switch (nextChar) {
-          case Char['-']:
-            this.#readNextChar();
-            this.#readNextChar();
-            return { kind: '--' };
-          case Char['>']:
-            this.#readNextChar();
-            this.#readNextChar();
-            return { kind: '->' };
-          default:
-            if (isNumberContinue(nextChar)) {
-              return this.#readNumberToken();
-            }
+        if (nextChar === '-') {
+          this.#readNextChar();
+          this.#readNextChar();
+          return { kind: '--' };
+        } else if (nextChar === '>') {
+          this.#readNextChar();
+          this.#readNextChar();
+          return { kind: '->' };
+        } else if (isNumberContinue(nextChar)) {
+          return this.#readNumberToken();
         }
         break;
       }
 
-      case Char['"']:
+      case '"':
         return this.#readStringToken();
 
       // Comment
@@ -137,7 +96,7 @@ class Lexer {
     const line = this.#line.toString();
     const column = (this.#nextIndex - this.#lineStart + 1).toString();
     throw new Error(
-      `(${line}:${column})Unexpected character: '${String.fromCodePoint(tokenStartChar)}'`,
+      `(${line}:${column})Unexpected character: '${tokenStartChar}'`,
     );
   }
 
@@ -145,11 +104,11 @@ class Lexer {
     while (true) {
       switch (this.#peekNextChar()) {
         // Ignored:
-        case Char.BOM:
-        case Char['\n']:
-        case Char['\r']:
-        case Char['\t']:
-        case Char[' ']:
+        case BOM:
+        case '\n':
+        case '\r':
+        case '\t':
+        case ' ':
           this.#readNextChar();
           continue;
       }
@@ -159,11 +118,11 @@ class Lexer {
 
   #readNumberToken(): Token {
     const valueStart = this.#nextIndex;
-    this.#skipChar(Char['-']);
-    if (this.#peekNextChar() !== Char['.']) {
+    this.#skipChar('-');
+    if (this.#peekNextChar() !== '.') {
       this.#readDigits();
     }
-    if (this.#skipChar(Char['.'])) {
+    if (this.#skipChar('.')) {
       this.#readDigits();
     }
 
@@ -193,7 +152,7 @@ class Lexer {
 
     this.#readNextChar(); // skip opening `"`
     const valueStart = this.#nextIndex;
-    while (this.#peekNextChar() !== Char['"']) {
+    while (this.#peekNextChar() !== '"') {
       switch (this.#readNextChar()) {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
@@ -230,7 +189,7 @@ class Lexer {
     }
   }
 
-  #skipChar(char: number): boolean {
+  #skipChar(char: string): boolean {
     if (this.#peekNextChar() === char) {
       this.#readNextChar();
       return true;
@@ -238,20 +197,20 @@ class Lexer {
     return false;
   }
 
-  #peekNextChar(offset = 0): number | undefined {
-    return this.#dotStr.codePointAt(this.#nextIndex + offset);
+  #peekNextChar(offset = 0): string | undefined {
+    return this.#dotStr[this.#nextIndex + offset];
   }
 
-  #readNextChar(): number | undefined {
+  #readNextChar(): string | undefined {
     const charIndex = this.#nextIndex++;
-    const char = this.#dotStr.codePointAt(charIndex);
-    if (char === Char['\r']) {
-      if (this.#peekNextChar() !== Char['\n']) {
+    const char = this.#dotStr[charIndex];
+    if (char === '\r') {
+      if (this.#peekNextChar() !== '\n') {
         // "Carriage Return (U+000D)" [lookahead != "New Line (U+000A)"]
         ++this.#line;
         this.#lineStart = charIndex;
       }
-    } else if (char === Char['\n']) {
+    } else if (char === '\n') {
       // "New Line (U+000A)"
       ++this.#line;
       this.#lineStart = charIndex;
@@ -306,28 +265,33 @@ function ellipsize(str: string): string {
   return str.length > 20 ? str.slice(0, 17) + '...' : str;
 }
 
-function isDigit(ch: number | undefined): boolean {
-  return ch !== undefined && ch >= Char._0 && ch <= Char._9;
+function isDigit(ch: string | undefined): boolean {
+  return ch !== undefined && ch >= '0' && ch <= '9';
 }
 
-function isNumberStart(ch: number): boolean {
-  return isNumberContinue(ch) || ch == Char['-'];
+function isNumberStart(ch: string): boolean {
+  return isNumberContinue(ch) || ch === '-';
 }
 
-function isNumberContinue(ch: number | undefined): boolean {
-  return isDigit(ch) || ch === Char['.'];
+function isNumberContinue(ch: string | undefined): boolean {
+  return isDigit(ch) || ch === '.';
 }
 
-function isLetter(ch: number): boolean {
-  return (ch >= Char.A && ch <= Char.Z) || (ch >= Char.a && ch <= Char.z);
+function isLetter(ch: string): boolean {
+  return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
 }
 
-function isNameStart(ch: number | undefined): boolean {
+function isASCII(ch: string): boolean {
+  const code = ch.codePointAt(0);
+  return code != undefined && code <= 127;
+}
+
+function isNameStart(ch: string | undefined): boolean {
   if (ch === undefined) return false;
-  return isLetter(ch) || ch === Char._ || ch >= Char.NON_ASCII_START;
+  return isLetter(ch) || ch === '_' || !isASCII(ch);
 }
 
-function isNameContinue(code: number | undefined): boolean {
+function isNameContinue(code: string | undefined): boolean {
   return isNameStart(code) || isDigit(code);
 }
 
