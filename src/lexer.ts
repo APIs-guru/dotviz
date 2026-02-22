@@ -71,12 +71,79 @@ class Lexer {
   }
 
   nextToken(): Token {
-    while (true) {
-      const tokenStartChar = this.#peekNextChar();
-      switch (tokenStartChar) {
-        case undefined:
-          return { kind: 'EOF' };
+    this.#skipUntilTokenStart();
+    const tokenStartChar = this.#peekNextChar();
+    switch (tokenStartChar) {
+      case undefined:
+        return { kind: 'EOF' };
 
+      case Char[',']:
+        this.#readNextChar();
+        return { kind: ',' };
+      case Char[';']:
+        this.#readNextChar();
+        return { kind: ';' };
+      case Char['=']:
+        this.#readNextChar();
+        return { kind: '=' };
+      case Char['[']:
+        this.#readNextChar();
+        return { kind: '[' };
+      case Char[']']:
+        this.#readNextChar();
+        return { kind: ']' };
+      case Char['{']:
+        this.#readNextChar();
+        return { kind: '{' };
+      case Char['}']:
+        this.#readNextChar();
+        return { kind: '}' };
+
+      case Char['-']: {
+        const nextChar = this.#peekNextChar(1);
+        switch (nextChar) {
+          case Char['-']:
+            this.#readNextChar();
+            this.#readNextChar();
+            return { kind: '--' };
+          case Char['>']:
+            this.#readNextChar();
+            this.#readNextChar();
+            return { kind: '->' };
+          default:
+            if (isNumberContinue(nextChar)) {
+              return this.#readNumberToken();
+            }
+        }
+        break;
+      }
+
+      case Char['"']:
+        return this.#readStringToken();
+
+      // Comment
+      // case 0x00_23: // #
+      //   skipComment(lexer, position);
+      //   continue;
+
+      default:
+        if (isNameStart(tokenStartChar)) {
+          return this.#readNameToken();
+        }
+        if (isNumberStart(tokenStartChar)) {
+          return this.#readNumberToken();
+        }
+    }
+    const line = this.#line.toString();
+    const column = (this.#nextIndex - this.#lineStart + 1).toString();
+    throw new Error(
+      `(${line}:${column})Unexpected character: '${String.fromCodePoint(tokenStartChar)}'`,
+    );
+  }
+
+  #skipUntilTokenStart() {
+    while (true) {
+      switch (this.#peekNextChar()) {
         // Ignored:
         case Char.BOM:
         case Char['\n']:
@@ -85,69 +152,8 @@ class Lexer {
         case Char[' ']:
           this.#readNextChar();
           continue;
-
-        case Char[',']:
-          this.#readNextChar();
-          return { kind: ',' };
-        case Char[';']:
-          this.#readNextChar();
-          return { kind: ';' };
-        case Char['=']:
-          this.#readNextChar();
-          return { kind: '=' };
-        case Char['[']:
-          this.#readNextChar();
-          return { kind: '[' };
-        case Char[']']:
-          this.#readNextChar();
-          return { kind: ']' };
-        case Char['{']:
-          this.#readNextChar();
-          return { kind: '{' };
-        case Char['}']:
-          this.#readNextChar();
-          return { kind: '}' };
-
-        case Char['-']: {
-          const nextChar = this.#peekNextChar(1);
-          switch (nextChar) {
-            case Char['-']:
-              this.#readNextChar();
-              this.#readNextChar();
-              return { kind: '--' };
-            case Char['>']:
-              this.#readNextChar();
-              this.#readNextChar();
-              return { kind: '->' };
-            default:
-              if (isNumberContinue(nextChar)) {
-                return this.#readNumberToken();
-              }
-          }
-          break;
-        }
-
-        case Char['"']:
-          return this.#readStringToken();
-
-        // Comment
-        // case 0x00_23: // #
-        //   skipComment(lexer, position);
-        //   continue;
-
-        default:
-          if (isNameStart(tokenStartChar)) {
-            return this.#readNameToken();
-          }
-          if (isNumberStart(tokenStartChar)) {
-            return this.#readNumberToken();
-          }
       }
-      const line = this.#line.toString();
-      const column = (this.#nextIndex - this.#lineStart + 1).toString();
-      throw new Error(
-        `(${line}:${column})Unexpected character: '${String.fromCodePoint(tokenStartChar)}'`,
-      );
+      return;
     }
   }
 
