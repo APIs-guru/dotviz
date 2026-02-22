@@ -1,6 +1,6 @@
-import type { Attributes, Graph } from './graph.js';
+import type { Attributes, Edge, Graph, Node } from './graph.js';
 
-type KeywordOrPunctuation =
+type LiteralToken =
   | ','
   | ';'
   | '='
@@ -15,8 +15,7 @@ type KeywordOrPunctuation =
   | 'graph'
   | 'digraph'
   | 'subgraph'
-  | 'strict'
-  | 'EOF';
+  | 'strict';
 
 const IDType = {
   Number: 0,
@@ -32,8 +31,7 @@ interface ID {
   idType: IDType;
 }
 
-type Token = { kind: KeywordOrPunctuation } | ID;
-type TokenKind = KeywordOrPunctuation | 'ID';
+type Token = { kind: LiteralToken } | ID | { kind: 'EOF' };
 
 const Char = {
   BOM: 0xfe_ff,
@@ -44,6 +42,7 @@ const Char = {
   '"': 0x22,
   ',': 0x2c,
   '-': 0x2d,
+  '.': 0x2e,
   _0: 0x30,
   _9: 0x39,
   ';': 0x3b,
@@ -65,110 +64,152 @@ class Lexer {
   #dotStr: string;
   #line = 1;
   #lineStart = 0;
-  #position = -1;
-  #currentChar: number | undefined = undefined;
+  #nextIndex = 0;
 
   constructor(dotStr: string) {
     this.#dotStr = dotStr;
-    this.#readNextChar();
   }
 
   nextToken(): Token {
-    while (this.#currentChar != undefined) {
-      switch (this.#currentChar) {
+    while (true) {
+      const tokenStartChar = this.#peekNextChar();
+      switch (tokenStartChar) {
+        case undefined:
+          return { kind: 'EOF' };
+
         // Ignored:
         case Char.BOM:
         case Char['\n']:
         case Char['\r']:
         case Char['\t']:
         case Char[' ']:
-          break;
+          this.#readNextChar();
+          continue;
 
         case Char[',']:
-        case Char[';']:
-        case Char['=']:
-        case Char['[']:
-        case Char[']']:
-        case Char['{']:
-        case Char['}']: {
-          const kind = String.fromCodePoint(
-            this.#currentChar,
-          ) as KeywordOrPunctuation;
           this.#readNextChar();
-          return { kind };
-        }
+          return { kind: ',' };
+        case Char[';']:
+          this.#readNextChar();
+          return { kind: ';' };
+        case Char['=']:
+          this.#readNextChar();
+          return { kind: '=' };
+        case Char['[']:
+          this.#readNextChar();
+          return { kind: '[' };
+        case Char[']']:
+          this.#readNextChar();
+          return { kind: ']' };
+        case Char['{']:
+          this.#readNextChar();
+          return { kind: '{' };
+        case Char['}']:
+          this.#readNextChar();
+          return { kind: '}' };
 
         case Char['-']: {
-          const line = this.#line.toString();
-          const column = (this.#position - this.#lineStart + 1).toString();
-          this.#readNextChar();
-          switch (this.#currentChar as number) {
+          const nextChar = this.#peekNextChar(1);
+          switch (nextChar) {
             case Char['-']:
+              this.#readNextChar();
               this.#readNextChar();
               return { kind: '--' };
             case Char['>']:
               this.#readNextChar();
+              this.#readNextChar();
               return { kind: '->' };
+            default:
+              if (isNumberContinue(nextChar)) {
+                return this.#readNumberToken();
+              }
           }
-          throw new Error(
-            `(${line}:${column})Unexpected character: '${String.fromCodePoint(this.#currentChar)}'`,
-          );
+          break;
         }
 
         case Char['"']:
-          return this.#readString();
+          return this.#readStringToken();
 
         // Comment
         // case 0x00_23: // #
-        //   return readComment(lexer, position);
+        //   skipComment(lexer, position);
+        //   continue;
 
-        default: {
-          if (isNameStart(this.#currentChar)) {
+        default:
+          if (isNameStart(tokenStartChar)) {
             return this.#readNameToken();
           }
-          const line = this.#line.toString();
-          const column = (this.#position - this.#lineStart + 1).toString();
+          if (isNumberStart(tokenStartChar)) {
+            return this.#readNumberToken();
+          }
+      }
+      const line = this.#line.toString();
+      const column = (this.#nextIndex - this.#lineStart + 1).toString();
+      throw new Error(
+        `(${line}:${column})Unexpected character: '${String.fromCodePoint(tokenStartChar)}'`,
+      );
+    }
+  }
+
+  #readNumberToken(): Token {
+    const valueStart = this.#nextIndex;
+    this.#skipChar(Char['-']);
+    if (this.#peekNextChar() !== Char['.']) {
+      this.#readDigits();
+    }
+    if (this.#skipChar(Char['.'])) {
+      this.#readDigits();
+    }
+
+    // FIXME
+    // if (this.#currentChar === Char['.']) {
+    //   // syntax ambiguity - badly delimited number '5.5.' in line 2 of input splits into two tokens
+    // }
+    // syntax ambiguity - badly delimited number '5a' in line 2 of input splits into two tokens
+
+    // FIXME: check for over and underflow
+    return {
+      kind: 'ID',
+      idType: IDType.Number,
+      value: this.#dotStr.slice(valueStart, this.#nextIndex),
+    };
+  }
+
+  #readDigits(): void {
+    while (isDigit(this.#peekNextChar())) {
+      this.#readNextChar();
+    }
+  }
+
+  #readStringToken(): ID {
+    const line = this.#line.toString();
+    const column = (this.#nextIndex - this.#lineStart + 1).toString();
+
+    this.#readNextChar(); // skip opening `"`
+    const valueStart = this.#nextIndex;
+    while (this.#peekNextChar() !== Char['"']) {
+      switch (this.#readNextChar()) {
+        case undefined: {
+          const value = this.#dotStr.slice(valueStart, this.#nextIndex);
           throw new Error(
-            `(${line}:${column})Unexpected character: '${String.fromCodePoint(this.#currentChar)}'`,
+            `(${line}:${column})Unterminated string, missing closing '"' in: '"${ellipsize(value)}'`,
           );
         }
       }
-      this.#readNextChar();
     }
-    return { kind: 'EOF' };
-  }
 
-  #readString(): ID {
-    const line = this.#line.toString();
-    const column = (this.#position - this.#lineStart + 1).toString();
-
-    this.#readNextChar(); // skip `"`
-    const start = this.#position;
-    do {
-      this.#readNextChar();
-      if (this.#currentChar === undefined) {
-        const value = this.#dotStr.slice(start, this.#position);
-        throw new Error(
-          `(${line}:${column})Unterminated string: '${ellipsize(value)}'`,
-        );
-      }
-    } while (this.#currentChar !== Char['"']);
-
-    const value = this.#dotStr.slice(start, this.#position);
-    this.#readNextChar(); // skip `"`
+    const value = this.#dotStr.slice(valueStart, this.#nextIndex);
+    this.#readNextChar(); // skip closing `"`
     return { kind: 'ID', idType: IDType.String, value };
   }
 
   #readNameToken(): Token | ID {
-    const start = this.#position;
-    do {
+    const valueStart = this.#nextIndex;
+    while (isNameContinue(this.#peekNextChar())) {
       this.#readNextChar();
-    } while (
-      this.#currentChar !== undefined &&
-      isNameContinue(this.#currentChar)
-    );
+    }
 
-    const value = this.#dotStr.slice(start, this.#position);
+    const value = this.#dotStr.slice(valueStart, this.#nextIndex);
     const token = value.toLowerCase();
     switch (token) {
       case 'node':
@@ -183,19 +224,33 @@ class Lexer {
     }
   }
 
-  #readNextChar(): void {
-    this.#currentChar = this.#dotStr.codePointAt(++this.#position);
-    if (this.#currentChar === Char['\r']) {
-      if (this.#dotStr.codePointAt(this.#position) !== Char['\n']) {
+  #skipChar(char: number): boolean {
+    if (this.#peekNextChar() === char) {
+      this.#readNextChar();
+      return true;
+    }
+    return false;
+  }
+
+  #peekNextChar(offset = 0): number | undefined {
+    return this.#dotStr.codePointAt(this.#nextIndex + offset);
+  }
+
+  #readNextChar(): number | undefined {
+    const charIndex = this.#nextIndex++;
+    const char = this.#dotStr.codePointAt(charIndex);
+    if (char === Char['\r']) {
+      if (this.#peekNextChar() !== Char['\n']) {
         // "Carriage Return (U+000D)" [lookahead != "New Line (U+000A)"]
         ++this.#line;
-        this.#lineStart = this.#position;
+        this.#lineStart = charIndex;
       }
-    } else if (this.#currentChar === Char['\n']) {
+    } else if (char === Char['\n']) {
       // "New Line (U+000A)"
       ++this.#line;
-      this.#lineStart = this.#position;
+      this.#lineStart = charIndex;
     }
+    return char;
   }
 }
 
@@ -214,7 +269,7 @@ function idStr({ idType, value }: ID): string {
   }
 }
 
-function kindStr(kind: KeywordOrPunctuation): string {
+function kindStr(kind: LiteralToken | 'EOF'): string {
   switch (kind) {
     case ',':
     case ';':
@@ -245,19 +300,28 @@ function ellipsize(str: string): string {
   return str.length > 20 ? str.slice(0, 17) + '...' : str;
 }
 
-function isDigit(ch: number): boolean {
-  return ch >= Char._0 && ch <= Char._9;
+function isDigit(ch: number | undefined): boolean {
+  return ch !== undefined && ch >= Char._0 && ch <= Char._9;
+}
+
+function isNumberStart(ch: number): boolean {
+  return isNumberContinue(ch) || ch == Char['-'];
+}
+
+function isNumberContinue(ch: number | undefined): boolean {
+  return isDigit(ch) || ch === Char['.'];
 }
 
 function isLetter(ch: number): boolean {
   return (ch >= Char.A && ch <= Char.Z) || (ch >= Char.a && ch <= Char.z);
 }
 
-function isNameStart(ch: number): boolean {
+function isNameStart(ch: number | undefined): boolean {
+  if (ch === undefined) return false;
   return isLetter(ch) || ch === Char._ || ch >= Char.NON_ASCII_START;
 }
 
-function isNameContinue(code: number): boolean {
+function isNameContinue(code: number | undefined): boolean {
   return isNameStart(code) || isDigit(code);
 }
 
@@ -276,7 +340,7 @@ class Parser {
   }
 
   #parseGraph(): Graph {
-    if (this.#peekIs('EOF')) {
+    if (this.#isEOF()) {
       throw new Error('Missing graph definition!');
     }
 
@@ -301,7 +365,7 @@ class Parser {
     }
     this.#consume();
 
-    if (!this.#peekIs('EOF')) {
+    if (!this.#isEOF()) {
       throw new Error(
         `Unexpected ${tokenStr(this.#token)}, after closing '}' of the graph!`,
       );
@@ -327,19 +391,31 @@ class Parser {
         // FIXME
 
         if (this.#optionalEdgeOp(graph.directed)) {
-          const head = this.#expectID('node name').value;
-          graph.edges.push({
-            head,
+          const edge: Required<Edge> = {
+            head: this.#expectID('node name').value,
             tail: nodeID,
-          });
+            attributes: {},
+          };
+          if (this.#peekIs('[')) {
+            this.#parseAttrList(edge.attributes);
+          }
+          graph.edges.push(edge);
           // FIXME
         } else {
           // node_stmt: node_id [ attr_list ]
+          const node: Required<Node> = { name: nodeID, attributes: {} };
+          if (this.#peekIs('[')) {
+            this.#parseAttrList(node.attributes);
+          }
+          graph.nodes.push(node);
           // FIXME
         }
 
         break;
       }
+      // case 'subgraph':
+      //   break;
+
       // attr_stmt:	(graph | node | edge) attr_list
       case 'graph':
         this.#parseAttrList(graph.graphAttributes);
@@ -350,8 +426,6 @@ class Parser {
       case 'edge':
         this.#parseAttrList(graph.edgeAttributes);
         break;
-      // case 'subgraph':
-      //   break;
       case 'EOF':
         throw new Error(
           `Unexpected end of file, expected ${kindStr('}')} before the end of the graph!`,
@@ -416,7 +490,11 @@ class Parser {
     attributes[name.value] = value.value;
   }
 
-  #peekIs(kind: TokenKind): boolean {
+  #isEOF(): boolean {
+    return this.#token.kind === 'EOF';
+  }
+
+  #peekIs(kind: LiteralToken): boolean {
     return this.#token.kind === kind;
   }
 
@@ -436,7 +514,7 @@ class Parser {
     return token;
   }
 
-  #expectedToken(kind: KeywordOrPunctuation): void {
+  #expectedToken(kind: LiteralToken): void {
     const token = this.#consume();
     if (token.kind !== kind) {
       throw new Error(
@@ -454,7 +532,7 @@ class Parser {
     }
   }
 
-  #optionalToken(kind: KeywordOrPunctuation): boolean {
+  #optionalToken(kind: LiteralToken): boolean {
     if (this.#peekIs(kind)) {
       this.#consume();
       return true;
