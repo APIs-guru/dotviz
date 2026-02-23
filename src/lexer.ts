@@ -1,4 +1,4 @@
-import type { Attributes, Edge, Graph, Node } from './graph.js';
+import type { Attributes, Edge, Graph, Node, Subgraph } from './graph.js';
 
 const BOM = '\uFEFF' as const;
 type LiteralToken =
@@ -42,10 +42,55 @@ class Lexer {
 
   constructor(dotStr: string) {
     this.#dotStr = dotStr;
+    this.#skipUntilTokenStart();
   }
 
   nextToken(): Token {
+    if (this.isEOF()) {
+      return { kind: 'EOF' };
+    }
+
+    const token = this.#readNextToken();
     this.#skipUntilTokenStart();
+    return token;
+  }
+
+  isEOF(): boolean {
+    return this.#nextIndex >= this.#dotStr.length;
+  }
+
+  peekIs(kind: LiteralToken): boolean {
+    return this.#dotStr.startsWith(kind, this.#nextIndex);
+  }
+
+  expectID(description: string): ID {
+    const token = this.nextToken();
+    if (token.kind !== 'ID') {
+      throw new Error(
+        `Unexpected ${tokenStr(token)}, expected ${description}!`,
+      );
+    }
+    return token;
+  }
+
+  expectedToken(kind: LiteralToken): void {
+    if (!this.optionalToken(kind)) {
+      throw new Error(
+        `Unexpected ${tokenStr(this.nextToken())}, expected ${kindStr(kind)}!`,
+      );
+    }
+  }
+
+  optionalToken(kind: LiteralToken): boolean {
+    if (this.#dotStr.startsWith(kind, this.#nextIndex)) {
+      this.#nextIndex += kind.length;
+      this.#skipUntilTokenStart();
+      return true;
+    }
+    return false;
+  }
+
+  #readNextToken(): Token {
     const tokenStartChar = this.#peekNextChar();
     switch (tokenStartChar) {
       case undefined:
@@ -63,13 +108,9 @@ class Lexer {
 
       case '-': {
         const nextChar = this.#peekNextChar(1);
-        if (nextChar === '-') {
-          this.#readNextChar();
-          this.#readNextChar();
+        if (this.optionalToken('--')) {
           return { kind: '--' };
-        } else if (nextChar === '>') {
-          this.#readNextChar();
-          this.#readNextChar();
+        } else if (this.optionalToken('->')) {
           return { kind: '->' };
         } else if (isNumberContinue(nextChar)) {
           return this.#readNumberToken();
@@ -295,62 +336,59 @@ function isNameContinue(code: string | undefined): boolean {
   return isNameStart(code) || isDigit(code);
 }
 
-class Parser {
-  #lexer: Lexer;
-  #token: Token | ID;
-
-  constructor(dotStr: string) {
-    this.#lexer = new Lexer(dotStr);
-    this.#token = this.#lexer.nextToken();
+export function parseDot(dotStr: string): Graph {
+  const lexer = new Lexer(dotStr);
+  if (lexer.isEOF()) {
+    throw new Error('Missing graph definition!');
   }
 
-  static parseDot(this: void, dotStr: string): Graph {
-    const parser = new Parser(dotStr);
-    return parser.#parseGraph();
+  // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
+  const isStrict = lexer.optionalToken('strict');
+  const isDirected = parseIsDirectedGraph();
+  let graphName = undefined;
+  if (!lexer.optionalToken('{')) {
+    graphName = lexer.expectID('graph name').value;
+    lexer.expectedToken('{');
   }
 
-  #parseGraph(): Graph {
-    if (this.#isEOF()) {
-      throw new Error('Missing graph definition!');
-    }
+  const graphAttributes: Attributes = {};
+  const nodeAttributes: Attributes = {};
+  const edgeAttributes: Attributes = {};
+  const nodes: Required<Node>[] = [];
+  const edges: Required<Edge>[] = [];
+  const subgraphs: Required<Subgraph>[] = [];
 
-    // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
-    const graph: Required<Graph> = {
-      strict: this.#optionalToken('strict'),
-      directed: this.#parseIsDirectedGraph(),
-      name: this.#optionalID(),
-      graphAttributes: {},
-      nodeAttributes: {},
-      edgeAttributes: {},
-      nodes: [],
-      edges: [],
-      subgraphs: [],
-    } as const;
-
-    this.#expectedToken('{');
+  while (!lexer.optionalToken('}')) {
     // stmt_list	:	[ stmt [ ';' ] stmt_list ]
-    while (!this.#peekIs('}')) {
-      this.#parseStatement(graph);
-      this.#optionalToken(';');
-    }
-    this.#consume();
-
-    if (!this.#isEOF()) {
-      throw new Error(
-        `Unexpected ${tokenStr(this.#token)}, after closing '}' of the graph!`,
-      );
-    }
-    return graph;
+    parseStatement();
+    lexer.optionalToken(';');
   }
 
-  #parseStatement(graph: Required<Graph>): void {
-    const token = this.#consume();
+  if (!lexer.isEOF()) {
+    throw new Error(
+      `Unexpected ${tokenStr(lexer.nextToken())}, after closing '}' of the graph!`,
+    );
+  }
+  return {
+    strict: isStrict,
+    directed: isDirected,
+    name: graphName,
+    graphAttributes,
+    nodeAttributes,
+    edgeAttributes,
+    nodes,
+    edges,
+    subgraphs,
+  };
+
+  function parseStatement(): void {
+    const token = lexer.nextToken();
     // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
     switch (token.kind) {
       case 'ID': {
-        if (this.#peekIs('=')) {
+        if (lexer.peekIs('=')) {
           // ID '=' ID
-          this.#parseAttr(token, graph.graphAttributes);
+          parseAttr(token, graphAttributes);
           break;
         }
 
@@ -360,24 +398,24 @@ class Parser {
         // port: ':' ID [ ':' compass_pt ]
         // FIXME
 
-        if (this.#optionalEdgeOp(graph.directed)) {
+        if (optionalEdgeOp()) {
           const edge: Required<Edge> = {
-            head: this.#expectID('node name').value,
+            head: lexer.expectID('node name').value,
             tail: nodeID,
             attributes: {},
           };
-          if (this.#peekIs('[')) {
-            this.#parseAttrList(edge.attributes);
+          if (lexer.peekIs('[')) {
+            parseAttrList(edge.attributes);
           }
-          graph.edges.push(edge);
+          edges.push(edge);
           // FIXME
         } else {
           // node_stmt: node_id [ attr_list ]
           const node: Required<Node> = { name: nodeID, attributes: {} };
-          if (this.#peekIs('[')) {
-            this.#parseAttrList(node.attributes);
+          if (lexer.peekIs('[')) {
+            parseAttrList(node.attributes);
           }
-          graph.nodes.push(node);
+          nodes.push(node);
           // FIXME
         }
 
@@ -388,13 +426,13 @@ class Parser {
 
       // attr_stmt:	(graph | node | edge) attr_list
       case 'graph':
-        this.#parseAttrList(graph.graphAttributes);
+        parseAttrList(graphAttributes);
         break;
       case 'node':
-        this.#parseAttrList(graph.nodeAttributes);
+        parseAttrList(nodeAttributes);
         break;
       case 'edge':
-        this.#parseAttrList(graph.edgeAttributes);
+        parseAttrList(edgeAttributes);
         break;
       case 'EOF':
         throw new Error(
@@ -403,17 +441,17 @@ class Parser {
     }
   }
 
-  #optionalEdgeOp(directed: boolean): boolean {
-    if (this.#optionalToken('--')) {
-      if (directed) {
+  function optionalEdgeOp(): boolean {
+    if (lexer.optionalToken('--')) {
+      if (isDirected) {
         throw new Error(
           `Unexpected keyword '--' in directed graph, expected keyword '->'!`,
         );
       }
       return true;
     }
-    if (this.#optionalToken('->')) {
-      if (!directed) {
+    if (lexer.optionalToken('->')) {
+      if (!isDirected) {
         throw new Error(
           `Unexpected keyword '->' in undirected graph, expected keyword '--'!`,
         );
@@ -423,8 +461,8 @@ class Parser {
     return false;
   }
 
-  #parseIsDirectedGraph(): boolean {
-    const token = this.#consume();
+  function parseIsDirectedGraph(): boolean {
+    const token = lexer.nextToken();
     switch (token.kind) {
       case 'graph':
         return false;
@@ -437,78 +475,25 @@ class Parser {
     }
   }
 
-  #parseAttrList(attributes: Attributes) {
+  function parseAttrList(attributes: Attributes) {
     // attr_list:	'[' [ a_list ] ']' [ attr_list ]
     do {
-      this.#expectedToken('[');
+      lexer.expectedToken('[');
       // a_list: ID '=' ID [ (';' | ',') ] [ a_list ]
-      while (!this.#peekIs(']')) {
-        this.#parseAttr(this.#expectID('attribute name'), attributes);
+      while (!lexer.optionalToken(']')) {
+        parseAttr(lexer.expectID('attribute name'), attributes);
         // Either ';' or ',' but doesn't allow both
-        if (!this.#optionalToken(';')) {
-          this.#optionalToken(',');
+        if (!lexer.optionalToken(';')) {
+          lexer.optionalToken(',');
         }
       }
-      this.#expectedToken(']');
-    } while (this.#peekIs('['));
+    } while (lexer.peekIs('['));
   }
 
-  #parseAttr(name: ID, attributes: Attributes) {
-    this.#expectedToken('=');
-    const value = this.#expectID('attribute value');
+  function parseAttr(name: ID, attributes: Attributes) {
+    lexer.expectedToken('=');
+    const value = lexer.expectID('attribute value');
     // FIXME: handle string escape characters
     attributes[name.value] = value.value;
   }
-
-  #isEOF(): boolean {
-    return this.#token.kind === 'EOF';
-  }
-
-  #peekIs(kind: LiteralToken): boolean {
-    return this.#token.kind === kind;
-  }
-
-  #consume(): Token | ID {
-    const token = this.#token;
-    this.#token = this.#lexer.nextToken();
-    return token;
-  }
-
-  #expectID(description: string): ID {
-    const token = this.#consume();
-    if (token.kind !== 'ID') {
-      throw new Error(
-        `Unexpected ${tokenStr(this.#token)}, expected ${description}!`,
-      );
-    }
-    return token;
-  }
-
-  #expectedToken(kind: LiteralToken): void {
-    const token = this.#consume();
-    if (token.kind !== kind) {
-      throw new Error(
-        `Unexpected ${tokenStr(token)}, expected ${kindStr(kind)}!`,
-      );
-    }
-  }
-
-  #optionalID(): string | undefined {
-    const token = this.#token;
-    if (token.kind === 'ID') {
-      this.#consume();
-      // FIXME: handle string escape characters
-      return token.value;
-    }
-  }
-
-  #optionalToken(kind: LiteralToken): boolean {
-    if (this.#peekIs(kind)) {
-      this.#consume();
-      return true;
-    }
-    return false;
-  }
 }
-
-export const parseDot = Parser.parseDot;
