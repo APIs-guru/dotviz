@@ -1,16 +1,9 @@
 import type { Attributes, Edge, Graph, Node, Subgraph } from './graph.js';
 
 const BOM = '\uFEFF' as const;
-type LiteralToken =
-  | ','
-  | ';'
-  | '='
-  | '['
-  | ']'
-  | '{'
-  | '}'
-  | '--'
-  | '->'
+type LiteralToken = ',' | ';' | '=' | '[' | ']' | '{' | '}' | '--' | '->';
+
+type KeywordToken =
   | 'node'
   | 'edge'
   | 'graph'
@@ -32,7 +25,11 @@ interface ID {
   idType: IDType;
 }
 
-type Token = { kind: LiteralToken } | ID | { kind: 'EOF' };
+type Token =
+  | { kind: LiteralToken }
+  | { kind: KeywordToken }
+  | { kind: 'EOF' }
+  | ID;
 
 class Lexer {
   #dotStr: string;
@@ -46,10 +43,6 @@ class Lexer {
   }
 
   nextToken(): Token {
-    if (this.isEOF()) {
-      return { kind: 'EOF' };
-    }
-
     const token = this.#readNextToken();
     this.#skipUntilTokenStart();
     return token;
@@ -59,30 +52,50 @@ class Lexer {
     return this.#nextIndex >= this.#dotStr.length;
   }
 
-  peekIs(kind: LiteralToken): boolean {
-    return this.#dotStr.startsWith(kind, this.#nextIndex);
+  peekIsLiteral(literal: LiteralToken): boolean {
+    return this.#dotStr.startsWith(literal, this.#nextIndex);
+  }
+
+  peekIsKeyword(keyword: KeywordToken): boolean {
+    if (this.#dotStr.startsWith(keyword, this.#nextIndex)) {
+      const nextChar = this.#dotStr[this.#nextIndex + keyword.length];
+      return !isNameContinue(nextChar);
+    }
+    return false;
+  }
+
+  optionalID(): ID | undefined {
+    const token = this.#readKeywordOrID();
+    if (token?.kind == 'ID') {
+      this.#skipUntilTokenStart();
+      return token;
+    }
+    if (token !== undefined) {
+      this.#nextIndex -= token.kind.length;
+    }
+    return undefined;
   }
 
   expectID(description: string): ID {
-    const token = this.nextToken();
-    if (token.kind !== 'ID') {
-      throw new Error(
-        `Unexpected ${tokenStr(token)}, expected ${description}!`,
-      );
+    const id = this.optionalID();
+    if (id !== undefined) {
+      return id;
     }
-    return token;
+    throw new Error(
+      `Unexpected ${tokenStr(this.#readNextToken())}, expected ${description}!`,
+    );
   }
 
-  expectedToken(kind: LiteralToken): void {
-    if (!this.optionalToken(kind)) {
+  expectedLiteral(literal: LiteralToken): void {
+    if (!this.optionalLiteral(literal)) {
       throw new Error(
-        `Unexpected ${tokenStr(this.nextToken())}, expected ${kindStr(kind)}!`,
+        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${kindStr(literal)}!`,
       );
     }
   }
 
-  optionalToken(kind: LiteralToken): boolean {
-    if (this.#dotStr.startsWith(kind, this.#nextIndex)) {
+  optionalLiteral(kind: LiteralToken): boolean {
+    if (this.peekIsLiteral(kind)) {
       this.#nextIndex += kind.length;
       this.#skipUntilTokenStart();
       return true;
@@ -90,12 +103,34 @@ class Lexer {
     return false;
   }
 
+  optionalKeyword(keyword: KeywordToken): boolean {
+    if (this.peekIsKeyword(keyword)) {
+      this.#nextIndex += keyword.length;
+      this.#skipUntilTokenStart();
+      return true;
+    }
+    return false;
+  }
+
   #readNextToken(): Token {
+    const token = this.#readLiteral() ?? this.#readKeywordOrID();
+    if (token !== undefined) {
+      return token;
+    }
+
+    const char = this.#peekNextChar();
+    if (char === undefined) {
+      return { kind: 'EOF' };
+    }
+
+    const line = this.#line.toString();
+    const column = (this.#nextIndex - this.#lineStart + 1).toString();
+    throw new Error(`(${line}:${column})Unexpected character: '${char}'`);
+  }
+
+  #readLiteral(): { kind: LiteralToken } | undefined {
     const tokenStartChar = this.#peekNextChar();
     switch (tokenStartChar) {
-      case undefined:
-        return { kind: 'EOF' };
-
       case ',':
       case ';':
       case '=':
@@ -103,42 +138,48 @@ class Lexer {
       case ']':
       case '{':
       case '}':
-        this.#readNextChar();
+        this.#nextIndex += 1;
         return { kind: tokenStartChar };
 
       case '-': {
         const nextChar = this.#peekNextChar(1);
-        if (this.optionalToken('--')) {
+        if (nextChar === '-') {
+          this.#nextIndex += 2;
           return { kind: '--' };
-        } else if (this.optionalToken('->')) {
+        } else if (nextChar === '->') {
+          this.#nextIndex += 2;
           return { kind: '->' };
-        } else if (isNumberContinue(nextChar)) {
-          return this.#readNumberToken();
         }
         break;
       }
-
-      case '"':
-        return this.#readStringToken();
-
-      // Comment
-      // case 0x00_23: // #
-      //   skipComment(lexer, position);
-      //   continue;
-
-      default:
-        if (isNameStart(tokenStartChar)) {
-          return this.#readNameToken();
-        }
-        if (isNumberStart(tokenStartChar)) {
-          return this.#readNumberToken();
-        }
     }
-    const line = this.#line.toString();
-    const column = (this.#nextIndex - this.#lineStart + 1).toString();
-    throw new Error(
-      `(${line}:${column})Unexpected character: '${tokenStartChar}'`,
-    );
+
+    return undefined;
+  }
+
+  #readKeywordOrID(): { kind: KeywordToken } | ID | undefined {
+    const tokenStartChar = this.#peekNextChar();
+    if (tokenStartChar === '"') {
+      return { kind: 'ID', idType: IDType.String, value: this.#readString() };
+    } else if (isNumberStart(tokenStartChar)) {
+      return { kind: 'ID', idType: IDType.Number, value: this.#readNumber() };
+    } else if (isNameStart(tokenStartChar)) {
+      const value = this.#readName();
+      const maybeKeyword = value.toLowerCase();
+      switch (maybeKeyword) {
+        case 'node':
+        case 'edge':
+        case 'graph':
+        case 'digraph':
+        case 'subgraph':
+        case 'strict':
+          // this.#nextIndex -= value.length; // roll back reading the token
+          return { kind: maybeKeyword };
+        default:
+          return { kind: 'ID', idType: IDType.Name, value };
+      }
+    }
+    return undefined;
   }
 
   #skipUntilTokenStart() {
@@ -152,12 +193,17 @@ class Lexer {
         case ' ':
           this.#readNextChar();
           continue;
+
+        // Comment
+        // case 0x00_23: // #
+        //   skipComment(lexer, position);
+        //   continue;
       }
       return;
     }
   }
 
-  #readNumberToken(): Token {
+  #readNumber(): string {
     const valueStart = this.#nextIndex;
     this.#skipChar('-');
     if (this.#peekNextChar() !== '.') {
@@ -173,12 +219,7 @@ class Lexer {
     // }
     // syntax ambiguity - badly delimited number '5a' in line 2 of input splits into two tokens
 
-    // FIXME: check for over and underflow
-    return {
-      kind: 'ID',
-      idType: IDType.Number,
-      value: this.#dotStr.slice(valueStart, this.#nextIndex),
-    };
+    return this.#dotStr.slice(valueStart, this.#nextIndex);
   }
 
   #readDigits(): void {
@@ -187,13 +228,13 @@ class Lexer {
     }
   }
 
-  #readStringToken(): ID {
+  #readString(): string {
     const line = this.#line.toString();
     const column = (this.#nextIndex - this.#lineStart + 1).toString();
 
     this.#readNextChar(); // skip opening `"`
     const valueStart = this.#nextIndex;
-    while (this.#peekNextChar() !== '"') {
+    while (!this.#skipChar('"')) {
       switch (this.#readNextChar()) {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
@@ -204,30 +245,17 @@ class Lexer {
       }
     }
 
-    const value = this.#dotStr.slice(valueStart, this.#nextIndex);
-    this.#readNextChar(); // skip closing `"`
-    return { kind: 'ID', idType: IDType.String, value };
+    return this.#dotStr.slice(valueStart, this.#nextIndex - 1);
   }
 
-  #readNameToken(): Token | ID {
+  #readName(): string {
     const valueStart = this.#nextIndex;
+    this.#readNextChar();
     while (isNameContinue(this.#peekNextChar())) {
       this.#readNextChar();
     }
 
-    const value = this.#dotStr.slice(valueStart, this.#nextIndex);
-    const token = value.toLowerCase();
-    switch (token) {
-      case 'node':
-      case 'edge':
-      case 'graph':
-      case 'digraph':
-      case 'subgraph':
-      case 'strict':
-        return { kind: token };
-      default:
-        return { kind: 'ID', idType: IDType.Name, value };
-    }
+    return this.#dotStr.slice(valueStart, this.#nextIndex);
   }
 
   #skipChar(char: string): boolean {
@@ -275,7 +303,7 @@ function idStr({ idType, value }: ID): string {
   }
 }
 
-function kindStr(kind: LiteralToken | 'EOF'): string {
+function kindStr(kind: LiteralToken | KeywordToken | 'EOF'): string {
   switch (kind) {
     case ',':
     case ';':
@@ -310,7 +338,7 @@ function isDigit(ch: string | undefined): boolean {
   return ch !== undefined && ch >= '0' && ch <= '9';
 }
 
-function isNumberStart(ch: string): boolean {
+function isNumberStart(ch: string | undefined): boolean {
   return isNumberContinue(ch) || ch === '-';
 }
 
@@ -343,13 +371,10 @@ export function parseDot(dotStr: string): Graph {
   }
 
   // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
-  const isStrict = lexer.optionalToken('strict');
+  const isStrict = lexer.optionalKeyword('strict');
   const isDirected = parseIsDirectedGraph();
-  let graphName = undefined;
-  if (!lexer.optionalToken('{')) {
-    graphName = lexer.expectID('graph name').value;
-    lexer.expectedToken('{');
-  }
+  const graphName = lexer.optionalID()?.value;
+  lexer.expectedLiteral('{');
 
   const graphAttributes: Attributes = {};
   const nodeAttributes: Attributes = {};
@@ -358,10 +383,10 @@ export function parseDot(dotStr: string): Graph {
   const edges: Required<Edge>[] = [];
   const subgraphs: Required<Subgraph>[] = [];
 
-  while (!lexer.optionalToken('}')) {
+  while (!lexer.optionalLiteral('}')) {
     // stmt_list	:	[ stmt [ ';' ] stmt_list ]
     parseStatement();
-    lexer.optionalToken(';');
+    lexer.optionalLiteral(';');
   }
 
   if (!lexer.isEOF()) {
@@ -386,7 +411,7 @@ export function parseDot(dotStr: string): Graph {
     // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
     switch (token.kind) {
       case 'ID': {
-        if (lexer.peekIs('=')) {
+        if (lexer.peekIsLiteral('=')) {
           // ID '=' ID
           parseAttr(token, graphAttributes);
           break;
@@ -404,7 +429,7 @@ export function parseDot(dotStr: string): Graph {
             tail: nodeID,
             attributes: {},
           };
-          if (lexer.peekIs('[')) {
+          if (lexer.peekIsLiteral('[')) {
             parseAttrList(edge.attributes);
           }
           edges.push(edge);
@@ -412,7 +437,7 @@ export function parseDot(dotStr: string): Graph {
         } else {
           // node_stmt: node_id [ attr_list ]
           const node: Required<Node> = { name: nodeID, attributes: {} };
-          if (lexer.peekIs('[')) {
+          if (lexer.peekIsLiteral('[')) {
             parseAttrList(node.attributes);
           }
           nodes.push(node);
@@ -442,7 +467,7 @@ export function parseDot(dotStr: string): Graph {
   }
 
   function optionalEdgeOp(): boolean {
-    if (lexer.optionalToken('--')) {
+    if (lexer.optionalLiteral('--')) {
       if (isDirected) {
         throw new Error(
           `Unexpected keyword '--' in directed graph, expected keyword '->'!`,
@@ -450,7 +475,7 @@ export function parseDot(dotStr: string): Graph {
       }
       return true;
     }
-    if (lexer.optionalToken('->')) {
+    if (lexer.optionalLiteral('->')) {
       if (!isDirected) {
         throw new Error(
           `Unexpected keyword '->' in undirected graph, expected keyword '--'!`,
@@ -462,36 +487,33 @@ export function parseDot(dotStr: string): Graph {
   }
 
   function parseIsDirectedGraph(): boolean {
-    const token = lexer.nextToken();
-    switch (token.kind) {
-      case 'graph':
-        return false;
-      case 'digraph':
-        return true;
-      default:
-        throw new Error(
-          `Unexpected ${tokenStr(token)}, expected keyword 'graph' or 'digraph'!`,
-        );
+    if (lexer.optionalKeyword('graph')) {
+      return false;
+    } else if (lexer.optionalKeyword('digraph')) {
+      return true;
     }
+    throw new Error(
+      `Unexpected ${tokenStr(lexer.nextToken())}, expected keyword 'graph' or 'digraph'!`,
+    );
   }
 
   function parseAttrList(attributes: Attributes) {
     // attr_list:	'[' [ a_list ] ']' [ attr_list ]
     do {
-      lexer.expectedToken('[');
+      lexer.expectedLiteral('[');
       // a_list: ID '=' ID [ (';' | ',') ] [ a_list ]
-      while (!lexer.optionalToken(']')) {
+      while (!lexer.optionalLiteral(']')) {
         parseAttr(lexer.expectID('attribute name'), attributes);
         // Either ';' or ',' but doesn't allow both
-        if (!lexer.optionalToken(';')) {
-          lexer.optionalToken(',');
+        if (!lexer.optionalLiteral(';')) {
+          lexer.optionalLiteral(',');
         }
       }
-    } while (lexer.peekIs('['));
+    } while (lexer.peekIsLiteral('['));
   }
 
   function parseAttr(name: ID, attributes: Attributes) {
-    lexer.expectedToken('=');
+    lexer.expectedLiteral('=');
     const value = lexer.expectID('attribute value');
     // FIXME: handle string escape characters
     attributes[name.value] = value.value;
