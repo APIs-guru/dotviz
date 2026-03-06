@@ -4,8 +4,11 @@ const RawStringSymbol = Symbol.for('RawString');
 
 export class RawString {
   private [RawStringSymbol] = true;
+  str: string;
 
-  constructor(public readonly str: string) {}
+  constructor(str: string) {
+    this.str = str;
+  }
 
   static isRawString(val: unknown): val is RawString {
     return typeof val === 'object' && val !== null && RawStringSymbol in val;
