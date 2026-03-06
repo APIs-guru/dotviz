@@ -37,7 +37,8 @@
     "typedoc": "0.28.13",
     "typedoc-plugin-mdn-links": "5.0.9",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.45.0"
+    "typescript-eslint": "8.45.0",
+    "vitest": "4.0.18"
   },
   "scripts": {
     "preversion": "bash ./scripts/check-git.sh && npm ci --ignore-scripts",
@@ -49,7 +50,7 @@
     "prettier": "prettier --write --list-different .",
     "prettier:check": "prettier --check .",
     "check:spelling": "cspell --cache --no-progress \"**/*\"",
-    "testonly": "node --test test/*.test.ts",
+    "testonly": "vitest run test/*.test.ts",
     "docs": "typedoc types/index.d.ts"
   }
 }

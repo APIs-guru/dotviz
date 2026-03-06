@@ -1,10 +1,12 @@
-import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { describe, it, type TestContext } from 'node:test';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import * as VizPackage from '@viz-js/viz';
+import { describe, expect, it, type TestContext } from 'vitest';
 
 import * as DotVizPackage from '../src/index.ts';
+import { expectString } from './util/raw-string-serializer.ts';
 
 const useVizJS = process.env.USE_VIZ_JS != null;
 const renderFormats = useVizJS
@@ -599,12 +601,13 @@ describe('fonts', () => {
   /* spell-checker: enable */
 });
 
+const graphvizSnapshotDir = fileURLToPath(import.meta.resolve('./graphviz'));
 const fontWarningRegExp =
   /^Warning: no hard-coded metrics for '[^']+'. {2}Falling back to 'Times' metrics$/;
 const asciiWarningRegExp =
   /^Warning: no value for width of non-ASCII character [0-9]+. Falling back to width of space character$/;
-async function snapshotGvFile(ctx: TestContext) {
-  const gvPath = './test/graphviz/' + ctx.name;
+async function snapshotGvFile({ task }: TestContext) {
+  const gvPath = path.join(graphvizSnapshotDir, task.name);
   const gvFile = fs.readFileSync(gvPath, 'utf8');
   const result = await renderFormats(gvFile, ['dot', 'svg']);
   const errors = result.errors.filter(
@@ -613,7 +616,7 @@ async function snapshotGvFile(ctx: TestContext) {
   );
 
   const output = result.output;
-  assert.deepStrictEqual(result, { status: 'success', output, errors });
+  expect(result).toStrictEqual({ status: 'success', output, errors });
 
   const dot = output?.dot;
   const svg = useVizJS
@@ -624,7 +627,6 @@ async function snapshotGvFile(ctx: TestContext) {
     : output?.svg;
 
   const basePath = gvPath.replace(/\.gv$/, '');
-  const serializers = [(str: string) => str];
-  ctx.assert.fileSnapshot(dot, basePath + '.dot', { serializers });
-  ctx.assert.fileSnapshot(svg, basePath + '.svg', { serializers });
+  await expectString(dot).toMatchFileSnapshot(basePath + '.dot');
+  await expectString(svg).toMatchFileSnapshot(basePath + '.svg');
 }
