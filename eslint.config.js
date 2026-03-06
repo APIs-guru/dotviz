@@ -74,22 +74,6 @@ export default defineConfig([
       'import-x/no-duplicates': 'error',
 
       '@typescript-eslint/unbound-method': ['error', { ignoreStatic: true }],
-      '@typescript-eslint/no-invalid-void-type': [
-        'error',
-        { allowAsThisParameter: true },
-      ],
-      '@typescript-eslint/no-floating-promises': [
-        'error',
-        {
-          allowForKnownSafeCalls: [
-            {
-              from: 'package',
-              package: 'node:test',
-              name: ['it', 'describe', 'skip', 'only'],
-            },
-          ],
-        },
-      ],
       '@typescript-eslint/no-unnecessary-condition': [
         'error',
         { allowConstantLoopConditions: 'only-allowed-literals' },
