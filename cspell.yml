@@ -13,6 +13,9 @@ dictionaries:
   - typescript
 
 overrides:
+  - filename: './test/*'
+    words:
+      - endquote
   - filename: '**/*.svg'
     dictionaries:
       - css

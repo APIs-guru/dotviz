@@ -1,7 +1,7 @@
-import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, expect, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
+import { expectString } from './util/raw-string-serializer.ts';
 
 describe('Viz', () => {
   describe('renderString', () => {
@@ -9,85 +9,86 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.renderString('graph a { } graph {');
 
-      assert.strictEqual(
-        result,
-        'graph a {\n\tgraph [bb="0,0,0,0"];\n\tnode [label="\\N"];\n}\n',
-      );
+      expectString(result).toMatchInlineSnapshot(`
+        graph a {
+        	graph [bb="0,0,0,0"];
+        	node [label="\\N"];
+        }
+      `);
     });
 
     it('throws an error if the first graph has a syntax error', async () => {
       const viz = await VizPackage.instance();
-      assert.throws(() => viz.renderString('graph {'), {
-        name: 'Error',
-        message: 'syntax error in line 1',
-      });
+      expect(() =>
+        viz.renderString('graph {'),
+      ).toThrowErrorMatchingInlineSnapshot(`[Error: syntax error in line 1]`);
     });
 
     it('throws an error for layout errors', async () => {
       const viz = await VizPackage.instance();
-      assert.throws(() => viz.renderString('graph { layout=invalid }'), {
-        name: 'Error',
-        message: 'Layout type: "invalid" not recognized. Use one of: dot circo',
-      });
+      expect(() =>
+        viz.renderString('graph { layout=invalid }'),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo]`,
+      );
     });
 
     it('throws an error if there are no graphs in the input', async () => {
       const viz = await VizPackage.instance();
-      assert.throws(() => viz.renderString(''), {
-        name: 'Error',
-        message: 'render failed',
-      });
+      expect(() => viz.renderString('')).toThrowErrorMatchingInlineSnapshot(
+        `[Error: render failed]`,
+      );
     });
 
     it('throws an error with the first render error message', async () => {
       const viz = await VizPackage.instance();
-      assert.throws(
-        () => viz.renderString('graph { layout=invalid; x=1.2.3=y }'),
-        {
-          name: 'Error',
-          message:
-            'Layout type: "invalid" not recognized. Use one of: dot circo',
-        },
+      expect(() =>
+        viz.renderString('graph { layout=invalid; x=1.2.3=y }'),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo]`,
       );
     });
 
     it('throws for invalid format option', async () => {
       const viz = await VizPackage.instance();
-      assert.throws(
-        () => viz.renderString('graph { }', { format: 'invalid' }),
-        {
-          name: 'Error',
-          message: 'Format: "invalid" not recognized. Use one of: dot gv svg',
-        },
+      expect(() =>
+        viz.renderString('graph { }', { format: 'invalid' }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Format: "invalid" not recognized. Use one of: dot gv svg]`,
       );
     });
 
-    void it.skip('throws for invalid engine option', async () => {
+    it('throws for invalid engine option', async () => {
       const viz = await VizPackage.instance();
-      assert.throws(
-        () => viz.renderString('graph { }', { engine: 'invalid' }),
-        {
-          name: 'Error',
-          message:
-            'Layout type: "invalid" not recognized. Use one of: dot circo',
-        },
+      expect(() =>
+        viz.renderString('graph { }', { engine: 'invalid' }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo]`,
       );
     });
 
     it('accepts a non-ASCII character', async () => {
       const viz = await VizPackage.instance();
-      assert.match(viz.renderString('digraph { a [label=図] }'), /label=図/);
+      const result = viz.renderString('digraph { a [label=図] }');
+      expect(result).toMatch(/label=図/);
     });
 
     it('a graph with unterminated string followed by another call with a valid graph', async () => {
       const viz = await VizPackage.instance();
-      assert.throws(() => viz.renderString('graph { a[label="blah'), {
-        name: 'Error',
-        message:
-          // cspell:disable-next-line
-          'syntax error in line 1 scanning a quoted string (missing endquote? longer than 16384?)\nString starting:"blah',
-      });
-      assert.ok(viz.renderString('graph { a }'));
+      expect(() => viz.renderString('graph { a[label="blah'))
+        .toThrowErrorMatchingInlineSnapshot(`
+        [Error: syntax error in line 1 scanning a quoted string (missing endquote? longer than 16384?)
+        String starting:"blah]
+      `);
+      expectString(viz.renderString('graph { a }')).toMatchInlineSnapshot(`
+        graph {
+        	graph [bb="0,0,54,36"];
+        	node [label="\\N"];
+        	a	[height=0.5,
+        		pos="27,18",
+        		width=0.75];
+        }
+      `);
     });
   });
 });
