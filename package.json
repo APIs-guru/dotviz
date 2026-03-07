@@ -22,6 +22,7 @@
     "@rollup/plugin-terser": "0.4.4",
     "@rollup/plugin-typescript": "12.1.4",
     "@types/node": "24.6.1",
+    "@vitest/coverage-v8": "4.0.18",
     "@viz-js/viz": "3.17.0",
     "cspell": "9.2.1",
     "eslint": "9.36.0",
@@ -50,7 +51,7 @@
     "prettier": "prettier --write --list-different .",
     "prettier:check": "prettier --check .",
     "check:spelling": "cspell --cache --no-progress \"**/*\"",
-    "testonly": "vitest run test/*.test.ts",
+    "testonly": "vitest run --coverage test/*.test.ts",
     "docs": "typedoc types/index.d.ts"
   }
 }

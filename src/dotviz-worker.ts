@@ -13,6 +13,7 @@ export interface RenderResponse {
   result: RenderResult;
 }
 
+/* v8 ignore start -- FIXME: write tests */
 const viz = await instance();
 
 addEventListener(
@@ -26,3 +27,4 @@ addEventListener(
     postMessage(response);
   },
 );
+/* v8 ignore stop */
