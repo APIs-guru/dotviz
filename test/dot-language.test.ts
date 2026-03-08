@@ -2,27 +2,22 @@ import * as VizJSPackage from '@viz-js/viz';
 import { describe, expect, it } from 'vitest';
 
 import * as DotVizPackage from '../src/index.ts';
+import { expectSuccessResult } from './util/render-result.ts';
 
 const vizJS = await VizJSPackage.instance();
 const dotviz = await DotVizPackage.instance();
 
-function renderString(dot: string): string {
-  const dotvizResult = dotviz.renderString(dot);
-  const vizJSResult = vizJS.renderString(dot);
+function renderString(dot: string): DotVizPackage.RenderResult {
+  const dotvizResult = dotviz.render(dot);
+  const vizJSResult = vizJS.render(dot);
   expect(dotvizResult).toStrictEqual(vizJSResult);
   return dotvizResult;
 }
 
 describe('Dot language support', () => {
-  // don't wrap result string inside snapshots
-  expect.addSnapshotSerializer({
-    serialize: (val) => val as string,
-    test: (val: unknown) => typeof val == 'string',
-  });
-
   it('empty graph', () => {
     const result = renderString('graph {}');
-    expect(result).toMatchInlineSnapshot(`
+    expectSuccessResult(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -30,7 +25,7 @@ describe('Dot language support', () => {
     `);
 
     const directedResult = renderString('digraph {}');
-    expect(directedResult).toMatchInlineSnapshot(`
+    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -40,7 +35,7 @@ describe('Dot language support', () => {
 
   it('strict empty graph', () => {
     const result = renderString('strict graph {}');
-    expect(result).toMatchInlineSnapshot(`
+    expectSuccessResult(result).toMatchInlineSnapshot(`
       strict graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -50,7 +45,7 @@ describe('Dot language support', () => {
 
   it('named graph', () => {
     const result = renderString('graph test {}');
-    expect(result).toMatchInlineSnapshot(`
+    expectSuccessResult(result).toMatchInlineSnapshot(`
       graph test {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -61,7 +56,7 @@ describe('Dot language support', () => {
     expect(stringResult).toStrictEqual(result);
 
     const keywordResult = renderString('graph "graph" {}');
-    expect(keywordResult).toMatchInlineSnapshot(`
+    expectSuccessResult(keywordResult).toMatchInlineSnapshot(`
       graph "graph" {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -77,7 +72,7 @@ describe('Dot language support', () => {
         edge []
       }
     `);
-    expect(result).toMatchInlineSnapshot(`
+    expectSuccessResult(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -103,7 +98,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expect(result).toMatchInlineSnapshot(`
+    expectSuccessResult(result).toMatchInlineSnapshot(`
       graph {
       	graph [a=valueA,
       		bb="0,0,0,0"
@@ -140,7 +135,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expect(result).toMatchInlineSnapshot(`
+    expectSuccessResult(result).toMatchInlineSnapshot(`
       graph {
       	graph [a=valueA,
       		bb="0,0,0,0"
@@ -165,7 +160,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expect(result).toMatchInlineSnapshot(`
+    expectSuccessResult(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -185,7 +180,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expect(directedResult).toMatchInlineSnapshot(`
+    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -208,7 +203,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expect(result).toMatchInlineSnapshot(`
+    expectSuccessResult(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -230,7 +225,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expect(directedResult).toMatchInlineSnapshot(`
+    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
