@@ -17,16 +17,8 @@ fs.copyFileSync('backend/zig-out/bin/dotviz.wasm', 'lib/module.wasm');
 
 const wasm = fs.readFileSync('lib/module.wasm');
 const hash = crypto.createHash('sha256').update(wasm).digest('hex');
-const encoded_ts = `const encoded = "${wasm.toString('base64')}";
-
-export function decode(): ArrayBuffer {
-  const data = atob(encoded);
-  const bytes = new Uint8Array(data.length);
-  for (let i = 0; i < data.length; i++) {
-    bytes[i] = data.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
+const encoded_ts = `
+export const WASM_BASE64: string = "${wasm.toString('base64')}";
 
 export const WASM_HASH = \`${hash}\`;
 `;

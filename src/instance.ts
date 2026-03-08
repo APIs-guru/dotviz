@@ -1,9 +1,18 @@
-import { decode } from '../lib/encoded.ts';
+import { WASM_BASE64 } from '../lib/encoded.ts';
 import { Viz } from './viz.ts';
 
+let cachedModule: Promise<WebAssembly.Module> | null = null;
 export async function compile(): Promise<WebAssembly.Module> {
-  const buffer = decode();
-  return WebAssembly.compile(buffer);
+  if (cachedModule === null) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const bytes: Uint8Array<ArrayBuffer> =
+      // @ts-expect-error FIXME: definition for Uint8Array.fromBase64 should be added in TS6.0
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      Uint8Array.fromBase64(WASM_BASE64);
+    cachedModule = WebAssembly.compile(bytes);
+  }
+
+  return cachedModule;
 }
 
 /**
