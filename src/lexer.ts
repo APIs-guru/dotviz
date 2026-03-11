@@ -1,4 +1,5 @@
 import type { Attributes, Edge, Graph, Node, Subgraph } from './graph.js';
+import type { FailureResult, RenderError } from './viz.ts';
 
 const BOM = '\uFEFF' as const;
 type LiteralToken = ',' | ';' | '=' | '[' | ']' | '{' | '}' | '--' | '->';
@@ -36,6 +37,7 @@ class Lexer {
   #line = 1;
   #lineStart = 0;
   #nextIndex = 0;
+  warnings: { level: 'warning'; message: string }[] = [];
 
   constructor(dotStr: string) {
     this.#dotStr = dotStr;
@@ -158,14 +160,20 @@ class Lexer {
   }
 
   #readKeywordOrID(): { kind: KeywordToken } | ID | undefined {
+    const tokenStartIndex = this.#nextIndex;
     const tokenStartChar = this.#peekNextChar();
     if (tokenStartChar === '"') {
-      return { kind: 'ID', idType: IDType.String, value: this.#readString() };
+      const value = this.#readString();
+      return { kind: 'ID', idType: IDType.String, value };
     } else if (isNumberStart(tokenStartChar)) {
-      return { kind: 'ID', idType: IDType.Number, value: this.#readNumber() };
+      const value = this.#readNumber();
+      const token = { kind: 'ID' as const, idType: IDType.Number, value };
+      this.#warnIfAmbiguous(tokenStartIndex, token);
+      return token;
     } else if (isNameStart(tokenStartChar)) {
       const value = this.#readName();
       const maybeKeyword = value.toLowerCase();
+      let token: { kind: KeywordToken } | ID;
       switch (maybeKeyword) {
         case 'node':
         case 'edge':
@@ -173,13 +181,28 @@ class Lexer {
         case 'digraph':
         case 'subgraph':
         case 'strict':
-          // this.#nextIndex -= value.length; // roll back reading the token
-          return { kind: maybeKeyword };
+          token = { kind: maybeKeyword };
+          break;
         default:
-          return { kind: 'ID', idType: IDType.Name, value };
+          token = { kind: 'ID', idType: IDType.Name, value };
       }
+      this.#warnIfAmbiguous(tokenStartIndex, token);
+      return token;
     }
     return undefined;
+  }
+
+  #warnIfAmbiguous(tokenStartIndex: number, lastToken: Token) {
+    const nextChar = this.#peekNextChar();
+    if (isNumberStart(nextChar) || isNameStart(nextChar)) {
+      const ambiguousText =
+        ellipsize(this.#dotStr.slice(tokenStartIndex, this.#nextIndex)) +
+        nextChar;
+      this.warnings.push({
+        level: 'warning',
+        message: `Ambiguous token sequence: '${ambiguousText}' will be split into ${tokenStr(lastToken)} and a following token. If you want it interpreted as a single value, use quotes: "${ambiguousText}". Otherwise, use whitespace or other delimiters to separate tokens.`,
+      });
+    }
   }
 
   #skipUntilTokenStart() {
@@ -212,12 +235,6 @@ class Lexer {
     if (this.#skipChar('.')) {
       this.#readDigits();
     }
-
-    // FIXME
-    // if (this.#currentChar === Char['.']) {
-    //   // syntax ambiguity - badly delimited number '5.5.' in line 2 of input splits into two tokens
-    // }
-    // syntax ambiguity - badly delimited number '5a' in line 2 of input splits into two tokens
 
     return this.#dotStr.slice(valueStart, this.#nextIndex);
   }
@@ -334,42 +351,75 @@ function ellipsize(str: string): string {
   return str.length > 20 ? str.slice(0, 17) + '...' : str;
 }
 
-function isDigit(ch: string | undefined): boolean {
+type DigitChars = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+function isDigit(ch: string | undefined): ch is DigitChars {
   return ch !== undefined && ch >= '0' && ch <= '9';
 }
 
-function isNumberStart(ch: string | undefined): boolean {
+type NumberStartChars = NumberContinueChars | '-';
+function isNumberStart(ch: string | undefined): ch is NumberStartChars {
   return isNumberContinue(ch) || ch === '-';
 }
 
-function isNumberContinue(ch: string | undefined): boolean {
+type NumberContinueChars = DigitChars | '.';
+function isNumberContinue(ch: string | undefined): ch is NumberContinueChars {
   return isDigit(ch) || ch === '.';
 }
 
-function isLetter(ch: string): boolean {
+// prettier-ignore
+type LetterChars = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z';
+function isLetter(ch: string): ch is LetterChars {
   return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z');
 }
 
-function isASCII(ch: string): boolean {
+function isASCII(ch: string): ch is string {
   const code = ch.codePointAt(0);
   return code != undefined && code <= 127;
 }
 
-function isNameStart(ch: string | undefined): boolean {
+function isNameStart(ch: string | undefined): ch is string {
   if (ch === undefined) return false;
   return isLetter(ch) || ch === '_' || !isASCII(ch);
 }
 
-function isNameContinue(code: string | undefined): boolean {
-  return isNameStart(code) || isDigit(code);
+function isNameContinue(ch: string | undefined): ch is string {
+  return isNameStart(ch) || isDigit(ch);
 }
 
-export function parseDot(dotStr: string): Graph {
-  const lexer = new Lexer(dotStr);
-  if (lexer.isEOF()) {
-    throw new Error('Missing graph definition!');
-  }
+export interface ParseSuccessResult {
+  status: 'success';
+  output: Graph;
+  errors: RenderError[];
+}
 
+export type ParseResult = ParseSuccessResult | FailureResult;
+export function parseDot(dotStr: string): ParseResult {
+  try {
+    const lexer = new Lexer(dotStr);
+    if (lexer.isEOF()) {
+      throw new Error('Missing graph definition!');
+    }
+
+    return {
+      status: 'success',
+      output: parseGraph(lexer),
+      errors: lexer.warnings,
+    };
+  } catch (error: unknown) {
+    return {
+      status: 'failure',
+      output: null,
+      errors: [
+        {
+          level: 'error',
+          message: error instanceof Error ? error.message : String(error),
+        },
+      ],
+    };
+  }
+}
+
+function parseGraph(lexer: Lexer): Graph {
   // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
   const isStrict = lexer.optionalKeyword('strict');
   const isDirected = parseIsDirectedGraph();
@@ -377,7 +427,10 @@ export function parseDot(dotStr: string): Graph {
   lexer.expectedLiteral('{');
 
   const graphAttributes: Attributes = {};
-  const nodeAttributes: Attributes = {};
+  const nodeAttributes: Attributes = {
+    // FIXME: check if it's viz.js hack or it also present in graphviz
+    label: String.raw`\N`,
+  };
   const edgeAttributes: Attributes = {};
   const nodes: Required<Node>[] = [];
   const edges: Required<Edge>[] = [];
@@ -389,11 +442,6 @@ export function parseDot(dotStr: string): Graph {
     lexer.optionalLiteral(';');
   }
 
-  if (!lexer.isEOF()) {
-    throw new Error(
-      `Unexpected ${tokenStr(lexer.nextToken())}, after closing '}' of the graph!`,
-    );
-  }
   return {
     strict: isStrict,
     directed: isDirected,
