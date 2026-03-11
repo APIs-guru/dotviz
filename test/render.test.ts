@@ -129,7 +129,14 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render('');
 
-      expectFailureResult(result).toMatchInlineSnapshot(`[]`);
+      expectFailureResult(result).toMatchInlineSnapshot(`
+        [
+          {
+            "level": "error",
+            "message": "Missing graph definition!",
+          },
+        ]
+      `);
     });
 
     it('returns error messages for invalid input', async () => {
@@ -140,7 +147,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
+            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph'!",
           },
         ]
       `);
@@ -157,7 +164,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "JSON error UnexpectedToken at 11:25: \`
+            "message": "JSON error UnexpectedToken at 26:25: \`
           "yInvert": "bad value",\`",
           },
         ]
@@ -173,7 +180,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid1'",
+            "message": "Unexpected identifier 'invalid1', expected keyword 'graph' or 'digraph'!",
           },
         ]
       `);
@@ -182,7 +189,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid2'",
+            "message": "Unexpected identifier 'invalid2', expected keyword 'graph' or 'digraph'!",
           },
         ]
       `);
@@ -238,7 +245,7 @@ describe('Viz', () => {
         [
           {
             "level": "warning",
-            "message": "syntax ambiguity - badly delimited number '1.2.' in line 1 of input splits into two tokens",
+            "message": "Ambiguous token sequence: '1.2.' will be split into number '1.2' and a following token. If you want it interpreted as a single value, use quotes: "1.2.". Otherwise, use whitespace or other delimiters to separate tokens.",
           },
         ]
       `);
@@ -252,7 +259,7 @@ describe('Viz', () => {
         [
           {
             "level": "warning",
-            "message": "syntax ambiguity - badly delimited number '1.2.' in line 1 of input splits into two tokens",
+            "message": "Ambiguous token sequence: '1.2.' will be split into number '1.2' and a following token. If you want it interpreted as a single value, use quotes: "1.2.". Otherwise, use whitespace or other delimiters to separate tokens.",
           },
           {
             "level": "error",
@@ -327,8 +334,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 scanning a quoted string (missing endquote? longer than 16384?)
-        String starting:" }",
+            "message": "(1:9)Unterminated string, missing closing '"' in: '" }'",
           },
         ]
       `);
