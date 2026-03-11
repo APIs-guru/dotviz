@@ -21,7 +21,9 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       expect(() =>
         viz.renderString('graph {'),
-      ).toThrowErrorMatchingInlineSnapshot(`[Error: syntax error in line 1]`);
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Unexpected end of file, expected '}' before the end of the graph!]`,
+      );
     });
 
     it('throws an error for layout errors', async () => {
@@ -36,7 +38,7 @@ describe('Viz', () => {
     it('throws an error if there are no graphs in the input', async () => {
       const viz = await VizPackage.instance();
       expect(() => viz.renderString('')).toThrowErrorMatchingInlineSnapshot(
-        `[Error: render failed]`,
+        `[Error: Missing graph definition!]`,
       );
     });
 
@@ -75,11 +77,11 @@ describe('Viz', () => {
 
     it('a graph with unterminated string followed by another call with a valid graph', async () => {
       const viz = await VizPackage.instance();
-      expect(() => viz.renderString('graph { a[label="blah'))
-        .toThrowErrorMatchingInlineSnapshot(`
-        [Error: syntax error in line 1 scanning a quoted string (missing endquote? longer than 16384?)
-        String starting:"blah]
-      `);
+      expect(() =>
+        viz.renderString('graph { a[label="blah'),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: (1:17)Unterminated string, missing closing '"' in: '"blah']`,
+      );
       expectString(viz.renderString('graph { a }')).toMatchInlineSnapshot(`
         graph {
         	graph [bb="0,0,54,36"];

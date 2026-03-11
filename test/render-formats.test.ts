@@ -79,7 +79,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
+            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph'!",
           },
         ]
       `);
@@ -93,7 +93,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
+            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph'!",
           },
         ]
       `);

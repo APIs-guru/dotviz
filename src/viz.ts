@@ -189,7 +189,18 @@ export class Viz {
     formats: readonly string[],
     options: RenderOptions,
   ): MultipleRenderResult {
-    const graph: Graph = typeof input === 'string' ? parseDot(input) : input;
+    let graph: Graph;
+    const warnings: RenderError[] = [];
+    if (typeof input === 'string') {
+      const result = parseDot(input);
+      if (result.status === 'failure') {
+        return result;
+      }
+      graph = result.output;
+      warnings.push(...result.errors);
+    } else {
+      graph = input;
+    }
 
     let renderGv = false;
     let renderDot = false;
@@ -267,7 +278,7 @@ export class Viz {
         }
       }
       response.output = output;
-      return response;
+      return { ...response, errors: [...warnings, ...response.errors] };
     } finally {
       this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
     }
