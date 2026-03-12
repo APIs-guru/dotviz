@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
@@ -8,13 +7,9 @@ import * as VizPackage from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
 import { expectSuccessResult } from './util/render-result.ts';
 
-const snapshotDirPath = fileURLToPath(import.meta.resolve('./snapshots'));
-function snapshotPath(filepath: string): string {
-  return path.join(snapshotDirPath, filepath);
-}
-
+const __dirname = import.meta.dirname;
 function readSnapshot(filepath: string): string {
-  return fs.readFileSync(snapshotPath(filepath), 'utf8');
+  return fs.readFileSync(path.join(__dirname, filepath), 'utf8');
 }
 
 describe('Viz', () => {
@@ -32,7 +27,7 @@ describe('Viz', () => {
       );
 
       await expectSuccessResult(result).toMatchFileSnapshot(
-        snapshotPath('comment_attribute.svg'),
+        './snapshots/comment_attribute.svg',
       );
     });
     it('layers support', async () => {
@@ -93,7 +88,7 @@ describe('Viz', () => {
       `);
 
       await expectString(result.output?.svg).toMatchFileSnapshot(
-        snapshotPath('layers_support.svg'),
+        './snapshots/layers_support.svg',
       );
     });
     it('_background attribute', async () => {
@@ -130,29 +125,29 @@ describe('Viz', () => {
         }
       `);
       await expectString(result.output?.svg).toMatchFileSnapshot(
-        snapshotPath('_background_attribute.svg'),
+        './snapshots/_background_attribute.svg',
       );
     });
   });
   it('multiple pages in ps, one in svg', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.render(readSnapshot('multiple_pages.gv'), {
+    const result = viz.render(readSnapshot('./snapshots/multiple_pages.gv'), {
       format: 'svg',
     });
 
     await expectSuccessResult(result).toMatchFileSnapshot(
-      snapshotPath('multiple_pages.svg'),
+      './snapshots/multiple_pages.svg',
     );
   });
   it('circo layout', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.render(readSnapshot('circo.gv'), {
+    const result = viz.render(readSnapshot('./snapshots/circo.gv'), {
       format: 'svg',
       engine: 'circo',
     });
 
     await expectSuccessResult(result).toMatchFileSnapshot(
-      snapshotPath('circo.svg'),
+      './snapshots/circo.svg',
     );
   });
 });
