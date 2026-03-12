@@ -162,7 +162,10 @@ class Lexer {
   #readKeywordOrID(): { kind: KeywordToken } | ID | undefined {
     const tokenStartIndex = this.#nextIndex;
     const tokenStartChar = this.#peekNextChar();
-    if (tokenStartChar === '"') {
+    if (tokenStartChar === '<') {
+      const value = this.#readHTML();
+      return { kind: 'ID', idType: IDType.HTML, value };
+    } else if (tokenStartChar === '"') {
       const value = this.#readString();
       return { kind: 'ID', idType: IDType.String, value };
     } else if (isNumberStart(tokenStartChar)) {
@@ -194,7 +197,7 @@ class Lexer {
 
   #warnIfAmbiguous(tokenStartIndex: number, lastToken: Token) {
     const nextChar = this.#peekNextChar();
-    if (isNumberStart(nextChar) || isNameStart(nextChar)) {
+    if (isNumberContinue(nextChar) || isNameContinue(nextChar)) {
       const ambiguousText =
         ellipsize(this.#dotStr.slice(tokenStartIndex, this.#nextIndex)) +
         nextChar;
@@ -215,14 +218,28 @@ class Lexer {
         case '\t':
         case ' ':
           this.#readNextChar();
-          continue;
-
-        // Comment
-        // case 0x00_23: // #
-        //   skipComment(lexer, position);
-        //   continue;
+          break;
+        case '#': {
+          const nextLine = this.#line + 1;
+          while (this.#line !== nextLine && this.#readNextChar() !== undefined);
+          break;
+        }
+        case '/':
+          if (this.#skipStr('/*')) {
+            while (!this.#skipStr('*/') && this.#readNextChar() !== undefined);
+            break;
+          } else if (this.#skipStr('//')) {
+            const nextLine = this.#line + 1;
+            while (
+              this.#line !== nextLine &&
+              this.#readNextChar() !== undefined
+            );
+            break;
+          }
+          return;
+        default:
+          return;
       }
-      return;
     }
   }
 
@@ -243,6 +260,32 @@ class Lexer {
     while (isDigit(this.#peekNextChar())) {
       this.#readNextChar();
     }
+  }
+
+  #readHTML(): string {
+    const line = this.#line.toString();
+    const column = (this.#nextIndex - this.#lineStart + 1).toString();
+
+    const valueStart = this.#nextIndex + 1;
+    let unclosedAngleBrackets = 0;
+    do {
+      switch (this.#readNextChar()) {
+        case undefined: {
+          const value = this.#dotStr.slice(valueStart, this.#nextIndex);
+          throw new Error(
+            `(${line}:${column})Unterminated HTML string, missing closing '>' in: '<${ellipsize(value)}'`,
+          );
+        }
+        case '<':
+          ++unclosedAngleBrackets;
+          break;
+        case '>':
+          --unclosedAngleBrackets;
+          break;
+      }
+    } while (unclosedAngleBrackets !== 0);
+
+    return this.#dotStr.slice(valueStart, this.#nextIndex - 1);
   }
 
   #readString(): string {
@@ -278,6 +321,14 @@ class Lexer {
   #skipChar(char: string): boolean {
     if (this.#peekNextChar() === char) {
       this.#readNextChar();
+      return true;
+    }
+    return false;
+  }
+
+  #skipStr(str: string): boolean {
+    if (this.#dotStr.startsWith(str, this.#nextIndex)) {
+      this.#nextIndex += str.length;
       return true;
     }
     return false;
@@ -564,6 +615,7 @@ function parseGraph(lexer: Lexer): Graph {
     lexer.expectedLiteral('=');
     const value = lexer.expectID('attribute value');
     // FIXME: handle string escape characters
-    attributes[name.value] = value.value;
+    attributes[name.value] =
+      value.idType === IDType.HTML ? { html: value.value } : value.value;
   }
 }
