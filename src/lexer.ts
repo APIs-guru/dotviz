@@ -2,7 +2,7 @@ import type { Attributes, Edge, Graph, Node, Subgraph } from './graph.js';
 import type { FailureResult, RenderError } from './viz.ts';
 
 const BOM = '\uFEFF' as const;
-type LiteralToken = ',' | ';' | '=' | '[' | ']' | '{' | '}' | '--' | '->';
+type LiteralToken = ',' | ':' | ';' | '=' | '[' | ']' | '{' | '}' | '--' | '->';
 
 type KeywordToken =
   | 'node'
@@ -134,6 +134,7 @@ class Lexer {
     const tokenStartChar = this.#peekNextChar();
     switch (tokenStartChar) {
       case ',':
+      case ':':
       case ';':
       case '=':
       case '[':
@@ -374,6 +375,7 @@ function idStr({ idType, value }: ID): string {
 function kindStr(kind: LiteralToken | KeywordToken | 'EOF'): string {
   switch (kind) {
     case ',':
+    case ':':
     case ';':
     case '=':
     case '[':
@@ -513,20 +515,18 @@ function parseGraph(lexer: Lexer): Graph {
         if (lexer.peekIsLiteral('=')) {
           // ID '=' ID
           parseAttr(token, graphAttributes);
-          break;
+          return;
         }
 
-        // node_id:	ID [ port ]
-        // FIXME: handle string escape characters
         const nodeID = token.value;
-        // port: ':' ID [ ':' compass_pt ]
-        // FIXME
+        const nodePort = optionalNodePort();
 
         if (optionalEdgeOp()) {
+          const [head, headport] = parseNodeID();
           const edge: Required<Edge> = {
-            head: lexer.expectID('node name').value,
+            head,
             tail: nodeID,
-            attributes: {},
+            attributes: { headport, tailport: nodePort },
           };
           if (lexer.peekIsLiteral('[')) {
             parseAttrList(edge.attributes);
@@ -543,7 +543,7 @@ function parseGraph(lexer: Lexer): Graph {
           // FIXME
         }
 
-        break;
+        return;
       }
       // case 'subgraph':
       //   break;
@@ -551,18 +551,52 @@ function parseGraph(lexer: Lexer): Graph {
       // attr_stmt:	(graph | node | edge) attr_list
       case 'graph':
         parseAttrList(graphAttributes);
-        break;
+        return;
       case 'node':
         parseAttrList(nodeAttributes);
-        break;
+        return;
       case 'edge':
         parseAttrList(edgeAttributes);
-        break;
+        return;
       case 'EOF':
         throw new Error(
           `Unexpected end of file, expected ${kindStr('}')} before the end of the graph!`,
         );
     }
+    throw new Error(
+      `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement!`,
+    );
+  }
+
+  function parseNodeID(): [string, string | undefined] {
+    // node_id:	ID [ port ]
+    const id = lexer.expectID('node name').value;
+
+    // port: ':' ID [ ':' compass_pt ]
+    let port: string | undefined;
+    if (lexer.optionalLiteral(':')) {
+      port = lexer.expectID('port name').value;
+
+      // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
+      if (lexer.optionalLiteral(':')) {
+        port += ':' + lexer.expectID('compass point values').value;
+      }
+    }
+    return [id, port];
+  }
+
+  function optionalNodePort(): string | undefined {
+    // port: ':' ID [ ':' compass_pt ]
+    let port: string | undefined;
+    if (lexer.optionalLiteral(':')) {
+      port = lexer.expectID('port name').value;
+
+      // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
+      if (lexer.optionalLiteral(':')) {
+        port += ':' + lexer.expectID('compass point values').value;
+      }
+    }
+    return port;
   }
 
   function optionalEdgeOp(): boolean {
