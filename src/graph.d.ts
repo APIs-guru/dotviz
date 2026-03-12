@@ -98,7 +98,10 @@ export interface Graph {
   subgraphs?: Subgraph[];
 }
 
-export type Attributes = Record<string, string | number | boolean | HTMLString>;
+export type Attributes = Record<
+  string,
+  string | number | boolean | HTMLString | undefined
+>;
 
 export interface HTMLString {
   html: string;
