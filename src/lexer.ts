@@ -59,7 +59,11 @@ class Lexer {
   }
 
   peekIsKeyword(keyword: KeywordToken): boolean {
-    if (this.#dotStr.startsWith(keyword, this.#nextIndex)) {
+    const maybeKeyword = this.#dotStr.slice(
+      this.#nextIndex,
+      this.#nextIndex + keyword.length,
+    );
+    if (maybeKeyword.toLowerCase() === keyword) {
       const nextChar = this.#dotStr[this.#nextIndex + keyword.length];
       return !isNameContinue(nextChar);
     }
