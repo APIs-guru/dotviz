@@ -306,7 +306,11 @@ class Lexer {
       }
     }
 
-    return this.#dotStr.slice(valueStart, this.#nextIndex - 1);
+    return this.#dotStr
+      .slice(valueStart, this.#nextIndex - 1)
+      .replaceAll('\\\r\n', '')
+      .replaceAll('\\\r', '')
+      .replaceAll('\\\n', '');
   }
 
   #readName(): string {
