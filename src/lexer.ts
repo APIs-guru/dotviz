@@ -485,7 +485,10 @@ function parseGraph(lexer: Lexer): Graph {
     label: String.raw`\N`,
   };
   const edgeAttributes: Attributes = {};
+
   const nodes: Required<Node>[] = [];
+  const nodeMap = new Map<string, Required<Node>>();
+
   const edges: Required<Edge>[] = [];
   const subgraphs: Required<Subgraph>[] = [];
 
@@ -524,9 +527,12 @@ function parseGraph(lexer: Lexer): Graph {
         if (optionalEdgeOp()) {
           let tail = nodeID;
           let tailport = nodePort;
+          makeNode(tail);
+
           const newEdges: Required<Edge>[] = [];
           do {
             const [head, headport] = parseNodeID();
+            makeNode(head);
             newEdges.push({
               head,
               tail,
@@ -546,14 +552,10 @@ function parseGraph(lexer: Lexer): Graph {
           edges.push(...newEdges);
         } else {
           // node_stmt: node_id [ attr_list ]
-          const node: Required<Node> = {
-            name: nodeID,
-            attributes: { ...nodeAttributes },
-          };
+          const node = makeNode(nodeID);
           if (lexer.peekIsLiteral('[')) {
             parseAttrList(node.attributes);
           }
-          nodes.push(node);
           // FIXME
         }
 
@@ -580,6 +582,19 @@ function parseGraph(lexer: Lexer): Graph {
     throw new Error(
       `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement!`,
     );
+  }
+
+  function makeNode(name: string): Required<Node> {
+    let node = nodeMap.get(name);
+    if (node === undefined) {
+      node = {
+        name,
+        attributes: { ...nodeAttributes },
+      };
+      nodeMap.set(name, node);
+      nodes.push(node);
+    }
+    return node;
   }
 
   function parseNodeID(): [string, string | undefined] {
