@@ -480,7 +480,7 @@ export function parseDot(dotStr: string): ParseResult {
   }
 }
 
-function parseGraph(lexer: Lexer): Graph {
+function parseGraph(lexer: Lexer): Required<Graph> {
   // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
   const isStrict = lexer.optionalKeyword('strict');
   const isDirected = parseIsDirectedGraph();
