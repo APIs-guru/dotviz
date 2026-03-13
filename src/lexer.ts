@@ -299,7 +299,7 @@ class Lexer {
 
     this.#readNextChar(); // skip opening `"`
     const valueStart = this.#nextIndex;
-    while (!this.#skipChar('"')) {
+    while (this.#peekNextChar(-1) === '\\' || !this.#skipChar('"')) {
       switch (this.#readNextChar()) {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
