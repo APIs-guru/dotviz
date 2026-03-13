@@ -240,4 +240,58 @@ describe('Dot language support', () => {
       }
     `);
   });
+
+  it('chain of edges', () => {
+    const result = renderString(`
+      graph {
+        c -- b -- a [valueA=a]
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,54,180"];
+      	node [label="\\N"];
+      	c	[height=0.5,
+      		pos="27,162",
+      		width=0.75];
+      	b	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	c -- b	[pos="27,143.7 27,132.85 27,118.92 27,108.1",
+      		valueA=a];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	b -- a	[pos="27,71.697 27,60.846 27,46.917 27,36.104",
+      		valueA=a];
+      }
+    `);
+
+    const directedResult = renderString(`
+      digraph {
+        c -> b -> a [valueA=a]
+      }
+    `);
+
+    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,180"];
+      	node [label="\\N"];
+      	c	[height=0.5,
+      		pos="27,162",
+      		width=0.75];
+      	b	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	c -> b	[pos="e,27,108.1 27,143.7 27,136.41 27,127.73 27,119.54",
+      		valueA=a];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	b -> a	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536",
+      		valueA=a];
+      }
+    `);
+  });
 });

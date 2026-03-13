@@ -522,20 +522,34 @@ function parseGraph(lexer: Lexer): Graph {
         const nodePort = optionalNodePort();
 
         if (optionalEdgeOp()) {
-          const [head, headport] = parseNodeID();
-          const edge: Required<Edge> = {
-            head,
-            tail: nodeID,
-            attributes: { headport, tailport: nodePort },
-          };
+          let tail = nodeID;
+          let tailport = nodePort;
+          const newEdges: Required<Edge>[] = [];
+          do {
+            const [head, headport] = parseNodeID();
+            newEdges.push({
+              head,
+              tail,
+              attributes: { headport, tailport },
+            });
+            tail = head;
+            tailport = headport;
+          } while (optionalEdgeOp());
+
           if (lexer.peekIsLiteral('[')) {
-            parseAttrList(edge.attributes);
+            const attributes: Attributes = { ...edgeAttributes };
+            parseAttrList(attributes);
+            for (const edge of newEdges) {
+              edge.attributes = { ...edge.attributes, ...attributes };
+            }
           }
-          edges.push(edge);
-          // FIXME
+          edges.push(...newEdges);
         } else {
           // node_stmt: node_id [ attr_list ]
-          const node: Required<Node> = { name: nodeID, attributes: {} };
+          const node: Required<Node> = {
+            name: nodeID,
+            attributes: { ...nodeAttributes },
+          };
           if (lexer.peekIsLiteral('[')) {
             parseAttrList(node.attributes);
           }
