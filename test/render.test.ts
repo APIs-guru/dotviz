@@ -164,7 +164,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "JSON error UnexpectedToken at 26:25: \`
+            "message": "JSON error UnexpectedToken at 33:25: \`
           "yInvert": "bad value",\`",
           },
         ]
