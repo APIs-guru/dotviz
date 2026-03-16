@@ -71,11 +71,7 @@ fn setAttributes(
     }
 }
 
-fn setAllDefaultAttributes(
-    allocator: std.mem.Allocator,
-    graph: anytype,
-    json: anytype,
-) void {
+fn readGraph(allocator: std.mem.Allocator, graph: anytype, json: anytype) void {
     if (json.graphAttributes) |attributes| {
         setDefaultAttributes(allocator, graph, attributes, graphviz.AGRAPH);
     }
@@ -85,10 +81,6 @@ fn setAllDefaultAttributes(
     if (json.edgeAttributes) |attributes| {
         setDefaultAttributes(allocator, graph, attributes, graphviz.AGEDGE);
     }
-}
-
-fn readGraph(allocator: std.mem.Allocator, graph: anytype, json: anytype) void {
-    setAllDefaultAttributes(allocator, graph, json);
     if (json.nodes) |nodes| {
         for (nodes) |node| {
             const node_ptr = graphviz.agnode(graph, node.name, graphviz.true);
@@ -265,10 +257,6 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         graph_json.directed,
         graph_json.strict,
     );
-    if (graph != null) {
-        readGraph(arena_allocator, graph, graph_json);
-    }
-
     if (graph == null) {
         return stringifyResponseJSON(.{
             .status = .failure,
@@ -278,9 +266,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     }
     defer _ = graphviz.agclose(graph);
 
-    setAllDefaultAttributes(arena_allocator, graph, request);
-
-    // FIXME: maybe call setDefaultAttributes
+    readGraph(arena_allocator, graph, graph_json);
 
     Y_invert = request.yInvert;
     Reduce = request.reduce;
