@@ -480,132 +480,296 @@ export function parseDot(dotStr: string): ParseResult {
   }
 }
 
-function parseGraph(lexer: Lexer): Required<Graph> {
+class StatementList {
+  inheritNodeAttributes: Attributes = {};
+  inheritEdgeAttributes: Attributes = {};
+  graphAttributes: Attributes = {};
+  nodeAttributes: Attributes = {};
+  edgeAttributes: Attributes = {};
+
+  referencedNodes = new Set<number>();
+  ownedNodes = new Set<number>();
+
+  referencedEdges = new Set<number>();
+  ownedEdges = new Set<number>();
+
+  subgraphs = new Map<number | string, StatementList>();
+
+  constructor(parent: StatementList | undefined) {
+    if (parent) {
+      this.inheritNodeAttributes = {
+        ...parent.inheritNodeAttributes,
+        ...parent.nodeAttributes,
+      };
+      this.inheritEdgeAttributes = {
+        ...parent.inheritEdgeAttributes,
+        ...parent.edgeAttributes,
+      };
+    }
+  }
+
+  sortedReferencedNodes(): number[] {
+    return [...this.referencedNodes].toSorted((a, b) => a - b);
+  }
+
+  sortedReferenceEdges(): number[] {
+    return [...this.referencedEdges].toSorted((a, b) => a - b);
+  }
+}
+
+type NodeID = [string, string | undefined];
+
+function parseGraph(lexer: Lexer): Graph {
   // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
   const isStrict = lexer.optionalKeyword('strict');
   const isDirected = parseIsDirectedGraph();
   const graphName = lexer.optionalID()?.value;
-  lexer.expectedLiteral('{');
 
-  const graphAttributes: Attributes = {};
-  const nodeAttributes: Attributes = {
-    // FIXME: check if it's viz.js hack or it also present in graphviz
-    label: String.raw`\N`,
-  };
-  const edgeAttributes: Attributes = {};
+  const globalNodes: Required<Node>[] = [];
+  const nodeNameToIndex = new Map<string, number>();
+  const globalEdges: Required<Edge>[] = [];
 
-  const nodes: Required<Node>[] = [];
-  const nodeMap = new Map<string, Required<Node>>();
+  const graphStatementList = new StatementList(undefined);
+  // FIXME: check if it's viz.js hack or it also present in graphviz
+  graphStatementList.nodeAttributes.label = String.raw`\N`;
 
-  const edges: Required<Edge>[] = [];
-  const subgraphs: Required<Subgraph>[] = [];
-
-  while (!lexer.optionalLiteral('}')) {
-    // stmt_list	:	[ stmt [ ';' ] stmt_list ]
-    parseStatement();
-    lexer.optionalLiteral(';');
-  }
-
+  parseStatementList(graphStatementList);
+  const graph = normalizeGraph(graphStatementList);
   return {
     strict: isStrict,
     directed: isDirected,
     name: graphName,
-    graphAttributes,
-    nodeAttributes,
-    edgeAttributes,
-    nodes,
-    edges,
-    subgraphs,
+    graphAttributes: graph.graphAttributes,
+    nodeAttributes: graph.nodeAttributes,
+    edgeAttributes: graph.edgeAttributes,
+
+    nodes: globalNodes,
+    edges: isStrict ? globalEdges : graph.edges,
+    subgraphs: graph.subgraphs,
   };
 
-  function parseStatement(): void {
+  function normalizeGraph(
+    statementList: StatementList,
+    parentNodeAttributeNames: Set<string> = new Set<string>(),
+    parentEdgeAttributeNames: Set<string> = new Set<string>(),
+  ): {
+    graphAttributes: Attributes | undefined;
+    nodeAttributes: Attributes | undefined;
+    edgeAttributes: Attributes | undefined;
+    nodes: Node[] | undefined;
+    edges: Edge[] | undefined;
+    subgraphs: Subgraph[] | undefined;
+  } {
+    const { graphAttributes, nodeAttributes, edgeAttributes } = statementList;
+
+    const nodeAttributeNames = new Set<string>([
+      ...parentNodeAttributeNames,
+      ...Object.keys(nodeAttributes),
+    ]);
+    const nodes: Node[] = statementList
+      .sortedReferencedNodes()
+      .map((nodeIndex) => {
+        const node = globalNodes[nodeIndex];
+        if (statementList.ownedNodes.has(nodeIndex)) {
+          for (const attributeName of nodeAttributeNames) {
+            node.attributes[attributeName] ??= '';
+          }
+        }
+        return { name: node.name };
+      });
+
+    const edgeAttributeNames = new Set<string>([
+      ...parentEdgeAttributeNames,
+      ...Object.keys(edgeAttributes),
+    ]);
+    const edges: Edge[] = statementList
+      .sortedReferenceEdges()
+      .map((edgeIndex) => {
+        const edge = globalEdges[edgeIndex];
+        if (statementList.ownedEdges.has(edgeIndex)) {
+          for (const attributeName of edgeAttributeNames) {
+            edge.attributes[attributeName] ??= '';
+          }
+          if (!isStrict) {
+            return edge;
+          }
+        }
+        return { tail: edge.tail, head: edge.head };
+      });
+
+    const subgraphs: Subgraph[] = [...statementList.subgraphs.entries()].map(
+      ([id, subgraphStatementList]) => {
+        const name = typeof id === 'string' ? id : undefined;
+        return {
+          ...normalizeGraph(
+            subgraphStatementList,
+            nodeAttributeNames,
+            edgeAttributeNames,
+          ),
+          name,
+        };
+      },
+    );
+
+    return {
+      graphAttributes,
+      nodeAttributes,
+      edgeAttributes,
+      nodes,
+      edges,
+      subgraphs,
+    };
+  }
+
+  function parseStatementList(statementList: StatementList): void {
+    // '{' stmt_list '}'
+    lexer.expectedLiteral('{');
+
+    while (!lexer.optionalLiteral('}')) {
+      // stmt_list	:	[ stmt [ ';' ] stmt_list ]
+      parseStatement(statementList);
+      lexer.optionalLiteral(';');
+    }
+
+    // for (const edge of graph.edges) {
+    //   if (edge.attributes) {
+    //     edge.attributes = { ...defaultEdgeAttributes, ...edge.attributes };
+    //   }
+    // }
+  }
+
+  function parseStatement(statementList: StatementList): void {
     const token = lexer.nextToken();
     // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
     switch (token.kind) {
       case 'ID': {
         if (lexer.peekIsLiteral('=')) {
           // ID '=' ID
-          parseAttr(token, graphAttributes);
-          return;
+          parseAttr(token, statementList.graphAttributes);
+          break;
         }
 
-        const nodeID = token.value;
-        const nodePort = optionalNodePort();
+        const nodeID: NodeID = [token.value, optionalNodePort()];
 
         if (optionalEdgeOp()) {
-          let tail = nodeID;
-          let tailport = nodePort;
-          makeNode(tail);
+          makeNode(nodeID, statementList);
+          let tailNodes: NodeID[] = [nodeID];
 
-          const newEdges: Required<Edge>[] = [];
+          const newEdges = new Set<number>();
           do {
-            const [head, headport] = parseNodeID();
-            makeNode(head);
-            newEdges.push({
-              head,
-              tail,
-              attributes: { headport, tailport },
-            });
-            tail = head;
-            tailport = headport;
+            let headNodes: NodeID[];
+            if (lexer.peekIsLiteral('{')) {
+              const subgraph = new StatementList(statementList);
+              statementList.subgraphs.set(
+                statementList.subgraphs.size,
+                subgraph,
+              );
+              parseStatementList(subgraph);
+              statementList.referencedNodes =
+                statementList.referencedNodes.union(subgraph.referencedNodes);
+              statementList.referencedEdges =
+                statementList.referencedEdges.union(subgraph.referencedEdges);
+              headNodes = subgraph
+                .sortedReferencedNodes()
+                .map((nodeIndex) => [globalNodes[nodeIndex].name, undefined]);
+            } else {
+              const head = parseNodeID();
+              makeNode(head, statementList);
+              headNodes = [head];
+            }
+
+            for (const tail of tailNodes) {
+              for (const head of headNodes) {
+                newEdges.add(makeEdge(tail, head, statementList));
+              }
+            }
+            tailNodes = headNodes;
           } while (optionalEdgeOp());
 
           if (lexer.peekIsLiteral('[')) {
-            const attributes: Attributes = { ...edgeAttributes };
+            const attributes = {};
             parseAttrList(attributes);
-            for (const edge of newEdges) {
-              edge.attributes = { ...edge.attributes, ...attributes };
+            for (const edgeIndex of newEdges) {
+              Object.assign(globalEdges[edgeIndex].attributes, attributes);
             }
           }
-          edges.push(...newEdges);
         } else {
           // node_stmt: node_id [ attr_list ]
-          const node = makeNode(nodeID);
+          const nodeIndex = makeNode(nodeID, statementList);
           if (lexer.peekIsLiteral('[')) {
-            parseAttrList(node.attributes);
+            parseAttrList(globalNodes[nodeIndex].attributes);
           }
-          // FIXME
         }
-
-        return;
+        break;
       }
       // case 'subgraph':
       //   break;
 
       // attr_stmt:	(graph | node | edge) attr_list
       case 'graph':
-        parseAttrList(graphAttributes);
-        return;
+        parseAttrList(statementList.graphAttributes);
+        break;
       case 'node':
-        parseAttrList(nodeAttributes);
-        return;
+        parseAttrList(statementList.nodeAttributes);
+        break;
       case 'edge':
-        parseAttrList(edgeAttributes);
-        return;
+        parseAttrList(statementList.edgeAttributes);
+        break;
+
       case 'EOF':
         throw new Error(
           `Unexpected end of file, expected ${kindStr('}')} before the end of the graph!`,
         );
+      default:
+        throw new Error(
+          `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement!`,
+        );
     }
-    throw new Error(
-      `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement!`,
-    );
   }
 
-  function makeNode(name: string): Required<Node> {
-    let node = nodeMap.get(name);
-    if (node === undefined) {
-      node = {
+  function makeNode(nodeID: NodeID, statementList: StatementList): number {
+    // FIXME: check that it's safe to ignore port
+    const [name] = nodeID;
+    let nodeIndex = nodeNameToIndex.get(name);
+    if (nodeIndex === undefined) {
+      nodeIndex = globalNodes.length;
+      globalNodes.push({
         name,
-        attributes: { ...nodeAttributes },
-      };
-      nodeMap.set(name, node);
-      nodes.push(node);
+        attributes: {
+          ...statementList.inheritNodeAttributes,
+          ...statementList.nodeAttributes,
+        },
+      });
+      nodeNameToIndex.set(name, nodeIndex);
+      statementList.ownedNodes.add(nodeIndex);
     }
-    return node;
+    statementList.referencedNodes.add(nodeIndex);
+    return nodeIndex;
   }
 
-  function parseNodeID(): [string, string | undefined] {
+  function makeEdge(
+    tail: NodeID,
+    head: NodeID,
+    statementList: StatementList,
+  ): number {
+    // FIXME: handle isStrict and ports should be merged
+    const edgeIndex = globalEdges.length;
+    globalEdges.push({
+      head: head[0],
+      tail: tail[0],
+      attributes: {
+        headport: head[1],
+        tailport: tail[1],
+        ...statementList.inheritEdgeAttributes,
+        ...statementList.edgeAttributes,
+      },
+    });
+    statementList.ownedEdges.add(edgeIndex);
+    statementList.referencedEdges.add(edgeIndex);
+    return edgeIndex;
+  }
+
+  function parseNodeID(): NodeID {
     // node_id:	ID [ port ]
     const id = lexer.expectID('node name').value;
 
@@ -667,7 +831,7 @@ function parseGraph(lexer: Lexer): Required<Graph> {
     );
   }
 
-  function parseAttrList(attributes: Attributes) {
+  function parseAttrList(attributes: Attributes): void {
     // attr_list:	'[' [ a_list ] ']' [ attr_list ]
     do {
       lexer.expectedLiteral('[');
