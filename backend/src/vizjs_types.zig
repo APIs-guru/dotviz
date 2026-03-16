@@ -119,9 +119,6 @@ pub const Engine = enum {
 
 pub const RenderRequest = struct {
     graph: Graph,
-    graphAttributes: ?*Attributes,
-    nodeAttributes: ?*Attributes,
-    edgeAttributes: ?*Attributes,
     renderDot: bool,
     renderSvg: bool,
     engine: [:0]const u8,
