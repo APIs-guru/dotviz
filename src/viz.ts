@@ -201,6 +201,21 @@ export class Viz {
     } else {
       graph = input;
     }
+    graph = {
+      ...graph,
+      graphAttributes: {
+        ...graph.graphAttributes,
+        ...options.graphAttributes,
+      },
+      nodeAttributes: {
+        ...graph.nodeAttributes,
+        ...options.nodeAttributes,
+      },
+      edgeAttributes: {
+        ...graph.edgeAttributes,
+        ...options.edgeAttributes,
+      },
+    };
 
     let renderGv = false;
     let renderDot = false;
@@ -233,9 +248,6 @@ export class Viz {
     const requestJSON = JSON.stringify(
       {
         graph,
-        graphAttributes: options.graphAttributes ?? null,
-        nodeAttributes: options.nodeAttributes ?? null,
-        edgeAttributes: options.edgeAttributes ?? null,
         renderDot: renderDot || renderGv,
         renderSvg,
         engine: options.engine ?? 'dot',
