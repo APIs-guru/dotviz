@@ -21,8 +21,8 @@ Agrw_t gw_agopen(const char *name, bool directed, bool stricted);
 int gw_agclose(Agrw_t graph);
 Agrw_t gw_agmemread(const char *cp);
 
-void gw_agattr_text(Agrw_t graph, int kind, char *name, const char *value);
-void gw_agattr_html(Agrw_t graph, int kind, char *name, const char *value);
+void gw_set_default_attr_text(Agrw_t graph, int kind, char *name, const char *value);
+void gw_set_default_attr_html(Agrw_t graph, int kind, char *name, const char *value);
 void gw_agsafeset_text(void *object, char *name, const char *value);
 void gw_agsafeset_html(void *object, char *name, const char *value);
 

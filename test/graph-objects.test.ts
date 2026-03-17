@@ -312,4 +312,38 @@ describe('Viz', () => {
       }
     `);
   });
+  it('applies subgraph attributes correctly', async () => {
+    const viz = await VizPackage.instance();
+    const result = viz.render({
+      subgraphs: [
+        {
+          graphAttributes: {
+            color: 'red',
+          },
+          nodeAttributes: {
+            color: 'green',
+          },
+          edgeAttributes: {
+            color: 'blue',
+          },
+          nodes: [{ name: 'a' }],
+        },
+      ],
+    });
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,36"];
+      	node [label="\\N"];
+      	{
+      		graph [color=red];
+      		node [color=green];
+      		edge [color=blue];
+      		a	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      	}
+      }
+    `);
+  });
 });

@@ -35,10 +35,10 @@ fn setDefaultAttributes(
         );
         switch (attr.value_ptr.*) {
             .text => |val| {
-                c.gw_agattr_text(graph, kind, name, @ptrCast(val.ptr));
+                c.gw_set_default_attr_text(graph, kind, name, @ptrCast(val.ptr));
             },
             .html => |val| {
-                c.gw_agattr_html(graph, kind, name, @ptrCast(val.ptr));
+                c.gw_set_default_attr_html(graph, kind, name, @ptrCast(val.ptr));
             },
         }
     }

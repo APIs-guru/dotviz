@@ -10,11 +10,17 @@ int gw_agclose(Agrw_t graph) { return agclose((Agraph_t *)graph); }
 
 Agrw_t gw_agmemread(const char *cp) { return (Agrw_t)agmemread(cp); }
 
-void gw_agattr_text(Agrw_t graph, int kind, char *name, const char *value) {
+void gw_set_default_attr_text(Agrw_t graph, int kind, char *name, const char *value) {
+  if (agattr_text(graph, kind, name, NULL) == NULL) {
+    agattr_text(graph, kind, name, "");
+  }
   agattr_text((Agraph_t *)graph, kind, name, value);
 }
 
-void gw_agattr_html(Agrw_t graph, int kind, char *name, const char *value) {
+void gw_set_default_attr_html(Agrw_t graph, int kind, char *name, const char *value) {
+  if (agattr_text(graph, kind, name, NULL) == NULL) {
+    agattr_text(graph, kind, name, "");
+  }
   agattr_html((Agraph_t *)graph, kind, name, value);
 }
 
