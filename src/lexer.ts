@@ -700,8 +700,18 @@ function parseGraph(lexer: Lexer): Graph {
         }
         break;
       }
-      // case 'subgraph':
-      //   break;
+
+      case 'subgraph': {
+        const name = lexer.expectID('subgraph name').value;
+        const subgraph = parseSubgraph(name, statementList);
+        if (optionalEdgeOp()) {
+          const tailNodes: NodeID[] = subgraph
+            .sortedReferencedNodes()
+            .map((nodeIndex) => [globalNodes[nodeIndex].name, undefined]);
+          parseEdges(tailNodes, statementList);
+        }
+        break;
+      }
 
       // attr_stmt:	(graph | node | edge) attr_list
       case 'graph':
@@ -757,7 +767,7 @@ function parseGraph(lexer: Lexer): Graph {
     statementList: StatementList,
   ): StatementList {
     const subgraph = new StatementList(statementList);
-    statementList.subgraphs.set(statementList.subgraphs.size, subgraph);
+    statementList.subgraphs.set(name ?? statementList.subgraphs.size, subgraph);
     parseStatementList(subgraph);
     statementList.referencedNodes = statementList.referencedNodes.union(
       subgraph.referencedNodes,
