@@ -144,10 +144,7 @@ export class Viz {
     formats: readonly string[],
     options: RenderOptions = {},
   ): MultipleRenderResult {
-    return this._renderInput(input, formats, {
-      engine: 'dot',
-      ...options,
-    });
+    return this._renderInput(input, formats, options);
   }
 
   /**
@@ -160,10 +157,7 @@ export class Viz {
   render(input: string | Graph, options: RenderOptions = {}): RenderResult {
     const format = options.format ?? 'dot';
 
-    const result = this._renderInput(input, [format], {
-      engine: 'dot',
-      ...options,
-    });
+    const result = this._renderInput(input, [format], options);
 
     return result.status === 'success'
       ? {
@@ -291,6 +285,7 @@ export class Viz {
     );
   }
 
+  /* v8 ignore next -- used only for debugging */
   _wasi_fd_write(
     fd: number,
     iovs_ptr: number,

@@ -27,6 +27,7 @@ export async function instance(
       ),
     },
     wasi_snapshot_preview1: {
+      /* v8 ignore next -- used only for debugging */
       fd_write(
         fd: number,
         iovs_ptr: number,
@@ -50,6 +51,7 @@ export async function instance(
         view.setUint32(environBufSize, 0, true);
         return 0;
       },
+      /* v8 ignore next -- FIXME: removed, but currently used by graphviz */
       path_filestat_get() {
         return 44; // __WASI_ERRNO_NOENT
       },
