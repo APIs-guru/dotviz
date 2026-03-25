@@ -20,16 +20,8 @@ describe('Viz', () => {
     it('attributes in options override options in input', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render(
-        {
-          nodeAttributes: {
-            shape: 'rectangle',
-          },
-        },
-        {
-          nodeAttributes: {
-            shape: 'circle',
-          },
-        },
+        { nodeAttributes: { shape: 'rectangle' } },
+        { nodeAttributes: { shape: 'circle' } },
       );
 
       expectSuccessResult(result).toMatchInlineSnapshot(`
@@ -290,9 +282,7 @@ describe('Viz', () => {
   it('override default attributes', async () => {
     const viz = await VizPackage.instance();
     const result = viz.render({
-      nodeAttributes: {
-        color: 'blue',
-      },
+      nodeAttributes: { color: 'blue' },
       nodes: [{ name: 'a', attributes: { color: 'red' } }, { name: 'b' }],
     });
 
@@ -317,15 +307,9 @@ describe('Viz', () => {
     const result = viz.render({
       subgraphs: [
         {
-          graphAttributes: {
-            color: 'red',
-          },
-          nodeAttributes: {
-            color: 'green',
-          },
-          edgeAttributes: {
-            color: 'blue',
-          },
+          graphAttributes: { color: 'red' },
+          nodeAttributes: { color: 'green' },
+          edgeAttributes: { color: 'blue' },
           nodes: [{ name: 'a' }],
         },
       ],

@@ -1,3 +1,6 @@
 {
-  "singleQuote": true
+  "singleQuote": true,
+  "overrides": [
+    { "files": ["tsconfig.json"], "options": { "parser": "jsonc" } }
+  ]
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
+import { expectFailureResult } from './util/render-result.ts';
 
 describe('Viz', () => {
   describe('renderFormats', () => {
@@ -74,26 +75,28 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.renderFormats('invalid', ['dot', 'svg']);
 
-      expect(result).toStrictEqual({
-        status: 'failure',
-        output: null,
-        errors: [
-          { level: 'error', message: "syntax error in line 1 near 'invalid'" },
-        ],
-      });
+      expectFailureResult(result).toMatchInlineSnapshot(`
+        [
+          {
+            "level": "error",
+            "message": "syntax error in line 1 near 'invalid'",
+          },
+        ]
+      `);
     });
 
     it('returns error messages for invalid input and an empty array of formats', async () => {
       const viz = await VizPackage.instance();
       const result = viz.renderFormats('invalid', []);
 
-      expect(result).toStrictEqual({
-        status: 'failure',
-        output: null,
-        errors: [
-          { level: 'error', message: "syntax error in line 1 near 'invalid'" },
-        ],
-      });
+      expectFailureResult(result).toMatchInlineSnapshot(`
+        [
+          {
+            "level": "error",
+            "message": "syntax error in line 1 near 'invalid'",
+          },
+        ]
+      `);
     });
   });
 });

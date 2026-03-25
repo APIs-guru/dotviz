@@ -13,6 +13,9 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
 
+    // Interop Constraints
+    "erasableSyntaxOnly": true,
+
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -40,7 +43,7 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
+    "skipLibCheck": true,
   },
-  "exclude": ["test/types"]
+  "exclude": ["test/types"],
 }

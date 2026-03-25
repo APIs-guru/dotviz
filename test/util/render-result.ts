@@ -1,6 +1,6 @@
 import { assert, expect } from 'vitest';
 
-import type { RenderResult } from '../../src/index.ts';
+import type { MultipleRenderResult, RenderResult } from '../../src/index.ts';
 import { RawString } from './raw-string-serializer.ts';
 
 export function expectSuccessResult(result: RenderResult) {
@@ -14,7 +14,9 @@ export function expectSuccessResult(result: RenderResult) {
   return expect(new RawString(output));
 }
 
-export function expectFailureResult(result: RenderResult) {
+export function expectFailureResult(
+  result: RenderResult | MultipleRenderResult,
+) {
   const { errors } = result;
   expect(result).toStrictEqual({
     status: 'failure',
