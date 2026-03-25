@@ -1,0 +1,471 @@
+digraph Programming {
+	graph [bb="0,0,1578.9,1507.4",
+		layout=circo,
+		mindist=0.5,
+		overlap=false,
+		root=root,
+		splines=curved
+	];
+	node [label="\N",
+		margin=0,
+		shape=plain
+	];
+	edge [arrowhead=none,
+		arrowtail=none,
+		color="#000000",
+		penwidth=3.0
+	];
+	{
+		cpp	[height=0.9,
+			href="https://isocpp.org/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">C++</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">General-purpose language, well-suited for<br/>system programming, embedded systems,<br/>desktop applications and computer graphics.</font></td></tr>
+        </table>
+    >,
+			pos="1371.7,713.3",
+			tooltip="C++",
+			width=2.5557];
+		java	[height=0.73333,
+			href="https://developer.oracle.com/java/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Java</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">Language for cross-platform development,<br/>popular for client-server web applications.</font></td></tr>
+        </table>
+    >,
+			pos="1220.5,1124.3",
+			tooltip=Java,
+			width=2.459];
+		python	[height=0.9,
+			href="https://www.python.org/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Python</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">Interpreted language used for<br/>web applications, scientific computing,<br/>machine learning and data science.</font></td></tr>
+        </table>
+    >,
+			pos="865.17,1334.6",
+			tooltip=Python,
+			width=2.2626];
+		javascript	[height=0.9,
+			href="https://wikipedia.org/wiki/JavaScript",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">JavaScript</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">Interpreted language used for<br/>frontend and backend development,<br/>desktop and mobile applications.</font></td></tr>
+        </table>
+    >,
+			pos="468.14,1287.7",
+			tooltip=JavaScript,
+			width=2.0734];
+		kotlin	[height=0.9,
+			href="https://kotlinlang.org/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Kotlin</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">Cross-platform language designed<br/>to interoperate fully with Java, used for<br/>client-server and mobile applications.</font></td></tr>
+        </table>
+    >,
+			pos="250.2,1029.3",
+			tooltip=Kotlin,
+			width=2.2702];
+		csharp	[height=0.9,
+			href="https://docs.microsoft.com/dotnet/csharp/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">C#</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">General-purpose language<br/>suitable for web, desktop<br/>and mobile development.</font></td></tr>
+        </table>
+    >,
+			pos="161.81,790.31",
+			tooltip="C#",
+			width=1.5449];
+		rust	[height=0.9,
+			href="https://www.rust-lang.org/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Rust</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">Language that is focused on safety and<br/>performance, used for desktop and server<br/>applications and embedded systems.</font></td></tr>
+        </table>
+    >,
+			pos="119.9,567.96",
+			tooltip=Rust,
+			width=2.3818];
+		haskell	[height=1.0667,
+			href="https://www.haskell.org/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Haskell</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">Purely functional programming<br/>language suitable for teaching,<br/>research and industrial application,<br/>mostly network and web software.</font></td></tr>
+        </table>
+    >,
+			pos="192.68,388.18",
+			tooltip=Haskell,
+			width=2.027];
+		php	[height=0.9,
+			href="https://www.php.net/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">PHP</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">Interpreted programming<br/>language originally designed<br/>for web development.</font></td></tr>
+        </table>
+    >,
+			pos="372.01,261.96",
+			tooltip=PHP,
+			width=1.6878];
+		swift	[height=1.0667,
+			href="https://swift.org/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Swift</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">General-purpose compiled<br/>language for desktop and<br/>mobile development for<br/>Apple devices (iOS, macOS).</font></td></tr>
+        </table>
+    >,
+			pos="587.76,152.23",
+			tooltip=Swift,
+			width=1.7303];
+		go	[height=1.2333,
+			href="https://golang.org/",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Go</td></tr>
+            <tr><td bgcolor="white" balign="left"><font point-size="10">General-purpose compiled<br/>language focused on safety<br/>and concurrency, used for<br/>network and system<br/>applications.</font></td></tr>
+        </table>
+    >,
+			pos="781.28,80.496",
+			tooltip=Go,
+			width=1.5912];
+		r	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">R</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="908.12,102.39",
+			width=0.99052];
+		julia	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Julia</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1008.5,139.87",
+			width=0.99052];
+		scala	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Scala</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1101.2,193.72",
+			width=0.99052];
+		clojure	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Clojure</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1183.5,262.41",
+			width=0.99052];
+		ocaml	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">OCaml</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1253.1,343.97",
+			width=0.99052];
+		ruby	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Ruby</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1307.9,436.08",
+			width=0.99052];
+	}
+	{
+		qt	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Qt</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1287,564.01",
+			width=0.99052];
+		boost	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">boost</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1543.3,709.32",
+			width=0.99052];
+		unreal	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Unreal Engine</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1287,862.59",
+			width=1.2117];
+	}
+	{
+		spring	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Spring</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1324.3,1002.3",
+			width=0.99052];
+		javafx	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">JavaFX</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="1116.7,1246.3",
+			width=0.99052];
+	}
+	{
+		angular	[height=0.63333,
+			href="https://angular.io",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Angular</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="588.14,1204",
+			tooltip=Angular,
+			width=0.99052];
+		react	[height=0.63333,
+			href="https://reactjs.org",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">React</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="600.61,1349.8",
+			tooltip=React,
+			width=0.99052];
+		vue	[height=0.63333,
+			href="https://vuejs.org",
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Vue</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="480.6,1433.4",
+			tooltip=Vue,
+			width=0.99052];
+		express	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Express</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="348.13,1371.3",
+			width=0.99052];
+		nestjs	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">NestJS</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="335.67,1225.6",
+			width=0.99052];
+		electron	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Electron</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="455.67,1141.9",
+			width=0.99052];
+	}
+	{
+		django	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Django</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="979.62,1232.9",
+			width=0.99052];
+		keras	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Keras</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="896.02,1484.6",
+			width=0.99052];
+		tensorflow	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Tensorflow</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="719.86,1286.4",
+			width=0.99052];
+	}
+	{
+		android	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Android</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="121.52,1112.8",
+			width=0.99052];
+	}
+	{
+		xamarin	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Xamarin</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="35.659,807.19",
+			width=0.99052];
+	}
+	{
+		laravel	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">Laravel</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="288.7,159.03",
+			width=0.99052];
+	}
+	{
+		ios	[height=0.63333,
+			label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td bgcolor="yellow">iOS</td></tr>
+            <tr><td bgcolor="white">Description</td></tr>
+        </table>
+    >,
+			pos="553.26,22.8",
+			width=0.99052];
+	}
+	root	[fontsize=30,
+		height=3.2406,
+		label=Programming,
+		pos="737.35,713.3",
+		shape=circle,
+		width=3.2406];
+	root -> cpp	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,1279.7,704.55 854.14,708.28 1101.2,697.79 1171.5,696.16 1265.4,703.4"];
+	root -> java	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,1189.3,1098.1 826.14,789.35 1046.5,978.03 1082.4,1008.6 1178.2,1088.9"];
+	root -> python	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,854.99,1302.5 755.74,828.99 802.17,1120 810.97,1162.3 850.66,1288.8"];
+	root -> javascript	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,478.15,1255.7 681.53,816.04 540.98,1075.1 523.02,1113.9 482.42,1242.1"];
+	root -> kotlin	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,288.3,997.09 636.05,771.25 422.46,893.68 380.77,920.14 299.03,988.13"];
+	root -> csharp	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,217.33,777.74 620.93,724.24 381.74,746.85 329.02,753.33 231.42,774.63"];
+	root -> rust	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,205.44,583.97 623.93,684.13 380.23,621.5 313.57,605.06 219.54,586.69"];
+	root -> haskell	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,258.88,426.49 637.33,652.79 414,517.7 358.84,484.58 271.19,433.64"];
+	root -> php	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,396.58,294.12 662.55,623.15 500.97,428.32 472.19,392.81 405.38,305.61"];
+	root -> swift	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,594.87,190.33 703.5,601.3 630.02,357.71 618.46,314.57 597.54,204.47"];
+	root -> go	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,773.73,124.61 740.36,596.18 747.86,309.81 750.99,261.11 771.37,138.7"];
+	root -> r	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,898.85,125.1 763.18,599.12 829.82,305.25 840.56,268.57 893.42,138.42"];
+	root -> julia	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,994.09,162.61 781.54,604.97 894.88,327.62 912.1,292.21 986.46,174.64"];
+	root -> scala	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,1080.5,216.37 798.82,613.81 954.94,361.49 978.92,327.75 1070.7,227"];
+	root -> clojure	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,1154.1,285.09 814.53,625.47 1007.4,406.24 1038.9,374.52 1142.7,293.85"];
+	root -> ocaml	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,1217.4,362.85 828.21,639.72 1053.4,457.64 1091,430.56 1204.7,369.65"];
+	root -> ruby	[arrowhead="",
+		arrowtail="",
+		color="#2b78e4",
+		pos="e,1272.7,447.81 839.43,656.23 1094.5,513.88 1134.7,494.38 1259.1,452.36"];
+	cpp -> qt	[pos="1368,681.08 1362.2,637.53 1354.2,624.74 1312.2,586.58"];
+	cpp -> boost	[pos="1463.5,710.21 1482.8,709.63 1495.1,709.39 1507.8,709.3"];
+	cpp -> unreal	[pos="1368,745.57 1362.4,785.53 1353.9,798.49 1311,839.8"];
+	java -> spring	[pos="1266.2,1098 1296,1078.9 1303.6,1065.5 1317,1024.9"];
+	java -> javafx	[pos="1211,1150.5 1193.7,1196.6 1185.4,1209.2 1152.2,1227.8"];
+	python -> django	[pos="931.96,1302.3 941.79,1292.3 951.35,1278.2 965.52,1255.6"];
+	python -> keras	[pos="871.13,1366.6 881.82,1423.8 884.91,1439.4 890.37,1461.9"];
+	python -> tensorflow	[pos="784.05,1330 774.42,1325.6 764.01,1318.9 750.32,1309"];
+	javascript -> angular	[pos="530.81,1255.3 539.43,1248.3 549.77,1239.1 563.51,1226.6"];
+	javascript -> react	[pos="499.44,1319.9 520.37,1339.6 533.6,1344.7 565.41,1347.5"];
+	javascript -> vue	[pos="465.81,1319.9 462.18,1372.8 462.71,1387.2 471.47,1410.9"];
+	javascript -> express	[pos="430.74,1320 408.27,1339.2 396.12,1348.6 383.75,1355.5"];
+	javascript -> nestjs	[pos="393.71,1276.2 380.05,1271 370.07,1262.9 356.09,1248.1"];
+	javascript -> electron	[pos="454.07,1255.5 446.73,1234.2 447.53,1216.8 453.18,1164.6"];
+	kotlin -> android	[pos="197.68,1061.5 175.8,1075 163.6,1082.8 152.77,1090.2"];
+	csharp -> xamarin	[pos="106.21,796.7 90.295,798.58 79.979,799.89 71.018,801.2"];
+	php -> laravel	[pos="345.55,229.66 324.62,204.1 315.48,192.87 306.49,181.57"];
+	swift -> ios	[pos="576.96,114.19 566.08,75.738 562.42,62.235 558.42,45.345"];
+}

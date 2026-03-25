@@ -141,13 +141,25 @@ describe('Viz', () => {
   });
   it('circo layout', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.render(readSnapshot('./snapshots/circo.gv'), {
-      format: 'svg',
-      engine: 'circo',
+    const result = viz.renderFormats(
+      readSnapshot('./snapshots/circo.gv'),
+      ['dot', 'svg'],
+      { engine: 'circo' },
+    );
+
+    expect(result).toStrictEqual({
+      status: 'success',
+      output: {
+        dot: expect.any(String) as unknown,
+        svg: expect.any(String) as unknown,
+      },
+      errors: [],
     });
 
-    await expectSuccessResult(result).toMatchFileSnapshot(
+    await expectString(result.output?.dot).toMatchFileSnapshot(
+      './snapshots/circo.dot',
+    );
+    await expectString(result.output?.svg).toMatchFileSnapshot(
       './snapshots/circo.svg',
     );
   });
-});
