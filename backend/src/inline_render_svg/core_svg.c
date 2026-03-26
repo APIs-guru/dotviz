@@ -44,7 +44,7 @@
 #include "gvcjob.h"
 #include "gvio_svg.h"
 #include "../output_string.h"
-#include "render_svg.h"
+#include "internal_render_svg.h"
 #include "safe_job.h"
 #include "streq.h"
 #include "types.h"

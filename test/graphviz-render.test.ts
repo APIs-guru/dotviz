@@ -163,3 +163,4 @@ describe('Viz', () => {
       './snapshots/circo.svg',
     );
   });
+});

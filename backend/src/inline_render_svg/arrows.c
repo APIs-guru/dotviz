@@ -13,7 +13,7 @@
 
 #include <assert.h>
 #include <geomprocs.h>
-#include "render_svg.h"
+#include "internal_render_svg.h"
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>

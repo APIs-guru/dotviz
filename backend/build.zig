@@ -42,7 +42,7 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath(b.path("src"));
     lib.addCSourceFiles(.{
         .files = &.{
-            "src/agrw.c",
+            "src/cgraph_wrapper.c",
             "src/layout_inline.c",
             "src/context_inline.c",
             "src/output_string.c",

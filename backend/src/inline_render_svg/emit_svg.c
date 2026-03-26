@@ -6,7 +6,7 @@
  */
 
 /*************************************************************************
- * Copyright (c) 2011 AT&T Intellectual Property 
+ * Copyright (c) 2011 AT&T Intellectual Property
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -54,7 +54,7 @@
 #include <util/unused.h>
 #include "utils.h"
 #include "xdot.h"
-#include "render_svg.h"
+#include "internal_render_svg.h"
 #include "core_svg.h"
 // clang-format on
 

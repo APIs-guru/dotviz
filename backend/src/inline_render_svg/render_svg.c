@@ -10,7 +10,6 @@
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "gvplugin_render.h" // IWYU pragma: keep
-#include "render_svg.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -168,6 +167,9 @@ static int parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
 }
 
 extern Agsym_t *G_peripheries, *G_penwidth;
+extern void init_bb(graph_t *g);
+void emit_graph(output_string *output, SafeJob *safe_job, graph_t *g,
+                int *layerlist, int graph_outputorder);
 
 output_string render_svg(Agraph_t *g) {
   // FIXME: do we need it? we suspect it is used only for clip!

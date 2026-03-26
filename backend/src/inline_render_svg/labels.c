@@ -10,7 +10,8 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-#include "render_svg.h"
+#include <types.h>
+#include <geom.h>
 #include <htmltable.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -18,8 +19,12 @@
 #include <util/agxbuf.h>
 #include <util/alloc.h>
 #include "core_svg.h"
+#include "gvcint.h"
 #include "safe_job.h"
 
+#include <utils.h>
+
+extern pointf textspan_size(GVC_t *gvc, textspan_t *span);
 static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash);
 
 static void storeline(GVC_t *gvc, textlabel_t *lp, char *line,

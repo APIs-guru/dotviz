@@ -50,7 +50,7 @@
 #include <util/streq.h>
 #include <util/unreachable.h>
 
-#include "render_svg.h"
+#include "internal_render_svg.h"
 #include <htmltable.h>
 #include "core_svg.h"
 #include "safe_job.h"

@@ -3,17 +3,26 @@ const testing = std.testing;
 const vizjs_types = @import("vizjs_types.zig");
 const wasm_allocator = std.heap.wasm_allocator;
 
-pub const c = @cImport({
-    @cInclude("gvc.h");
-    @cInclude("agrw.h");
-    @cInclude("layout_inline.h");
+// pub const c = @cImport({
+//     @cInclude("gvc.h");
+//     @cInclude("agrw.h");
+//     @cInclude("layout_inline.h");
+//     @cInclude("graphviz.h");
+//     @cInclude("gvusershape_size.h");
+// });
+
+pub const graphviz = @cImport({
     @cInclude("geom.h");
+    @cInclude("cgraph_wrapper.h");
+    @cInclude("context_inline.h");
+    @cInclude("layout_inline.h");
     @cInclude("gvusershape_size.h");
+    @cInclude("inline_render_dot/render_inline_dot.h");
+    @cInclude("inline_render_svg/render_svg.h");
 });
 
 extern var Y_invert: bool;
 extern var Reduce: bool;
-pub const Agrw_t = ?*anyopaque;
 
 fn toCString(maybe_string: ?[:0]const u8) [*c]const u8 {
     if (maybe_string) |string| {
@@ -24,7 +33,7 @@ fn toCString(maybe_string: ?[:0]const u8) [*c]const u8 {
 
 fn setDefaultAttributes(
     allocator: std.mem.Allocator,
-    graph: Agrw_t,
+    graph: ?*graphviz.Agraph_t,
     attributes: *vizjs_types.Attributes,
     kind: c_int,
 ) void {
@@ -33,12 +42,17 @@ fn setDefaultAttributes(
         const name = allocator.dupeZ(u8, attr.key_ptr.*) catch @panic(
             "cannot dupeZ in setDefaultAttributes",
         );
+
+        if (graphviz.agattr_text(graph, kind, name, null) == null) {
+            _ = graphviz.agattr_text(graph, kind, name, "");
+        }
+
         switch (attr.value_ptr.*) {
             .text => |val| {
-                c.gw_set_default_attr_text(graph, kind, name, @ptrCast(val.ptr));
+                _ = graphviz.agattr_text(graph, kind, name, @ptrCast(val.ptr));
             },
             .html => |val| {
-                c.gw_set_default_attr_html(graph, kind, name, @ptrCast(val.ptr));
+                _ = graphviz.agattr_html(graph, kind, name, @ptrCast(val.ptr));
             },
         }
     }
@@ -56,10 +70,10 @@ fn setAttributes(
         );
         switch (attr.value_ptr.*) {
             .text => |val| {
-                c.gw_agsafeset_text(object, name, @ptrCast(val.ptr));
+                _ = graphviz.agsafeset_text(object, name, @ptrCast(val.ptr), "");
             },
             .html => |val| {
-                c.gw_agsafeset_html(object, name, @ptrCast(val.ptr));
+                _ = graphviz.agsafeset_html(object, name, @ptrCast(val.ptr), "");
             },
         }
     }
@@ -71,13 +85,13 @@ fn setAllDefaultAttributes(
     json: anytype,
 ) void {
     if (json.graphAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, c.AGRAPH);
+        setDefaultAttributes(allocator, graph, attributes, graphviz.AGRAPH);
     }
     if (json.nodeAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, c.AGNODE);
+        setDefaultAttributes(allocator, graph, attributes, graphviz.AGNODE);
     }
     if (json.edgeAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, c.AGEDGE);
+        setDefaultAttributes(allocator, graph, attributes, graphviz.AGEDGE);
     }
 }
 
@@ -85,7 +99,7 @@ fn readGraph(allocator: std.mem.Allocator, graph: anytype, json: anytype) void {
     setAllDefaultAttributes(allocator, graph, json);
     if (json.nodes) |nodes| {
         for (nodes) |node| {
-            const node_ptr = c.gw_agnode(graph, node.name);
+            const node_ptr = graphviz.agnode(graph, node.name, graphviz.true);
             if (node.attributes) |attributes| {
                 setAttributes(
                     allocator,
@@ -98,9 +112,9 @@ fn readGraph(allocator: std.mem.Allocator, graph: anytype, json: anytype) void {
 
     if (json.edges) |edges| {
         for (edges) |edge| {
-            const tail_ptr = c.gw_agnode(graph, @ptrCast(edge.tail.ptr));
-            const head_ptr = c.gw_agnode(graph, @ptrCast(edge.head.ptr));
-            const edge_ptr = c.gw_agedge(graph, tail_ptr, head_ptr);
+            const tail_ptr = graphviz.agnode(graph, @ptrCast(edge.tail.ptr), graphviz.true);
+            const head_ptr = graphviz.agnode(graph, @ptrCast(edge.head.ptr), graphviz.true);
+            const edge_ptr = graphviz.agedge(graph, tail_ptr, head_ptr, null, graphviz.true);
             if (edge.attributes) |attributes| {
                 setAttributes(
                     allocator,
@@ -113,13 +127,11 @@ fn readGraph(allocator: std.mem.Allocator, graph: anytype, json: anytype) void {
 
     if (json.subgraphs) |subgraphs| {
         for (subgraphs) |subgraph| {
-            const subgraph_ptr = c.gw_agsubg(graph, toCString(subgraph.name));
+            const subgraph_ptr = graphviz.agsubg(graph, toCString(subgraph.name), graphviz.true);
             readGraph(allocator, subgraph_ptr, subgraph);
         }
     }
 }
-
-const GVC = ?*c.GVC_t;
 
 pub export fn wasm_alloc(len: usize) ?[*]u8 {
     const mem = wasm_allocator.alloc(u8, len) catch return null;
@@ -248,18 +260,17 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     };
 
     // Reset errors
-    _ = c.agseterrf(viz_errorf);
-    _ = c.agseterr(c.AGWARN);
-    _ = c.agreseterrors();
+    _ = graphviz.agseterrf(viz_errorf);
+    _ = graphviz.agseterr(graphviz.AGWARN);
+    _ = graphviz.agreseterrors();
 
-    const graphptr: Agrw_t = switch (request.graph) {
+    const graphptr = switch (request.graph) {
         .dot => |dot_string| blk: {
-            var graph: Agrw_t = null;
 
             // FIXME: should be [:0]u8 already
             const dot_string_z = arena_allocator.dupeZ(u8, dot_string) catch @panic("cannot alloc");
             // Try to read one graph
-            graph = c.gw_agmemread(dot_string_z);
+            const graph = graphviz.agmemread(dot_string_z);
 
             // Consume the rest of the input
             // while (true) {
@@ -276,15 +287,15 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
             break :blk graph;
         },
         .graph => |graph_json| blk: {
-            const graph = c.gw_agopen(
+            const maybe_graph = graphviz.wrapped_agopen(
                 toCString(graph_json.name),
                 graph_json.directed,
                 graph_json.strict,
             );
-            if (graph != null) {
+            if (maybe_graph) |graph| {
                 readGraph(arena_allocator, graph, graph_json);
             }
-            break :blk graph;
+            break :blk maybe_graph;
         },
     };
 
@@ -298,7 +309,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
             .output = null,
         });
     }
-    defer _ = c.gw_agclose(graphptr);
+    defer _ = graphviz.agclose(graphptr);
 
     setAllDefaultAttributes(arena_allocator, graphptr, request);
 
@@ -307,12 +318,12 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     Y_invert = request.yInvert;
     Reduce = request.reduce;
 
-    const gvc = c.gw_create_context();
+    const gvc = graphviz.gw_create_context();
     defer {
-        _ = c.gvFreeContext(gvc);
+        _ = graphviz.gvFreeContext(gvc);
     }
 
-    if (c.gw_gvLayout(gvc, graphptr, request.engine) != 0) {
+    if (graphviz.gw_gvLayout(gvc, graphptr, request.engine) != 0) {
         return stringifyResponseJSON(wasm_allocator, .{
             .status = .failure,
             .errors = parseAgerrMessages(
@@ -322,19 +333,19 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
             .output = null,
         });
     }
-    defer _ = c.gw_gvFreeLayout(graphptr);
+    defer _ = graphviz.gw_gvFreeLayout(graphptr);
 
     var responseDot: ?[:0]const u8 = null;
     defer freeCString(responseDot);
     if (request.renderDot) {
-        const output = c.render_dot(graphptr);
+        const output = graphviz.render_dot(graphptr);
         responseDot = @ptrCast(output.data[0..output.data_position]);
     }
 
     var responseSvg: ?[:0]const u8 = null;
     defer freeCString(responseSvg);
     if (request.renderSvg) {
-        const output = c.render_svg(graphptr);
+        const output = graphviz.render_svg(graphptr);
         responseSvg = @ptrCast(output.data[0..output.data_position]);
     }
 
@@ -359,15 +370,15 @@ fn freeCString(string: ?[:0]const u8) void {
 }
 
 var g_image_map: vizjs_types.ImageDimensionsMap = undefined;
-export fn gvusershape_size(graph: Agrw_t, name: [*c]u8) c.point {
+export fn gvusershape_size(graph: *graphviz.Agraph_t, name: [*c]u8) graphviz.point {
     const dimensions = g_image_map.map.get(std.mem.span(name)) orelse @panic("no image found");
-    return c.my_gvusershape_size(graph, dimensions.height, dimensions.width);
+    return graphviz.my_gvusershape_size(graph, dimensions.height, dimensions.width);
 }
 
-export fn get_dimensions_by_name(name: [*c]u8, dpi: c.pointf) c.point {
+export fn get_dimensions_by_name(name: [*c]u8, dpi: graphviz.pointf) graphviz.point {
     const dimensions = g_image_map.map.get(std.mem.span(name)) orelse return .{
         .x = -1,
         .y = -1,
     };
-    return c.convert_image_dimensions(dpi, dimensions.height, dimensions.width);
+    return graphviz.convert_image_dimensions(dpi, dimensions.height, dimensions.width);
 }

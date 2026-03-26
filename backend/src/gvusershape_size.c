@@ -2,8 +2,6 @@
 #include "types.h"
 #include <stdio.h>
 
-#include "gvusershape_size.h"
-
 #define DEFAULT_DPI 96
 
 static int svg_units_convert(double n, char *u) {
@@ -53,7 +51,7 @@ point convert_image_dimensions(pointf dpi, const char *raw_height,
   return rv;
 }
 
-point my_gvusershape_size(graph_t *g, const char *raw_height,
+point my_gvusershape_size(Agraph_t *g, const char *raw_height,
                           const char *raw_width) {
   pointf dpi;
 

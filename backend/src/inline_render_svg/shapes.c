@@ -13,7 +13,7 @@
 
 // clang-format off
 #include <assert.h>
-#include "render_svg.h"
+#include "internal_render_svg.h"
 #include <htmltable.h>
 #include <float.h>
 #include <limits.h>
