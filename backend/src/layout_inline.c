@@ -1,4 +1,3 @@
-#include "agrw.h"
 #include "cgraph.h"
 #include "gvc.h" // IWYU pragma: keep
 #include <stdatomic.h>
