@@ -128,6 +128,27 @@ describe('Dot language support', () => {
     expect(mergeListsResult).toStrictEqual(result);
   });
 
+  it('empty strings as global attributes', () => {
+    const result = renderString(`
+      graph {
+        graph [a=""]
+        node [b=""]
+        edge [c=""]
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [a="",
+      		bb="0,0,0,0"
+      	];
+      	node [b="",
+      		label="\\N"
+      	];
+      	edge [c=""];
+      }
+    `);
+  });
+
   it('global graph attributes shorthand', () => {
     const result = renderString(`
       graph {
@@ -291,6 +312,54 @@ describe('Dot language support', () => {
       		width=0.75];
       	b -> a	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536",
       		valueA=a];
+      }
+    `);
+  });
+
+  it('empty strings as subgraph attributes', () => {
+    const result = renderString(`
+        graph {
+         	node [a=""];
+         	{ node [a=""] }
+        }
+      `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+        graph {
+        	graph [bb="0,0,0,0"];
+        	node [a="",
+        		label="\\N"
+        	];
+        	{
+        	}
+        }
+      `);
+  });
+
+  it('merge subgraphs with the same name', () => {
+    const result = renderString(`
+      graph {
+        subgraph a { a1 }
+        subgraph b { b1 }
+        subgraph a { a2 }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,198,36"];
+      	node [label="\\N"];
+      	subgraph a {
+      		a1	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a2	[height=0.5,
+      			pos="171,18",
+      			width=0.75];
+      	}
+      	subgraph b {
+      		b1	[height=0.5,
+      			pos="99,18",
+      			width=0.75];
+      	}
       }
     `);
   });

@@ -40,50 +40,39 @@ pub const AttributeValue = union(enum) {
     }
 };
 
-const CString = struct {
-    cstring: [:0]u8,
-
-    const Self = @This();
-
-    pub fn jsonParse(allocator: Allocator, source: anytype, options: ParseOptions) !Self {
-        const s = try json.innerParse([:0]u8, allocator, source, options);
-        return Self{ .string = s };
-    }
-};
-
 pub const Attributes = std.json.ArrayHashMap(AttributeValue);
 
 pub const Node = struct {
     name: [:0]const u8,
-    attributes: ?*Attributes = null,
+    attributes: Attributes,
 };
 
 pub const Edge = struct {
     tail: [:0]const u8,
     head: [:0]const u8,
-    attributes: ?*Attributes = null,
+    attributes: Attributes,
 };
 
 pub const Subgraph = struct {
-    name: ?[:0]const u8 = null,
-    graphAttributes: ?*Attributes = null,
-    nodeAttributes: ?*Attributes = null,
-    edgeAttributes: ?*Attributes = null,
-    nodes: ?[]Node = null,
-    edges: ?[]Edge = null,
-    subgraphs: ?[]Subgraph = null,
+    name: ?[:0]const u8,
+    graphAttributes: Attributes,
+    nodeAttributes: Attributes,
+    edgeAttributes: Attributes,
+    nodeIndexes: []usize,
+    edgeIndexes: []usize,
+    subgraphs: []Subgraph,
 };
 
 pub const Graph = struct {
-    name: ?[:0]const u8 = null,
-    directed: bool = true,
-    strict: bool = false,
-    graphAttributes: ?*Attributes = null,
-    nodeAttributes: ?*Attributes = null,
-    edgeAttributes: ?*Attributes = null,
-    nodes: ?[]Node = null,
-    edges: ?[]Edge = null,
-    subgraphs: ?[]Subgraph = null,
+    name: ?[:0]const u8,
+    directed: bool,
+    strict: bool,
+    graphAttributes: Attributes,
+    nodeAttributes: Attributes,
+    edgeAttributes: Attributes,
+    allNodes: []Node,
+    allEdges: []Edge,
+    subgraphs: []Subgraph,
 
     pub fn initFromJson(
         allocator: std.mem.Allocator,
