@@ -26,7 +26,7 @@ fn toCString(maybe_string: ?[:0]const u8) [*c]const u8 {
 fn setDefaultAttributes(
     allocator: std.mem.Allocator,
     graph: ?*graphviz.Agraph_t,
-    attributes: *vizjs_types.Attributes,
+    attributes: vizjs_types.Attributes,
     kind: c_int,
 ) void {
     var iterator = attributes.map.iterator();
@@ -39,13 +39,16 @@ fn setDefaultAttributes(
             _ = graphviz.agattr_text(graph, kind, name, "");
         }
 
-        switch (attr.value_ptr.*) {
+        const sym = brk: switch (attr.value_ptr.*) {
             .text => |val| {
-                _ = graphviz.agattr_text(graph, kind, name, @ptrCast(val.ptr));
+                break :brk graphviz.agattr_text(graph, kind, name, @ptrCast(val.ptr));
             },
             .html => |val| {
-                _ = graphviz.agattr_html(graph, kind, name, @ptrCast(val.ptr));
+                break :brk graphviz.agattr_html(graph, kind, name, @ptrCast(val.ptr));
             },
+        };
+        if (graphviz.agroot(graph) == graph) {
+            graphviz.wrapped_sym_set_print(sym);
         }
     }
 }
@@ -53,7 +56,7 @@ fn setDefaultAttributes(
 fn setAttributes(
     allocator: std.mem.Allocator,
     object: ?*anyopaque,
-    attributes: *vizjs_types.Attributes,
+    attributes: vizjs_types.Attributes,
 ) void {
     var iterator = attributes.map.iterator();
     while (iterator.next()) |attr| {
@@ -71,49 +74,59 @@ fn setAttributes(
     }
 }
 
-fn readGraph(allocator: std.mem.Allocator, graph: anytype, json: anytype) void {
-    if (json.graphAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, graphviz.AGRAPH);
-    }
-    if (json.nodeAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, graphviz.AGNODE);
-    }
-    if (json.edgeAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, graphviz.AGEDGE);
-    }
-    if (json.nodes) |nodes| {
-        for (nodes) |node| {
-            const node_ptr = graphviz.agnode(graph, node.name, graphviz.true);
-            if (node.attributes) |attributes| {
-                setAttributes(
-                    allocator,
-                    node_ptr,
-                    attributes,
-                );
-            }
-        }
+fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph_json: vizjs_types.Graph) void {
+    setDefaultAttributes(allocator, graph, graph_json.graphAttributes, graphviz.AGRAPH);
+    setDefaultAttributes(allocator, graph, graph_json.nodeAttributes, graphviz.AGNODE);
+    setDefaultAttributes(allocator, graph, graph_json.edgeAttributes, graphviz.AGEDGE);
+
+    const allNodes = allocator.alloc(?*graphviz.Agnode_t, graph_json.allNodes.len) catch @panic(
+        "cannot alloc for allNodes",
+    );
+    for (graph_json.allNodes, 0..) |node_json, i| {
+        const node_ptr = graphviz.agnode(graph, node_json.name, graphviz.true);
+        setAttributes(allocator, node_ptr, node_json.attributes);
+        allNodes[i] = node_ptr;
     }
 
-    if (json.edges) |edges| {
-        for (edges) |edge| {
-            const tail_ptr = graphviz.agnode(graph, @ptrCast(edge.tail.ptr), graphviz.true);
-            const head_ptr = graphviz.agnode(graph, @ptrCast(edge.head.ptr), graphviz.true);
-            const edge_ptr = graphviz.agedge(graph, tail_ptr, head_ptr, null, graphviz.true);
-            if (edge.attributes) |attributes| {
-                setAttributes(
-                    allocator,
-                    edge_ptr,
-                    attributes,
-                );
-            }
-        }
+    const allEdges = allocator.alloc(?*graphviz.Agedge_t, graph_json.allEdges.len) catch @panic(
+        "cannot alloc for allEdges",
+    );
+    for (graph_json.allEdges, 0..) |edge_json, i| {
+        const tail_node = graphviz.agnode(graph, @ptrCast(edge_json.tail.ptr), graphviz.true);
+        const head_node = graphviz.agnode(graph, @ptrCast(edge_json.head.ptr), graphviz.true);
+        const edge = graphviz.agedge(graph, tail_node, head_node, null, graphviz.true);
+        setAttributes(allocator, edge, edge_json.attributes);
+        allEdges[i] = edge;
     }
 
-    if (json.subgraphs) |subgraphs| {
-        for (subgraphs) |subgraph| {
-            const subgraph_ptr = graphviz.agsubg(graph, toCString(subgraph.name), graphviz.true);
-            readGraph(allocator, subgraph_ptr, subgraph);
-        }
+    for (graph_json.subgraphs) |subgraph_json| {
+        const subgraph = graphviz.agsubg(graph, toCString(subgraph_json.name), graphviz.true);
+        readSubgraphJSON(allocator, subgraph, subgraph_json, allNodes, allEdges);
+    }
+}
+
+fn readSubgraphJSON(
+    allocator: std.mem.Allocator,
+    subgraph: anytype,
+    subgraph_json: vizjs_types.Subgraph,
+    allNodes: []?*graphviz.Agnode_t,
+    allEdges: []?*graphviz.Agedge_t,
+) void {
+    setDefaultAttributes(allocator, subgraph, subgraph_json.graphAttributes, graphviz.AGRAPH);
+    setDefaultAttributes(allocator, subgraph, subgraph_json.nodeAttributes, graphviz.AGNODE);
+    setDefaultAttributes(allocator, subgraph, subgraph_json.edgeAttributes, graphviz.AGEDGE);
+
+    for (subgraph_json.nodeIndexes) |node| {
+        _ = graphviz.agsubnode(subgraph, allNodes[node], graphviz.true);
+    }
+
+    for (subgraph_json.edgeIndexes) |edge| {
+        _ = graphviz.agsubedge(subgraph, allEdges[edge], graphviz.true);
+    }
+
+    for (subgraph_json.subgraphs) |child_subgraph_json| {
+        const child_subgraph = graphviz.agsubg(subgraph, toCString(child_subgraph_json.name), graphviz.true);
+        readSubgraphJSON(allocator, child_subgraph, child_subgraph_json, allNodes, allEdges);
     }
 }
 
@@ -266,7 +279,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     }
     defer _ = graphviz.agclose(graph);
 
-    readGraph(arena_allocator, graph, graph_json);
+    readGraphJSON(arena_allocator, graph, graph_json);
 
     Y_invert = request.yInvert;
     Reduce = request.reduce;
