@@ -85,15 +85,9 @@ describe('Viz', () => {
     it('accepts default attributes', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph {}', {
-        graphAttributes: {
-          a: 123,
-        },
-        nodeAttributes: {
-          b: false,
-        },
-        edgeAttributes: {
-          c: 'test',
-        },
+        graphAttributes: { a: 123 },
+        nodeAttributes: { b: false },
+        edgeAttributes: { c: 'test' },
       });
 
       expectSuccessResult(result).toMatchInlineSnapshot(`
@@ -164,7 +158,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "JSON error UnexpectedToken at 36:25: \`
+            "message": "JSON error UnexpectedToken at 33:25: \`
           "yInvert": "bad value",\`",
           },
         ]

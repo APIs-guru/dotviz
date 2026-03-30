@@ -1,5 +1,6 @@
 import type { Attributes, Graph } from './graph.d.ts';
 import { parseDot } from './lexer.ts';
+import { NormalizedGraph } from './normalize-graph.ts';
 
 /**
  * @property format
@@ -189,7 +190,7 @@ export class Viz {
     formats: readonly string[],
     options: RenderOptions,
   ): MultipleRenderResult {
-    let graph: Graph;
+    let graph: NormalizedGraph;
     const warnings: RenderError[] = [];
     if (typeof input === 'string') {
       const result = parseDot(input);
@@ -199,23 +200,12 @@ export class Viz {
       graph = result.output;
       warnings.push(...result.errors);
     } else {
-      graph = input;
+      graph = new NormalizedGraph(input);
     }
-    graph = {
-      ...graph,
-      graphAttributes: {
-        ...graph.graphAttributes,
-        ...options.graphAttributes,
-      },
-      nodeAttributes: {
-        ...graph.nodeAttributes,
-        ...options.nodeAttributes,
-      },
-      edgeAttributes: {
-        ...graph.edgeAttributes,
-        ...options.edgeAttributes,
-      },
-    };
+
+    graph.mergeGraphAttributes(options.graphAttributes);
+    graph.mergeNodeAttributes(options.nodeAttributes);
+    graph.mergeEdgeAttributes(options.edgeAttributes);
 
     let renderGv = false;
     let renderDot = false;
@@ -258,6 +248,7 @@ export class Viz {
       null,
       2,
     );
+    // console.log(requestJSON);
     const cJson = this._utf8Encoder.encode(requestJSON);
     const jsonPtr = this._wasm.wasm_alloc(cJson.length);
     const inputJSONBuf = new Uint8Array(
