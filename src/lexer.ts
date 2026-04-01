@@ -117,24 +117,15 @@ class Lexer {
   }
 
   #readNextToken(): Token {
-    const token = this.#readLiteral() ?? this.#readKeywordOrID();
+    const token = this.#readKeywordOrID();
     if (token !== undefined) {
       return token;
     }
 
-    const char = this.#peekNextChar();
-    if (char === undefined) {
-      return { kind: 'EOF' };
-    }
-
-    const line = this.#line.toString();
-    const column = (this.#nextIndex - this.#lineStart + 1).toString();
-    throw new Error(`(${line}:${column})Unexpected character: '${char}'`);
-  }
-
-  #readLiteral(): { kind: LiteralToken } | undefined {
     const tokenStartChar = this.#peekNextChar();
     switch (tokenStartChar) {
+      case undefined:
+        return { kind: 'EOF' };
       case ',':
       case ':':
       case ';':
@@ -145,21 +136,20 @@ class Lexer {
       case '}':
         this.#nextIndex += 1;
         return { kind: tokenStartChar };
-
-      case '-': {
-        const nextChar = this.#peekNextChar(1);
-        if (nextChar === '-') {
-          this.#nextIndex += 2;
+      case '-':
+        if (this.optionalLiteral('--')) {
           return { kind: '--' };
-        } else if (nextChar === '->') {
-          this.#nextIndex += 2;
+        }
+        if (this.optionalLiteral('->')) {
           return { kind: '->' };
         }
-        break;
-      }
     }
 
-    return undefined;
+    const line = this.#line.toString();
+    const column = (this.#nextIndex - this.#lineStart + 1).toString();
+    throw new Error(
+      `(${line}:${column})Unexpected character: '${tokenStartChar}'`,
+    );
   }
 
   #readKeywordOrID(): { kind: KeywordToken } | ID | undefined {
