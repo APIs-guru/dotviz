@@ -1,5 +1,11 @@
 import type { Attributes, Graph, Subgraph } from './graph.d.ts';
 
+interface NormalizedGraphConfig {
+  name: string | null;
+  strict: boolean;
+  directed: boolean;
+}
+
 export class NormalizedGraph {
   name: string | null;
   strict: boolean;
@@ -11,30 +17,10 @@ export class NormalizedGraph {
   allEdges: NormalizedEdge[] = [];
   subgraphs = new Map<string | number, NormalizedSubgraph>();
 
-  constructor(config: Graph) {
-    this.name = config.name ?? null;
-    this.strict = config.strict ?? false;
-    this.directed = config.directed ?? true;
-    this.graphAttributes = config.graphAttributes ?? {};
-    this.nodeAttributes = config.nodeAttributes ?? {};
-    this.edgeAttributes = config.edgeAttributes ?? {};
-
-    const { nodes = [], edges = [], subgraphs = [] } = config;
-    for (const config of nodes) {
-      const [node] = this.upsertNode(config.name);
-      node.mergeAttributes(config.attributes);
-    }
-
-    for (const config of edges) {
-      const [tail] = this.upsertNode(config.tail);
-      const [head] = this.upsertNode(config.head);
-      const [edge] = this.upsertEdge({ tail, head });
-      edge.mergeAttributes(config.attributes);
-    }
-
-    for (const subgraph of subgraphs) {
-      this.upsertSubgraph(subgraph);
-    }
+  constructor(config: NormalizedGraphConfig) {
+    this.name = config.name;
+    this.strict = config.strict;
+    this.directed = config.directed;
   }
 
   mergeGraphAttributes(newAttributes: Attributes | undefined) {
@@ -111,18 +97,16 @@ export class NormalizedGraph {
     return [edge, true];
   }
 
-  upsertSubgraph(config: Subgraph): NormalizedSubgraph {
-    const { name } = config;
-    if (name !== undefined) {
+  upsertSubgraph(name: string | null): NormalizedSubgraph {
+    if (name !== null) {
       const subgraph = this.subgraphs.get(name);
       if (subgraph) {
-        subgraph.mergeConfig(config);
         return subgraph;
       }
     }
 
     const key = name ?? this.subgraphs.size;
-    const newSubgraph = new NormalizedSubgraph(this, config);
+    const newSubgraph = new NormalizedSubgraph(this, name);
     this.subgraphs.set(key, newSubgraph);
     return newSubgraph;
   }
@@ -215,34 +199,12 @@ export class NormalizedSubgraph {
   edgeIndexes = new Set<NormalizedEdge>();
   subgraphs = new Map<string | number, NormalizedSubgraph>();
 
-  constructor(parent: NormalizedGraph | NormalizedSubgraph, config: Subgraph) {
+  constructor(
+    parent: NormalizedGraph | NormalizedSubgraph,
+    name: string | null,
+  ) {
     this.parent = parent;
-    this.mergeConfig(config);
-  }
-
-  mergeConfig(config: Subgraph) {
-    this.name = config.name ?? null;
-
-    this.mergeGraphAttributes(config.graphAttributes);
-    this.mergeNodeAttributes(config.nodeAttributes);
-    this.mergeEdgeAttributes(config.edgeAttributes);
-
-    const { nodes = [], edges = [], subgraphs = [] } = config;
-    for (const config of nodes) {
-      const [node] = this.upsertNode(config.name);
-      node.mergeAttributes(config.attributes);
-    }
-
-    for (const config of edges) {
-      const [tail] = this.upsertNode(config.tail);
-      const [head] = this.upsertNode(config.head);
-      const [edge] = this.upsertEdge({ tail, head });
-      edge.mergeAttributes(config.attributes);
-    }
-
-    for (const subgraph of subgraphs) {
-      this.upsertSubgraph(subgraph);
-    }
+    this.name = name;
   }
 
   mergeGraphAttributes(newAttributes: Attributes | undefined) {
@@ -330,18 +292,16 @@ export class NormalizedSubgraph {
     return [edge, isCreated];
   }
 
-  upsertSubgraph(config: Subgraph): NormalizedSubgraph {
-    const { name } = config;
-    if (name !== undefined) {
+  upsertSubgraph(name: string | null): NormalizedSubgraph {
+    if (name !== null) {
       const subgraph = this.subgraphs.get(name);
       if (subgraph) {
-        subgraph.mergeConfig(config);
         return subgraph;
       }
     }
 
     const key = name ?? this.subgraphs.size;
-    const newSubgraph = new NormalizedSubgraph(this, config);
+    const newSubgraph = new NormalizedSubgraph(this, name);
     this.subgraphs.set(key, newSubgraph);
     return newSubgraph;
   }
@@ -364,5 +324,48 @@ export class NormalizedSubgraph {
       edgeIndexes: this.sortedEdges().map((edge) => edge.index),
       subgraphs: [...this.subgraphs.values()],
     };
+  }
+}
+
+export function normalizeGraph(config: Graph): NormalizedGraph {
+  const graph = new NormalizedGraph({
+    name: config.name ?? null,
+    strict: config.strict ?? false,
+    directed: config.directed ?? true,
+  });
+  applyDefinitions(graph, config);
+  return graph;
+}
+
+function applyDefinitions(
+  owner: NormalizedGraph | NormalizedSubgraph,
+  config: Graph | Subgraph,
+) {
+  owner.mergeGraphAttributes(config.graphAttributes);
+  owner.mergeNodeAttributes(config.nodeAttributes);
+  owner.mergeEdgeAttributes(config.edgeAttributes);
+
+  const { nodes, edges, subgraphs } = config;
+  if (nodes) {
+    for (const config of nodes) {
+      const [node] = owner.upsertNode(config.name);
+      node.mergeAttributes(config.attributes);
+    }
+  }
+
+  if (edges) {
+    for (const config of edges) {
+      const [tail] = owner.upsertNode(config.tail);
+      const [head] = owner.upsertNode(config.head);
+      const [edge] = owner.upsertEdge({ tail, head });
+      edge.mergeAttributes(config.attributes);
+    }
+  }
+
+  if (subgraphs) {
+    for (const config of subgraphs) {
+      const subgraph = owner.upsertSubgraph(config.name ?? null);
+      applyDefinitions(subgraph, config);
+    }
   }
 }

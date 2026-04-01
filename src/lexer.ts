@@ -495,10 +495,10 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   const graph = new NormalizedGraph({
     strict: lexer.optionalKeyword('strict'),
     directed: parseIsDirectedGraph(),
-    name: lexer.optionalID()?.value,
-    // FIXME: check if it's viz.js hack or it also present in graphviz
-    nodeAttributes: { label: String.raw`\N` },
+    name: lexer.optionalID()?.value ?? null,
   });
+  // FIXME: check if it's viz.js hack or it also present in graphviz
+  graph.mergeNodeAttributes({ label: String.raw`\N` });
 
   parseStatementList(graph);
   return graph;
@@ -525,7 +525,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   function parseStatement(owner: NormalizedGraph | NormalizedSubgraph): void {
     // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
     if (lexer.peekIsLiteral('{')) {
-      const subgraph = owner.upsertSubgraph({});
+      const subgraph = owner.upsertSubgraph(null);
       parseStatementList(subgraph);
       if (optionalEdgeOp()) {
         const tailNodes: NodeID[] = subgraph
@@ -561,9 +561,8 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
       }
 
       case 'subgraph': {
-        const subgraph = owner.upsertSubgraph({
-          name: lexer.optionalID()?.value,
-        });
+        const name = lexer.optionalID()?.value;
+        const subgraph = owner.upsertSubgraph(name ?? null);
         parseStatementList(subgraph);
         if (optionalEdgeOp()) {
           const tailNodes: NodeID[] = subgraph
@@ -600,7 +599,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     do {
       let headNodes: NodeID[];
       if (lexer.peekIsLiteral('{')) {
-        const subgraph = owner.upsertSubgraph({});
+        const subgraph = owner.upsertSubgraph(null);
         parseStatementList(subgraph);
         headNodes = subgraph.sortedNodes().map((node) => [node, undefined]);
       } else {
