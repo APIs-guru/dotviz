@@ -90,7 +90,7 @@ class Lexer {
     throw new Error(`Expected ${description}, got keyword ${tokenStr(token)}!`);
   }
 
-  expectedLiteral(literal: LiteralToken): void {
+  expectLiteral(literal: LiteralToken): void {
     if (!this.optionalLiteral(literal)) {
       throw new Error(
         `Unexpected ${tokenStr(this.#readNextToken())}, expected ${kindStr(literal)}!`,
@@ -98,9 +98,9 @@ class Lexer {
     }
   }
 
-  optionalLiteral(kind: LiteralToken): boolean {
-    if (this.peekIsLiteral(kind)) {
-      this.#nextIndex += kind.length;
+  optionalLiteral(literal: LiteralToken): boolean {
+    if (this.peekIsLiteral(literal)) {
+      this.#nextIndex += literal.length;
       this.#skipUntilTokenStart();
       return true;
     }
@@ -499,7 +499,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     owner: NormalizedGraph | NormalizedSubgraph,
   ): void {
     // '{' stmt_list '}'
-    lexer.expectedLiteral('{');
+    lexer.expectLiteral('{');
 
     while (!lexer.optionalLiteral('}')) {
       if (lexer.isEOF()) {
@@ -686,7 +686,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
 
     // attr_list:	'[' [ a_list ] ']' [ attr_list ]
     do {
-      lexer.expectedLiteral('[');
+      lexer.expectLiteral('[');
       // a_list: ID '=' ID [ (';' | ',') ] [ a_list ]
       while (!lexer.optionalLiteral(']')) {
         parseAttr(lexer.expectID('attribute name'), attributes);
@@ -701,7 +701,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   }
 
   function parseAttr(name: ID, attributes: Attributes) {
-    lexer.expectedLiteral('=');
+    lexer.expectLiteral('=');
     const value = lexer.expectID('attribute value');
     // FIXME: handle string escape characters
     attributes[name.value] =
