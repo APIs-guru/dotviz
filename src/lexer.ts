@@ -80,20 +80,20 @@ class Lexer {
     const token = this.#readKeywordOrID();
     if (token === undefined) {
       throw new Error(
-        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${description}!`,
+        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${description}`,
       );
     }
     if (token.kind === 'ID') {
       this.#skipUntilTokenStart();
       return token;
     }
-    throw new Error(`Expected ${description}, got keyword ${tokenStr(token)}!`);
+    throw new Error(`Expected ${description}, got keyword ${tokenStr(token)}`);
   }
 
   expectLiteral(literal: LiteralToken): void {
     if (!this.optionalLiteral(literal)) {
       throw new Error(
-        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${kindStr(literal)}!`,
+        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${kindStr(literal)}`,
       );
     }
   }
@@ -148,7 +148,7 @@ class Lexer {
     const line = this.#line.toString();
     const column = (this.#nextIndex - this.#lineStart + 1).toString();
     throw new Error(
-      `(${line}:${column})Unexpected character: '${tokenStartChar}'`,
+      `(${line}:${column}) Unexpected character: '${tokenStartChar}'`,
     );
   }
 
@@ -266,7 +266,7 @@ class Lexer {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
           throw new Error(
-            `(${line}:${column})Unterminated HTML string, missing closing '>' in: '<${ellipsize(value)}'`,
+            `(${line}:${column}) Unterminated HTML string, missing closing '>' in: '<${ellipsize(value)}'`,
           );
         }
         case '<':
@@ -292,7 +292,7 @@ class Lexer {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
           throw new Error(
-            `(${line}:${column})Unterminated string, missing closing '"' in: '"${ellipsize(value)}'`,
+            `(${line}:${column}) Unterminated string, missing closing '"' in: '"${ellipsize(value)}'`,
           );
         }
       }
@@ -446,7 +446,7 @@ export function parseDot(dotStr: string): ParseResult {
   try {
     const lexer = new Lexer(dotStr);
     if (lexer.isEOF()) {
-      throw new Error('Missing graph definition!');
+      throw new Error('Missing graph definition');
     }
 
     const graph = parseGraph(lexer);
@@ -494,7 +494,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     while (!lexer.optionalLiteral('}')) {
       if (lexer.isEOF()) {
         throw new Error(
-          `Unexpected end of file, expected ${kindStr('}')} before the end of the graph!`,
+          `Unexpected end of file, expected ${kindStr('}')} before the end of the graph`,
         );
       }
 
@@ -570,7 +570,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
 
       default:
         throw new Error(
-          `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement!`,
+          `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement`,
         );
     }
   }
@@ -623,7 +623,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
 
       // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
       if (lexer.optionalLiteral(':')) {
-        port += ':' + lexer.expectID('compass point values').value;
+        port += ':' + lexer.expectID('compass point value').value;
       }
     }
     return port;
@@ -632,17 +632,13 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   function optionalEdgeOp(): boolean {
     if (lexer.optionalLiteral('--')) {
       if (graph.directed) {
-        throw new Error(
-          `Unexpected keyword '--' in directed graph, expected keyword '->'!`,
-        );
+        throw new Error(`Unexpected '--' in directed graph, expected '->'`);
       }
       return true;
     }
     if (lexer.optionalLiteral('->')) {
       if (!graph.directed) {
-        throw new Error(
-          `Unexpected keyword '->' in undirected graph, expected keyword '--'!`,
-        );
+        throw new Error(`Unexpected '->' in undirected graph, expected '--'`);
       }
       return true;
     }
@@ -656,7 +652,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
       return true;
     }
     throw new Error(
-      `Unexpected ${tokenStr(lexer.nextToken())}, expected keyword 'graph' or 'digraph'!`,
+      `Unexpected ${tokenStr(lexer.nextToken())}, expected keyword 'graph' or 'digraph'`,
     );
   }
 
