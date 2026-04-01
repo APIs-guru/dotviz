@@ -127,7 +127,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "Missing graph definition!",
+            "message": "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'",
           },
         ]
       `);
@@ -141,7 +141,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph'!",
+            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph' at the beginning of the file",
           },
         ]
       `);
@@ -173,7 +173,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "Unexpected identifier 'invalid1', expected keyword 'graph' or 'digraph'!",
+            "message": "Unexpected identifier 'invalid1', expected keyword 'graph' or 'digraph' at the beginning of the file",
           },
         ]
       `);
@@ -182,7 +182,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "Unexpected identifier 'invalid2', expected keyword 'graph' or 'digraph'!",
+            "message": "Unexpected identifier 'invalid2', expected keyword 'graph' or 'digraph' at the beginning of the file",
           },
         ]
       `);
@@ -327,7 +327,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "(1:9)Unterminated string, missing closing '"' in: '" }'",
+            "message": "(1:9) Unterminated string. Add a closing '"' to complete the string started here: '" }'",
           },
         ]
       `);
