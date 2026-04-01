@@ -76,26 +76,18 @@ class Lexer {
     return false;
   }
 
-  optionalID(): ID | undefined {
+  expectID(description: string): ID {
     const token = this.#readKeywordOrID();
-    if (token?.kind == 'ID') {
+    if (token === undefined) {
+      throw new Error(
+        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${description}!`,
+      );
+    }
+    if (token.kind === 'ID') {
       this.#skipUntilTokenStart();
       return token;
     }
-    if (token !== undefined) {
-      this.#nextIndex -= token.kind.length;
-    }
-    return undefined;
-  }
-
-  expectID(description: string): ID {
-    const id = this.optionalID();
-    if (id !== undefined) {
-      return id;
-    }
-    throw new Error(
-      `Unexpected ${tokenStr(this.#readNextToken())}, expected ${description}!`,
-    );
+    throw new Error(`Expected ${description}, got keyword ${tokenStr(token)}!`);
   }
 
   expectedLiteral(literal: LiteralToken): void {
@@ -495,7 +487,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   const graph = new NormalizedGraph({
     strict: lexer.optionalKeyword('strict'),
     directed: parseIsDirectedGraph(),
-    name: lexer.optionalID()?.value ?? null,
+    name: lexer.peekIsLiteral('{') ? null : lexer.expectID('graph name').value,
   });
   // FIXME: check if it's viz.js hack or it also present in graphviz
   graph.mergeNodeAttributes({ label: String.raw`\N` });
@@ -561,8 +553,10 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
       }
 
       case 'subgraph': {
-        const name = lexer.optionalID()?.value;
-        const subgraph = owner.upsertSubgraph(name ?? null);
+        const name = lexer.peekIsLiteral('{')
+          ? null
+          : lexer.expectID('subgraph name').value;
+        const subgraph = owner.upsertSubgraph(name);
         parseStatementList(subgraph);
         if (optionalEdgeOp()) {
           const tailNodes: NodeID[] = subgraph
