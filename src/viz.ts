@@ -235,20 +235,17 @@ export class Viz {
           };
       }
     }
-    const requestJSON = JSON.stringify(
-      {
-        graph,
-        renderDot: renderDot || renderGv,
-        renderSvg,
-        engine: options.engine ?? 'dot',
-        yInvert: options.yInvert ?? false,
-        reduce: options.reduce ?? false,
-        images: this._normalizeImages(options.images),
-      },
-      null,
-      2,
-    );
-    // console.log(requestJSON);
+
+    const request = {
+      graph,
+      renderDot: renderDot || renderGv,
+      renderSvg,
+      engine: options.engine ?? 'dot',
+      yInvert: options.yInvert ?? false,
+      reduce: options.reduce ?? false,
+      images: this._normalizeImages(options.images),
+    };
+    const requestJSON = JSON.stringify(request);
     const cJson = this._utf8Encoder.encode(requestJSON);
     const jsonPtr = this._wasm.wasm_alloc(cJson.length);
     const inputJSONBuf = new Uint8Array(
