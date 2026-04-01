@@ -335,7 +335,7 @@ describe('Dot language support', () => {
       `);
   });
 
-  it('merge subgraphs with the same name', () => {
+  it('merge top-level subgraphs with the same name', () => {
     const result = renderString(`
       graph {
         subgraph a { a1 }
@@ -343,6 +343,7 @@ describe('Dot language support', () => {
         subgraph a { a2 }
       }
     `);
+
     expectSuccessResult(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,198,36"];
@@ -359,6 +360,70 @@ describe('Dot language support', () => {
       		b1	[height=0.5,
       			pos="99,18",
       			width=0.75];
+      	}
+      }
+    `);
+  });
+
+  it('merge nested subgraphs with the same name', () => {
+    const result = renderString(`
+      graph {
+        {
+          subgraph a { a1 }
+          subgraph b { b1 }
+          subgraph a { a2 }
+        }
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,198,36"];
+      	node [label="\\N"];
+      	{
+      		subgraph a {
+      			a1	[height=0.5,
+      				pos="27,18",
+      				width=0.75];
+      			a2	[height=0.5,
+      				pos="171,18",
+      				width=0.75];
+      		}
+      		subgraph b {
+      			b1	[height=0.5,
+      				pos="99,18",
+      				width=0.75];
+      		}
+      	}
+      }
+    `);
+  });
+
+  it('change edge attributes inside subgraph', () => {
+    const result = renderString(`
+        digraph {
+          {
+            a->b
+            edge [color=red]
+            b->a
+          }
+        }
+      `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [color=red];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -> b	[color="",
+      			pos="e,21.138,35.789 21.122,72.055 20.328,64.574 20.076,55.579 20.367,47.137"];
+      		b -> a	[pos="e,32.878,72.055 32.862,35.789 33.663,43.248 33.922,52.237 33.639,60.686"];
       	}
       }
     `);
