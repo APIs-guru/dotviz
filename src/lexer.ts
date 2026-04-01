@@ -510,13 +510,9 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
 
   function parseStatement(owner: NormalizedGraph | NormalizedSubgraph): void {
     // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
-    if (lexer.peekIsLiteral('{')) {
-      const subgraph = owner.upsertSubgraph(null);
-      parseStatementList(subgraph);
+    if (lexer.peekIsLiteral('{') || lexer.optionalKeyword('subgraph')) {
+      const tailNodes = parseSubgraph(owner);
       if (optionalEdgeOp()) {
-        const tailNodes: NodeID[] = subgraph
-          .sortedNodes()
-          .map((node) => [node, undefined]);
         parseEdges(tailNodes, owner);
       }
       return;
@@ -547,15 +543,8 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
       }
 
       case 'subgraph': {
-        const name = lexer.peekIsLiteral('{')
-          ? null
-          : lexer.expectID('subgraph name').value;
-        const subgraph = owner.upsertSubgraph(name);
-        parseStatementList(subgraph);
+        const tailNodes = parseSubgraph(owner);
         if (optionalEdgeOp()) {
-          const tailNodes: NodeID[] = subgraph
-            .sortedNodes()
-            .map((node) => [node, undefined]);
           parseEdges(tailNodes, owner);
         }
         break;
@@ -579,20 +568,27 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     }
   }
 
+  function parseSubgraph(
+    owner: NormalizedGraph | NormalizedSubgraph,
+  ): NodeID[] {
+    const name = lexer.peekIsLiteral('{')
+      ? null
+      : lexer.expectID('subgraph name').value;
+    const subgraph = owner.upsertSubgraph(name);
+    parseStatementList(subgraph);
+    return subgraph.sortedNodes().map((node) => [node, undefined]);
+  }
+
   function parseEdges(
     tailNodes: NodeID[],
     owner: NormalizedGraph | NormalizedSubgraph,
   ) {
     const newEdges = new Set<NormalizedEdge>();
     do {
-      let headNodes: NodeID[];
-      if (lexer.peekIsLiteral('{')) {
-        const subgraph = owner.upsertSubgraph(null);
-        parseStatementList(subgraph);
-        headNodes = subgraph.sortedNodes().map((node) => [node, undefined]);
-      } else {
-        headNodes = [parseNodeID(owner)];
-      }
+      const headNodes =
+        lexer.peekIsLiteral('{') || lexer.optionalKeyword('subgraph')
+          ? parseSubgraph(owner)
+          : [parseNodeID(owner)];
 
       for (const tail of tailNodes) {
         for (const head of headNodes) {

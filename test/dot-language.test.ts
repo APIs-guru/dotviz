@@ -428,4 +428,38 @@ describe('Dot language support', () => {
       }
     `);
   });
+
+  it('connect nodes in subgraphs with edges', () => {
+    const result = renderString(`
+      digraph {
+        subgraph tails { a b } -> subgraph heads { c d }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,126,108"];
+      	node [label="\\N"];
+      	subgraph tails {
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="99,90",
+      			width=0.75];
+      	}
+      	subgraph heads {
+      		c	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		d	[height=0.5,
+      			pos="99,18",
+      			width=0.75];
+      	}
+      	a -> c	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"];
+      	a -> d	[pos="e,84.101,33.485 41.918,74.496 51.765,64.923 64.861,52.19 76.026,41.336"];
+      	b -> c	[pos="e,41.899,33.485 84.082,74.496 74.235,64.923 61.139,52.19 49.974,41.336"];
+      	b -> d	[pos="e,99,36.104 99,71.697 99,64.407 99,55.726 99,47.536"];
+      }
+    `);
+  });
 });
