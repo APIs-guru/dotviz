@@ -48,8 +48,8 @@ pub const Node = struct {
 };
 
 pub const Edge = struct {
-    tail: [:0]const u8,
-    head: [:0]const u8,
+    tail: usize,
+    head: usize,
     attributes: Attributes,
 };
 

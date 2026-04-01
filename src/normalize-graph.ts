@@ -1,4 +1,4 @@
-import type { Attributes, Edge, Graph, Node, Subgraph } from './graph.d.ts';
+import type { Attributes, Graph, Subgraph } from './graph.d.ts';
 
 export class NormalizedGraph {
   name: string | null;
@@ -20,12 +20,16 @@ export class NormalizedGraph {
     this.edgeAttributes = config.edgeAttributes ?? {};
 
     const { nodes = [], edges = [], subgraphs = [] } = config;
-    for (const node of nodes) {
-      this.upsertNode(node);
+    for (const config of nodes) {
+      const [node] = this.upsertNode(config.name);
+      node.mergeAttributes(config.attributes);
     }
 
-    for (const edge of edges) {
-      this.upsertEdge(edge);
+    for (const config of edges) {
+      const [tail] = this.upsertNode(config.tail);
+      const [head] = this.upsertNode(config.head);
+      const [edge] = this.upsertEdge({ tail, head });
+      edge.mergeAttributes(config.attributes);
     }
 
     for (const subgraph of subgraphs) {
@@ -81,23 +85,22 @@ export class NormalizedGraph {
   }
 
   upsertNode(
-    config: Node,
+    name: string,
     defaultAttributes: Attributes = {},
   ): [NormalizedNode, boolean] {
-    const { name } = config;
     const node = this.allNodes.get(name);
     if (node !== undefined) {
       return [node, false];
     }
 
-    const newNode = new NormalizedNode(this.allNodes.size, config);
+    const newNode = new NormalizedNode(this.allNodes.size, name);
     newNode.applyDefaultAttributes(defaultAttributes);
     this.allNodes.set(name, newNode);
     return [newNode, true];
   }
 
   upsertEdge(
-    config: Edge,
+    config: NormalizedEdgeConfig,
     defaultAttributes: Attributes = {},
   ): [NormalizedEdge, boolean] {
     // FIXME: handle special 'key' attribute
@@ -144,14 +147,9 @@ export class NormalizedNode {
   name: string;
   attributes: Attributes = {};
 
-  constructor(index: number, config: Node) {
+  constructor(index: number, name: string) {
     this.index = index;
-    this.name = config.name;
-    this.mergeConfig(config);
-  }
-
-  mergeConfig(config: Node) {
-    this.mergeAttributes(config.attributes);
+    this.name = name;
   }
 
   mergeAttributes(newAttributes: Attributes | undefined) {
@@ -170,21 +168,21 @@ export class NormalizedNode {
   }
 }
 
+interface NormalizedEdgeConfig {
+  tail: NormalizedNode;
+  head: NormalizedNode;
+}
+
 export class NormalizedEdge {
   index: number;
-  tail: string;
-  head: string;
-  attributes: Attributes;
+  tail: NormalizedNode;
+  head: NormalizedNode;
+  attributes: Attributes = {};
 
-  constructor(index: number, config: Edge) {
+  constructor(index: number, config: NormalizedEdgeConfig) {
     this.index = index;
     this.tail = config.tail;
     this.head = config.head;
-    this.attributes = config.attributes ?? {};
-  }
-
-  mergeConfig(config: Node) {
-    this.mergeAttributes(config.attributes);
   }
 
   mergeAttributes(newAttributes: Attributes | undefined) {
@@ -197,8 +195,8 @@ export class NormalizedEdge {
 
   toJSON() {
     return {
-      tail: this.tail,
-      head: this.head,
+      tail: this.tail.index,
+      head: this.head.index,
       attributes: this.attributes,
     };
   }
@@ -230,12 +228,16 @@ export class NormalizedSubgraph {
     this.mergeEdgeAttributes(config.edgeAttributes);
 
     const { nodes = [], edges = [], subgraphs = [] } = config;
-    for (const node of nodes) {
-      this.upsertNode(node);
+    for (const config of nodes) {
+      const [node] = this.upsertNode(config.name);
+      node.mergeAttributes(config.attributes);
     }
 
-    for (const edge of edges) {
-      this.upsertEdge(edge);
+    for (const config of edges) {
+      const [tail] = this.upsertNode(config.tail);
+      const [head] = this.upsertNode(config.head);
+      const [edge] = this.upsertEdge({ tail, head });
+      edge.mergeAttributes(config.attributes);
     }
 
     for (const subgraph of subgraphs) {
@@ -295,10 +297,10 @@ export class NormalizedSubgraph {
   }
 
   upsertNode(
-    config: Node,
+    name: string,
     defaultAttributes: Attributes = {},
   ): [NormalizedNode, boolean] {
-    const [node, isCreated] = this.parent.upsertNode(config, {
+    const [node, isCreated] = this.parent.upsertNode(name, {
       ...this.nodeAttributes,
       ...defaultAttributes,
     });
@@ -311,7 +313,7 @@ export class NormalizedSubgraph {
   }
 
   upsertEdge(
-    config: Edge,
+    config: NormalizedEdgeConfig,
     defaultAttributes: Attributes = {},
   ): [NormalizedEdge, boolean] {
     // FIXME: handle special 'key' attribute

@@ -2,6 +2,7 @@ import type { Attributes } from './graph.js';
 import {
   NormalizedEdge,
   NormalizedGraph,
+  NormalizedNode,
   NormalizedSubgraph,
 } from './normalize-graph.ts';
 import type { FailureResult, RenderError } from './viz.ts';
@@ -487,7 +488,7 @@ export function parseDot(dotStr: string): ParseResult {
   }
 }
 
-type NodeID = [string, string | undefined];
+type NodeID = [NormalizedNode, string | undefined];
 
 function parseGraph(lexer: Lexer): NormalizedGraph {
   // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
@@ -529,7 +530,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
       if (optionalEdgeOp()) {
         const tailNodes: NodeID[] = subgraph
           .sortedNodes()
-          .map((node) => [node.name, undefined]);
+          .map((node) => [node, undefined]);
         parseEdges(tailNodes, owner);
       }
       return;
@@ -546,12 +547,12 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
           break;
         }
 
-        const nodeID: NodeID = [token.value, optionalNodePort()];
-        // FIXME: check that it's safe to ignore port
-        const [node] = owner.upsertNode({ name: nodeID[0] });
+        const [node] = owner.upsertNode(token.value);
+        const nodeID: NodeID = [node, optionalNodePort()];
 
         if (lexer.peekIsLiteral('[')) {
           // node_stmt: node_id [ attr_list ]
+          // FIXME: check that it's safe to ignore port
           node.mergeAttributes(parseAttrList());
         } else if (optionalEdgeOp()) {
           parseEdges([nodeID], owner);
@@ -567,7 +568,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
         if (optionalEdgeOp()) {
           const tailNodes: NodeID[] = subgraph
             .sortedNodes()
-            .map((node) => [node.name, undefined]);
+            .map((node) => [node, undefined]);
           parseEdges(tailNodes, owner);
         }
         break;
@@ -601,26 +602,15 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
       if (lexer.peekIsLiteral('{')) {
         const subgraph = owner.upsertSubgraph({});
         parseStatementList(subgraph);
-        headNodes = subgraph
-          .sortedNodes()
-          .map((node) => [node.name, undefined]);
+        headNodes = subgraph.sortedNodes().map((node) => [node, undefined]);
       } else {
-        const head = parseNodeID();
-        // FIXME: check that it's safe to ignore port
-        owner.upsertNode({ name: head[0] });
-        headNodes = [head];
+        headNodes = [parseNodeID(owner)];
       }
 
       for (const tail of tailNodes) {
         for (const head of headNodes) {
-          const [edge] = owner.upsertEdge({
-            tail: tail[0],
-            head: head[0],
-            attributes: {
-              headport: head[1],
-              tailport: tail[1],
-            },
-          });
+          const [edge] = owner.upsertEdge({ tail: tail[0], head: head[0] });
+          edge.mergeAttributes({ headport: head[1], tailport: tail[1] });
           newEdges.add(edge);
         }
       }
@@ -635,9 +625,10 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     }
   }
 
-  function parseNodeID(): NodeID {
+  function parseNodeID(owner: NormalizedGraph | NormalizedSubgraph): NodeID {
     // node_id:	ID [ port ]
-    const id = lexer.expectID('node name').value;
+    const name = lexer.expectID('node name').value;
+    const [node] = owner.upsertNode(name);
 
     // port: ':' ID [ ':' compass_pt ]
     let port: string | undefined;
@@ -649,7 +640,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
         port += ':' + lexer.expectID('compass point values').value;
       }
     }
-    return [id, port];
+    return [node, port];
   }
 
   function optionalNodePort(): string | undefined {

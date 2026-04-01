@@ -92,8 +92,8 @@ fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph
         "cannot alloc for allEdges",
     );
     for (graph_json.allEdges, 0..) |edge_json, i| {
-        const tail_node = graphviz.agnode(graph, @ptrCast(edge_json.tail.ptr), graphviz.true);
-        const head_node = graphviz.agnode(graph, @ptrCast(edge_json.head.ptr), graphviz.true);
+        const tail_node = allNodes[edge_json.tail];
+        const head_node = allNodes[edge_json.head];
         const edge = graphviz.agedge(graph, tail_node, head_node, null, graphviz.true);
         setAttributes(allocator, edge, edge_json.attributes);
         allEdges[i] = edge;
