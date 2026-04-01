@@ -1,6 +1,6 @@
 import type { Attributes, Graph } from './graph.d.ts';
 import { parseDot } from './lexer.ts';
-import { NormalizedGraph } from './normalize-graph.ts';
+import { NormalizedGraph, normalizeGraph } from './normalize-graph.ts';
 
 /**
  * @property format
@@ -200,7 +200,7 @@ export class Viz {
       graph = result.output;
       warnings.push(...result.errors);
     } else {
-      graph = new NormalizedGraph(input);
+      graph = normalizeGraph(input);
     }
 
     graph.mergeGraphAttributes(options.graphAttributes);
