@@ -612,18 +612,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     // node_id:	ID [ port ]
     const name = lexer.expectID('node name').value;
     const [node] = owner.upsertNode(name);
-
-    // port: ':' ID [ ':' compass_pt ]
-    let port: string | undefined;
-    if (lexer.optionalLiteral(':')) {
-      port = lexer.expectID('port name').value;
-
-      // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
-      if (lexer.optionalLiteral(':')) {
-        port += ':' + lexer.expectID('compass point values').value;
-      }
-    }
-    return [node, port];
+    return [node, optionalNodePort()];
   }
 
   function optionalNodePort(): string | undefined {
