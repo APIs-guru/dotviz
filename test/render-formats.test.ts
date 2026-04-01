@@ -79,7 +79,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph' at the beginning of the file",
+            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);
@@ -93,7 +93,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph' at the beginning of the file",
+            "message": "Unexpected identifier 'invalid', expected keyword 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);

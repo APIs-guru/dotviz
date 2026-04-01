@@ -22,7 +22,7 @@ describe('Viz', () => {
       expect(() =>
         viz.renderString('graph {'),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph]`,
+        `[Error: Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph.]`,
       );
     });
 
@@ -38,7 +38,7 @@ describe('Viz', () => {
     it('throws an error if there are no graphs in the input', async () => {
       const viz = await VizPackage.instance();
       expect(() => viz.renderString('')).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Missing graph definition. Start your file with 'graph {}' or 'digraph {}']`,
+        `[Error: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.]`,
       );
     });
 
@@ -80,7 +80,7 @@ describe('Viz', () => {
       expect(() =>
         viz.renderString('graph { a[label="blah'),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: (1:17) Unterminated string. Add a closing '"' to complete the string started here: '"blah']`,
+        `[Error: (1:17) Unterminated string. Add a closing '"' to complete the string started here: '"blah'.]`,
       );
       expectString(viz.renderString('graph { a }')).toMatchInlineSnapshot(`
         graph {

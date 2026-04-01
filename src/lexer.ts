@@ -80,7 +80,7 @@ class Lexer {
     const token = this.#readKeywordOrID();
     if (token === undefined) {
       throw new Error(
-        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${description}`,
+        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${description}.`,
       );
     }
     if (token.kind === 'ID') {
@@ -88,14 +88,14 @@ class Lexer {
       return token;
     }
     throw new Error(
-      `Unexpected keyword ${tokenStr(token)}, expected ${description}. Use "${token.kind}" to treat it as an identifier`,
+      `Unexpected reserved keyword ${tokenStr(token)} where ${description} was expected. If you want to use it as an identifier, enclose it in quotes: "${token.kind}".`,
     );
   }
 
   expectLiteral(literal: LiteralToken): void {
     if (!this.optionalLiteral(literal)) {
       throw new Error(
-        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${kindStr(literal)}`,
+        `Unexpected ${tokenStr(this.#readNextToken())}, expected ${kindStr(literal)}.`,
       );
     }
   }
@@ -150,7 +150,7 @@ class Lexer {
     const line = this.#line.toString();
     const column = (this.#nextIndex - this.#lineStart + 1).toString();
     throw new Error(
-      `(${line}:${column}) Unexpected character: '${tokenStartChar}'. If this is meant to be part of a label or name, enclose it in quotes ("...")`,
+      `(${line}:${column}) Unexpected character: '${tokenStartChar}'. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
     );
   }
 
@@ -268,7 +268,7 @@ class Lexer {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
           throw new Error(
-            `(${line}:${column}) Unterminated HTML string. Add a closing '>' to complete the HTML started here: '<${ellipsize(value)}'`,
+            `(${line}:${column}) Unterminated HTML string. Add a closing '>' to complete the HTML started here: '<${ellipsize(value)}'.`,
           );
         }
         case '<':
@@ -294,7 +294,7 @@ class Lexer {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
           throw new Error(
-            `(${line}:${column}) Unterminated string. Add a closing '"' to complete the string started here: '"${ellipsize(value)}'`,
+            `(${line}:${column}) Unterminated string. Add a closing '"' to complete the string started here: '"${ellipsize(value)}'.`,
           );
         }
       }
@@ -449,7 +449,7 @@ export function parseDot(dotStr: string): ParseResult {
     const lexer = new Lexer(dotStr);
     if (lexer.isEOF()) {
       throw new Error(
-        "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'",
+        "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
       );
     }
 
@@ -498,7 +498,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     while (!lexer.optionalLiteral('}')) {
       if (lexer.isEOF()) {
         throw new Error(
-          `Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph`,
+          `Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph.`,
         );
       }
 
@@ -563,7 +563,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
 
       default:
         throw new Error(
-          `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement`,
+          `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement.`,
         );
     }
   }
@@ -633,7 +633,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     if (lexer.optionalLiteral('--')) {
       if (graph.directed) {
         throw new Error(
-          `Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'`,
+          `Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.`,
         );
       }
       return true;
@@ -641,7 +641,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     if (lexer.optionalLiteral('->')) {
       if (!graph.directed) {
         throw new Error(
-          `Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'`,
+          `Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.`,
         );
       }
       return true;
@@ -656,7 +656,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
       return true;
     }
     throw new Error(
-      `Unexpected ${tokenStr(lexer.nextToken())}, expected keyword 'graph' or 'digraph' at the beginning of the file`,
+      `Unexpected ${tokenStr(lexer.nextToken())}, expected keyword 'graph' or 'digraph' at the beginning of the file.`,
     );
   }
 
