@@ -43,11 +43,23 @@ class Lexer {
   #line = 1;
   #lineStart = 0;
   #nextIndex = 0;
-  warnings: { level: 'warning'; message: string }[] = [];
+  errors: RenderError[] = [];
+
+  static AbortError = new Error(
+    'Internal error, thrown when parsing of dot file fails',
+  );
 
   constructor(dotStr: string) {
     this.#dotStr = dotStr;
     this.#skipUntilTokenStart();
+  }
+
+  failWithError(message: string): never {
+    this.errors.push({
+      level: 'error',
+      message,
+    });
+    throw Lexer.AbortError;
   }
 
   nextToken(): Token {
@@ -79,7 +91,7 @@ class Lexer {
   expectID(description: string): ID {
     const token = this.#readKeywordOrID();
     if (token === undefined) {
-      throw new Error(
+      this.failWithError(
         `Unexpected ${tokenStr(this.#readNextToken())}, expected ${description}.`,
       );
     }
@@ -87,14 +99,14 @@ class Lexer {
       this.#skipUntilTokenStart();
       return token;
     }
-    throw new Error(
+    this.failWithError(
       `Unexpected reserved keyword ${tokenStr(token)} where ${description} was expected. If you want to use it as an identifier, enclose it in quotes: "${token.kind}".`,
     );
   }
 
   expectLiteral(literal: LiteralToken): void {
     if (!this.optionalLiteral(literal)) {
-      throw new Error(
+      this.failWithError(
         `Unexpected ${tokenStr(this.#readNextToken())}, expected ${kindStr(literal)}.`,
       );
     }
@@ -149,7 +161,7 @@ class Lexer {
 
     const line = this.#line.toString();
     const column = (this.#nextIndex - this.#lineStart + 1).toString();
-    throw new Error(
+    this.failWithError(
       `(${line}:${column}) Unexpected character: '${tokenStartChar}'. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
     );
   }
@@ -196,7 +208,7 @@ class Lexer {
       const ambiguousText =
         ellipsize(this.#dotStr.slice(tokenStartIndex, this.#nextIndex)) +
         nextChar;
-      this.warnings.push({
+      this.errors.push({
         level: 'warning',
         message: `Ambiguous token sequence: '${ambiguousText}' will be split into ${tokenStr(lastToken)} and a following token. If you want it interpreted as a single value, use quotes: "${ambiguousText}". Otherwise, use whitespace or other delimiters to separate tokens.`,
       });
@@ -267,9 +279,10 @@ class Lexer {
       switch (this.#readNextChar()) {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
-          throw new Error(
+          this.failWithError(
             `(${line}:${column}) Unterminated HTML string. Add a closing '>' to complete the HTML started here: '<${ellipsize(value)}'.`,
           );
+          break;
         }
         case '<':
           ++unclosedAngleBrackets;
@@ -289,14 +302,12 @@ class Lexer {
 
     this.#readNextChar(); // skip opening `"`
     const valueStart = this.#nextIndex;
-    while (this.#peekNextChar(-1) === '\\' || !this.#skipChar('"')) {
-      switch (this.#readNextChar()) {
-        case undefined: {
-          const value = this.#dotStr.slice(valueStart, this.#nextIndex);
-          throw new Error(
-            `(${line}:${column}) Unterminated string. Add a closing '"' to complete the string started here: '"${ellipsize(value)}'.`,
-          );
-        }
+    while (!this.#skipChar('"') || this.#peekNextChar(-2) === '\\') {
+      if (this.#readNextChar() === undefined) {
+        const value = this.#dotStr.slice(valueStart, this.#nextIndex);
+        this.failWithError(
+          `(${line}:${column}) Unterminated string. Add a closing '"' to complete the string started here: '"${ellipsize(value)}'.`,
+        );
       }
     }
 
@@ -445,32 +456,29 @@ export interface ParseSuccessResult {
 
 export type ParseResult = ParseSuccessResult | FailureResult;
 export function parseDot(dotStr: string): ParseResult {
+  const lexer = new Lexer(dotStr);
   try {
-    const lexer = new Lexer(dotStr);
     if (lexer.isEOF()) {
-      throw new Error(
+      lexer.failWithError(
         "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
       );
     }
 
     const graph = parseGraph(lexer);
-    // console.log(JSON.stringify(graph, null, 2));
     return {
       status: 'success',
       output: graph,
-      errors: lexer.warnings,
+      errors: lexer.errors,
     };
   } catch (error: unknown) {
-    return {
-      status: 'failure',
-      output: null,
-      errors: [
-        {
-          level: 'error',
-          message: error instanceof Error ? error.message : String(error),
-        },
-      ],
-    };
+    if (error === Lexer.AbortError) {
+      return {
+        status: 'failure',
+        output: null,
+        errors: lexer.errors,
+      };
+    }
+    throw error;
   }
 }
 
@@ -497,7 +505,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
 
     while (!lexer.optionalLiteral('}')) {
       if (lexer.isEOF()) {
-        throw new Error(
+        lexer.failWithError(
           `Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph.`,
         );
       }
@@ -562,7 +570,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
         break;
 
       default:
-        throw new Error(
+        lexer.failWithError(
           `Unexpected ${tokenStr(token)}, expected node, edge, subgraph or attribute statement.`,
         );
     }
@@ -632,7 +640,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   function optionalEdgeOp(): boolean {
     if (lexer.optionalLiteral('--')) {
       if (graph.directed) {
-        throw new Error(
+        lexer.failWithError(
           `Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.`,
         );
       }
@@ -640,7 +648,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     }
     if (lexer.optionalLiteral('->')) {
       if (!graph.directed) {
-        throw new Error(
+        lexer.failWithError(
           `Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.`,
         );
       }
@@ -655,7 +663,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     } else if (lexer.optionalKeyword('digraph')) {
       return true;
     }
-    throw new Error(
+    lexer.failWithError(
       `Unexpected ${tokenStr(lexer.nextToken())}, expected keyword 'graph' or 'digraph' at the beginning of the file.`,
     );
   }
