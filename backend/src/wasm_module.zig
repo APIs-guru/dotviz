@@ -333,7 +333,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
             .output = null,
         });
     }
-    defer _ = graphviz.gw_gvFreeLayout(graphptr);
+    defer graphviz.gw_gvFreeLayout(graphptr);
 
     var responseDot: ?[:0]const u8 = null;
     defer freeCString(responseDot);
