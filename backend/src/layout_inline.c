@@ -120,7 +120,14 @@ static inline void *my_gv_calloc(size_t nmemb, size_t size) {
   return p;
 }
 
-void my_graph_init(graph_t *g, bool use_rankdir) {
+void my_graph_init(GVC_t *gvc, graph_t *g, bool use_rankdir) {
+  agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
+  GD_gvc(g) = gvc;
+  if (g != agroot(g)) {
+    agbindrec(agroot(g), "Agraphinfo_t", sizeof(Agraphinfo_t), true);
+    GD_gvc(agroot(g)) = gvc;
+  }
+
   char *p;
   double xf;
   static char *rankname[] = {"local", "global", "none", NULL};
@@ -297,6 +304,8 @@ void my_graph_init(graph_t *g, bool use_rankdir) {
   /* initialize id, if any */
   if ((p = agget(g, "id")) && *p)
     GD_drawing(g)->id = strdup_and_subst_obj(p, g);
+
+  GD_drawing(agroot(g)) = GD_drawing(g);
 }
 
 extern void dot_layout(graph_t *g);
@@ -311,31 +320,29 @@ extern gvlayout_features_t dotgen_features;
 extern void circo_layout(Agraph_t *g);
 extern void circo_cleanup(graph_t *g);
 
-int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, bool is_circo) {
-  agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
-  GD_gvc(g) = gvc;
-  if (g != agroot(g)) {
-    agbindrec(agroot(g), "Agraphinfo_t", sizeof(Agraphinfo_t), true);
-    GD_gvc(agroot(g)) = gvc;
-  }
-
+void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, bool is_circo) {
   if (is_circo) {
-    my_graph_init(g, false);
-    GD_drawing(agroot(g)) = GD_drawing(g);
+    my_graph_init(gvc, g, false);
     circo_layout(g);
-
-    GD_cleanup(g) = circo_cleanup;
   } else {
-    my_graph_init(g, true);
-    GD_drawing(agroot(g)) = GD_drawing(g);
+    my_graph_init(gvc, g, true);
     dot_layout(g);
-
-    GD_cleanup(g) = dot_cleanup;
   }
+
+  /* set bb attribute for basic layout.
+   * doesn't yet include margins, scaling or page sizes because
+   * those depend on the renderer being used. */
+  char buf[256];
+  if (GD_drawing(g)->landscape)
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.y),
+             round(GD_bb(g).LL.x), round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
+  else
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.x),
+             round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
+  agsafeset(g, "bb", buf, "");
+
   // FIXME: IMPORTANT: check that we don't use GVC after this line
   GD_gvc(g) = NULL;
-
-  return 0;
 }
 
 int gw_gvLayout(GVC_t *gvc, Agraph_t *g, const char *engine) {
@@ -360,30 +367,12 @@ int gw_gvLayout(GVC_t *gvc, Agraph_t *g, const char *engine) {
   }
   bool is_circo = !strcmp(engine, "circo");
 
-  if (my_gvLayoutJobs(gvc, g, is_circo) == -1)
-    return -1;
-
-  /* set bb attribute for basic layout.
-   * doesn't yet include margins, scaling or page sizes because
-   * those depend on the renderer being used. */
-  char buf[256];
-  if (GD_drawing(g)->landscape)
-    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.y),
-             round(GD_bb(g).LL.x), round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
-  else
-    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.x),
-             round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
-  agsafeset(g, "bb", buf, "");
-
+  my_gvLayoutJobs(gvc, g, is_circo);
   return 0;
 }
 
 extern void graph_cleanup(graph_t *g);
 int gw_gvFreeLayout(Agraph_t *g, bool is_circo) {
-  /* skip if no Agraphinfo_t yet */
-  if (!agbindrec(g, "Agraphinfo_t", 0, true))
-    return 0;
-
   if (is_circo) {
     circo_cleanup(g);
   } else {
