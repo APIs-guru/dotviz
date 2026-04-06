@@ -65,7 +65,7 @@ describe('GraphViz Gallery', () => {
     it('gallery/gradient/radial_angle.gv', snapshotGvFile);
     it('gallery/gradient/table.gv', snapshotGvFile);
   });
-  describe.only('neato', () => {
+  describe('neato', () => {
     it('gallery/neato/color_wheel.gv', snapshotGvFile);
     it('gallery/neato/colors.gv', snapshotGvFile);
     it('gallery/neato/ER.gv', snapshotGvFile);

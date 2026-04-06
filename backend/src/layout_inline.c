@@ -330,13 +330,13 @@ int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
     agbindrec(agroot(g), "Agraphinfo_t", sizeof(Agraphinfo_t), true);
     GD_gvc(agroot(g)) = gvc;
   } else if (!strcmp(engine, "circo")) {
-    my_graph_init(g, false);
+    my_graph_init(gvc, g, false);
     GD_drawing(agroot(g)) = GD_drawing(g);
     circo_layout(g);
 
     GD_cleanup(g) = circo_cleanup;
   } else if (!strcmp(engine, "neato")) {
-    my_graph_init(g, false);
+    my_graph_init(gvc, g, false);
     GD_drawing(agroot(g)) = GD_drawing(g);
     neato_layout(g);
 
@@ -361,6 +361,7 @@ int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
 
   // FIXME: IMPORTANT: check that we don't use GVC after this line
   GD_gvc(g) = NULL;
+  return 0;
 }
 
 int gw_gvLayout(GVC_t *gvc, Agraph_t *graph, const char *engine) {
@@ -389,7 +390,6 @@ int gw_gvLayout(GVC_t *gvc, Agraph_t *graph, const char *engine) {
     // }
     engine = p;
   }
-  // bool is_circo = !strcmp(engine, "circo");
 
   if (my_gvLayoutJobs(gvc, g, engine) == -1)
     return -1;

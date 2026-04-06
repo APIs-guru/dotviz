@@ -116,6 +116,9 @@ pub fn buildGraphviz(
     lib.addCSourceFile(.{ .file = b.path(
         "src/graphviz_build/src/dummy.c",
     ) });
+    lib.addCSourceFile(.{ .file = b.path(
+        "src/graphviz_build/src/drand48.c",
+    ) });
     lib.addIncludePath(graphviz_dep.path("lib/cdt"));
     lib.addIncludePath(graphviz_dep.path("lib/cgraph"));
     const expat_dep = b.dependency("libexpat", .{
@@ -132,6 +135,8 @@ pub fn buildGraphviz(
         .DEFAULT_DPI = 96,
         .HAVE_EXPAT = 1,
         .HAVE_SYS_MMAN_H = 1,
+        .HAVE_DRAND48 = 1,
+        .HAVE_SRAND48 = 1,
     });
     lib.installConfigHeader(config_h);
     const builddate_h = b.addConfigHeader(.{
