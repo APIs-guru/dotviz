@@ -361,7 +361,6 @@ void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
 
   // FIXME: IMPORTANT: check that we don't use GVC after this line
   GD_gvc(g) = NULL;
-  return 0;
 }
 
 int gw_gvLayout(GVC_t *gvc, Agraph_t *graph, const char *engine) {
