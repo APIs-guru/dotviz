@@ -172,6 +172,18 @@ void emit_graph(output_string *output, SafeJob *safe_job, graph_t *g,
                 int *layerlist, int graph_outputorder);
 
 output_string render_svg(Agraph_t *g) {
+  /* set bb attribute for basic layout.
+   * doesn't yet include margins, scaling or page sizes because
+   * those depend on the renderer being used. */
+  char buf[256];
+  if (GD_drawing(g)->landscape)
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.y),
+             round(GD_bb(g).LL.x), round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
+  else
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.x),
+             round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
+  agsafeset(g, "bb", buf, "");
+
   // FIXME: do we need it? we suspect it is used only for clip!
   init_bb(g);
 

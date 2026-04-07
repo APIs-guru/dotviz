@@ -112,6 +112,12 @@ pub const ImageDimensions = struct {
 
 pub const ImageDimensionsMap = std.json.ArrayHashMap(ImageDimensions);
 
+pub const Engine = enum {
+    dot,
+    circo,
+    neato,
+};
+
 pub const RenderRequest = struct {
     graph: GraphInput,
     graphAttributes: ?*Attributes,

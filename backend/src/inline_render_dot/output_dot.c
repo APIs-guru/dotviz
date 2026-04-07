@@ -124,6 +124,18 @@ static attrsym_t *safe_dcl(graph_t *g, int obj_kind, char *name,
 
 extern void undoClusterEdges(graph_t *g);
 void my_attach_attrs_and_arrows(graph_t *g) {
+  /* set bb attribute for basic layout.
+   * doesn't yet include margins, scaling or page sizes because
+   * those depend on the renderer being used. */
+  char buf[256];
+  if (GD_drawing(g)->landscape)
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.y),
+             round(GD_bb(g).LL.x), round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
+  else
+    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.x),
+             round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
+  agsafeset(g, "bb", buf, "");
+
   node_t *n;
   edge_t *e;
   pointf ptf;

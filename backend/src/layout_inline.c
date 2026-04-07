@@ -120,7 +120,7 @@ static inline void *my_gv_calloc(size_t nmemb, size_t size) {
   return p;
 }
 
-void my_graph_init(GVC_t *gvc, graph_t *g, bool use_rankdir) {
+void my_graph_init(GVC_t *gvc, Agraph_t *g, bool use_rankdir) {
   agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
   GD_gvc(g) = gvc;
   if (g != agroot(g)) {
@@ -306,88 +306,4 @@ void my_graph_init(GVC_t *gvc, graph_t *g, bool use_rankdir) {
     GD_drawing(g)->id = strdup_and_subst_obj(p, g);
 
   GD_drawing(agroot(g)) = GD_drawing(g);
-}
-
-extern void dot_layout(graph_t *g);
-extern void dot_cleanup(graph_t *g);
-extern gvlayout_features_t dotgen_features;
-/* gvLayoutJobs:
- * Layout input graph g based on layout engine attached to gvc.
- * Check that the root graph has been initialized. If not, initialize it.
- * Return 0 on success.
- */
-
-extern void circo_layout(Agraph_t *g);
-extern void circo_cleanup(graph_t *g);
-
-extern void neato_layout(graph_t *g);
-extern void neato_cleanup(graph_t *g);
-
-void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
-  if (!strcmp(engine, "circo")) {
-    my_graph_init(gvc, g, false);
-    circo_layout(g);
-  } else if (!strcmp(engine, "neato")) {
-    my_graph_init(gvc, g, false);
-    neato_layout(g);
-  } else { // dot
-    my_graph_init(gvc, g, true);
-    dot_layout(g);
-  }
-
-  /* set bb attribute for basic layout.
-   * doesn't yet include margins, scaling or page sizes because
-   * those depend on the renderer being used. */
-  char buf[256];
-  if (GD_drawing(g)->landscape)
-    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.y),
-             round(GD_bb(g).LL.x), round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
-  else
-    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.x),
-             round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
-  agsafeset(g, "bb", buf, "");
-
-  // FIXME: IMPORTANT: check that we don't use GVC after this line
-  GD_gvc(g) = NULL;
-}
-
-int gw_gvLayout(GVC_t *gvc, Agraph_t *g, const char *engine) {
-  if (strcmp(engine, "dot") && strcmp(engine, "circo") &&
-      strcmp(engine, "neato")) {
-    agerrorf(
-        "Layout type: \"%s\" not recognized. Use one of: dot circo neato \n",
-        engine);
-    return -1;
-  }
-  // FIXME: handle "layout" attribute on graph
-  char *p;
-  if ((p = agget(g, "layout"))) { // FIXME: layout should match is_circo
-    if (strcmp(p, "dot") && strcmp(p, "circo") && strcmp(p, "neato")) {
-      agerrorf(
-          "Layout type: \"%s\" not recognized. Use one of: dot circo neato\n",
-          p);
-      return -1;
-    }
-    // FIXME: remove check
-    if (strcmp(engine, p)) {
-      agerrorf("Layouts should be the same. %s != %s\n", engine, p);
-      return -1;
-    }
-    engine = p;
-  }
-
-  my_gvLayoutJobs(gvc, g, engine);
-  return 0;
-}
-
-extern void graph_cleanup(graph_t *g);
-int gw_gvFreeLayout(Agraph_t *g, bool is_circo) {
-  if (is_circo) {
-    circo_cleanup(g);
-  } else {
-    dot_cleanup(g);
-  }
-
-  graph_cleanup(g);
-  return 0;
 }

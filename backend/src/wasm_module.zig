@@ -161,10 +161,10 @@ fn viz_errorf(text: [*c]u8) callconv(.c) c_int {
 
 fn parseAgerrMessages(
     allocator: std.mem.Allocator,
-    array_list: std.ArrayList([]const u8),
-) []vizjs_types.RenderError {
+) std.ArrayList(vizjs_types.RenderError) {
+    const array_list = &errors_strings.array_list;
     if (array_list.items.len == 0) {
-        return &.{};
+        return .empty;
     }
     const eql = std.mem.eql;
     const items = array_list.items;
@@ -188,7 +188,7 @@ fn parseAgerrMessages(
             }) catch @panic("cannot allocate");
         }
     }
-    return result.toOwnedSlice(allocator) catch @panic("cannot allocate");
+    return result;
 }
 
 const WasmString = packed struct(u64) {
@@ -218,12 +218,22 @@ fn stringifyResponseJSON(allocator: std.mem.Allocator, response: vizjs_types.Ren
 }
 
 pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
+    var arena = std.heap.ArenaAllocator.init(wasm_allocator);
+    defer arena.deinit();
+    const arena_allocator = arena.allocator();
+
+    errors_strings = .{
+        .allocator = arena_allocator,
+        .array_list = .empty,
+    };
+
+    // Reset errors
+    _ = graphviz.agseterrf(viz_errorf);
+    _ = graphviz.agseterr(graphviz.AGWARN);
+    _ = graphviz.agreseterrors();
+
     const json_string = json_bytes[0..size];
     defer wasm_allocator.free(json_string);
-
-    var arena = std.heap.ArenaAllocator.init(wasm_allocator);
-    const arena_allocator = arena.allocator();
-    defer arena.deinit();
 
     var scanner = std.json.Scanner.initCompleteInput(
         arena_allocator,
@@ -240,29 +250,21 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         .{},
     ) catch |err| {
         const json_error = vizjs_types.JSONParseError.init(diag, err, json_string);
+        var errors = parseAgerrMessages(arena_allocator);
+        errors.append(arena_allocator, .{
+            .level = .@"error",
+            .message = .{
+                .err = json_error,
+            },
+        }) catch @panic("cannot append error");
         return stringifyResponseJSON(wasm_allocator, .{
             .status = .failure,
-            .errors = &[1]vizjs_types.RenderError{.{
-                .level = .@"error",
-                .message = .{
-                    .err = json_error,
-                },
-            }},
+            .errors = errors.items,
             .output = null,
         });
     };
 
     g_image_map = request.images;
-
-    errors_strings = .{
-        .allocator = arena_allocator,
-        .array_list = .empty,
-    };
-
-    // Reset errors
-    _ = graphviz.agseterrf(viz_errorf);
-    _ = graphviz.agseterr(graphviz.AGWARN);
-    _ = graphviz.agreseterrors();
 
     const graphptr = switch (request.graph) {
         .dot => |dot_string| blk: {
@@ -302,10 +304,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     if (graphptr == null) {
         return stringifyResponseJSON(wasm_allocator, .{
             .status = .failure,
-            .errors = parseAgerrMessages(
-                arena_allocator,
-                errors_strings.array_list,
-            ),
+            .errors = parseAgerrMessages(arena_allocator).items,
             .output = null,
         });
     }
@@ -323,17 +322,71 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         _ = graphviz.gvFreeContext(gvc);
     }
 
-    if (graphviz.gw_gvLayout(gvc, graphptr, request.engine) != 0) {
+    const engine = std.meta.stringToEnum(vizjs_types.Engine, request.engine) orelse {
+        const message = std.fmt.allocPrint(
+            wasm_allocator,
+            "Layout type: \"{s}\" not recognized. Use one of: dot circo neato",
+            .{request.engine},
+        ) catch @panic("cannot allocate error message");
+
+        var errors = parseAgerrMessages(arena_allocator);
+        errors.append(arena_allocator, .{
+            .level = .@"error",
+            .message = .{ .slice = message },
+        }) catch @panic("cannot append error");
+
         return stringifyResponseJSON(wasm_allocator, .{
             .status = .failure,
-            .errors = parseAgerrMessages(
-                arena_allocator,
-                errors_strings.array_list,
-            ),
+            .errors = errors.items,
             .output = null,
         });
+    };
+
+    if (graphviz.agget(graphptr, "layout")) |layout_cstr| {
+        const layout_str = std.mem.span(layout_cstr);
+        const layout = std.meta.stringToEnum(vizjs_types.Engine, layout_str) orelse {
+            const message = std.fmt.allocPrint(
+                arena_allocator,
+                "Layout type: \"{s}\" not recognized. Use one of: dot circo neato",
+                .{layout_str},
+            ) catch @panic("cannot allocate error message");
+
+            var errors = parseAgerrMessages(arena_allocator);
+            errors.append(arena_allocator, .{
+                .level = .@"error",
+                .message = .{ .slice = message },
+            }) catch @panic("cannot append error");
+
+            return stringifyResponseJSON(wasm_allocator, .{
+                .status = .failure,
+                .errors = errors.items,
+                .output = null,
+            });
+        };
+
+        if (layout != engine) {
+            const message = std.fmt.allocPrint(
+                arena_allocator,
+                "Layouts should be the same. {} != {}",
+                .{ layout, engine },
+            ) catch @panic("cannot allocate error message");
+
+            var errors = parseAgerrMessages(arena_allocator);
+            errors.append(arena_allocator, .{
+                .level = .@"error",
+                .message = .{ .slice = message },
+            }) catch @panic("cannot append error");
+
+            return stringifyResponseJSON(wasm_allocator, .{
+                .status = .failure,
+                .errors = errors.items,
+                .output = null,
+            });
+        }
     }
-    defer graphviz.gw_gvFreeLayout(graphptr);
+
+    layoutRender(engine, gvc, graphptr);
+    defer layoutCleanup(engine, graphptr);
 
     var responseDot: ?[:0]const u8 = null;
     defer freeCString(responseDot);
@@ -351,16 +404,41 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     const responseJSON = stringifyResponseJSON(wasm_allocator, .{
         .status = .success,
-        .errors = parseAgerrMessages(
-            arena_allocator,
-            errors_strings.array_list,
-        ),
+        .errors = parseAgerrMessages(arena_allocator).items,
         .output = .{
             .dot = responseDot,
             .svg = responseSvg,
         },
     });
     return responseJSON;
+}
+
+fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graphptr: ?*graphviz.Agraph_t) void {
+    switch (engine) {
+        .dot => {
+            graphviz.my_graph_init(gvc, graphptr, true);
+            graphviz.dot_layout(graphptr);
+        },
+        .circo => {
+            graphviz.my_graph_init(gvc, graphptr, false);
+            graphviz.circo_layout(graphptr);
+        },
+        .neato => {
+            graphviz.my_graph_init(gvc, graphptr, false);
+            graphviz.neato_layout(graphptr);
+        },
+    }
+    // FIXME: IMPORTANT: check that we don't use GVC after this line
+    graphviz.set_gvc_to_null(graphptr);
+}
+
+fn layoutCleanup(engine: vizjs_types.Engine, graphptr: ?*graphviz.Agraph_t) void {
+    switch (engine) {
+        .dot => graphviz.dot_cleanup(graphptr),
+        .circo => graphviz.circo_cleanup(graphptr),
+        .neato => graphviz.neato_cleanup(graphptr),
+    }
+    graphviz.graph_cleanup(graphptr);
 }
 
 fn freeCString(string: ?[:0]const u8) void {
