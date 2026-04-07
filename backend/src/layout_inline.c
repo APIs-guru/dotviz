@@ -369,10 +369,10 @@ int gw_gvLayout(GVC_t *gvc, Agraph_t *g, const char *engine) {
       return -1;
     }
     // FIXME: remove check
-    // if (strcmp(engine, p)) {
-    //   agerrorf("Layouts should be the same. %s != %s\n", engine, p);
-    //   return -1;
-    // }
+    if (strcmp(engine, p)) {
+      agerrorf("Layouts should be the same. %s != %s\n", engine, p);
+      return -1;
+    }
     engine = p;
   }
 
