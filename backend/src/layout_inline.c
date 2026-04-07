@@ -320,11 +320,17 @@ extern gvlayout_features_t dotgen_features;
 extern void circo_layout(Agraph_t *g);
 extern void circo_cleanup(graph_t *g);
 
-void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, bool is_circo) {
-  if (is_circo) {
+extern void neato_layout(graph_t *g);
+extern void neato_cleanup(graph_t *g);
+
+void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
+  if (!strcmp(engine, "circo")) {
     my_graph_init(gvc, g, false);
     circo_layout(g);
-  } else {
+  } else if (!strcmp(engine, "neato")) {
+    my_graph_init(gvc, g, false);
+    neato_layout(g);
+  } else { // dot
     my_graph_init(gvc, g, true);
     dot_layout(g);
   }
@@ -346,28 +352,31 @@ void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, bool is_circo) {
 }
 
 int gw_gvLayout(GVC_t *gvc, Agraph_t *g, const char *engine) {
-  if (strcmp(engine, "dot") && strcmp(engine, "circo")) {
-    agerrorf("Layout type: \"%s\" not recognized. Use one of: dot circo\n",
-             engine);
+  if (strcmp(engine, "dot") && strcmp(engine, "circo") &&
+      strcmp(engine, "neato")) {
+    agerrorf(
+        "Layout type: \"%s\" not recognized. Use one of: dot circo neato \n",
+        engine);
     return -1;
   }
   // FIXME: handle "layout" attribute on graph
   char *p;
   if ((p = agget(g, "layout"))) { // FIXME: layout should match is_circo
-    if (strcmp(p, "dot") && strcmp(p, "circo")) {
-      agerrorf("Layout type: \"%s\" not recognized. Use one of: dot circo\n",
-               p);
+    if (strcmp(p, "dot") && strcmp(p, "circo") && strcmp(p, "neato")) {
+      agerrorf(
+          "Layout type: \"%s\" not recognized. Use one of: dot circo neato\n",
+          p);
       return -1;
     }
-    if (strcmp(engine, p)) {
-      agerrorf("Layouts should be the same. %s != %s\n", engine, p);
-      return -1;
-    }
+    // FIXME: remove check
+    // if (strcmp(engine, p)) {
+    //   agerrorf("Layouts should be the same. %s != %s\n", engine, p);
+    //   return -1;
+    // }
     engine = p;
   }
-  bool is_circo = !strcmp(engine, "circo");
 
-  my_gvLayoutJobs(gvc, g, is_circo);
+  my_gvLayoutJobs(gvc, g, engine);
   return 0;
 }
 

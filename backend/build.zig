@@ -116,6 +116,9 @@ pub fn buildGraphviz(
     lib.addCSourceFile(.{ .file = b.path(
         "src/graphviz_build/src/dummy.c",
     ) });
+    lib.addCSourceFile(.{ .file = b.path(
+        "src/graphviz_build/src/drand48.c",
+    ) });
     lib.addIncludePath(graphviz_dep.path("lib/cdt"));
     lib.addIncludePath(graphviz_dep.path("lib/cgraph"));
     const expat_dep = b.dependency("libexpat", .{
@@ -132,6 +135,8 @@ pub fn buildGraphviz(
         .DEFAULT_DPI = 96,
         .HAVE_EXPAT = 1,
         .HAVE_SYS_MMAN_H = 1,
+        .HAVE_DRAND48 = 1,
+        .HAVE_SRAND48 = 1,
     });
     lib.installConfigHeader(config_h);
     const builddate_h = b.addConfigHeader(.{
@@ -451,10 +456,16 @@ const src_circogen = [_][]const u8{
 };
 
 const src_neatogen = [_][]const u8{
-    "neatoinit.c", "adjust.c", "neatosplines.c", "constraint.c",
-    "geometry.c",  "poly.c",   "voronoi.c",      "edges.c",
-    "info.c",      "hedges.c", "heap.c",         "site.c",
-    "memory.c",    "legal.c",
+    "neatoinit.c",   "adjust.c",     "neatosplines.c", "constraint.c",
+    "geometry.c",    "poly.c",       "voronoi.c",      "edges.c",
+    "info.c",        "hedges.c",     "heap.c",         "site.c",
+    "memory.c",      "legal.c",      "stuff.c",        "solve.c",
+    "stress.c",      "matrix_ops.c", "circuit.c",      "matinv.c",
+    "lu.c",          "dijkstra.c",   "bfs.c",          "kkutils.c",
+    "embed_graph.c", "pca.c",        "closest.c",      "conjgrad.c",
+    "delaunay.c",    "sgd.c",
+    "randomkit.c",
+    // "adjust.c", "bfs.c", "call_tri.c", "circuit.c", "closest.c", "compute_hierarchy.c", "conjgrad.c", "constrained_majorization.c", "constrained_majorization_ipsep.c", "constraint.c", "delaunay.c", "dijkstra.c", "edges.c", "embed_graph.c", "geometry.c", "heap.c", "hedges.c", "info.c", "kkutils.c", "legal.c", "lu.c", "matinv.c", "matrix_ops.c", "memory.c", "multispline.c", "neatoinit.c", "neatosplines.c", "opt_arrangement.c", "overlap.c", "pca.c", "poly.c", "quad_prog_solve.c", "quad_prog_vpsc.c", "randomkit.c", "sgd.c", "site.c", "smart_ini_x.c", "solve.c", "stress.c", "stuff.c", "voronoi.c"
 };
 
 const src_label = [_][]const u8{

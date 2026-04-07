@@ -1,0 +1,134 @@
+digraph Twelve_colors {
+	graph [bb="0,0,564.6,659.95",
+		fontname=Arial,
+		label="Twelve colors. Neato layout",
+		labelloc=b,
+		layout=neato,
+		lheight=0.23,
+		lp="282.3,12.4",
+		lwidth=2.39,
+		normalize=0,
+		start=regular
+	];
+	node [color="#00000088",
+		fontname=Helvetica,
+		label="\N",
+		shape=circle,
+		style=filled,
+		width=1.5
+	];
+	edge [arrowhead=open,
+		len=2,
+		penwidth=1.5
+	];
+	{
+		white	[fillcolor=white,
+			height=1.5,
+			pos="285.12,342.42"];
+		yellow	[fillcolor=yellow,
+			height=1.5,
+			pos="196.51,189.98"];
+		cyan	[fillcolor=cyan,
+			height=1.5,
+			pos="196.31,495.01"];
+		yellowgreen	[fillcolor=yellowgreen,
+			height=1.5,
+			pos="54.304,214.67"];
+		springgreen	[fillcolor=springgreen,
+			height=1.5,
+			pos="54,469.8"];
+	}
+	{
+		white;
+		yellow;
+		magenta	[fillcolor=magenta,
+			fontcolor=white,
+			height=1.5,
+			pos="460.46,342.32"];
+		orange	[fillcolor=orange,
+			height=1.5,
+			pos="288.2,78.8"];
+		deeppink	[fillcolor=deeppink,
+			fontcolor=white,
+			height=1.5,
+			pos="510.59,206.93"];
+	}
+	{
+		yellowgreen;
+		orange;
+	}
+	{
+		white;
+		cyan;
+		magenta;
+		deepskyblue	[fillcolor=deepskyblue,
+			height=1.5,
+			pos="288.5,605.95"];
+		purple	[fillcolor=purple,
+			fontcolor=white,
+			height=1.5,
+			pos="510.6,477.64"];
+	}
+	{
+		springgreen;
+		deepskyblue;
+	}
+	{
+		deeppink;
+		purple;
+	}
+	green	[fillcolor=green,
+		fontcolor=white,
+		height=1.5,
+		pos="131.33,342.42"];
+	green -> white	[color=green,
+		pos="e,230.87,342.42 185.55,342.42 196.46,342.42 208.04,342.42 219.3,342.42"];
+	green -> yellow	[color=green,
+		pos="e,175.12,240.01 152.67,292.5 158.41,279.08 164.68,264.42 170.64,250.48"];
+	green -> cyan	[color=green,
+		pos="e,174.98,444.93 152.6,392.38 158.33,405.82 164.58,420.5 170.52,434.44"];
+	green -> yellowgreen	[color=green,
+		pos="e,82.437,261.33 103.3,295.94 98.471,287.93 93.401,279.52 88.429,271.27"];
+	green -> springgreen	[color=green,
+		pos="e,82.244,423.27 103.19,388.77 98.341,396.76 93.251,405.14 88.26,413.36"];
+	yellow -> yellowgreen	[color=yellow,
+		pos="e,107.96,205.36 143.15,199.24 135.42,200.59 127.39,201.98 119.46,203.36"];
+	yellow -> orange	[color=yellow,
+		pos="e,253.79,120.52 231.18,147.95 236.15,141.91 241.31,135.66 246.41,129.48"];
+	cyan -> springgreen	[color=cyan,
+		pos="e,107.22,479.23 142.91,485.55 134.98,484.14 126.73,482.68 118.6,481.24"];
+	cyan -> deepskyblue	[color=cyan,
+		pos="e,253.71,564.09 230.9,536.64 235.91,542.67 241.12,548.93 246.26,555.12"];
+	blue	[fillcolor=blue,
+		fontcolor=white,
+		height=1.5,
+		pos="361.39,475.74"];
+	blue -> white	[color=blue,
+		pos="e,312.02,389.45 334.5,428.73 329.09,419.27 323.35,409.24 317.76,399.48"];
+	blue -> cyan	[color=blue,
+		pos="e,250.2,488.72 307.34,482.05 292.73,483.75 276.76,485.62 261.6,487.39"];
+	blue -> magenta	[color=blue,
+		pos="e,428.29,385.65 393.83,432.05 402.64,420.18 412.28,407.2 421.42,394.9"];
+	blue -> deepskyblue	[color=blue,
+		pos="e,314.88,558.83 334.87,523.12 330.24,531.39 325.38,540.07 320.61,548.58"];
+	blue -> purple	[color=blue,
+		pos="e,456.35,476.95 415.68,476.43 425.1,476.55 434.99,476.67 444.68,476.8"];
+	red	[fillcolor=red,
+		fontcolor=white,
+		height=1.5,
+		pos="361.44,208.97"];
+	red -> white	[color=red,
+		pos="e,312.04,295.35 334.53,256.02 329.12,265.49 323.37,275.54 317.78,285.3"];
+	red -> yellow	[color=red,
+		pos="e,250.64,196.21 307.44,202.75 292.91,201.08 277.05,199.25 261.97,197.52"];
+	red -> magenta	[color=red,
+		pos="e,428.3,299.02 393.86,252.64 402.67,264.5 412.31,277.47 421.44,289.77"];
+	red -> orange	[color=red,
+		pos="e,314.71,125.91 334.79,161.61 330.14,153.34 325.26,144.66 320.47,136.16"];
+	red -> deeppink	[color=red,
+		pos="e,456.11,207.68 415.71,208.23 425.07,208.1 434.88,207.97 444.51,207.83"];
+	magenta -> deeppink	[color=magenta,
+		pos="e,491.68,258.01 479.27,291.52 481.99,284.16 484.83,276.51 487.62,268.96"];
+	magenta -> purple	[color=magenta,
+		pos="e,491.68,426.58 479.27,393.09 482,400.45 484.83,408.09 487.63,415.64"];
+}
