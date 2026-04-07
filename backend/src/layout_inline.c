@@ -324,26 +324,14 @@ extern void neato_layout(graph_t *g);
 extern void neato_cleanup(graph_t *g);
 
 void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
-  agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
-  GD_gvc(g) = gvc;
-  if (g != agroot(g)) {
-    agbindrec(agroot(g), "Agraphinfo_t", sizeof(Agraphinfo_t), true);
-    GD_gvc(agroot(g)) = gvc;
-  } else if (!strcmp(engine, "circo")) {
+  if (!strcmp(engine, "circo")) {
     my_graph_init(gvc, g, false);
-    GD_drawing(agroot(g)) = GD_drawing(g);
     circo_layout(g);
-
-    GD_cleanup(g) = circo_cleanup;
   } else if (!strcmp(engine, "neato")) {
     my_graph_init(gvc, g, false);
-    GD_drawing(agroot(g)) = GD_drawing(g);
     neato_layout(g);
-
-    GD_cleanup(g) = neato_cleanup;
   } else { // dot
     my_graph_init(gvc, g, true);
-    GD_drawing(agroot(g)) = GD_drawing(g);
     dot_layout(g);
   }
 
@@ -363,9 +351,7 @@ void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
   GD_gvc(g) = NULL;
 }
 
-int gw_gvLayout(GVC_t *gvc, Agraph_t *graph, const char *engine) {
-  graph_t *g = (graph_t *)graph;
-
+int gw_gvLayout(GVC_t *gvc, Agraph_t *g, const char *engine) {
   if (strcmp(engine, "dot") && strcmp(engine, "circo") &&
       strcmp(engine, "neato")) {
     agerrorf(
@@ -390,21 +376,7 @@ int gw_gvLayout(GVC_t *gvc, Agraph_t *graph, const char *engine) {
     engine = p;
   }
 
-  if (my_gvLayoutJobs(gvc, g, engine) == -1)
-    return -1;
-
-  /* set bb attribute for basic layout.
-   * doesn't yet include margins, scaling or page sizes because
-   * those depend on the renderer being used. */
-  char buf[256];
-  if (GD_drawing(g)->landscape)
-    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.y),
-             round(GD_bb(g).LL.x), round(GD_bb(g).UR.y), round(GD_bb(g).UR.x));
-  else
-    snprintf(buf, sizeof(buf), "%.0f %.0f %.0f %.0f", round(GD_bb(g).LL.x),
-             round(GD_bb(g).LL.y), round(GD_bb(g).UR.x), round(GD_bb(g).UR.y));
-  agsafeset(g, "bb", buf, "");
-
+  my_gvLayoutJobs(gvc, g, engine);
   return 0;
 }
 
