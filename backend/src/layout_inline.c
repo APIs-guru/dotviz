@@ -323,7 +323,7 @@ extern void circo_cleanup(graph_t *g);
 extern void neato_layout(graph_t *g);
 extern void neato_cleanup(graph_t *g);
 
-int my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
+void my_gvLayoutJobs(GVC_t *gvc, Agraph_t *g, const char *engine) {
   agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
   GD_gvc(g) = gvc;
   if (g != agroot(g)) {
