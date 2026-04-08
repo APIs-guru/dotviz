@@ -75,7 +75,7 @@ describe('GraphViz Gallery', () => {
     it('neato: gallery/neato/traffic_lights.gv', snapshotGvFile);
     it('neato: gallery/neato/transparency.gv', snapshotGvFile);
   });
-  describe.skip('sfdp', () => {
+  describe('sfdp', () => {
     it('sfdp: gallery/sfdp/root.gv', snapshotGvFile);
   });
   describe('twopi', () => {

@@ -318,7 +318,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     const engine = std.meta.stringToEnum(vizjs_types.Engine, request.engine) orelse {
         const message = std.fmt.allocPrint(
             wasm_allocator,
-            "Layout type: \"{s}\" not recognized. Use one of: dot circo neato fdp twopi",
+            "Layout type: \"{s}\" not recognized. Use one of: dot circo neato fdp twopi sfdp",
             .{request.engine},
         ) catch @panic("cannot allocate error message");
 
@@ -340,7 +340,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         const layout = std.meta.stringToEnum(vizjs_types.Engine, layout_str) orelse {
             const message = std.fmt.allocPrint(
                 arena_allocator,
-                "Layout type: \"{s}\" not recognized. Use one of: dot circo neato fdp twopi",
+                "Layout type: \"{s}\" not recognized. Use one of: dot circo neato fdp twopi sfdp",
                 .{layout_str},
             ) catch @panic("cannot allocate error message");
 
@@ -428,6 +428,10 @@ fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graphptr: ?*g
             graphviz.my_graph_init(gvc, graphptr, false);
             graphviz.twopi_layout(graphptr);
         },
+        .sfdp => {
+            graphviz.my_graph_init(gvc, graphptr, false);
+            graphviz.sfdp_layout(graphptr);
+        },
     }
     // FIXME: IMPORTANT: check that we don't use GVC after this line
     graphviz.set_gvc_to_null(graphptr);
@@ -440,6 +444,7 @@ fn layoutCleanup(engine: vizjs_types.Engine, graphptr: ?*graphviz.Agraph_t) void
         .neato => graphviz.neato_cleanup(graphptr),
         .fdp => graphviz.fdp_cleanup(graphptr),
         .twopi => graphviz.twopi_cleanup(graphptr),
+        .sfdp => graphviz.sfdp_cleanup(graphptr),
     }
     graphviz.graph_cleanup(graphptr);
 }
