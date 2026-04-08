@@ -29,7 +29,7 @@ describe('Viz', () => {
       expect(() =>
         viz.renderString('graph { layout=invalid }'),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage]`,
+        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp]`,
       );
     });
 
@@ -45,7 +45,7 @@ describe('Viz', () => {
       expect(() =>
         viz.renderString('graph { layout=invalid; x=1.2.3=y }'),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage]`,
+        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp]`,
       );
     });
 
@@ -63,7 +63,7 @@ describe('Viz', () => {
       expect(() =>
         viz.renderString('graph { }', { engine: 'invalid' }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage]`,
+        `[Error: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp]`,
       );
     });
 

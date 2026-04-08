@@ -120,6 +120,7 @@ pub const Engine = enum {
     twopi,
     patchwork,
     osage,
+    sfdp,
 };
 
 pub const RenderRequest = struct {
