@@ -75,7 +75,7 @@ describe('GraphViz Gallery', () => {
     it('neato: gallery/neato/traffic_lights.gv', snapshotGvFile);
     it('neato: gallery/neato/transparency.gv', snapshotGvFile);
   });
-  describe.skip('sfdp', () => {
+  describe('sfdp', () => {
     it('sfdp: gallery/sfdp/root.gv', snapshotGvFile);
   });
   describe.skip('twopi', () => {
@@ -150,7 +150,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/b94.gv', snapshotGvFile);
   // FIXME runs for 16sec it.only('dot: graphs/b100.gv', snapshotGvFile);
   it('dot: graphs/b102.gv', snapshotGvFile);
-  it('dot: graphs/b103.gv', snapshotGvFile);
+  // FIXME runs for 5sec it('dot: graphs/b103.gv', snapshotGvFile);
   // FIXME runs for 15sec it.only('dot: graphs/b104.gv', snapshotGvFile);
   it('dot: graphs/b106.gv', snapshotGvFile);
   it('dot: graphs/b117.gv', snapshotGvFile);

@@ -116,6 +116,7 @@ pub const Engine = enum {
     dot,
     circo,
     neato,
+    sfdp,
 };
 
 pub const RenderRequest = struct {

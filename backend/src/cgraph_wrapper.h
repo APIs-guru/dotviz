@@ -46,6 +46,9 @@ void circo_cleanup(graph_t *g);
 void neato_layout(graph_t *g);
 void neato_cleanup(graph_t *g);
 
+void sfdp_layout(graph_t *g);
+void sfdp_cleanup(graph_t *g);
+
 void graph_cleanup(graph_t *g);
 
 #endif /* CGRAPH_WRAPPER_H_ */

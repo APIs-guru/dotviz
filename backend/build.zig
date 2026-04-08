@@ -302,6 +302,30 @@ pub fn buildGraphviz(
     addInclude(lib_neatogen, graphviz_dep);
     lib_neatogen.addConfigHeader(config_h);
 
+    const lib_sfdpgen = b.addLibrary(.{
+        .name = "sfdpgen",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+    lib_sfdpgen.addCSourceFiles(.{
+        .root = graphviz_dep.path("lib/sfdpgen"),
+        .files = &src_sfdpgen,
+    });
+    addInclude(lib_sfdpgen, graphviz_dep);
+    lib_sfdpgen.addConfigHeader(config_h);
+
+    const lib_sparse = b.addLibrary(.{
+        .name = "sparse",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+    lib_sparse.addCSourceFiles(.{
+        .root = graphviz_dep.path("lib/sparse"),
+        .files = &src_sparse,
+    });
+    addInclude(lib_sparse, graphviz_dep);
+    lib_sparse.addConfigHeader(config_h);
+
     const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
         .root_module = lib_mod,
@@ -463,9 +487,17 @@ const src_neatogen = [_][]const u8{
     "stress.c",      "matrix_ops.c", "circuit.c",      "matinv.c",
     "lu.c",          "dijkstra.c",   "bfs.c",          "kkutils.c",
     "embed_graph.c", "pca.c",        "closest.c",      "conjgrad.c",
-    "delaunay.c",    "sgd.c",
-    "randomkit.c",
+    "delaunay.c",    "sgd.c",        "randomkit.c",
     // "adjust.c", "bfs.c", "call_tri.c", "circuit.c", "closest.c", "compute_hierarchy.c", "conjgrad.c", "constrained_majorization.c", "constrained_majorization_ipsep.c", "constraint.c", "delaunay.c", "dijkstra.c", "edges.c", "embed_graph.c", "geometry.c", "heap.c", "hedges.c", "info.c", "kkutils.c", "legal.c", "lu.c", "matinv.c", "matrix_ops.c", "memory.c", "multispline.c", "neatoinit.c", "neatosplines.c", "opt_arrangement.c", "overlap.c", "pca.c", "poly.c", "quad_prog_solve.c", "quad_prog_vpsc.c", "randomkit.c", "sgd.c", "site.c", "smart_ini_x.c", "solve.c", "stress.c", "stuff.c", "voronoi.c"
+       "call_tri.c", "overlap.c",
+};
+
+const src_sfdpgen = [_][]const u8{
+    "sfdpinit.c", "spring_electrical.c", "Multilevel.c", "sparse_solve.c", "post_process.c",
+};
+
+const src_sparse = [_][]const u8{
+    "SparseMatrix.c", "QuadTree.c", "general.c",
 };
 
 const src_label = [_][]const u8{
