@@ -3,14 +3,6 @@ const testing = std.testing;
 const vizjs_types = @import("vizjs_types.zig");
 const wasm_allocator = std.heap.wasm_allocator;
 
-// pub const c = @cImport({
-//     @cInclude("gvc.h");
-//     @cInclude("agrw.h");
-//     @cInclude("layout_inline.h");
-//     @cInclude("graphviz.h");
-//     @cInclude("gvusershape_size.h");
-// });
-
 pub const graphviz = @cImport({
     @cInclude("geom.h");
     @cInclude("cgraph_wrapper.h");
