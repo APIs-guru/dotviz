@@ -78,9 +78,10 @@ describe('GraphViz Gallery', () => {
   describe.skip('sfdp', () => {
     it('sfdp: gallery/sfdp/root.gv', snapshotGvFile);
   });
-  describe.skip('twopi', () => {
+  describe('twopi', () => {
     it('twopi: gallery/twopi/happiness.gv', snapshotGvFile);
-    it('twopi: gallery/twopi/networkmap_twopi.gv', snapshotGvFile);
+    // FIXME: no images in gv
+    // it('twopi: gallery/twopi/networkmap_twopi.gv', snapshotGvFile);
     it('twopi: gallery/twopi/twopi2.gv', snapshotGvFile);
   });
   describe('undirected', () => {
@@ -421,7 +422,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/root.gv', snapshotGvFile);
   // Case("size_ex", Path("root.gv"), "dot", "ps", ["-Gsize=6,6!"]),
   // Case("size_ex", Path("root.gv"), "dot", "png", ["-Gsize=6,6!"]),
-  // Case("root", Path("root.gv"), "twopi", "gv", []),
+  it('twopi: graphs/root.gv', snapshotGvFile);
 
   it('dot: graphs/rootlabel.gv', snapshotGvFile);
   // Case(

@@ -1,0 +1,426 @@
+graph happiness {
+	graph [bb="0,0,1019.7,941.61",
+		fontname="URW Chancery L, Apple Chancery, Comic Sans MS, cursive",
+		label="Mind map of Happiness.\nTwopi radial graph.",
+		labelloc=t,
+		layout=twopi,
+		lheight=0.47,
+		lp="509.85,920.81",
+		lwidth=1.92,
+		ranksep=2
+	];
+	node [fillcolor="#f0f0ffA0",
+		fontcolor=indigo,
+		fontname="URW Chancery L, Apple Chancery, Comic Sans MS, cursive",
+		fontsize="",
+		label="\N",
+		penwidth=0,
+		style=filled
+	];
+	edge [color="#f0f0ff",
+		penwidth=5
+	];
+	{
+		Peace	[URL="https://en.wikipedia.org/wiki/Category:Peace",
+			fontsize=40,
+			height=1.0999,
+			pos="616.3,530.65",
+			width=2.1461];
+		Love	[URL="https://en.wikipedia.org/wiki/Category:Love",
+			fontcolor=orchid,
+			fontsize=40,
+			height=1.0999,
+			pos="492.59,594.14",
+			width=1.9286];
+		Soul	[URL="https://en.wikipedia.org/wiki/Soul",
+			fontsize=40,
+			height=1.0999,
+			pos="387.78,544.21",
+			width=1.7552];
+		Mind	[URL="https://en.wikipedia.org/wiki/Category:Mind",
+			fontsize=40,
+			height=1.0999,
+			pos="356.89,416.38",
+			width=2.0168];
+		Life	[fontcolor=seagreen,
+			fontsize=40,
+			height=1.0999,
+			pos="492.59,306.26",
+			width=1.6228];
+		Health	[fontcolor=mediumvioletred,
+			fontsize=40,
+			height=1.0999,
+			pos="628.64,392.15",
+			width=2.4085];
+	}
+	{
+		Giving	[fontsize=25,
+			height=0.74639,
+			pos="572.77,728.02",
+			width=1.6783];
+		People	[fontsize=25,
+			height=0.74639,
+			pos="488.33,738.07",
+			width=1.6507];
+		Beauty	[fontsize=25,
+			height=0.74639,
+			pos="404.62,723.03",
+			width=1.7052];
+	}
+	{
+		Success	[fontcolor=goldenrod,
+			fontsize=25,
+			height=0.74639,
+			pos="343.12,206.67",
+			width=1.8689];
+		Nature	[fontsize=25,
+			height=0.74639,
+			pos="471.29,163.34",
+			width=1.6503];
+		Wellbeing	[fontsize=25,
+			height=0.74639,
+			pos="620.72,190.19",
+			width=2.3595];
+	}
+	{
+		Connection	[fontsize=25,
+			height=0.74639,
+			pos="776.8,517.85",
+			width=2.5782];
+		Relationship	[fontsize=25,
+			height=0.74639,
+			pos="725.78,624.96",
+			width=2.7966];
+		Caring	[fontsize=25,
+			height=0.74639,
+			pos="650.6,693.73",
+			width=1.6507];
+	}
+	{
+		Body	[fontsize=25,
+			height=0.74639,
+			pos="744.84,303.74",
+			width=1.3784];
+		Recreation	[fontsize=25,
+			height=0.74639,
+			pos="782.84,416.14",
+			width=2.441];
+	}
+	{
+		Cognition	[fontsize=25,
+			height=0.74639,
+			pos="208.86,450.2",
+			width=2.2787];
+		Consciousness	[fontsize=25,
+			height=0.74639,
+			pos="226.88,349.92",
+			width=3.2061];
+		Intelligence	[fontsize=25,
+			height=0.74639,
+			pos="257.99,289.31",
+			width=2.6319];
+	}
+	{
+		Emotions	[URL="https://en.wikipedia.org/wiki/Soul",
+			fontsize=25,
+			height=0.74639,
+			pos="343.12,693.73",
+			width=2.1967];
+		Self	[fontsize=25,
+			height=0.74639,
+			pos="278.7,638.21",
+			width=1.1053];
+		Meditation	[fontsize=25,
+			height=0.74639,
+			pos="233.3,566.3",
+			width=2.4691];
+	}
+	{
+		Esthetics	[height=0.5,
+			pos="382.99,866.92",
+			width=1.275];
+		Art	[height=0.5,
+			pos="334.5,850.53",
+			width=0.75];
+	}
+	{
+		Family	[height=0.5,
+			pos="535.22,880.49",
+			width=1.0667];
+		Partner	[height=0.5,
+			pos="484.06,882.01",
+			width=1.0812];
+		Hug	[height=0.5,
+			pos="433.08,877.47",
+			width=0.76854];
+	}
+	{
+		Feelings	[height=0.5,
+			pos="635.22,859.44",
+			width=1.2156];
+		Support	[height=0.5,
+			pos="585.84,872.94",
+			width=1.1561];
+	}
+	{
+		Delight	[height=0.5,
+			pos="205.27,768.94",
+			width=1.1112];
+		Joy	[height=0.5,
+			pos="169.62,732.22",
+			width=0.75];
+		Expression	[height=0.5,
+			pos="138.56,691.54",
+			width=1.4986];
+	}
+	{
+		Creation	[height=0.5,
+			pos="205.27,131.46",
+			width=1.2302];
+		Profit	[height=0.5,
+			pos="245.01,99.206",
+			width=0.91759];
+		Win	[height=0.5,
+			pos="288.3,71.883",
+			width=0.76841];
+		Career	[height=0.5,
+			pos="334.5,49.87",
+			width=1.0213];
+	}
+	{
+		Leisure	[height=0.5,
+			pos="922.05,373.78",
+			width=1.1109];
+		Sleep	[height=0.5,
+			pos="928.1,424.61",
+			width=0.90253];
+	}
+	{
+		Positiveness	[height=0.5,
+			pos="288.3,828.52",
+			width=1.633];
+		Tranquility	[height=0.5,
+			pos="245.01,801.19",
+			width=1.5134];
+	}
+	{
+		Medicine	[height=0.5,
+			pos="806.82,149.29",
+			width=1.3196];
+		Exercises	[height=0.5,
+			pos="840.24,188.06",
+			width=1.3344];
+		Nutrition	[height=0.5,
+			pos="868.83,230.51",
+			width=1.2901];
+		Water	[height=0.5,
+			pos="892.2,276.05",
+			width=0.96174];
+		Heart	[height=0.5,
+			pos="910.03,324.03",
+			width=0.90227];
+	}
+	{
+		Home	[height=0.5,
+			pos="585.84,27.464",
+			width=0.96213];
+		Work	[height=0.5,
+			pos="635.22,40.955",
+			width=0.91733];
+		Finance	[height=0.5,
+			pos="682.65,60.191",
+			width=1.1557];
+		Clothes	[height=0.5,
+			pos="727.47,84.903",
+			width=1.1262];
+		Transport	[height=0.5,
+			pos="769.06,114.74",
+			width=1.3494];
+	}
+	{
+		Friends	[height=0.5,
+			pos="868.83,669.89",
+			width=1.1113];
+		Community	[height=0.5,
+			pos="840.24,712.34",
+			width=1.5883];
+		Society	[height=0.5,
+			pos="806.82,751.11",
+			width=1.1112];
+	}
+	{
+		Acceptance	[height=0.5,
+			pos="928.1,475.79",
+			width=1.5574];
+		Forgiveness	[height=0.5,
+			pos="922.05,526.62",
+			width=1.603];
+		Gratitude	[height=0.5,
+			pos="910.03,576.37",
+			width=1.3196];
+		Agreement	[height=0.5,
+			pos="892.2,624.35",
+			width=1.4982];
+	}
+	{
+		Respect	[height=0.5,
+			pos="769.06,785.66",
+			width=1.1557];
+		Empathy	[height=0.5,
+			pos="727.47,815.5",
+			width=1.275];
+		Help	[height=0.5,
+			pos="682.65,840.21",
+			width=0.828];
+	}
+	{
+		Awareness	[height=0.5,
+			pos="91.896,299.78",
+			width=1.4834];
+	}
+	{
+		Contemplation	[height=0.5,
+			pos="112.53,647.46",
+			width=1.901];
+		Breath	[height=0.5,
+			pos="91.896,600.62",
+			width=1.0216];
+	}
+	{
+		Imagination	[height=0.5,
+			pos="76.948,551.67",
+			width=1.6028];
+		Perception	[height=0.5,
+			pos="67.894,501.29",
+			width=1.4537];
+		Thinking	[height=0.5,
+			pos="64.861,450.2",
+			width=1.2901];
+		Understanding	[height=0.5,
+			pos="67.894,399.11",
+			width=1.8859];
+		Memory	[height=0.5,
+			pos="76.948,348.73",
+			width=1.2304];
+	}
+	{
+		Learning	[height=0.5,
+			pos="112.53,252.94",
+			width=1.2748];
+		Experiment	[height=0.5,
+			pos="138.56,208.86",
+			width=1.558];
+		Education	[height=0.5,
+			pos="169.62,168.18",
+			width=1.3941];
+	}
+	{
+		Ocean	[height=0.5,
+			pos="382.99,33.477",
+			width=0.9916];
+		Forest	[height=0.5,
+			pos="433.08,22.935",
+			width=0.97719];
+		Pets	[height=0.5,
+			pos="484.06,18.39",
+			width=0.75374];
+		Wildlife	[height=0.5,
+			pos="535.22,19.906",
+			width=1.2004];
+	}
+	Happiness	[URL="https://en.wikipedia.org/wiki/Category:Happiness",
+		fontcolor=red,
+		fontsize=50,
+		height=1.3356,
+		pos="496.86,450.2",
+		width=4.4057];
+	Happiness -- Peace	[pos="561.82,493.95 564.45,495.72 567.06,497.48 569.64,499.22"];
+	Happiness -- Love	[pos="495.44,498.13 494.9,516.45 494.28,537.11 493.77,554.57"];
+	Happiness -- Soul	[pos="444.24,495.55 437.7,501.19 431.13,506.85 424.89,512.22"];
+	Happiness -- Mind	[pos="372.95,420.26 372.79,420.22 372.64,420.18 372.49,420.15"];
+	Happiness -- Life	[pos="495.44,402.27 494.9,383.95 494.28,363.29 493.77,345.83"];
+	Happiness -- Health	[pos="586.58,410.68 586.67,410.64 586.77,410.6 586.86,410.56"];
+	Peace -- Connection	[pos="692.32,524.58 692.48,524.57 692.64,524.56 692.81,524.54"];
+	Peace -- Relationship	[pos="655.51,564.43 668.89,575.95 683.61,588.63 696.11,599.4"];
+	Peace -- Caring	[pos="624.51,569.71 630.86,599.86 639.46,640.77 645.02,667.21"];
+	Love -- Giving	[pos="514.93,631.43 528.46,654.02 545.37,682.26 557.41,702.36"];
+	Love -- People	[pos="491.43,633.47 490.69,658.27 489.76,689.64 489.11,711.53"];
+	Love -- Beauty	[pos="467.62,630.73 453.09,652.01 435.14,678.32 422.12,697.4"];
+	Soul -- Emotions	[pos="376.16,583.1 368.25,609.58 358,643.92 351.02,667.28"];
+	Soul -- Self	[pos="350.85,576.03 335.15,589.56 317.27,604.97 303.24,617.06"];
+	Soul -- Meditation	[pos="326.28,553 322.07,553.6 317.8,554.21 313.52,554.83"];
+	Mind -- Cognition	[pos="290.24,431.61 285.48,432.69 280.68,433.79 275.92,434.88"];
+	Mind -- Consciousness	[pos="304.01,389.35 294.31,384.39 284.24,379.24 274.69,374.36"];
+	Mind -- Intelligence	[pos="328.55,379.96 312.45,359.28 292.68,333.88 278.17,315.24"];
+	Life -- Success	[pos="450.96,278.52 427.81,263.1 399.35,244.13 377.48,229.56"];
+	Life -- Nature	[pos="486.77,267.21 483.13,242.74 478.52,211.85 475.28,190.14"];
+	Life -- Wellbeing	[pos="527.27,274.85 547.87,256.19 573.65,232.83 592.91,215.39"];
+	Health -- Body	[pos="673.24,358.22 687.7,347.22 703.35,335.31 716.31,325.45"];
+	Health -- Recreation	[pos="710.71,404.92 710.85,404.94 711,404.96 711.14,404.98"];
+	Giving -- Feelings	[pos="585.26,754.3 597.65,780.37 616.27,819.57 626.94,842.02"];
+	Giving -- Support	[pos="575.17,754.6 577.81,783.85 581.98,830.05 584.24,855.2"];
+	People -- Family	[pos="497.04,764.53 506.47,793.17 521.24,838.04 529.37,862.73"];
+	People -- Partner	[pos="487.53,764.81 486.68,793.75 485.33,839.11 484.59,864.06"];
+	People -- Hug	[pos="477.94,764.29 466.81,792.37 449.47,836.12 439.93,860.17"];
+	Beauty -- Esthetics	[pos="400.61,749.76 396.26,778.69 389.44,824.03 385.69,848.98"];
+	Beauty -- Art	[pos="390.26,749.14 376.32,774.49 355.57,812.22 343.71,833.79"];
+	Success -- Creation	[pos="303.62,185.12 280.55,172.53 252.06,156.98 231.69,145.87"];
+	Success -- Profit	[pos="320.12,181.47 301.43,161 275.63,132.74 259.65,115.24"];
+	Success -- Win	[pos="332.42,180.36 321.45,153.39 304.71,112.23 295.32,89.142"];
+	Success -- Career	[pos="341.66,180.07 339.9,148.09 337,95.3 335.49,67.792"];
+	Nature -- Ocean	[pos="453.84,137.68 436.25,111.81 409.6,72.616 394.5,50.402"];
+	Nature -- Forest	[pos="464.1,136.93 456.41,108.65 444.41,64.585 437.82,40.358"];
+	Nature -- Pets	[pos="473.63,136.75 476.21,107.49 480.28,61.283 482.5,36.131"];
+	Nature -- Wildlife	[pos="483.01,137.03 495.92,108.08 516.3,62.351 527.4,37.463"];
+	Wellbeing -- Home	[pos="615.04,163.69 607.86,130.18 595.7,73.453 589.59,44.934"];
+	Wellbeing -- Work	[pos="623.31,163.51 626.26,133.16 630.99,84.464 633.51,58.534"];
+	Wellbeing -- Finance	[pos="633.25,163.89 645.48,138.22 663.74,99.885 674.3,77.728"];
+	Wellbeing -- Clothes	[pos="646.56,164.71 666.56,144.99 693.65,118.27 710.84,101.3"];
+	Wellbeing -- Transport	[pos="665.23,167.56 689.63,155.14 719.17,140.12 740.49,129.27"];
+	Connection -- Acceptance	[pos="843.61,499.28 858.01,495.27 872.86,491.15 886,487.49"];
+	Connection -- Forgiveness	[pos="867.55,523.33 867.67,523.33 867.78,523.34 867.9,523.35"];
+	Connection -- Gratitude	[pos="827.55,540.14 844.9,547.76 863.78,556.05 879.09,562.78"];
+	Connection -- Agreement	[pos="804.45,543.36 826.05,563.3 855.45,590.43 874.14,607.67"];
+	Relationship -- Friends	[pos="790.61,645.32 806.43,650.29 822.69,655.39 836.26,659.66"];
+	Relationship -- Community	[pos="758.89,650.23 778.16,664.95 801.91,683.08 818.76,695.94"];
+	Relationship -- Society	[pos="742.77,651.4 758.74,676.26 782.16,712.72 795.82,733.98"];
+	Caring -- Respect	[pos="680.49,716.93 701.88,733.52 730.09,755.42 748.86,769.99"];
+	Caring -- Empathy	[pos="666.9,719.56 681.89,743.29 703.68,777.81 716.63,798.33"];
+	Caring -- Help	[pos="656.41,720.26 662.9,749.94 673.24,797.18 678.8,822.62"];
+	Body -- Medicine	[pos="755.36,277.54 768,246.04 788.87,194.04 799.74,166.94"];
+	Body -- Exercises	[pos="765.07,279.21 783.45,256.93 810.08,224.64 826.21,205.07"];
+	Body -- Nutrition	[pos="778.07,284.12 798.58,272 824.5,256.7 843.38,245.54"];
+	Body -- Water	[pos="791.47,294.98 813.73,290.8 839.82,285.9 859.87,282.13"];
+	Body -- Heart	[pos="793.06,309.67 820.68,313.06 854.54,317.22 878.7,320.18"];
+	Recreation -- Leisure	[pos="845.12,397.19 860.32,392.56 875.99,387.8 889.19,383.78"];
+	Recreation -- Sleep	[pos="869.02,421.16 878.55,421.72 887.76,422.26 895.95,422.73"];
+	Cognition -- Imagination	[pos="176.93,474.76 152.53,493.53 119.57,518.88 98.288,535.25"];
+	Cognition -- Perception	[pos="153.96,470.1 137.1,476.21 119,482.77 103.76,488.29"];
+	Cognition -- Thinking	[pos="127.18,450.2 121.73,450.2 116.34,450.2 111.16,450.2"];
+	Cognition -- Understanding	[pos="153.96,430.3 138.49,424.7 121.98,418.71 107.59,413.5"];
+	Cognition -- Memory	[pos="176.93,425.64 152.22,406.63 118.75,380.88 97.496,364.54"];
+	Consciousness -- Awareness	[pos="165.71,327.19 152.73,322.38 139.45,317.44 127.78,313.11"];
+	Intelligence -- Learning	[pos="186.97,271.55 174.56,268.45 162.09,265.33 151,262.56"];
+	Intelligence -- Experiment	[pos="221.51,264.74 202.3,251.8 179.29,236.3 162.39,224.91"];
+	Intelligence -- Education	[pos="238.82,263.03 221.66,239.51 197,205.71 182.22,185.45"];
+	Emotions -- Positiveness	[pos="332.42,720.04 321.51,746.85 304.9,787.7 295.48,810.86"];
+	Emotions -- Tranquility	[pos="319.87,719.2 301.51,739.31 276.41,766.8 260.45,784.28"];
+	Self -- Emotions	[constraint=false,
+		penwidth=1,
+		pos="303.05,659.2 306.76,662.4 310.61,665.72 314.4,668.98",
+		style=dotted,
+		weight=10];
+	Self -- Delight	[pos="264.71,663.11 250.15,689.04 227.72,728.97 214.98,751.65"];
+	Self -- Joy	[pos="254.22,659.31 233.36,677.28 203.98,702.6 185.9,718.19"];
+	Self -- Expression	[pos="244.06,651.39 222.66,659.54 195.28,669.95 173.77,678.14"];
+	Meditation -- Contemplation	[pos="197.06,590.65 177.75,603.63 154.49,619.27 137.26,630.84"];
+	Meditation -- Breath	[pos="164.25,583.06 150.37,586.43 136.41,589.82 124.5,592.71"];
+	c	[fontcolor=gray,
+		fontsize=12,
+		height=0.2,
+		label="© 2020-2022 Costa Shulyupin",
+		pos="947.86,7.2",
+		shape=plain,
+		style="",
+		width=1.9954];
+}

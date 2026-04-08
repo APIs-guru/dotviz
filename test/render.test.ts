@@ -210,7 +210,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp",
+            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi",
           },
         ]
       `);
@@ -256,7 +256,7 @@ describe('Viz', () => {
           },
           {
             "level": "error",
-            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp",
+            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi",
           },
         ]
       `);
@@ -299,7 +299,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp",
+            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi",
           },
         ]
       `);
