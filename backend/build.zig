@@ -314,6 +314,18 @@ pub fn buildGraphviz(
     addInclude(lib_fdpgen, graphviz_dep);
     lib_fdpgen.addConfigHeader(config_h);
 
+    const lib_twopigen = b.addLibrary(.{
+        .name = "twopigen",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+    lib_twopigen.addCSourceFiles(.{
+        .root = graphviz_dep.path("lib/twopigen"),
+        .files = &src_twopigen,
+    });
+    addInclude(lib_twopigen, graphviz_dep);
+    lib_twopigen.addConfigHeader(config_h);
+
     const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
         .root_module = lib_mod,
@@ -362,10 +374,10 @@ pub fn buildGraphviz(
     lib_label.addConfigHeader(config_h);
 
     inline for (&.{
-        lib,        lib_cdt,      lib_cgraph,   lib_common,
-        lib_dotgen, lib_circogen, lib_neatogen, lib_gvc,
-        lib_label,  lib_pack,     lib_pathplan, lib_plugin_dot_layout,
-        lib_util,   lib_xdot,
+        lib,          lib_cdt,               lib_cgraph,   lib_common,
+        lib_dotgen,   lib_circogen,          lib_neatogen, lib_fdpgen,
+        lib_twopigen, lib_gvc,               lib_label,    lib_pack,
+        lib_pathplan, lib_plugin_dot_layout, lib_util,     lib_xdot,
     }) |library| {
         applyWasiEmulation(library);
     }
@@ -483,6 +495,10 @@ const src_neatogen = [_][]const u8{
 const src_fdpgen = [_][]const u8{
     "layout.c",  "tlayout.c", "grid.c", "fdpinit.c", "clusteredges.c", "comp.c",
     "xlayout.c",
+};
+
+const src_twopigen = [_][]const u8{
+    "twopiinit.c", "circle.c",
 };
 
 const src_label = [_][]const u8{
