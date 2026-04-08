@@ -195,8 +195,9 @@ const WasmString = packed struct(u64) {
     }
 };
 
-fn stringifyResponseJSON(allocator: std.mem.Allocator, response: vizjs_types.RenderResponse) WasmString {
-    var json_writer = std.io.Writer.Allocating.init(allocator);
+fn stringifyResponseJSON(response: vizjs_types.RenderResponse) WasmString {
+    // use global WASM allocator since response is need to be passed to JS
+    var json_writer = std.io.Writer.Allocating.init(wasm_allocator);
     var formatter: std.json.Formatter(vizjs_types.RenderResponse) = .{
         .options = .{},
         .value = response,
@@ -249,7 +250,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
                 .err = json_error,
             },
         }) catch @panic("cannot append error");
-        return stringifyResponseJSON(wasm_allocator, .{
+        return stringifyResponseJSON(.{
             .status = .failure,
             .errors = errors.items,
             .output = null,
@@ -294,7 +295,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     };
 
     if (graphptr == null) {
-        return stringifyResponseJSON(wasm_allocator, .{
+        return stringifyResponseJSON(.{
             .status = .failure,
             .errors = parseAgerrMessages(arena_allocator).items,
             .output = null,
@@ -327,7 +328,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
             .message = .{ .slice = message },
         }) catch @panic("cannot append error");
 
-        return stringifyResponseJSON(wasm_allocator, .{
+        return stringifyResponseJSON(.{
             .status = .failure,
             .errors = errors.items,
             .output = null,
@@ -349,7 +350,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
                 .message = .{ .slice = message },
             }) catch @panic("cannot append error");
 
-            return stringifyResponseJSON(wasm_allocator, .{
+            return stringifyResponseJSON(.{
                 .status = .failure,
                 .errors = errors.items,
                 .output = null,
@@ -369,7 +370,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
                 .message = .{ .slice = message },
             }) catch @panic("cannot append error");
 
-            return stringifyResponseJSON(wasm_allocator, .{
+            return stringifyResponseJSON(.{
                 .status = .failure,
                 .errors = errors.items,
                 .output = null,
@@ -394,7 +395,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         responseSvg = @ptrCast(output.data[0..output.data_position]);
     }
 
-    const responseJSON = stringifyResponseJSON(wasm_allocator, .{
+    const responseJSON = stringifyResponseJSON(.{
         .status = .success,
         .errors = parseAgerrMessages(arena_allocator).items,
         .output = .{
