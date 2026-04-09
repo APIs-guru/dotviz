@@ -10,7 +10,7 @@
   "version": "0.0.7",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/IvanGoncharov/dotviz.git"
+    "url": "git+https://github.com/APIs-guru/dotviz.git"
   },
   "license": "MIT",
   "type": "module",
