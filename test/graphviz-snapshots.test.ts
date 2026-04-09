@@ -632,7 +632,7 @@ async function snapshotGvFile({ task }: TestContext) {
       )
     : output?.svg;
 
-  const basePath = gvPath.replace(/\.gv$/, '');
+  const basePath = gvPath.replace(/\.gv$/, `-snapshots/${engine}_engine`);
   await expectString(dot).toMatchFileSnapshot(basePath + '.dot');
   await expectString(svg).toMatchFileSnapshot(basePath + '.svg');
 }
