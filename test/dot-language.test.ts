@@ -316,6 +316,55 @@ describe('Dot language support', () => {
     `);
   });
 
+  it('chain of edges with node lists', () => {
+    const result = renderString(`
+      graph {
+        a,b -- c,d -- e,f [valueA=a]
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,126,180"];
+      	node [label="\\N"];
+      	a	[height=0.5,
+      		pos="27,162",
+      		width=0.75];
+      	c	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	a -- c	[pos="27,143.7 27,132.85 27,118.92 27,108.1",
+      		valueA=a];
+      	d	[height=0.5,
+      		pos="99,90",
+      		width=0.75];
+      	a -- d	[pos="41.918,146.5 54.275,134.48 71.749,117.49 84.101,105.49",
+      		valueA=a];
+      	b	[height=0.5,
+      		pos="99,162",
+      		width=0.75];
+      	b -- c	[pos="84.082,146.5 71.725,134.48 54.251,117.49 41.899,105.49",
+      		valueA=a];
+      	b -- d	[pos="99,143.7 99,132.85 99,118.92 99,108.1",
+      		valueA=a];
+      	e	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	c -- e	[pos="27,71.697 27,60.846 27,46.917 27,36.104",
+      		valueA=a];
+      	f	[height=0.5,
+      		pos="99,18",
+      		width=0.75];
+      	c -- f	[pos="41.918,74.496 54.275,62.482 71.749,45.494 84.101,33.485",
+      		valueA=a];
+      	d -- e	[pos="84.082,74.496 71.725,62.482 54.251,45.494 41.899,33.485",
+      		valueA=a];
+      	d -- f	[pos="99,71.697 99,60.846 99,46.917 99,36.104",
+      		valueA=a];
+      }
+    `);
+  });
+
   it('empty strings as subgraph attributes', () => {
     const result = renderString(`
         graph {
