@@ -176,10 +176,7 @@ export class Viz {
     const result = this.render(input, options);
 
     if (result.status !== 'success') {
-      throw new Error(
-        result.errors.find((e) => e.level == 'error')?.message ??
-          'render failed',
-      );
+      throw new Error(result.errors.find((e) => e.level == 'error')?.message);
     }
 
     return result.output;
