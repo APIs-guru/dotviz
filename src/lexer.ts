@@ -1,5 +1,6 @@
 import type { Attributes } from './graph.js';
 import {
+  type FixedAttributes,
   NormalizedEdge,
   NormalizedGraph,
   NormalizedNode,
@@ -455,7 +456,10 @@ export interface ParseSuccessResult {
 }
 
 export type ParseResult = ParseSuccessResult | FailureResult;
-export function parseDot(dotStr: string): ParseResult {
+export function parseDot(
+  dotStr: string,
+  fixedAttributes: FixedAttributes,
+): ParseResult {
   const lexer = new Lexer(dotStr);
   try {
     if (lexer.isEOF()) {
@@ -464,7 +468,7 @@ export function parseDot(dotStr: string): ParseResult {
       );
     }
 
-    const graph = parseGraph(lexer);
+    const graph = parseGraph(lexer, fixedAttributes);
     return {
       status: 'success',
       output: graph,
@@ -484,13 +488,21 @@ export function parseDot(dotStr: string): ParseResult {
 
 type NodeID = [NormalizedNode, string | undefined];
 
-function parseGraph(lexer: Lexer): NormalizedGraph {
+function parseGraph(
+  lexer: Lexer,
+  fixedAttributes: FixedAttributes,
+): NormalizedGraph {
   // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
-  const graph = new NormalizedGraph({
-    strict: lexer.optionalKeyword('strict'),
-    directed: parseIsDirectedGraph(),
-    name: lexer.peekIsLiteral('{') ? null : lexer.expectID('graph name').value,
-  });
+  const graph = new NormalizedGraph(
+    {
+      strict: lexer.optionalKeyword('strict'),
+      directed: parseIsDirectedGraph(),
+      name: lexer.peekIsLiteral('{')
+        ? null
+        : lexer.expectID('graph name').value,
+    },
+    fixedAttributes,
+  );
   // FIXME: check if it's viz.js hack or it also present in graphviz
   graph.mergeNodeAttributes({ label: String.raw`\N` });
 
