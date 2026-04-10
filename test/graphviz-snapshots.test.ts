@@ -400,7 +400,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/p4.gv', snapshotGvFile);
 
   it('dot: graphs/pack.gv', snapshotGvFile);
-  // Case("pack", Path("pack.gv"), "neato", "gv", []),
+  it('neato: graphs/pack.gv', snapshotGvFile);
   // Case("pack", Path("pack.gv"), "neato", "gv", ["-Gpack=20"], 1),
   // Case("pack", Path("pack.gv"), "neato", "gv", ["-Gpackmode=graph"], 2),
 
@@ -566,8 +566,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/world.gv', snapshotGvFile);
 
   it('dot: graphs/xlabels.gv', snapshotGvFile);
-  // Case("xlabels", Path("xlabels.gv"), "dot", "png", []),
-  // Case("xlabels", Path("xlabels.gv"), "neato", "png", []),
+  it('neato: graphs/xlabels.gv', snapshotGvFile);
 
   it('dot: graphs/xx.gv', snapshotGvFile);
 
