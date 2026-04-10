@@ -14,7 +14,7 @@ export class NormalizedGraph {
   nodeAttributes: Attributes = {};
   edgeAttributes: Attributes = {};
   allNodes = new Map<string, NormalizedNode>();
-  allEdges: NormalizedEdge[] = [];
+  allEdges = new Map<string | number, NormalizedEdge>();
   subgraphs = new Map<string | number, NormalizedSubgraph>();
 
   constructor(config: NormalizedGraphConfig) {
@@ -64,7 +64,7 @@ export class NormalizedGraph {
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = this.edgeAttributes[key] ?? '';
     }
-    for (const edge of this.allEdges) {
+    for (const edge of this.allEdges.values()) {
       edge.applyDefaultAttributes(defaultAttributes);
     }
     this.edgeAttributes = { ...this.edgeAttributes, ...newAttributes };
@@ -90,11 +90,32 @@ export class NormalizedGraph {
     defaultAttributes: Attributes = {},
   ): [NormalizedEdge, boolean] {
     // FIXME: handle special 'key' attribute
-    // FIXME: handle strict graphs
-    const edge = new NormalizedEdge(this.allEdges.length, config);
-    edge.applyDefaultAttributes(defaultAttributes);
-    this.allEdges.push(edge);
-    return [edge, true];
+    const key = this.edgeKey(config);
+    if (key) {
+      const edge = this.allEdges.get(key);
+      if (edge !== undefined) {
+        return [edge, false];
+      }
+    }
+
+    const newEdge = new NormalizedEdge(this.allEdges.size, config);
+    newEdge.applyDefaultAttributes(defaultAttributes);
+    this.allEdges.set(key ?? newEdge.index, newEdge);
+    return [newEdge, true];
+  }
+
+  edgeKey(config: NormalizedEdgeConfig): string | undefined {
+    const { tail, head } = config;
+    if (this.strict) {
+      if (this.directed) {
+        return tail.index.toString() + ':' + head.index.toString();
+      }
+      if (tail.index < head.index) {
+        return tail.index.toString() + ':' + head.index.toString();
+      }
+      return head.index.toString() + ':' + tail.index.toString();
+    }
+    return undefined;
   }
 
   upsertSubgraph(name: string | null): NormalizedSubgraph {
@@ -120,7 +141,7 @@ export class NormalizedGraph {
       nodeAttributes: this.nodeAttributes,
       edgeAttributes: this.edgeAttributes,
       allNodes: [...this.allNodes.values()],
-      allEdges: this.allEdges,
+      allEdges: [...this.allEdges.values()],
       subgraphs: [...this.subgraphs.values()],
     };
   }
