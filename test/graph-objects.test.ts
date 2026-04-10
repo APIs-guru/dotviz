@@ -20,16 +20,22 @@ describe('Viz', () => {
     it('attributes in options override options in input', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render(
-        { nodeAttributes: { shape: 'rectangle' } },
+        {
+          nodeAttributes: { shape: 'rectangle' },
+          nodes: [{ name: 'a' }],
+        },
         { nodeAttributes: { shape: 'circle' } },
       );
 
       expectSuccessResult(result).toMatchInlineSnapshot(`
         digraph {
-        	graph [bb="0,0,0,0"];
+        	graph [bb="0,0,36,36"];
         	node [label="\\N",
         		shape=circle
         	];
+        	a	[height=0.5,
+        		pos="18,18",
+        		width=0.5];
         }
       `);
     });
