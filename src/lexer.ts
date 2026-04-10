@@ -494,6 +494,7 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   // FIXME: check if it's viz.js hack or it also present in graphviz
   graph.mergeNodeAttributes({ label: String.raw`\N` });
 
+  lexer.expectLiteral('{');
   parseStatementList(graph);
   return graph;
 
@@ -501,8 +502,6 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     owner: NormalizedGraph | NormalizedSubgraph,
   ): void {
     // '{' stmt_list '}'
-    lexer.expectLiteral('{');
-
     while (!lexer.optionalLiteral('}')) {
       if (lexer.isEOF()) {
         lexer.failWithError(
@@ -517,16 +516,8 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   }
 
   function parseStatement(owner: NormalizedGraph | NormalizedSubgraph): void {
-    // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
-    if (lexer.peekIsLiteral('{') || lexer.optionalKeyword('subgraph')) {
-      const tailNodes = parseSubgraph(owner);
-      if (optionalEdgeOp()) {
-        parseEdges(tailNodes, owner);
-      }
-      return;
-    }
-
     const token = lexer.nextToken();
+    // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
     switch (token.kind) {
       case 'ID': {
         if (lexer.peekIsLiteral('=')) {
@@ -550,8 +541,15 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
         break;
       }
 
+      case '{': {
+        const tailNodes = parseSubgraph(owner, null);
+        if (optionalEdgeOp()) {
+          parseEdges(tailNodes, owner);
+        }
+        break;
+      }
       case 'subgraph': {
-        const tailNodes = parseSubgraph(owner);
+        const tailNodes = parseNamedSubgraph(owner);
         if (optionalEdgeOp()) {
           parseEdges(tailNodes, owner);
         }
@@ -576,12 +574,21 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
     }
   }
 
-  function parseSubgraph(
+  function parseNamedSubgraph(
     owner: NormalizedGraph | NormalizedSubgraph,
   ): NodeID[] {
-    const name = lexer.peekIsLiteral('{')
-      ? null
-      : lexer.expectID('subgraph name').value;
+    if (lexer.optionalLiteral('{')) {
+      return parseSubgraph(owner, null);
+    }
+    const name = lexer.expectID('subgraph name').value;
+    lexer.expectLiteral('{');
+    return parseSubgraph(owner, name);
+  }
+
+  function parseSubgraph(
+    owner: NormalizedGraph | NormalizedSubgraph,
+    name: string | null,
+  ): NodeID[] {
     const subgraph = owner.upsertSubgraph(name);
     parseStatementList(subgraph);
     return subgraph.sortedNodes().map((node) => [node, undefined]);
@@ -593,10 +600,14 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
   ) {
     const newEdges = new Set<NormalizedEdge>();
     do {
-      const headNodes =
-        lexer.peekIsLiteral('{') || lexer.optionalKeyword('subgraph')
-          ? parseSubgraph(owner)
-          : [parseNodeID(owner)];
+      let headNodes: NodeID[];
+      if (lexer.optionalLiteral('{')) {
+        headNodes = parseSubgraph(owner, null);
+      } else if (lexer.optionalKeyword('subgraph')) {
+        headNodes = parseNamedSubgraph(owner);
+      } else {
+        headNodes = [parseNodeID(owner)];
+      }
 
       for (const tail of tailNodes) {
         for (const head of headNodes) {
