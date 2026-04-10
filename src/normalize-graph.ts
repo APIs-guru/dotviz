@@ -1,5 +1,11 @@
 import type { Attributes, Graph, Subgraph } from './graph.d.ts';
 
+export interface FixedAttributes {
+  graphAttributes: Attributes | undefined;
+  nodeAttributes: Attributes | undefined;
+  edgeAttributes: Attributes | undefined;
+}
+
 interface NormalizedGraphConfig {
   name: string | null;
   strict: boolean;
@@ -10,6 +16,9 @@ export class NormalizedGraph {
   name: string | null;
   strict: boolean;
   directed: boolean;
+  fixedGraphAttributes: Attributes = {};
+  fixedNodeAttributes: Attributes = {};
+  fixedEdgeAttributes: Attributes = {};
   graphAttributes: Attributes = {};
   nodeAttributes: Attributes = {};
   edgeAttributes: Attributes = {};
@@ -17,10 +26,13 @@ export class NormalizedGraph {
   allEdges = new Map<string | number, NormalizedEdge>();
   subgraphs = new Map<string | number, NormalizedSubgraph>();
 
-  constructor(config: NormalizedGraphConfig) {
+  constructor(config: NormalizedGraphConfig, fixedAttributes: FixedAttributes) {
     this.name = config.name;
     this.strict = config.strict;
     this.directed = config.directed;
+    this.fixedGraphAttributes = fixedAttributes.graphAttributes ?? {};
+    this.fixedNodeAttributes = fixedAttributes.nodeAttributes ?? {};
+    this.fixedEdgeAttributes = fixedAttributes.edgeAttributes ?? {};
   }
 
   mergeGraphAttributes(newAttributes: Attributes | undefined) {
@@ -80,7 +92,11 @@ export class NormalizedGraph {
     }
 
     const newNode = new NormalizedNode(this.allNodes.size, name);
-    newNode.applyDefaultAttributes(defaultAttributes);
+    newNode.applyDefaultAttributes({
+      ...this.nodeAttributes,
+      ...this.fixedNodeAttributes,
+      ...defaultAttributes,
+    });
     this.allNodes.set(name, newNode);
     return [newNode, true];
   }
@@ -99,7 +115,11 @@ export class NormalizedGraph {
     }
 
     const newEdge = new NormalizedEdge(this.allEdges.size, config);
-    newEdge.applyDefaultAttributes(defaultAttributes);
+    newEdge.applyDefaultAttributes({
+      ...this.edgeAttributes,
+      ...this.fixedEdgeAttributes,
+      ...defaultAttributes,
+    });
     this.allEdges.set(key ?? newEdge.index, newEdge);
     return [newEdge, true];
   }
@@ -137,9 +157,12 @@ export class NormalizedGraph {
       name: this.name,
       strict: this.strict,
       directed: this.directed,
-      graphAttributes: this.graphAttributes,
-      nodeAttributes: this.nodeAttributes,
-      edgeAttributes: this.edgeAttributes,
+      graphAttributes: {
+        ...this.graphAttributes,
+        ...this.fixedGraphAttributes,
+      },
+      nodeAttributes: { ...this.nodeAttributes, ...this.fixedNodeAttributes },
+      edgeAttributes: { ...this.edgeAttributes, ...this.fixedEdgeAttributes },
       allNodes: [...this.allNodes.values()],
       allEdges: [...this.allEdges.values()],
       subgraphs: [...this.subgraphs.values()],
@@ -348,12 +371,18 @@ export class NormalizedSubgraph {
   }
 }
 
-export function normalizeGraph(config: Graph): NormalizedGraph {
-  const graph = new NormalizedGraph({
-    name: config.name ?? null,
-    strict: config.strict ?? false,
-    directed: config.directed ?? true,
-  });
+export function normalizeGraph(
+  config: Graph,
+  fixedAttributes: FixedAttributes,
+): NormalizedGraph {
+  const graph = new NormalizedGraph(
+    {
+      name: config.name ?? null,
+      strict: config.strict ?? false,
+      directed: config.directed ?? true,
+    },
+    fixedAttributes,
+  );
   applyDefinitions(graph, config);
   return graph;
 }

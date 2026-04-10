@@ -1,6 +1,10 @@
 import type { Attributes, Graph } from './graph.d.ts';
 import { parseDot } from './lexer.ts';
-import { NormalizedGraph, normalizeGraph } from './normalize-graph.ts';
+import {
+  type FixedAttributes,
+  NormalizedGraph,
+  normalizeGraph,
+} from './normalize-graph.ts';
 
 /**
  * @property format
@@ -146,7 +150,12 @@ export class Viz {
     formats: readonly string[],
     options: RenderOptions = {},
   ): MultipleRenderResult {
-    return this._renderInput(input, formats, options);
+    const fixedAttributes: FixedAttributes = {
+      graphAttributes: options.graphAttributes,
+      nodeAttributes: options.nodeAttributes,
+      edgeAttributes: options.edgeAttributes,
+    };
+    return this._renderInput(input, formats, fixedAttributes, options);
   }
 
   /**
@@ -159,7 +168,7 @@ export class Viz {
   render(input: string | Graph, options: RenderOptions = {}): RenderResult {
     const format = options.format ?? 'dot';
 
-    const result = this._renderInput(input, [format], options);
+    const result = this.renderFormats(input, [format], options);
 
     return result.status === 'success'
       ? {
@@ -185,24 +194,21 @@ export class Viz {
   _renderInput(
     input: string | Graph,
     formats: readonly string[],
+    fixedAttributes: FixedAttributes,
     options: RenderOptions,
   ): MultipleRenderResult {
     let graph: NormalizedGraph;
     const warnings: RenderError[] = [];
     if (typeof input === 'string') {
-      const result = parseDot(input);
+      const result = parseDot(input, fixedAttributes);
       if (result.status === 'failure') {
         return result;
       }
       graph = result.output;
       warnings.push(...result.errors);
     } else {
-      graph = normalizeGraph(input);
+      graph = normalizeGraph(input, fixedAttributes);
     }
-
-    graph.mergeGraphAttributes(options.graphAttributes);
-    graph.mergeNodeAttributes(options.nodeAttributes);
-    graph.mergeEdgeAttributes(options.edgeAttributes);
 
     let renderGv = false;
     let renderDot = false;
