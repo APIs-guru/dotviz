@@ -462,4 +462,69 @@ describe('Dot language support', () => {
       }
     `);
   });
+
+  it('dedublicate edges in strict graph', () => {
+    const result = renderString(`
+      strict graph {
+        {
+          edge [test=1]
+          a -- b
+          edge [test=2]
+          b -- a
+          edge [test=3]
+          a -- b
+        }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      strict graph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [test=3];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -- b	[pos="27,71.697 27,60.846 27,46.917 27,36.104",
+      			test=1];
+      	}
+      }
+    `);
+  });
+  it('dedublicate edges in strict directed graph', () => {
+    const result = renderString(`
+      strict digraph {
+        {
+          edge [test=1]
+          a -> b
+          edge [test=2]
+          b -> a
+          edge [test=3]
+          a -> b
+        }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      strict digraph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [test=3];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -> b	[pos="e,21.138,35.789 21.122,72.055 20.328,64.574 20.076,55.579 20.367,47.137",
+      			test=1];
+      		b -> a	[pos="e,32.878,72.055 32.862,35.789 33.663,43.248 33.922,52.237 33.639,60.686",
+      			test=2];
+      	}
+      }
+    `);
+  });
 });
