@@ -529,14 +529,20 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
         }
 
         const [node] = owner.upsertNode(token.value);
-        const nodeID: NodeID = [node, optionalNodePort()];
+        const nodeIDs: NodeID[] = [[node, optionalNodePort()]];
+        while (lexer.optionalLiteral(',')) {
+          nodeIDs.push(parseNodeID(owner));
+        }
 
         if (lexer.peekIsLiteral('[')) {
           // node_stmt: node_id [ attr_list ]
           // FIXME: check that it's safe to ignore port
-          node.mergeAttributes(parseAttrList());
+          const attributes: Attributes = parseAttrList();
+          for (const [node] of nodeIDs) {
+            node.mergeAttributes(attributes);
+          }
         } else if (optionalEdgeOp()) {
-          parseEdges([nodeID], owner);
+          parseEdges(nodeIDs, owner);
         }
         break;
       }
@@ -606,7 +612,10 @@ function parseGraph(lexer: Lexer): NormalizedGraph {
       } else if (lexer.optionalKeyword('subgraph')) {
         headNodes = parseNamedSubgraph(owner);
       } else {
-        headNodes = [parseNodeID(owner)];
+        headNodes = [];
+        do {
+          headNodes.push(parseNodeID(owner));
+        } while (lexer.optionalLiteral(','));
       }
 
       for (const tail of tailNodes) {
