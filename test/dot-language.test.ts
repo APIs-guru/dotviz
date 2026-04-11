@@ -512,6 +512,93 @@ describe('Dot language support', () => {
     `);
   });
 
+  it('dedublicate edges with the same key', () => {
+    const result = renderString(`
+      graph {
+        {
+          edge [test=<nokey>]
+          a -- b
+          edge [test=key1]
+          a -- b [key = 1]
+          edge [test=bad1]
+          b -- a [key = 1]
+          edge [test=bad2]
+          a -- b [key = 1]
+          edge [test=key2]
+          a -- b [key=2]
+        }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [test=key2];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -- b	[pos="15.56,73.465 12.81,61.865 12.813,46.082 15.57,34.492",
+      			test=<nokey>];
+      		a -- b	[key=1,
+      			pos="27,71.697 27,60.846 27,46.917 27,36.104",
+      			test=key1];
+      		a -- b	[key=2,
+      			pos="38.44,73.465 41.19,61.865 41.187,46.082 38.43,34.492"];
+      	}
+      }
+    `);
+  });
+
+  it('dedublicate edges with the same key in directed graph', () => {
+    const result = renderString(`
+      digraph {
+        {
+          edge [test=<nokey>]
+          a -> b
+          edge [test=key1]
+          a -> b [key = 1]
+          edge [test=key1]
+          b -> a [key = 1]
+          edge [test=bad1]
+          a -> b [key = 1]
+          edge [test=bad2]
+          b -> a [key = 1]
+          edge [test=key2]
+          a -> b [key=2]
+        }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [test=key2];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -> b	[pos="e,10.643,32.455 10.626,75.503 6.8265,66.4 5.8204,54.129 7.6076,43.348",
+      			test=<nokey>];
+      		a -> b	[key=1,
+      			pos="e,21.138,35.789 21.122,72.055 20.328,64.574 20.076,55.579 20.367,47.137",
+      			test=key1];
+      		a -> b	[key=2,
+      			pos="e,43.357,32.455 43.374,75.503 47.173,66.4 48.18,54.129 46.392,43.348"];
+      		b -> a	[key=1,
+      			pos="e,32.878,72.055 32.862,35.789 33.663,43.248 33.922,52.237 33.639,60.686",
+      			test=key1];
+      	}
+      }
+    `);
+  });
+
   it('dedublicate edges in strict graph', () => {
     const result = renderString(`
       strict graph {
@@ -543,6 +630,7 @@ describe('Dot language support', () => {
       }
     `);
   });
+
   it('dedublicate edges in strict directed graph', () => {
     const result = renderString(`
       strict digraph {
