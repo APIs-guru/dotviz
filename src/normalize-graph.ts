@@ -135,17 +135,21 @@ export class NormalizedGraph {
   }
 
   edgeKey(config: NormalizedEdgeConfig): string | undefined {
-    const { tail, head } = config;
-    if (this.strict) {
-      if (this.directed) {
-        return tail.index.toString() + ':' + head.index.toString();
-      }
-      if (tail.index < head.index) {
-        return tail.index.toString() + ':' + head.index.toString();
-      }
-      return head.index.toString() + ':' + tail.index.toString();
+    let tail = config.tail.index;
+    let head = config.head.index;
+
+    if (!this.directed && head > tail) {
+      [tail, head] = [head, tail];
     }
-    return undefined;
+
+    if (this.strict) {
+      return tail.toString() + ':' + head.toString();
+    }
+
+    if (config.key == null) {
+      return undefined;
+    }
+    return tail.toString() + ':' + head.toString() + ':' + config.key;
   }
 
   upsertSubgraph(name: string | null): NormalizedSubgraph {
@@ -209,18 +213,21 @@ export class NormalizedNode {
 interface NormalizedEdgeConfig {
   tail: NormalizedNode;
   head: NormalizedNode;
+  key: string | null;
 }
 
 export class NormalizedEdge {
   index: number;
   tail: NormalizedNode;
   head: NormalizedNode;
+  key: string | null;
   attributes: Attributes = {};
 
   constructor(index: number, config: NormalizedEdgeConfig) {
     this.index = index;
     this.tail = config.tail;
     this.head = config.head;
+    this.key = config.key;
   }
 
   mergeAttributes(newAttributes: Attributes | undefined) {
@@ -235,6 +242,7 @@ export class NormalizedEdge {
     return {
       tail: this.tail.index,
       head: this.head.index,
+      key: this.key,
       attributes: this.attributes,
     };
   }
@@ -332,7 +340,6 @@ export class NormalizedSubgraph {
     config: NormalizedEdgeConfig,
     defaultAttributes: Attributes = {},
   ): [NormalizedEdge, boolean] {
-    // FIXME: handle special 'key' attribute
     const [edge, isCreated] = this.parent.upsertEdge(config, {
       ...this.edgeAttributes,
       ...defaultAttributes,
@@ -416,8 +423,9 @@ function applyDefinitions(
     for (const config of edges) {
       const [tail] = owner.upsertNode(config.tail);
       const [head] = owner.upsertNode(config.head);
-      const [edge] = owner.upsertEdge({ tail, head });
-      edge.mergeAttributes(config.attributes);
+      const [key, attributes] = extractKeyFromEdgeAttributes(config.attributes);
+      const [edge] = owner.upsertEdge({ tail, head, key });
+      edge.mergeAttributes(attributes);
     }
   }
 
@@ -427,4 +435,27 @@ function applyDefinitions(
       applyDefinitions(subgraph, config);
     }
   }
+}
+
+export function extractKeyFromEdgeAttributes(
+  attributes: Attributes | undefined,
+): [string | null, Attributes] {
+  if (attributes == null) {
+    return [null, {}];
+  }
+
+  const { key } = attributes;
+  if (key == null) {
+    return [null, attributes];
+  }
+
+  const attributesCopy = { ...attributes };
+  delete attributesCopy.key;
+
+  /* v8 ignore start -- FIXME: it's wierd edge case, so in future we should forbid using HTML as keys */
+  if (typeof key === 'object') {
+    throw new TypeError('HTML as edge key is not supported');
+  }
+  /* v8 ignore end */
+  return [key.toString(), attributesCopy];
 }

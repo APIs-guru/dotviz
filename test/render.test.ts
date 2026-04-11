@@ -158,7 +158,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "JSON error UnexpectedToken at 1:361: \`lse,"engine":"dot","yInvert":"bad value","reduce":false,"images":{}}\`",
+            "message": "JSON error UnexpectedToken at 1:372: \`lse,"engine":"dot","yInvert":"bad value","reduce":false,"images":{}}\`",
           },
         ]
       `);

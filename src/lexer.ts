@@ -1,7 +1,7 @@
 import type { Attributes } from './graph.js';
 import {
+  extractKeyFromEdgeAttributes,
   type FixedAttributes,
-  NormalizedEdge,
   NormalizedGraph,
   NormalizedNode,
   NormalizedSubgraph,
@@ -616,7 +616,7 @@ function parseGraph(
     tailNodes: NodeID[],
     owner: NormalizedGraph | NormalizedSubgraph,
   ) {
-    const newEdges = new Set<NormalizedEdge>();
+    const newEdges: [NodeID, NodeID][] = [];
     do {
       let headNodes: NodeID[];
       if (lexer.optionalLiteral('{')) {
@@ -632,19 +632,24 @@ function parseGraph(
 
       for (const tail of tailNodes) {
         for (const head of headNodes) {
-          const [edge] = owner.upsertEdge({ tail: tail[0], head: head[0] });
-          edge.mergeAttributes({ headport: head[1], tailport: tail[1] });
-          newEdges.add(edge);
+          newEdges.push([tail, head]);
         }
       }
       tailNodes = headNodes;
     } while (optionalEdgeOp());
 
+    let key: string | null = null;
+    let attributes: Attributes | undefined;
     if (lexer.peekIsLiteral('[')) {
-      const attributes = parseAttrList();
-      for (const edge of newEdges) {
-        edge.mergeAttributes(attributes);
-      }
+      [key, attributes] = extractKeyFromEdgeAttributes(parseAttrList());
+    }
+    for (const [tail, head] of newEdges) {
+      const [edge] = owner.upsertEdge({ tail: tail[0], head: head[0], key });
+      edge.mergeAttributes({
+        headport: head[1],
+        tailport: tail[1],
+        ...attributes,
+      });
     }
   }
 
