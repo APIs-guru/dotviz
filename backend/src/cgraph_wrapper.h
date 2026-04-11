@@ -29,7 +29,7 @@ const char *agget(void *obj, const char *name);
 Agraph_t *agroot(void* obj);
 Agraph_t *agsubg(Agraph_t *g, const char *name, int cflag);
 Agnode_t *agnode(Agraph_t *g, const char *name, int createflag);
-Agedge_t *agedge(Agraph_t *g, Agnode_t *t, Agnode_t *h, char *name,
+Agedge_t *agedge(Agraph_t *g, Agnode_t *t, Agnode_t *h, const char *name,
                  int createflag);
 Agsym_t *agattr_text(Agraph_t *g, int kind, const char *name, const char *value);
 Agsym_t *agattr_html(Agraph_t *g, int kind, const char *name, const char *value);

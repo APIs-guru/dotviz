@@ -50,6 +50,7 @@ pub const Node = struct {
 pub const Edge = struct {
     tail: usize,
     head: usize,
+    key: ?[:0]const u8,
     attributes: Attributes,
 };
 
