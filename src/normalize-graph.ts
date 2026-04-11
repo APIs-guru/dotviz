@@ -94,28 +94,19 @@ export class NormalizedGraph {
     };
   }
 
-  upsertNode(
-    name: string,
-    defaultAttributes: Attributes = {},
-  ): [NormalizedNode, boolean] {
+  upsertNode(name: string): [NormalizedNode, boolean] {
     const node = this.allNodes.get(name);
     if (node !== undefined) {
       return [node, false];
     }
 
     const newNode = new NormalizedNode(this.allNodes.size, name);
-    newNode.mergeAttributes({
-      ...this.nodeAttributes,
-      ...defaultAttributes,
-    });
+    newNode.mergeAttributes(this.nodeAttributes);
     this.allNodes.set(name, newNode);
     return [newNode, true];
   }
 
-  upsertEdge(
-    config: NormalizedEdgeConfig,
-    defaultAttributes: Attributes = {},
-  ): [NormalizedEdge, boolean] {
+  upsertEdge(config: NormalizedEdgeConfig): [NormalizedEdge, boolean] {
     // FIXME: handle special 'key' attribute
     const key = this.edgeKey(config);
     if (key) {
@@ -126,10 +117,7 @@ export class NormalizedGraph {
     }
 
     const newEdge = new NormalizedEdge(this.allEdges.size, config);
-    newEdge.mergeAttributes({
-      ...this.edgeAttributes,
-      ...defaultAttributes,
-    });
+    newEdge.mergeAttributes(this.edgeAttributes);
     this.allEdges.set(key ?? newEdge.index, newEdge);
     return [newEdge, true];
   }
@@ -320,34 +308,24 @@ export class NormalizedSubgraph {
     this.graphAttributes = { ...defaults, ...this.graphAttributes };
   }
 
-  upsertNode(
-    name: string,
-    defaultAttributes: Attributes = {},
-  ): [NormalizedNode, boolean] {
-    const [node, isCreated] = this.parent.upsertNode(name, {
-      ...this.nodeAttributes,
-      ...defaultAttributes,
-    });
+  upsertNode(name: string): [NormalizedNode, boolean] {
+    const [node, isCreated] = this.parent.upsertNode(name);
 
     this.nodeIndexes.add(node);
     if (isCreated) {
       this.ownedNodes.add(node);
+      node.mergeAttributes(this.nodeAttributes);
     }
     return [node, isCreated];
   }
 
-  upsertEdge(
-    config: NormalizedEdgeConfig,
-    defaultAttributes: Attributes = {},
-  ): [NormalizedEdge, boolean] {
-    const [edge, isCreated] = this.parent.upsertEdge(config, {
-      ...this.edgeAttributes,
-      ...defaultAttributes,
-    });
+  upsertEdge(config: NormalizedEdgeConfig): [NormalizedEdge, boolean] {
+    const [edge, isCreated] = this.parent.upsertEdge(config);
 
     this.edgeIndexes.add(edge);
     if (isCreated) {
       this.ownedEdges.add(edge);
+      edge.mergeAttributes(this.edgeAttributes);
     }
     return [edge, isCreated];
   }
