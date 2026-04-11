@@ -35,11 +35,7 @@ export class NormalizedGraph {
     this.fixedEdgeAttributes = fixedAttributes.edgeAttributes ?? {};
   }
 
-  mergeGraphAttributes(newAttributes: Attributes | undefined) {
-    if (newAttributes === undefined) {
-      return;
-    }
-
+  mergeGraphAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = this.graphAttributes[key] ?? '';
@@ -55,11 +51,7 @@ export class NormalizedGraph {
     };
   }
 
-  mergeNodeAttributes(newAttributes: Attributes | undefined) {
-    if (newAttributes === undefined) {
-      return;
-    }
-
+  mergeNodeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = '';
@@ -75,11 +67,7 @@ export class NormalizedGraph {
     };
   }
 
-  mergeEdgeAttributes(newAttributes: Attributes | undefined) {
-    if (newAttributes === undefined) {
-      return;
-    }
-
+  mergeEdgeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = '';
@@ -182,7 +170,7 @@ export class NormalizedNode {
     this.name = name;
   }
 
-  mergeAttributes(newAttributes: Attributes | undefined) {
+  mergeAttributes(newAttributes: Attributes) {
     this.attributes = { ...this.attributes, ...newAttributes };
   }
 
@@ -218,7 +206,7 @@ export class NormalizedEdge {
     this.key = config.key;
   }
 
-  mergeAttributes(newAttributes: Attributes | undefined) {
+  mergeAttributes(newAttributes: Attributes) {
     this.attributes = { ...this.attributes, ...newAttributes };
   }
 
@@ -257,11 +245,7 @@ export class NormalizedSubgraph {
     this.name = name;
   }
 
-  mergeGraphAttributes(newAttributes: Attributes | undefined) {
-    if (newAttributes === undefined) {
-      return;
-    }
-
+  mergeGraphAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = this.graphAttributes[key] ?? '';
@@ -273,11 +257,7 @@ export class NormalizedSubgraph {
     this.graphAttributes = { ...this.graphAttributes, ...newAttributes };
   }
 
-  mergeNodeAttributes(newAttributes: Attributes | undefined) {
-    if (newAttributes === undefined) {
-      return;
-    }
-
+  mergeNodeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = this.nodeAttributes[key] ?? '';
@@ -289,11 +269,7 @@ export class NormalizedSubgraph {
     this.nodeAttributes = { ...this.nodeAttributes, ...newAttributes };
   }
 
-  mergeEdgeAttributes(newAttributes: Attributes | undefined) {
-    if (newAttributes === undefined) {
-      return;
-    }
-
+  mergeEdgeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = this.edgeAttributes[key] ?? '';
@@ -385,15 +361,23 @@ function applyDefinitions(
   owner: NormalizedGraph | NormalizedSubgraph,
   config: Graph | Subgraph,
 ) {
-  owner.mergeGraphAttributes(config.graphAttributes);
-  owner.mergeNodeAttributes(config.nodeAttributes);
-  owner.mergeEdgeAttributes(config.edgeAttributes);
+  if (config.graphAttributes) {
+    owner.mergeGraphAttributes(config.graphAttributes);
+  }
+  if (config.nodeAttributes) {
+    owner.mergeNodeAttributes(config.nodeAttributes);
+  }
+  if (config.edgeAttributes) {
+    owner.mergeEdgeAttributes(config.edgeAttributes);
+  }
 
   const { nodes, edges, subgraphs } = config;
   if (nodes) {
     for (const config of nodes) {
       const [node] = owner.upsertNode(config.name);
-      node.mergeAttributes(config.attributes);
+      if (config.attributes) {
+        node.mergeAttributes(config.attributes);
+      }
     }
   }
 
@@ -401,9 +385,13 @@ function applyDefinitions(
     for (const config of edges) {
       const [tail] = owner.upsertNode(config.tail);
       const [head] = owner.upsertNode(config.head);
-      const [key, attributes] = extractKeyFromEdgeAttributes(config.attributes);
+      const [key, attributes] = config.attributes
+        ? extractKeyFromEdgeAttributes(config.attributes)
+        : [null, undefined];
       const [edge] = owner.upsertEdge({ tail, head, key });
-      edge.mergeAttributes(attributes);
+      if (attributes) {
+        edge.mergeAttributes(attributes);
+      }
     }
   }
 
@@ -416,12 +404,8 @@ function applyDefinitions(
 }
 
 export function extractKeyFromEdgeAttributes(
-  attributes: Attributes | undefined,
+  attributes: Attributes,
 ): [string | null, Attributes] {
-  if (attributes == null) {
-    return [null, {}];
-  }
-
   const { key } = attributes;
   if (key == null) {
     return [null, attributes];
