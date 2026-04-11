@@ -48,7 +48,11 @@ export class NormalizedGraph {
       subgraph.applyDefaultGraphAttributes(defaultAttributes);
     }
 
-    this.graphAttributes = { ...this.graphAttributes, ...newAttributes };
+    this.graphAttributes = {
+      ...this.graphAttributes,
+      ...newAttributes,
+      ...this.fixedGraphAttributes,
+    };
   }
 
   mergeNodeAttributes(newAttributes: Attributes | undefined) {
@@ -58,13 +62,17 @@ export class NormalizedGraph {
 
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = this.nodeAttributes[key] ?? '';
+      defaultAttributes[key] = '';
     }
     for (const node of this.allNodes.values()) {
       node.applyDefaultAttributes(defaultAttributes);
     }
 
-    this.nodeAttributes = { ...this.nodeAttributes, ...newAttributes };
+    this.nodeAttributes = {
+      ...this.nodeAttributes,
+      ...newAttributes,
+      ...this.fixedNodeAttributes,
+    };
   }
 
   mergeEdgeAttributes(newAttributes: Attributes | undefined) {
@@ -74,12 +82,16 @@ export class NormalizedGraph {
 
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = this.edgeAttributes[key] ?? '';
+      defaultAttributes[key] = '';
     }
     for (const edge of this.allEdges.values()) {
       edge.applyDefaultAttributes(defaultAttributes);
     }
-    this.edgeAttributes = { ...this.edgeAttributes, ...newAttributes };
+    this.edgeAttributes = {
+      ...this.edgeAttributes,
+      ...newAttributes,
+      ...this.fixedEdgeAttributes,
+    };
   }
 
   upsertNode(
@@ -92,9 +104,8 @@ export class NormalizedGraph {
     }
 
     const newNode = new NormalizedNode(this.allNodes.size, name);
-    newNode.applyDefaultAttributes({
+    newNode.mergeAttributes({
       ...this.nodeAttributes,
-      ...this.fixedNodeAttributes,
       ...defaultAttributes,
     });
     this.allNodes.set(name, newNode);
@@ -115,9 +126,8 @@ export class NormalizedGraph {
     }
 
     const newEdge = new NormalizedEdge(this.allEdges.size, config);
-    newEdge.applyDefaultAttributes({
+    newEdge.mergeAttributes({
       ...this.edgeAttributes,
-      ...this.fixedEdgeAttributes,
       ...defaultAttributes,
     });
     this.allEdges.set(key ?? newEdge.index, newEdge);
@@ -323,7 +333,6 @@ export class NormalizedSubgraph {
     defaultAttributes: Attributes = {},
   ): [NormalizedEdge, boolean] {
     // FIXME: handle special 'key' attribute
-    // FIXME: handle strict graphs
     const [edge, isCreated] = this.parent.upsertEdge(config, {
       ...this.edgeAttributes,
       ...defaultAttributes,
