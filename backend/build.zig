@@ -302,6 +302,18 @@ pub fn buildGraphviz(
     addInclude(lib_neatogen, graphviz_dep);
     lib_neatogen.addConfigHeader(config_h);
 
+    const lib_fdpgen = b.addLibrary(.{
+        .name = "fdpgen",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+    lib_fdpgen.addCSourceFiles(.{
+        .root = graphviz_dep.path("lib/fdpgen"),
+        .files = &src_fdpgen,
+    });
+    addInclude(lib_fdpgen, graphviz_dep);
+    lib_fdpgen.addConfigHeader(config_h);
+
     const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
         .root_module = lib_mod,
@@ -466,6 +478,11 @@ const src_neatogen = [_][]const u8{
     "delaunay.c",    "sgd.c",
     "randomkit.c",
     // "adjust.c", "bfs.c", "call_tri.c", "circuit.c", "closest.c", "compute_hierarchy.c", "conjgrad.c", "constrained_majorization.c", "constrained_majorization_ipsep.c", "constraint.c", "delaunay.c", "dijkstra.c", "edges.c", "embed_graph.c", "geometry.c", "heap.c", "hedges.c", "info.c", "kkutils.c", "legal.c", "lu.c", "matinv.c", "matrix_ops.c", "memory.c", "multispline.c", "neatoinit.c", "neatosplines.c", "opt_arrangement.c", "overlap.c", "pca.c", "poly.c", "quad_prog_solve.c", "quad_prog_vpsc.c", "randomkit.c", "sgd.c", "site.c", "smart_ini_x.c", "solve.c", "stress.c", "stuff.c", "voronoi.c"
+};
+
+const src_fdpgen = [_][]const u8{
+    "layout.c",  "tlayout.c", "grid.c", "fdpinit.c", "clusteredges.c", "comp.c",
+    "xlayout.c",
 };
 
 const src_label = [_][]const u8{
