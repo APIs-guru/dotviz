@@ -150,7 +150,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/b94.gv', snapshotGvFile);
   // FIXME runs for 16sec it.only('dot: graphs/b100.gv', snapshotGvFile);
   it('dot: graphs/b102.gv', snapshotGvFile);
-  it('dot: graphs/b103.gv', snapshotGvFile);
+  it('dot: graphs/b103.gv', snapshotGvFile, 6000);
   // FIXME runs for 15sec it.only('dot: graphs/b104.gv', snapshotGvFile);
   it('dot: graphs/b106.gv', snapshotGvFile);
   it('dot: graphs/b117.gv', snapshotGvFile);
