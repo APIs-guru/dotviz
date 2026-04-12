@@ -52,7 +52,7 @@ describe('GraphViz Gallery', () => {
     it('dot: gallery/directed/unix.gv', snapshotGvFile);
     it('dot: gallery/directed/world.gv', snapshotGvFile);
   });
-  describe.skip('fdp', () => {
+  describe('fdp', () => {
     it('fdp: gallery/fdp/fdpclust.gv', snapshotGvFile);
   });
   describe('gradient', () => {
@@ -255,7 +255,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/dpd.gv', snapshotGvFile);
   it('dot: graphs/edgeclip.gv', snapshotGvFile);
   it('dot: graphs/ER.gv', snapshotGvFile);
-  // FDP it('dot: graphs/fdp.gv', snapshotGvFile);
+  it('fdp: graphs/fdp.gv', snapshotGvFile);
   it('dot: graphs/fig6.gv', snapshotGvFile);
   it('dot: graphs/flatedge.gv', snapshotGvFile);
   it('dot: graphs/fsm.gv', snapshotGvFile);
