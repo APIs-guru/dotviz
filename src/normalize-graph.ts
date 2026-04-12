@@ -16,12 +16,12 @@ export class NormalizedGraph {
   name: string | null;
   strict: boolean;
   directed: boolean;
-  fixedGraphAttributes: Attributes = {};
-  fixedNodeAttributes: Attributes = {};
-  fixedEdgeAttributes: Attributes = {};
-  graphAttributes: Attributes = {};
-  nodeAttributes: Attributes = {};
-  edgeAttributes: Attributes = {};
+  fixedGraphAttributes: Attributes;
+  fixedNodeAttributes: Attributes;
+  fixedEdgeAttributes: Attributes;
+  graphAttributes: Attributes;
+  nodeAttributes: Attributes;
+  edgeAttributes: Attributes;
   allNodes = new Map<string, NormalizedNode>();
   allEdges = new Map<string | number, NormalizedEdge>();
   subgraphs = new Map<string | number, NormalizedSubgraph>();
@@ -30,15 +30,23 @@ export class NormalizedGraph {
     this.name = config.name;
     this.strict = config.strict;
     this.directed = config.directed;
-    this.fixedGraphAttributes = fixedAttributes.graphAttributes ?? {};
-    this.fixedNodeAttributes = fixedAttributes.nodeAttributes ?? {};
-    this.fixedEdgeAttributes = fixedAttributes.edgeAttributes ?? {};
+    this.graphAttributes = this.fixedGraphAttributes = {
+      ...fixedAttributes.graphAttributes,
+    };
+    this.nodeAttributes = this.fixedNodeAttributes = {
+      ...fixedAttributes.nodeAttributes,
+    };
+    this.edgeAttributes = this.fixedEdgeAttributes = {
+      ...fixedAttributes.edgeAttributes,
+    };
   }
 
   mergeGraphAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = this.graphAttributes[key] ?? '';
+      if (this.fixedGraphAttributes[key] === undefined) {
+        defaultAttributes[key] = this.graphAttributes[key] ?? '';
+      }
     }
     for (const subgraph of this.subgraphs.values()) {
       subgraph.applyDefaultGraphAttributes(defaultAttributes);
@@ -54,7 +62,9 @@ export class NormalizedGraph {
   mergeNodeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = '';
+      if (this.fixedNodeAttributes[key] === undefined) {
+        defaultAttributes[key] = '';
+      }
     }
     for (const node of this.allNodes.values()) {
       node.applyDefaultAttributes(defaultAttributes);
@@ -70,7 +80,9 @@ export class NormalizedGraph {
   mergeEdgeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = '';
+      if (this.fixedEdgeAttributes[key] === undefined) {
+        defaultAttributes[key] = '';
+      }
     }
     for (const edge of this.allEdges.values()) {
       edge.applyDefaultAttributes(defaultAttributes);
@@ -147,12 +159,9 @@ export class NormalizedGraph {
       name: this.name,
       strict: this.strict,
       directed: this.directed,
-      graphAttributes: {
-        ...this.graphAttributes,
-        ...this.fixedGraphAttributes,
-      },
-      nodeAttributes: { ...this.nodeAttributes, ...this.fixedNodeAttributes },
-      edgeAttributes: { ...this.edgeAttributes, ...this.fixedEdgeAttributes },
+      graphAttributes: this.graphAttributes,
+      nodeAttributes: this.nodeAttributes,
+      edgeAttributes: this.edgeAttributes,
       allNodes: [...this.allNodes.values()],
       allEdges: [...this.allEdges.values()],
       subgraphs: [...this.subgraphs.values()],
