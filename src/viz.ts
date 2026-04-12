@@ -1,4 +1,10 @@
 import type { Attributes, Graph } from './graph.d.ts';
+import { parseDot } from './lexer.ts';
+import {
+  type FixedAttributes,
+  NormalizedGraph,
+  normalizeGraph,
+} from './normalize-graph.ts';
 
 /**
  * @property format
@@ -144,7 +150,12 @@ export class Viz {
     formats: readonly string[],
     options: RenderOptions = {},
   ): MultipleRenderResult {
-    return this._renderInput(input, formats, options);
+    const fixedAttributes: FixedAttributes = {
+      graphAttributes: options.graphAttributes,
+      nodeAttributes: options.nodeAttributes,
+      edgeAttributes: options.edgeAttributes,
+    };
+    return this._renderInput(input, formats, fixedAttributes, options);
   }
 
   /**
@@ -157,7 +168,7 @@ export class Viz {
   render(input: string | Graph, options: RenderOptions = {}): RenderResult {
     const format = options.format ?? 'dot';
 
-    const result = this._renderInput(input, [format], options);
+    const result = this.renderFormats(input, [format], options);
 
     return result.status === 'success'
       ? {
@@ -174,10 +185,7 @@ export class Viz {
     const result = this.render(input, options);
 
     if (result.status !== 'success') {
-      throw new Error(
-        result.errors.find((e) => e.level == 'error')?.message ??
-          'render failed',
-      );
+      throw new Error(result.errors.find((e) => e.level == 'error')?.message);
     }
 
     return result.output;
@@ -186,26 +194,37 @@ export class Viz {
   _renderInput(
     input: string | Graph,
     formats: readonly string[],
+    fixedAttributes: FixedAttributes,
     options: RenderOptions,
   ): MultipleRenderResult {
+    let graph: NormalizedGraph;
+    const warnings: RenderError[] = [];
+    if (typeof input === 'string') {
+      const result = parseDot(input, fixedAttributes);
+      if (result.status === 'failure') {
+        return result;
+      }
+      graph = result.output;
+      warnings.push(...result.errors);
+    } else {
+      graph = normalizeGraph(input, fixedAttributes);
+    }
+
     let renderGv = false;
     let renderDot = false;
     let renderSvg = false;
     for (const name of formats) {
       switch (name) {
-        case 'gv': {
+        case 'gv':
           renderGv = true;
           break;
-        }
-        case 'dot': {
+        case 'dot':
           renderDot = true;
           break;
-        }
-        case 'svg': {
+        case 'svg':
           renderSvg = true;
           break;
-        }
-        default: {
+        default:
           return {
             status: 'failure',
             output: null,
@@ -217,25 +236,19 @@ export class Viz {
               },
             ],
           };
-        }
       }
     }
-    const requestJSON = JSON.stringify(
-      {
-        graph: typeof input === 'string' ? { dot: input } : { graph: input },
-        graphAttributes: options.graphAttributes ?? null,
-        nodeAttributes: options.nodeAttributes ?? null,
-        edgeAttributes: options.edgeAttributes ?? null,
-        renderDot: renderDot || renderGv,
-        renderSvg,
-        engine: options.engine ?? 'dot',
-        yInvert: options.yInvert ?? false,
-        reduce: options.reduce ?? false,
-        images: this._normalizeImages(options.images),
-      },
-      null,
-      2,
-    );
+
+    const request = {
+      graph,
+      renderDot: renderDot || renderGv,
+      renderSvg,
+      engine: options.engine ?? 'dot',
+      yInvert: options.yInvert ?? false,
+      reduce: options.reduce ?? false,
+      images: this._normalizeImages(options.images),
+    };
+    const requestJSON = JSON.stringify(request);
     const cJson = this._utf8Encoder.encode(requestJSON);
     const jsonPtr = this._wasm.wasm_alloc(cJson.length);
     const inputJSONBuf = new Uint8Array(
@@ -268,7 +281,7 @@ export class Viz {
         }
       }
       response.output = output;
-      return response;
+      return { ...response, errors: [...warnings, ...response.errors] };
     } finally {
       this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
     }
@@ -324,10 +337,9 @@ export class Viz {
         }
         break;
       }
-      default: {
+      default:
         console.trace(`fd_write: unknown fd ${fd.toString()}`);
         return 52; // WASI_ERRNO_NOTSUP
-      }
     }
 
     view.setUint32(nwritten_ptr, totalWritten, true);

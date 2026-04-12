@@ -19,20 +19,23 @@ typedef struct Agraph_s Agraph_t;
 typedef struct Agraph_s graph_t;
 typedef struct Agsym_s Agsym_t;
 
-Agraph_t *agmemread(const char *cp);
 int agclose(Agraph_t *g);
 Agraph_t *wrapped_agopen(const char *name, bool directed, bool strict);
+void wrapped_sym_set_print(Agsym_t* sym);
 
 void set_gvc_to_null(Agraph_t *g);
 
 const char *agget(void *obj, const char *name);
+Agraph_t *agroot(void* obj);
 Agraph_t *agsubg(Agraph_t *g, const char *name, int cflag);
 Agnode_t *agnode(Agraph_t *g, const char *name, int createflag);
-Agedge_t *agedge(Agraph_t *g, Agnode_t *t, Agnode_t *h, char *name,
+Agedge_t *agedge(Agraph_t *g, Agnode_t *t, Agnode_t *h, const char *name,
                  int createflag);
-Agsym_t *agattr_text(Agraph_t *g, int kind, char *name, const char *value);
-Agsym_t *agattr_html(Agraph_t *g, int kind, char *name, const char *value);
+Agsym_t *agattr_text(Agraph_t *g, int kind, const char *name, const char *value);
+Agsym_t *agattr_html(Agraph_t *g, int kind, const char *name, const char *value);
+
 Agnode_t *agsubnode(Agraph_t *g, Agnode_t *n, int createflag);
+Agedge_t *agsubedge(Agraph_t *g, Agedge_t *e, int createflag);
 
 int agsafeset_text(void *obj, char *name, const char *value, const char *def);
 int agsafeset_html(void *obj, char *name, const char *value, const char *def);

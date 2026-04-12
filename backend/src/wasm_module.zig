@@ -26,7 +26,7 @@ fn toCString(maybe_string: ?[:0]const u8) [*c]const u8 {
 fn setDefaultAttributes(
     allocator: std.mem.Allocator,
     graph: ?*graphviz.Agraph_t,
-    attributes: *vizjs_types.Attributes,
+    attributes: vizjs_types.Attributes,
     kind: c_int,
 ) void {
     var iterator = attributes.map.iterator();
@@ -39,13 +39,16 @@ fn setDefaultAttributes(
             _ = graphviz.agattr_text(graph, kind, name, "");
         }
 
-        switch (attr.value_ptr.*) {
+        const sym = brk: switch (attr.value_ptr.*) {
             .text => |val| {
-                _ = graphviz.agattr_text(graph, kind, name, @ptrCast(val.ptr));
+                break :brk graphviz.agattr_text(graph, kind, name, @ptrCast(val.ptr));
             },
             .html => |val| {
-                _ = graphviz.agattr_html(graph, kind, name, @ptrCast(val.ptr));
+                break :brk graphviz.agattr_html(graph, kind, name, @ptrCast(val.ptr));
             },
+        };
+        if (graphviz.agroot(graph) == graph) {
+            graphviz.wrapped_sym_set_print(sym);
         }
     }
 }
@@ -53,7 +56,7 @@ fn setDefaultAttributes(
 fn setAttributes(
     allocator: std.mem.Allocator,
     object: ?*anyopaque,
-    attributes: *vizjs_types.Attributes,
+    attributes: vizjs_types.Attributes,
 ) void {
     var iterator = attributes.map.iterator();
     while (iterator.next()) |attr| {
@@ -71,57 +74,60 @@ fn setAttributes(
     }
 }
 
-fn setAllDefaultAttributes(
-    allocator: std.mem.Allocator,
-    graph: anytype,
-    json: anytype,
-) void {
-    if (json.graphAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, graphviz.AGRAPH);
+fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph_json: vizjs_types.Graph) void {
+    setDefaultAttributes(allocator, graph, graph_json.graphAttributes, graphviz.AGRAPH);
+    setDefaultAttributes(allocator, graph, graph_json.nodeAttributes, graphviz.AGNODE);
+    setDefaultAttributes(allocator, graph, graph_json.edgeAttributes, graphviz.AGEDGE);
+
+    const allNodes = allocator.alloc(?*graphviz.Agnode_t, graph_json.allNodes.len) catch @panic(
+        "cannot alloc for allNodes",
+    );
+    for (graph_json.allNodes, 0..) |node_json, i| {
+        const node_ptr = graphviz.agnode(graph, node_json.name, graphviz.true);
+        setAttributes(allocator, node_ptr, node_json.attributes);
+        allNodes[i] = node_ptr;
     }
-    if (json.nodeAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, graphviz.AGNODE);
+
+    const allEdges = allocator.alloc(?*graphviz.Agedge_t, graph_json.allEdges.len) catch @panic(
+        "cannot alloc for allEdges",
+    );
+    for (graph_json.allEdges, 0..) |edge_json, i| {
+        const tail_node = allNodes[edge_json.tail];
+        const head_node = allNodes[edge_json.head];
+        const key: [*c]const u8 = edge_json.key orelse null;
+        const edge = graphviz.agedge(graph, tail_node, head_node, key, graphviz.true);
+        setAttributes(allocator, edge, edge_json.attributes);
+        allEdges[i] = edge;
     }
-    if (json.edgeAttributes) |attributes| {
-        setDefaultAttributes(allocator, graph, attributes, graphviz.AGEDGE);
+
+    for (graph_json.subgraphs) |subgraph_json| {
+        const subgraph = graphviz.agsubg(graph, toCString(subgraph_json.name), graphviz.true);
+        readSubgraphJSON(allocator, subgraph, subgraph_json, allNodes, allEdges);
     }
 }
 
-fn readGraph(allocator: std.mem.Allocator, graph: anytype, json: anytype) void {
-    setAllDefaultAttributes(allocator, graph, json);
-    if (json.nodes) |nodes| {
-        for (nodes) |node| {
-            const node_ptr = graphviz.agnode(graph, node.name, graphviz.true);
-            if (node.attributes) |attributes| {
-                setAttributes(
-                    allocator,
-                    node_ptr,
-                    attributes,
-                );
-            }
-        }
+fn readSubgraphJSON(
+    allocator: std.mem.Allocator,
+    subgraph: anytype,
+    subgraph_json: vizjs_types.Subgraph,
+    allNodes: []?*graphviz.Agnode_t,
+    allEdges: []?*graphviz.Agedge_t,
+) void {
+    setDefaultAttributes(allocator, subgraph, subgraph_json.graphAttributes, graphviz.AGRAPH);
+    setDefaultAttributes(allocator, subgraph, subgraph_json.nodeAttributes, graphviz.AGNODE);
+    setDefaultAttributes(allocator, subgraph, subgraph_json.edgeAttributes, graphviz.AGEDGE);
+
+    for (subgraph_json.nodeIndexes) |node| {
+        _ = graphviz.agsubnode(subgraph, allNodes[node], graphviz.true);
     }
 
-    if (json.edges) |edges| {
-        for (edges) |edge| {
-            const tail_ptr = graphviz.agnode(graph, @ptrCast(edge.tail.ptr), graphviz.true);
-            const head_ptr = graphviz.agnode(graph, @ptrCast(edge.head.ptr), graphviz.true);
-            const edge_ptr = graphviz.agedge(graph, tail_ptr, head_ptr, null, graphviz.true);
-            if (edge.attributes) |attributes| {
-                setAttributes(
-                    allocator,
-                    edge_ptr,
-                    attributes,
-                );
-            }
-        }
+    for (subgraph_json.edgeIndexes) |edge| {
+        _ = graphviz.agsubedge(subgraph, allEdges[edge], graphviz.true);
     }
 
-    if (json.subgraphs) |subgraphs| {
-        for (subgraphs) |subgraph| {
-            const subgraph_ptr = graphviz.agsubg(graph, toCString(subgraph.name), graphviz.true);
-            readGraph(allocator, subgraph_ptr, subgraph);
-        }
+    for (subgraph_json.subgraphs) |child_subgraph_json| {
+        const child_subgraph = graphviz.agsubg(subgraph, toCString(child_subgraph_json.name), graphviz.true);
+        readSubgraphJSON(allocator, child_subgraph, child_subgraph_json, allNodes, allEdges);
     }
 }
 
@@ -259,53 +265,22 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     g_image_map = request.images;
 
-    const graphptr = switch (request.graph) {
-        .dot => |dot_string| blk: {
-
-            // FIXME: should be [:0]u8 already
-            const dot_string_z = arena_allocator.dupeZ(u8, dot_string) catch @panic("cannot alloc");
-            // Try to read one graph
-            const graph = graphviz.agmemread(dot_string_z);
-
-            // Consume the rest of the input
-            // while (true) {
-            //     // FIXME: figure out why it is here
-            //     var other_graph: ?Agrw_t = null;
-            //     other_graph = c.gw_agmemread(null);
-            //     if (other_graph) |g| {
-            //         _ = c.gw_agclose(g);
-            //     } else {
-            //         break;
-            //     }
-            // }
-
-            break :blk graph;
-        },
-        .graph => |graph_json| blk: {
-            const maybe_graph = graphviz.wrapped_agopen(
-                toCString(graph_json.name),
-                graph_json.directed,
-                graph_json.strict,
-            );
-            if (maybe_graph) |graph| {
-                readGraph(arena_allocator, graph, graph_json);
-            }
-            break :blk maybe_graph;
-        },
-    };
-
-    if (graphptr == null) {
+    const graph_json = request.graph;
+    const graph = graphviz.wrapped_agopen(
+        toCString(graph_json.name),
+        graph_json.directed,
+        graph_json.strict,
+    );
+    if (graph == null) {
         return stringifyResponseJSON(.{
             .status = .failure,
             .errors = parseAgerrMessages(arena_allocator).items,
             .output = null,
         });
     }
-    defer _ = graphviz.agclose(graphptr);
+    defer _ = graphviz.agclose(graph);
 
-    setAllDefaultAttributes(arena_allocator, graphptr, request);
-
-    // FIXME: maybe call setDefaultAttributes
+    readGraphJSON(arena_allocator, graph, graph_json);
 
     Y_invert = request.yInvert;
     Reduce = request.reduce;
@@ -335,7 +310,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         });
     };
 
-    if (graphviz.agget(graphptr, "layout")) |layout_cstr| {
+    if (graphviz.agget(graph, "layout")) |layout_cstr| {
         const layout_str = std.mem.span(layout_cstr);
         const layout = std.meta.stringToEnum(vizjs_types.Engine, layout_str) orelse {
             const message = std.fmt.allocPrint(
@@ -378,20 +353,20 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         }
     }
 
-    layoutRender(engine, gvc, graphptr);
-    defer layoutCleanup(engine, graphptr);
+    layoutRender(engine, gvc, graph);
+    defer layoutCleanup(engine, graph);
 
     var responseDot: ?[:0]const u8 = null;
     defer freeCString(responseDot);
     if (request.renderDot) {
-        const output = graphviz.render_dot(graphptr);
+        const output = graphviz.render_dot(graph);
         responseDot = @ptrCast(output.data[0..output.data_position]);
     }
 
     var responseSvg: ?[:0]const u8 = null;
     defer freeCString(responseSvg);
     if (request.renderSvg) {
-        const output = graphviz.render_svg(graphptr);
+        const output = graphviz.render_svg(graph);
         responseSvg = @ptrCast(output.data[0..output.data_position]);
     }
 
@@ -406,32 +381,32 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     return responseJSON;
 }
 
-fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graphptr: ?*graphviz.Agraph_t) void {
+fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graph: ?*graphviz.Agraph_t) void {
     switch (engine) {
         .dot => {
-            graphviz.my_graph_init(gvc, graphptr, true);
-            graphviz.dot_layout(graphptr);
+            graphviz.my_graph_init(gvc, graph, true);
+            graphviz.dot_layout(graph);
         },
         .circo => {
-            graphviz.my_graph_init(gvc, graphptr, false);
-            graphviz.circo_layout(graphptr);
+            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.circo_layout(graph);
         },
         .neato => {
-            graphviz.my_graph_init(gvc, graphptr, false);
-            graphviz.neato_layout(graphptr);
+            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.neato_layout(graph);
         },
     }
     // FIXME: IMPORTANT: check that we don't use GVC after this line
-    graphviz.set_gvc_to_null(graphptr);
+    graphviz.set_gvc_to_null(graph);
 }
 
-fn layoutCleanup(engine: vizjs_types.Engine, graphptr: ?*graphviz.Agraph_t) void {
+fn layoutCleanup(engine: vizjs_types.Engine, graph: ?*graphviz.Agraph_t) void {
     switch (engine) {
-        .dot => graphviz.dot_cleanup(graphptr),
-        .circo => graphviz.circo_cleanup(graphptr),
-        .neato => graphviz.neato_cleanup(graphptr),
+        .dot => graphviz.dot_cleanup(graph),
+        .circo => graphviz.circo_cleanup(graph),
+        .neato => graphviz.neato_cleanup(graph),
     }
-    graphviz.graph_cleanup(graphptr);
+    graphviz.graph_cleanup(graph);
 }
 
 fn freeCString(string: ?[:0]const u8) void {
