@@ -21,21 +21,31 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render(
         {
-          nodeAttributes: { shape: 'rectangle' },
-          nodes: [{ name: 'a' }],
+          graphAttributes: { testGraph: 'valueGraphBad' },
+          nodeAttributes: { testNode: 'valueNodeBad' },
+          edgeAttributes: { shape: 'valueEdgeBad' },
+          edges: [{ tail: 'a', head: 'a' }],
         },
-        { nodeAttributes: { shape: 'circle' } },
+        {
+          graphAttributes: { testGraph: 'valueGraph' },
+          nodeAttributes: { testNode: 'valueNode' },
+          edgeAttributes: { shape: 'valueEdge' },
+        },
       );
 
       expectSuccessResult(result).toMatchInlineSnapshot(`
         digraph {
-        	graph [bb="0,0,36,36"];
-        	node [label="\\N",
-        		shape=circle
+        	graph [bb="0,0,72,36",
+        		testGraph=valueGraph
         	];
+        	node [label="\\N",
+        		testNode=valueNode
+        	];
+        	edge [shape=valueEdge];
         	a	[height=0.5,
-        		pos="18,18",
-        		width=0.5];
+        		pos="27,18",
+        		width=0.75];
+        	a -> a	[pos="e,52.443,11.309 52.443,24.691 63.028,25.152 72,22.922 72,18 72,15.001 68.668,13.001 63.67,12.001"];
         }
       `);
     });
