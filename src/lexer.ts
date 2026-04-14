@@ -178,9 +178,11 @@ class Lexer {
       return { kind: 'ID', idType: IDType.String, value };
     } else if (isNumberStart(tokenStartChar)) {
       const value = this.#readNumber();
-      const token = { kind: 'ID' as const, idType: IDType.Number, value };
-      this.#warnIfAmbiguous(tokenStartIndex, token);
-      return token;
+      if (value !== undefined) {
+        const token = { kind: 'ID' as const, idType: IDType.Number, value };
+        this.#warnIfAmbiguous(tokenStartIndex, token);
+        return token;
+      }
     } else if (isNameStart(tokenStartChar)) {
       const value = this.#readName();
       const maybeKeyword = value.toLowerCase();
@@ -207,7 +209,7 @@ class Lexer {
     const nextChar = this.#peekNextChar();
     if (isNumberContinue(nextChar) || isNameContinue(nextChar)) {
       const ambiguousText =
-        ellipsize(this.#dotStr.slice(tokenStartIndex, this.#nextIndex)) +
+        errorStringValue(this.#dotStr.slice(tokenStartIndex, this.#nextIndex)) +
         nextChar;
       this.errors.push({
         level: 'warning',
@@ -251,23 +253,26 @@ class Lexer {
     }
   }
 
-  #readNumber(): string {
+  #readNumber(): string | undefined {
     const valueStart = this.#nextIndex;
+    // [-]?.[0-9]⁺ or [-]?[0-9]⁺(.[0-9]*)?
     this.#skipChar('-');
-    if (this.#peekNextChar() !== '.') {
-      this.#readDigits();
+    const sawPeriod = this.#skipChar('.');
+    if (!isDigit(this.#peekNextChar())) {
+      this.#nextIndex = valueStart;
+      return undefined;
     }
-    if (this.#skipChar('.')) {
-      this.#readDigits();
-    }
-
-    return this.#dotStr.slice(valueStart, this.#nextIndex);
-  }
-
-  #readDigits(): void {
     while (isDigit(this.#peekNextChar())) {
       this.#readNextChar();
     }
+    if (!sawPeriod) {
+      this.#skipChar('.');
+      while (isDigit(this.#peekNextChar())) {
+        this.#readNextChar();
+      }
+    }
+
+    return this.#dotStr.slice(valueStart, this.#nextIndex);
   }
 
   #readHTML(): string {
@@ -281,7 +286,7 @@ class Lexer {
         case undefined: {
           const value = this.#dotStr.slice(valueStart, this.#nextIndex);
           this.failWithError(
-            `(${line}:${column}) Unterminated HTML string. Add a closing '>' to complete the HTML started here: '<${ellipsize(value)}'.`,
+            `(${line}:${column}) Unterminated HTML string. Add a closing '>' to complete the HTML started here: '<${errorStringValue(value)}'.`,
           );
           break;
         }
@@ -303,20 +308,28 @@ class Lexer {
 
     this.#readNextChar(); // skip opening `"`
     const valueStart = this.#nextIndex;
-    while (!this.#skipChar('"') || this.#peekNextChar(-2) === '\\') {
-      if (this.#readNextChar() === undefined) {
-        const value = this.#dotStr.slice(valueStart, this.#nextIndex);
-        this.failWithError(
-          `(${line}:${column}) Unterminated string. Add a closing '"' to complete the string started here: '"${ellipsize(value)}'.`,
-        );
+    while (true) {
+      switch (this.#readNextChar()) {
+        case undefined: {
+          const value = this.#dotStr.slice(valueStart, this.#nextIndex);
+          this.failWithError(
+            `(${line}:${column}) Unterminated string. Add a closing '"' to complete the string started here: '"${errorStringValue(value)}'.`,
+          );
+          break;
+        }
+        case '\\':
+          this.#readNextChar();
+          break;
+
+        case '"':
+          return this.#dotStr
+            .slice(valueStart, this.#nextIndex - 1)
+            .replaceAll(String.raw`\"`, '"')
+            .replaceAll('\\\r\n', '')
+            .replaceAll('\\\r', '')
+            .replaceAll('\\\n', '');
       }
     }
-
-    return this.#dotStr
-      .slice(valueStart, this.#nextIndex - 1)
-      .replaceAll('\\\r\n', '')
-      .replaceAll('\\\r', '')
-      .replaceAll('\\\n', '');
   }
 
   #readName(): string {
@@ -352,14 +365,7 @@ class Lexer {
   #readNextChar(): string | undefined {
     const charIndex = this.#nextIndex++;
     const char = this.#dotStr[charIndex];
-    if (char === '\r') {
-      if (this.#peekNextChar() !== '\n') {
-        // "Carriage Return (U+000D)" [lookahead != "New Line (U+000A)"]
-        ++this.#line;
-        this.#lineStart = charIndex;
-      }
-    } else if (char === '\n') {
-      // "New Line (U+000A)"
+    if (char === '\n') {
       ++this.#line;
       this.#lineStart = charIndex;
     }
@@ -374,11 +380,9 @@ function idStr({ idType, value }: ID): string {
     case IDType.Name:
       return `identifier '${value}'`;
     case IDType.String:
-      return `string "${ellipsize(value)}"`;
+      return `string "${errorStringValue(value)}"`;
     case IDType.HTML:
-      return `html "${ellipsize(value)}"`;
-    default:
-      return `unknown token '${value}'`;
+      return `html <${errorStringValue(value)}>`;
   }
 }
 
@@ -410,8 +414,9 @@ function tokenStr(token: Token): string {
   return token.kind === 'ID' ? idStr(token) : kindStr(token.kind);
 }
 
-function ellipsize(str: string): string {
-  return str.length > 20 ? str.slice(0, 17) + '...' : str;
+function errorStringValue(value: string) {
+  const truncated = value.length > 20 ? value.slice(0, 17) + '...' : value;
+  return JSON.stringify(truncated).slice(1, -1);
 }
 
 type DigitChars = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
@@ -475,14 +480,16 @@ export function parseDot(
       errors: lexer.errors,
     };
   } catch (error: unknown) {
-    if (error === Lexer.AbortError) {
-      return {
-        status: 'failure',
-        output: null,
-        errors: lexer.errors,
-      };
+    /* c8 ignore start -- Should only happen in case of internal errors */
+    if (error !== Lexer.AbortError) {
+      throw error;
     }
-    throw error;
+    /* c8 ignore end */
+    return {
+      status: 'failure',
+      output: null,
+      errors: lexer.errors,
+    };
   }
 }
 
