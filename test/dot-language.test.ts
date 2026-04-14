@@ -2,7 +2,10 @@ import * as VizJSPackage from '@viz-js/viz';
 import { describe, expect, it } from 'vitest';
 
 import * as DotVizPackage from '../src/index.ts';
-import { expectSuccessResult } from './util/render-result.ts';
+import {
+  expectFailureResult,
+  expectSuccessResult,
+} from './util/render-result.ts';
 
 const vizJS = await VizJSPackage.instance();
 const dotviz = await DotVizPackage.instance();
@@ -58,6 +61,24 @@ describe('Dot language support', () => {
     const keywordResult = renderString('graph "graph" {}');
     expectSuccessResult(keywordResult).toMatchInlineSnapshot(`
       graph "graph" {
+      	graph [bb="0,0,0,0"];
+      	node [label="\\N"];
+      }
+    `);
+  });
+
+  it('skip ignored characters', () => {
+    const result = renderString(`
+      graph
+      \n\r\t\uFEFF
+      # comment
+      // another one
+      /* start comment
+         end comment */
+      {}
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
       }
@@ -512,11 +533,11 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('dedublicate edges with the same key', () => {
+  it('deduplicate edges with the same key', () => {
     const result = renderString(`
       graph {
         {
-          edge [test=<nokey>]
+          edge [test=<no_key>]
           a -- b
           edge [test=key1]
           a -- b [key = 1]
@@ -542,7 +563,7 @@ describe('Dot language support', () => {
       			pos="27,18",
       			width=0.75];
       		a -- b	[pos="15.56,73.465 12.81,61.865 12.813,46.082 15.57,34.492",
-      			test=<nokey>];
+      			test=<no_key>];
       		a -- b	[key=1,
       			pos="27,71.697 27,60.846 27,46.917 27,36.104",
       			test=key1];
@@ -553,11 +574,11 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('dedublicate edges with the same key in directed graph', () => {
+  it('deduplicate edges with the same key in directed graph', () => {
     const result = renderString(`
       digraph {
         {
-          edge [test=<nokey>]
+          edge [test=<no_key>]
           a -> b
           edge [test=key1]
           a -> b [key = 1]
@@ -585,7 +606,7 @@ describe('Dot language support', () => {
       			pos="27,18",
       			width=0.75];
       		a -> b	[pos="e,10.643,32.455 10.626,75.503 6.8265,66.4 5.8204,54.129 7.6076,43.348",
-      			test=<nokey>];
+      			test=<no_key>];
       		a -> b	[key=1,
       			pos="e,21.138,35.789 21.122,72.055 20.328,64.574 20.076,55.579 20.367,47.137",
       			test=key1];
@@ -599,7 +620,7 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('dedublicate edges in strict graph', () => {
+  it('deduplicate edges in strict graph', () => {
     const result = renderString(`
       strict graph {
         {
@@ -631,7 +652,7 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('dedublicate edges in strict directed graph', () => {
+  it('deduplicate edges in strict directed graph', () => {
     const result = renderString(`
       strict digraph {
         {
@@ -662,6 +683,234 @@ describe('Dot language support', () => {
       			test=2];
       	}
       }
+    `);
+  });
+
+  it('error on missing graph at the beginning of file', () => {
+    const result = dotviz.render('test');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected identifier 'test', expected keyword 'graph' or 'digraph' at the beginning of the file.",
+        },
+      ]
+    `);
+  });
+
+  it('error on graph without statements', () => {
+    const result = dotviz.render('graph');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected end of file, expected graph name.",
+        },
+      ]
+    `);
+  });
+
+  it('error on using square brackets for graph definition', () => {
+    const result = dotviz.render('graph []');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected '[', expected graph name.",
+        },
+      ]
+    `);
+  });
+
+  it('error on using keyword as graph name', () => {
+    const result = dotviz.render('graph subgraph {}');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected reserved keyword keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".",
+        },
+      ]
+    `);
+  });
+
+  it('error on invalid graph definition', () => {
+    const result = dotviz.render('graph name "bad"');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected string "bad", expected '{'.",
+        },
+      ]
+    `);
+  });
+  describe('error on invalid graph definition', () => {
+    it.for([
+      [',', `','`],
+      [':', `':'`],
+      [';', `';'`],
+      ['=', `'='`],
+      ['[', `'['`],
+      [']', `']'`],
+      ['}', `'}'`],
+      ['->', `'->'`],
+      ['--', `'--'`],
+      ['node', `keyword 'node'`],
+      ['edge', `keyword 'edge'`],
+      ['graph', `keyword 'graph'`],
+      ['digraph', `keyword 'digraph'`],
+      ['subgraph', `keyword 'subgraph'`],
+      ['strict', `keyword 'strict'`],
+      ['', 'end of file'],
+    ])('token $0', ([token, tokenDebugMessage]) => {
+      const result = dotviz.render('graph name ' + token);
+      expectFailureResult(result).toStrictEqual([
+        {
+          level: 'error',
+          message: `Unexpected ${tokenDebugMessage}, expected '{'.`,
+        },
+      ]);
+    });
+  });
+
+  it('error on invalid syntax in graph statement list', () => {
+    const result = dotviz.render('graph { -- }');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected '--', expected node, edge, subgraph or attribute statement.",
+        },
+      ]
+    `);
+  });
+
+  it('error on invalid attributes syntax', () => {
+    const result = dotviz.render(`
+        graph {
+          node {}
+        }
+      `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+        [
+          {
+            "level": "error",
+            "message": "Unexpected '{', expected '['.",
+          },
+        ]
+      `);
+  });
+
+  it('error on invalid syntax inside attribute list', () => {
+    const result = dotviz.render(`
+        graph {
+          node [ -> ]
+        }
+      `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected '->', expected attribute name.",
+        },
+      ]
+    `);
+  });
+
+  it('error on unterminated string', () => {
+    const result = dotviz.render(`
+        graph {
+          test="never finishes
+        }
+      `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "(3:17) Unterminated string. Add a closing '"' to complete the string started here: '"never finishes\\n  ...'.",
+        },
+      ]
+    `);
+  });
+
+  it('error on unterminated html', () => {
+    const result = dotviz.render(`
+        graph {
+          test=<never finishes
+        }
+      `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "(3:17) Unterminated HTML string. Add a closing '>' to complete the HTML started here: '<never finishes\\n  ...'.",
+        },
+      ]
+    `);
+  });
+
+  it('error on using directed edges in a undirected graph', () => {
+    const result = dotviz.render(`
+      graph {
+        a -> a
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.",
+        },
+      ]
+    `);
+  });
+
+  it('error on using undirected edges in a directed graph', () => {
+    const result = dotviz.render(`
+      digraph {
+        a -- a
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.",
+        },
+      ]
+    `);
+  });
+
+  describe('error on invalid syntax inside subgraph', () => {
+    it.for(['&', '/', '-', '.'])('character $0', (badChar) => {
+      const result = dotviz.render(`
+        digraph {
+          { ${badChar} }
+        }
+      `);
+      expectFailureResult(result).toStrictEqual([
+        {
+          level: 'error',
+          message: `(3:14) Unexpected character: '${badChar}'. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
+        },
+      ]);
+    });
+  });
+
+  it('error on invalid syntax in named subgraph definition', () => {
+    const result = dotviz.render(`
+      graph {
+        subgraph name <bad>
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "message": "Unexpected html <bad>, expected '{'.",
+        },
+      ]
     `);
   });
 });

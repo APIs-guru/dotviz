@@ -423,7 +423,7 @@ export function extractKeyFromEdgeAttributes(
   const attributesCopy = { ...attributes };
   delete attributesCopy.key;
 
-  /* v8 ignore start -- FIXME: it's wierd edge case, so in future we should forbid using HTML as keys */
+  /* v8 ignore start -- FIXME: it's weird edge case, so in future we should forbid using HTML as keys */
   if (typeof key === 'object') {
     throw new TypeError('HTML as edge key is not supported');
   }
