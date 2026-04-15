@@ -85,15 +85,9 @@ describe('Viz', () => {
     it('accepts default attributes', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph {}', {
-        graphAttributes: {
-          a: 123,
-        },
-        nodeAttributes: {
-          b: false,
-        },
-        edgeAttributes: {
-          c: 'test',
-        },
+        graphAttributes: { a: 123 },
+        nodeAttributes: { b: false },
+        edgeAttributes: { c: 'test' },
       });
 
       expectSuccessResult(result).toMatchInlineSnapshot(`
@@ -129,7 +123,14 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render('');
 
-      expectFailureResult(result).toMatchInlineSnapshot(`[]`);
+      expectFailureResult(result).toMatchInlineSnapshot(`
+        [
+          {
+            "level": "error",
+            "message": "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
+          },
+        ]
+      `);
     });
 
     it('returns error messages for invalid input', async () => {
@@ -140,7 +141,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
+            "message": "Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);
@@ -157,8 +158,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "JSON error UnexpectedToken at 11:25: \`
-          "yInvert": "bad value",\`",
+            "message": "JSON error UnexpectedToken at 1:372: \`lse,"engine":"dot","yInvert":"bad value","reduce":false,"images":{}}\`",
           },
         ]
       `);
@@ -173,7 +173,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid1'",
+            "message": "Unexpected identifier 'invalid1', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);
@@ -182,7 +182,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid2'",
+            "message": "Unexpected identifier 'invalid2', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);
@@ -238,7 +238,7 @@ describe('Viz', () => {
         [
           {
             "level": "warning",
-            "message": "syntax ambiguity - badly delimited number '1.2.' in line 1 of input splits into two tokens",
+            "message": "Ambiguous token sequence: '1.2.' will be split into number '1.2' and a following token. If you want it interpreted as a single value, use quotes: "1.2.". Otherwise, use whitespace or other delimiters to separate tokens.",
           },
         ]
       `);
@@ -252,7 +252,7 @@ describe('Viz', () => {
         [
           {
             "level": "warning",
-            "message": "syntax ambiguity - badly delimited number '1.2.' in line 1 of input splits into two tokens",
+            "message": "Ambiguous token sequence: '1.2.' will be split into number '1.2' and a following token. If you want it interpreted as a single value, use quotes: "1.2.". Otherwise, use whitespace or other delimiters to separate tokens.",
           },
           {
             "level": "error",
@@ -327,8 +327,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 scanning a quoted string (missing endquote? longer than 16384?)
-        String starting:" }",
+            "message": "(1:9) Unterminated string. Add a closing '"' to complete the string started here: '" }'.",
           },
         ]
       `);
