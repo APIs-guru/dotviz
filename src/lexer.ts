@@ -382,7 +382,7 @@ function idStr({ idType, value }: ID): string {
     case IDType.String:
       return `string "${errorStringValue(value)}"`;
     case IDType.HTML:
-      return `html <${errorStringValue(value)}>`;
+      return `HTML string <${errorStringValue(value)}>`;
   }
 }
 
@@ -500,14 +500,23 @@ function parseGraph(
   fixedAttributes: FixedAttributes,
 ): NormalizedGraph {
   // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
+  const strict = lexer.optionalKeyword('strict');
+  const directed = lexer.optionalKeyword('digraph');
+
+  if (!directed && !lexer.optionalKeyword('graph')) {
+    lexer.failWithError(
+      `Unexpected ${tokenStr(lexer.nextToken())}, expected keyword ` +
+        (strict
+          ? `'graph' or 'digraph' after 'strict'.`
+          : `'strict', 'graph' or 'digraph' at the beginning of the file.`),
+    );
+  }
+
+  const name = lexer.peekIsLiteral('{')
+    ? null
+    : lexer.expectID('graph name').value;
   const graph = new NormalizedGraph(
-    {
-      strict: lexer.optionalKeyword('strict'),
-      directed: parseIsDirectedGraph(),
-      name: lexer.peekIsLiteral('{')
-        ? null
-        : lexer.expectID('graph name').value,
-    },
+    { strict, directed, name },
     fixedAttributes,
   );
   // FIXME: check if it's viz.js hack or it also present in graphviz
@@ -699,17 +708,6 @@ function parseGraph(
       return true;
     }
     return false;
-  }
-
-  function parseIsDirectedGraph(): boolean {
-    if (lexer.optionalKeyword('graph')) {
-      return false;
-    } else if (lexer.optionalKeyword('digraph')) {
-      return true;
-    }
-    lexer.failWithError(
-      `Unexpected ${tokenStr(lexer.nextToken())}, expected keyword 'graph' or 'digraph' at the beginning of the file.`,
-    );
   }
 
   function parseAttrList(): Attributes {
