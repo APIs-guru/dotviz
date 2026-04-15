@@ -1,4 +1,4 @@
-import type { Attributes } from './graph.js';
+import type { Attributes } from './graph.d.ts';
 import {
   extractKeyFromEdgeAttributes,
   type FixedAttributes,
@@ -101,7 +101,7 @@ class Lexer {
       return token;
     }
     this.failWithError(
-      `Unexpected reserved keyword ${tokenStr(token)} where ${description} was expected. If you want to use it as an identifier, enclose it in quotes: "${token.kind}".`,
+      `Unexpected reserved keyword '${token.kind}' where ${description} was expected. If you want to use it as an identifier, enclose it in quotes: "${token.kind}".`,
     );
   }
 

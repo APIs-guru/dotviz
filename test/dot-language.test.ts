@@ -728,7 +728,7 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
-          "message": "Unexpected reserved keyword keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".",
+          "message": "Unexpected reserved keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".",
         },
       ]
     `);
