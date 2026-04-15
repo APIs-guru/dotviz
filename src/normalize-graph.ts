@@ -107,7 +107,6 @@ export class NormalizedGraph {
   }
 
   upsertEdge(config: NormalizedEdgeConfig): [NormalizedEdge, boolean] {
-    // FIXME: handle special 'key' attribute
     const key = this.edgeKey(config);
     if (key) {
       const edge = this.allEdges.get(key);
