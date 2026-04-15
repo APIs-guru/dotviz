@@ -185,7 +185,9 @@ export class Viz {
     const result = this.render(input, options);
 
     if (result.status !== 'success') {
-      throw new Error(result.errors.find((e) => e.level == 'error')?.message);
+      let message = result.errors.find((e) => e.level == 'error')?.message;
+      message ??= 'Unknown error';
+      throw new Error(message);
     }
 
     return result.output;
