@@ -692,7 +692,7 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
-          "message": "Unexpected identifier 'test', expected keyword 'graph' or 'digraph' at the beginning of the file.",
+          "message": "Unexpected identifier 'test', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
         },
       ]
     `);
@@ -745,7 +745,7 @@ describe('Dot language support', () => {
       ]
     `);
   });
-  describe('error on invalid graph definition', () => {
+  describe('error on invalid graph definition with various tokens', () => {
     it.for([
       [',', `','`],
       [':', `':'`],
@@ -850,7 +850,7 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('error on using directed edges in a undirected graph', () => {
+  it('error on using directed edges in an undirected graph', () => {
     const result = dotviz.render(`
       graph {
         a -> a
@@ -908,7 +908,7 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
-          "message": "Unexpected html <bad>, expected '{'.",
+          "message": "Unexpected HTML string <bad>, expected '{'.",
         },
       ]
     `);
