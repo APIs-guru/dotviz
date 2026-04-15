@@ -233,8 +233,7 @@ export class Viz {
             errors: [
               {
                 level: 'error',
-                message:
-                  'Format: "invalid" not recognized. Use one of: dot gv svg',
+                message: `Format: "${name}" not recognized. Use one of: dot gv svg`,
               },
             ],
           };

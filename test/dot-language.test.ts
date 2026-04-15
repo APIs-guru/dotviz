@@ -170,6 +170,35 @@ describe('Dot language support', () => {
     `);
   });
 
+  it('various values as attributes', () => {
+    const result = renderString(String.raw`
+      graph {
+        graph [
+          str1="",
+          str2="\"",
+          str3="\\\"",
+          str4="a",
+          str5="\
+          a",
+          str6="\na",
+        ]
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(String.raw`
+      graph {
+      	graph [bb="0,0,0,0",
+      		str1="",
+      		str2="\"",
+      		str3="\\\"",
+      		str4=a,
+      		str5="          a",
+      		str6="\na"
+      	];
+      	node [label="\N"];
+      }
+    `);
+  });
+
   it('global graph attributes shorthand', () => {
     const result = renderString(`
       graph {
