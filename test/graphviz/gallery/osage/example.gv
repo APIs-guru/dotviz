@@ -1,0 +1,28 @@
+graph {
+	layout=osage
+		subgraph cluster_0 {
+			label="composite cluster";
+			subgraph cluster_1 {
+			    label="the first cluster";
+				C
+				L
+				U
+				S
+				T
+				E
+				R
+			}
+			subgraph cluster_2 {
+			    label="the second\ncluster";
+				a
+				b
+				c
+				d
+			}
+			1
+			2
+		}
+	3
+	4
+	5
+}

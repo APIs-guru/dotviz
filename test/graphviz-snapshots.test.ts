@@ -87,6 +87,9 @@ describe('GraphViz Gallery', () => {
   describe('patchwork', () => {
     it('patchwork: gallery/patchwork/example.gv', snapshotGvFile);
   });
+  describe('osage', () => {
+    it('osage: gallery/osage/example.gv', snapshotGvFile);
+  });
   describe('undirected', () => {
     it('dot: gallery/undirected/gd_1994_2007.gv', snapshotGvFile);
     it('dot: gallery/undirected/grid.gv', snapshotGvFile);
