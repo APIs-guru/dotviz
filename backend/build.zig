@@ -326,6 +326,18 @@ pub fn buildGraphviz(
     addInclude(lib_twopigen, graphviz_dep);
     lib_twopigen.addConfigHeader(config_h);
 
+    const lib_patchwork = b.addLibrary(.{
+        .name = "patchwork",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+    lib_patchwork.addCSourceFiles(.{
+        .root = graphviz_dep.path("lib/patchwork"),
+        .files = &src_patchwork,
+    });
+    addInclude(lib_patchwork, graphviz_dep);
+    lib_patchwork.addConfigHeader(config_h);
+
     const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
         .root_module = lib_mod,
@@ -374,10 +386,11 @@ pub fn buildGraphviz(
     lib_label.addConfigHeader(config_h);
 
     inline for (&.{
-        lib,          lib_cdt,               lib_cgraph,   lib_common,
-        lib_dotgen,   lib_circogen,          lib_neatogen, lib_fdpgen,
-        lib_twopigen, lib_gvc,               lib_label,    lib_pack,
-        lib_pathplan, lib_plugin_dot_layout, lib_util,     lib_xdot,
+        lib,          lib_cdt,       lib_cgraph,            lib_common,
+        lib_dotgen,   lib_circogen,  lib_neatogen,          lib_fdpgen,
+        lib_twopigen, lib_patchwork, lib_gvc,               lib_label,
+        lib_pack,     lib_pathplan,  lib_plugin_dot_layout, lib_util,
+        lib_xdot,
     }) |library| {
         applyWasiEmulation(library);
     }
@@ -499,6 +512,10 @@ const src_fdpgen = [_][]const u8{
 
 const src_twopigen = [_][]const u8{
     "twopiinit.c", "circle.c",
+};
+
+const src_patchwork = [_][]const u8{
+    "patchworkinit.c", "patchwork.c", "tree_map.c",
 };
 
 const src_label = [_][]const u8{

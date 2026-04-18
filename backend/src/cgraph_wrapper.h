@@ -52,6 +52,9 @@ void fdp_cleanup(graph_t *g);
 void twopi_layout(graph_t *g);
 void twopi_cleanup(graph_t *g);
 
+void patchwork_layout(graph_t *g);
+void patchwork_cleanup(graph_t *g);
+
 void graph_cleanup(graph_t *g);
 
 #endif /* CGRAPH_WRAPPER_H_ */

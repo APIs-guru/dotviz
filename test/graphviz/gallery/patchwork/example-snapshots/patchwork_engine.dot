@@ -1,0 +1,39 @@
+graph {
+	graph [bb="0,0,620.48,620.48",
+		layout=patchwork
+	];
+	node [label="\N",
+		shape=box,
+		style=filled
+	];
+	"$2"	[area=200,
+		fillcolor=gold,
+		height=4.4768,
+		pos="310.24,459.32",
+		width=8.6178];
+	"$1"	[area=100,
+		fillcolor=gold,
+		height=4.141,
+		pos="167.7,149.08",
+		width=4.6583];
+	"50c"	[area=50,
+		fillcolor=silver,
+		height=2.4359,
+		pos="477.94,210.46",
+		width=3.9595];
+	"20c"	[area=20,
+		fillcolor=silver,
+		height=1.7051,
+		pos="416.85,61.385",
+		width=2.2626];
+	"10c"	[area=10,
+		fillcolor=silver,
+		height=1.1367,
+		pos="559.39,81.847",
+		width=1.697];
+	"5c"	[area=5,
+		fillcolor=silver,
+		height=0.56839,
+		pos="559.39,20.462",
+		width=1.6969];
+}
