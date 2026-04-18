@@ -118,6 +118,7 @@ pub const Engine = enum {
     neato,
     fdp,
     twopi,
+    osage,
 };
 
 pub const RenderRequest = struct {

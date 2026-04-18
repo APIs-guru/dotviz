@@ -84,6 +84,9 @@ describe('GraphViz Gallery', () => {
     // it('twopi: gallery/twopi/networkmap_twopi.gv', snapshotGvFile);
     it('twopi: gallery/twopi/twopi2.gv', snapshotGvFile);
   });
+  describe('osage', () => {
+    it('osage: gallery/osage/example.gv', snapshotGvFile);
+  });
   describe('undirected', () => {
     it('dot: gallery/undirected/gd_1994_2007.gv', snapshotGvFile);
     it('dot: gallery/undirected/grid.gv', snapshotGvFile);
