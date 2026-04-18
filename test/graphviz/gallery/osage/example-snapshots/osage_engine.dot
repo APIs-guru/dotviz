@@ -1,0 +1,78 @@
+graph {
+	graph [bb="0,0,356,253.6",
+		layout=osage
+	];
+	node [label="\N"];
+	subgraph cluster_0 {
+		graph [bb="0,40,298,253.6",
+			label="composite cluster",
+			lheight=0.23,
+			lp="149,241.2",
+			lwidth=1.37
+		];
+		subgraph cluster_1 {
+			graph [bb="2,82,176,226.8",
+				label="the first cluster",
+				lheight=0.23,
+				lp="89,214.4",
+				lwidth=1.17
+			];
+			C	[height=0.5,
+				pos="31,182",
+				width=0.75];
+			L	[height=0.5,
+				pos="89,182",
+				width=0.75];
+			U	[height=0.5,
+				pos="147,182",
+				width=0.75];
+			S	[height=0.5,
+				pos="31,142",
+				width=0.75];
+			T	[height=0.5,
+				pos="89,142",
+				width=0.75];
+			E	[height=0.5,
+				pos="147,142",
+				width=0.75];
+			R	[height=0.5,
+				pos="31,102",
+				width=0.75];
+		}
+		subgraph cluster_2 {
+			graph [bb="180,94,296,215.6",
+				label="the second\ncluster",
+				lheight=0.47,
+				lp="238,194.8",
+				lwidth=0.83
+			];
+			a	[height=0.5,
+				pos="209,154",
+				width=0.75];
+			b	[height=0.5,
+				pos="267,154",
+				width=0.75];
+			c	[height=0.5,
+				pos="209,114",
+				width=0.75];
+			d	[height=0.5,
+				pos="267,114",
+				width=0.75];
+		}
+		1	[height=0.5,
+			pos="89,60",
+			width=0.75];
+		2	[height=0.5,
+			pos="238,60",
+			width=0.75];
+	}
+	3	[height=0.5,
+		pos="329,147",
+		width=0.75];
+	4	[height=0.5,
+		pos="149,18",
+		width=0.75];
+	5	[height=0.5,
+		pos="329,18",
+		width=0.75];
+}

@@ -338,6 +338,18 @@ pub fn buildGraphviz(
     addInclude(lib_patchwork, graphviz_dep);
     lib_patchwork.addConfigHeader(config_h);
 
+    const lib_osage = b.addLibrary(.{
+        .name = "osage",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+    lib_osage.addCSourceFiles(.{
+        .root = graphviz_dep.path("lib/osage"),
+        .files = &src_osage,
+    });
+    addInclude(lib_osage, graphviz_dep);
+    lib_osage.addConfigHeader(config_h);
+
     const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
         .root_module = lib_mod,
@@ -386,11 +398,11 @@ pub fn buildGraphviz(
     lib_label.addConfigHeader(config_h);
 
     inline for (&.{
-        lib,          lib_cdt,       lib_cgraph,            lib_common,
-        lib_dotgen,   lib_circogen,  lib_neatogen,          lib_fdpgen,
-        lib_twopigen, lib_patchwork, lib_gvc,               lib_label,
-        lib_pack,     lib_pathplan,  lib_plugin_dot_layout, lib_util,
-        lib_xdot,
+        lib,          lib_cdt,       lib_cgraph,   lib_common,
+        lib_dotgen,   lib_circogen,  lib_neatogen, lib_fdpgen,
+        lib_twopigen, lib_patchwork, lib_osage,    lib_gvc,
+        lib_label,    lib_pack,      lib_pathplan, lib_plugin_dot_layout,
+        lib_util,     lib_xdot,
     }) |library| {
         applyWasiEmulation(library);
     }
@@ -517,6 +529,8 @@ const src_twopigen = [_][]const u8{
 const src_patchwork = [_][]const u8{
     "patchworkinit.c", "patchwork.c", "tree_map.c",
 };
+
+const src_osage = [_][]const u8{"osageinit.c"};
 
 const src_label = [_][]const u8{
     "index.c", "split.q.c", "xlabels.c", "rectangle.c", "node.c",
