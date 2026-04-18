@@ -37,10 +37,10 @@ pub fn build(b: *std.Build) void {
         target,
         graphviz_build_mode,
     );
-    lib.linkLibrary(graphviz_build);
+    lib.root_module.linkLibrary(graphviz_build);
 
-    lib.addIncludePath(b.path("src"));
-    lib.addCSourceFiles(.{
+    lib.root_module.addIncludePath(b.path("src"));
+    lib.root_module.addCSourceFiles(.{
         .files = &.{
             "src/cgraph_wrapper.c",
             "src/layout_inline.c",
@@ -75,7 +75,7 @@ pub fn build(b: *std.Build) void {
         .name = "dotviz",
         .root_module = exe_mod,
     });
-    exe.addIncludePath(b.path("src"));
+    exe.root_module.addIncludePath(b.path("src"));
     exe.lto = .full;
     applyWasiEmulation(exe);
     lib.stack_size = 16 * 1024 * 1024;
@@ -101,7 +101,7 @@ pub fn buildGraphviz(
         .optimize = optimize,
     });
 
-    const lib_mod = b.createModule(.{
+    var lib_mod = b.createModule(.{
         .root_source_file = null,
         .target = target,
         .optimize = optimize,
@@ -113,19 +113,19 @@ pub fn buildGraphviz(
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib.addCSourceFile(.{ .file = b.path(
+    lib_mod.addCSourceFile(.{ .file = b.path(
         "src/graphviz_build/src/dummy.c",
     ) });
-    lib.addCSourceFile(.{ .file = b.path(
+    lib_mod.addCSourceFile(.{ .file = b.path(
         "src/graphviz_build/src/drand48.c",
     ) });
-    lib.addIncludePath(graphviz_dep.path("lib/cdt"));
-    lib.addIncludePath(graphviz_dep.path("lib/cgraph"));
+    lib_mod.addIncludePath(graphviz_dep.path("lib/cdt"));
+    lib_mod.addIncludePath(graphviz_dep.path("lib/cgraph"));
     const expat_dep = b.dependency("libexpat", .{
         .target = target,
         .optimize = optimize,
     });
-    lib.linkLibrary(expat_dep.artifact("expat"));
+    lib_mod.linkLibrary(expat_dep.artifact("expat"));
 
     const config_h = b.addConfigHeader(.{
         .style = .blank,
@@ -153,205 +153,205 @@ pub fn buildGraphviz(
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_cdt.addCSourceFiles(.{
+    lib_cdt.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/cdt"),
         .files = &src_cdt,
     });
-    lib_cdt.addIncludePath(graphviz_dep.path("lib"));
-    lib_cdt.addIncludePath(graphviz_dep.path("lib/cdt"));
+    lib_cdt.root_module.addIncludePath(graphviz_dep.path("lib"));
+    lib_cdt.root_module.addIncludePath(graphviz_dep.path("lib/cdt"));
 
     const lib_cgraph = b.addLibrary(.{
         .name = "cgraph",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_cgraph.addCSourceFiles(.{
+    lib_cgraph.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/cgraph"),
         .files = &src_cgraph,
     });
-    lib_cgraph.addIncludePath(b.path("inc/cgraph"));
-    lib.addCSourceFiles(.{
+    lib_cgraph.root_module.addIncludePath(b.path("inc/cgraph"));
+    lib.root_module.addCSourceFiles(.{
         .root = b.path("src/graphviz_build/src/cgraph/"),
         .files = &.{
             "grammar.c",
             "scan.c",
         },
     });
-    lib.addConfigHeader(config_h);
-    lib.addIncludePath(graphviz_dep.path("lib"));
-    lib.addIncludePath(b.path("src/graphviz_build/inc/cgraph/"));
-    lib_cgraph.addConfigHeader(config_h);
-    lib_cgraph.addIncludePath(b.path("src/graphviz_build/inc/cgraph/"));
-    lib_cgraph.addIncludePath(graphviz_dep.path("lib"));
-    lib_cgraph.addIncludePath(graphviz_dep.path("lib/cdt"));
-    lib_cgraph.addIncludePath(graphviz_dep.path("lib/cgraph"));
+    lib.root_module.addConfigHeader(config_h);
+    lib.root_module.addIncludePath(graphviz_dep.path("lib"));
+    lib.root_module.addIncludePath(b.path("src/graphviz_build/inc/cgraph/"));
+    lib_cgraph.root_module.addConfigHeader(config_h);
+    lib_cgraph.root_module.addIncludePath(b.path("src/graphviz_build/inc/cgraph/"));
+    lib_cgraph.root_module.addIncludePath(graphviz_dep.path("lib"));
+    lib_cgraph.root_module.addIncludePath(graphviz_dep.path("lib/cdt"));
+    lib_cgraph.root_module.addIncludePath(graphviz_dep.path("lib/cgraph"));
 
     const lib_common = b.addLibrary(.{
         .name = "gvc",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_common.addIncludePath(b.path("src/graphviz_build/inc/"));
-    lib_common.addIncludePath(b.path("src/graphviz_build/inc/common/"));
-    lib_common.addCSourceFiles(.{
+    lib_common.root_module.addIncludePath(b.path("src/graphviz_build/inc/"));
+    lib_common.root_module.addIncludePath(b.path("src/graphviz_build/inc/common/"));
+    lib_common.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/common"),
         .files = &src_common,
     });
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = b.path("src/graphviz_build/src/common/"),
         .files = &.{"htmlparse.c"},
     });
     addInclude(lib, graphviz_dep);
-    lib.addIncludePath(b.path("src/graphviz_build/inc/common/"));
-    lib_common.addIncludePath(graphviz_dep.path("lib"));
+    lib.root_module.addIncludePath(b.path("src/graphviz_build/inc/common/"));
+    lib_common.root_module.addIncludePath(graphviz_dep.path("lib"));
     addInclude(lib_common, graphviz_dep);
-    lib_common.linkLibrary(expat_dep.artifact("expat"));
-    lib_common.addIncludePath(.{
+    lib_common.root_module.linkLibrary(expat_dep.artifact("expat"));
+    lib_common.root_module.addIncludePath(.{
         .dependency = .{
             .dependency = expat_dep,
             .sub_path = "lib",
         },
     });
-    lib_common.addConfigHeader(config_h);
-    lib_common.addConfigHeader(builddate_h);
+    lib_common.root_module.addConfigHeader(config_h);
+    lib_common.root_module.addConfigHeader(builddate_h);
 
     const lib_util = b.addLibrary(.{
         .name = "util",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_util.addCSourceFiles(.{
+    lib_util.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/util"),
         .files = &src_util,
     });
-    lib_util.addIncludePath(graphviz_dep.path("lib"));
-    lib_util.addIncludePath(graphviz_dep.path("lib/util"));
+    lib_util.root_module.addIncludePath(graphviz_dep.path("lib"));
+    lib_util.root_module.addIncludePath(graphviz_dep.path("lib/util"));
 
     const lib_gvc = b.addLibrary(.{
         .name = "gvc",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_gvc.addCSourceFiles(.{
+    lib_gvc.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/gvc"),
         .files = &src_gvc,
     });
-    lib_gvc.addIncludePath(graphviz_dep.path("lib"));
+    lib_gvc.root_module.addIncludePath(graphviz_dep.path("lib"));
     addInclude(lib_gvc, graphviz_dep);
-    lib_gvc.addConfigHeader(config_h);
-    lib_gvc.addConfigHeader(builddate_h);
+    lib_gvc.root_module.addConfigHeader(config_h);
+    lib_gvc.root_module.addConfigHeader(builddate_h);
 
     const lib_xdot = b.addLibrary(.{
         .name = "xdot",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_xdot.addCSourceFile(.{ .file = .{
+    lib_xdot.root_module.addCSourceFile(.{ .file = .{
         .dependency = .{
             .dependency = graphviz_dep,
             .sub_path = "lib/xdot/xdot.c",
         },
     } });
-    lib_xdot.addIncludePath(graphviz_dep.path("lib"));
+    lib_xdot.root_module.addIncludePath(graphviz_dep.path("lib"));
 
     const lib_pathplan = b.addLibrary(.{
         .name = "pathplan",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_pathplan.addCSourceFiles(.{
+    lib_pathplan.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/pathplan"),
         .files = &src_pathplan,
     });
-    lib_pathplan.addIncludePath(graphviz_dep.path("lib"));
-    lib_pathplan.addIncludePath(graphviz_dep.path("lib/pathplan"));
+    lib_pathplan.root_module.addIncludePath(graphviz_dep.path("lib"));
+    lib_pathplan.root_module.addIncludePath(graphviz_dep.path("lib/pathplan"));
 
     const lib_dotgen = b.addLibrary(.{
         .name = "dotgen",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_dotgen.addCSourceFiles(.{
+    lib_dotgen.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/dotgen"),
         .files = &src_dotgen,
     });
     addInclude(lib_dotgen, graphviz_dep);
-    lib_dotgen.addConfigHeader(config_h);
+    lib_dotgen.root_module.addConfigHeader(config_h);
 
     const lib_circogen = b.addLibrary(.{
         .name = "circogen",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_circogen.addCSourceFiles(.{
+    lib_circogen.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/circogen"),
         .files = &src_circogen,
     });
     addInclude(lib_circogen, graphviz_dep);
-    lib_circogen.addConfigHeader(config_h);
+    lib_circogen.root_module.addConfigHeader(config_h);
 
     const lib_neatogen = b.addLibrary(.{
         .name = "neatogen",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_neatogen.addCSourceFiles(.{
+    lib_neatogen.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/neatogen"),
         .files = &src_neatogen,
     });
     addInclude(lib_neatogen, graphviz_dep);
-    lib_neatogen.addConfigHeader(config_h);
+    lib_neatogen.root_module.addConfigHeader(config_h);
 
     const lib_fdpgen = b.addLibrary(.{
         .name = "fdpgen",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_fdpgen.addCSourceFiles(.{
+    lib_fdpgen.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/fdpgen"),
         .files = &src_fdpgen,
     });
     addInclude(lib_fdpgen, graphviz_dep);
-    lib_fdpgen.addConfigHeader(config_h);
+    lib_fdpgen.root_module.addConfigHeader(config_h);
 
     const lib_twopigen = b.addLibrary(.{
         .name = "twopigen",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_twopigen.addCSourceFiles(.{
+    lib_twopigen.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/twopigen"),
         .files = &src_twopigen,
     });
     addInclude(lib_twopigen, graphviz_dep);
-    lib_twopigen.addConfigHeader(config_h);
+    lib_twopigen.root_module.addConfigHeader(config_h);
 
     const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_plugin_dot_layout.addCSourceFile(.{ .file = .{
+    lib_plugin_dot_layout.root_module.addCSourceFile(.{ .file = .{
         .dependency = .{
             .dependency = graphviz_dep,
             .sub_path = "plugin/dot_layout/gvlayout_dot_layout.c",
         },
     } });
-    lib_plugin_dot_layout.addCSourceFile(.{ .file = .{
+    lib_plugin_dot_layout.root_module.addCSourceFile(.{ .file = .{
         .dependency = .{
             .dependency = graphviz_dep,
             .sub_path = "plugin/dot_layout/gvplugin_dot_layout.c",
         },
     } });
     addInclude(lib_plugin_dot_layout, graphviz_dep);
-    lib_plugin_dot_layout.addConfigHeader(config_h);
+    lib_plugin_dot_layout.root_module.addConfigHeader(config_h);
 
     const lib_pack = b.addLibrary(.{
         .name = "pack",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_pack.addCSourceFiles(.{
+    lib_pack.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/pack"),
         .files = &.{
             "ccomps.c",
@@ -359,19 +359,19 @@ pub fn buildGraphviz(
         },
     });
     addInclude(lib_pack, graphviz_dep);
-    lib_pack.addConfigHeader(config_h);
+    lib_pack.root_module.addConfigHeader(config_h);
 
     const lib_label = b.addLibrary(.{
         .name = "label",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_label.addCSourceFiles(.{
+    lib_label.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/label"),
         .files = &src_label,
     });
     addInclude(lib_label, graphviz_dep);
-    lib_label.addConfigHeader(config_h);
+    lib_label.root_module.addConfigHeader(config_h);
 
     inline for (&.{
         lib,          lib_cdt,               lib_cgraph,   lib_common,
@@ -400,24 +400,24 @@ pub fn buildGraphviz(
 }
 
 fn addInclude(step: *std.Build.Step.Compile, graphviz_dep: *std.Build.Dependency) void {
-    step.addIncludePath(graphviz_dep.path("lib"));
-    step.addIncludePath(graphviz_dep.path("lib/common"));
-    step.addIncludePath(graphviz_dep.path("lib/pathplan"));
-    step.addIncludePath(graphviz_dep.path("lib/gvc"));
-    step.addIncludePath(graphviz_dep.path("lib/cgraph"));
-    step.addIncludePath(graphviz_dep.path("lib/cdt"));
+    step.root_module.addIncludePath(graphviz_dep.path("lib"));
+    step.root_module.addIncludePath(graphviz_dep.path("lib/common"));
+    step.root_module.addIncludePath(graphviz_dep.path("lib/pathplan"));
+    step.root_module.addIncludePath(graphviz_dep.path("lib/gvc"));
+    step.root_module.addIncludePath(graphviz_dep.path("lib/cgraph"));
+    step.root_module.addIncludePath(graphviz_dep.path("lib/cdt"));
 }
 
 fn applyWasiEmulation(step: *std.Build.Step.Compile) void {
     if (step.root_module.resolved_target.?.result.os.tag == .wasi) {
         step.root_module.addCMacro("_WASI_EMULATED_SIGNAL", "");
-        step.linkSystemLibrary("wasi-emulated-signal");
+        step.root_module.linkSystemLibrary("wasi-emulated-signal", .{});
         step.root_module.addCMacro("_WASI_EMULATED_PROCESS_CLOCKS", "");
-        step.linkSystemLibrary("wasi-emulated-process-clocks");
+        step.root_module.linkSystemLibrary("wasi-emulated-process-clocks", .{});
         step.root_module.addCMacro("_WASI_EMULATED_MMAN", "");
-        step.linkSystemLibrary("wasi-emulated-mman");
+        step.root_module.linkSystemLibrary("wasi-emulated-mman", .{});
         step.root_module.addCMacro("_WASI_EMULATED_GETPID", "");
-        step.linkSystemLibrary("wasi-emulated-getpid");
+        step.root_module.linkSystemLibrary("wasi-emulated-getpid", .{});
     }
 }
 

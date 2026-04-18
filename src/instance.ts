@@ -64,6 +64,14 @@ export async function instance(
       path_filestat_get() {
         return 44; // __WASI_ERRNO_NOENT
       },
+      path_create_directory: wasiErrnoBadF,
+      path_filestat_set_times: wasiErrnoBadF,
+      path_link: wasiErrnoBadF,
+      path_readlink: wasiErrnoBadF,
+      path_remove_directory: wasiErrnoBadF,
+      path_rename: wasiErrnoBadF,
+      path_symlink: wasiErrnoBadF,
+      path_unlink_file: wasiErrnoBadF,
       fd_pread: wasiErrnoBadF,
       fd_pwrite: wasiErrnoBadF,
       fd_close: wasiErrnoBadF,
@@ -74,6 +82,10 @@ export async function instance(
       fd_read: wasiErrnoBadF,
       fd_seek: wasiErrnoBadF,
       fd_fdstat_get: wasiErrnoBadF,
+      fd_filestat_set_size: wasiErrnoBadF,
+      fd_filestat_set_times: wasiErrnoBadF,
+      fd_sync: wasiErrnoBadF,
+      fd_readdir: wasiErrnoBadF,
       environ_get: wasiErrnoNoSys,
       random_get: wasiErrnoNoSys,
       path_open: wasiErrnoNoSys,
@@ -81,6 +93,8 @@ export async function instance(
       args_sizes_get: wasiErrnoNoSys,
       args_get: wasiErrnoNoSys,
       clock_time_get: wasiErrnoNoSys,
+      clock_res_get: wasiErrnoNoSys,
+      poll_oneoff: wasiErrnoNoSys,
     },
   });
 

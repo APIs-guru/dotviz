@@ -10,7 +10,13 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   {
-    ignores: ['reports', 'npmDist/', 'lib/', 'test/types/'],
+    ignores: [
+      'reports',
+      'npmDist/',
+      'lib/',
+      'test/types/',
+      'backend/zig-pkg/**',
+    ],
   },
   {
     linterOptions: {
