@@ -80,7 +80,7 @@ describe('Viz', () => {
       expect(() =>
         viz.renderString('graph { a[label="blah'),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: (1:17) Unterminated string. Add a closing '"' to complete the string started here: '"blah'.]`,
+        `[Error: Unterminated string '"blah', add a closing '"' to the string.]`,
       );
       expectString(viz.renderString('graph { a }')).toMatchInlineSnapshot(`
         graph {

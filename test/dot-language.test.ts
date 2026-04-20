@@ -721,6 +721,11 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
+          "location": {
+            "column": 0,
+            "index": 0,
+            "line": 1,
+          },
           "message": "Unexpected identifier 'test', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
         },
       ]
@@ -728,12 +733,17 @@ describe('Dot language support', () => {
   });
 
   it('error on graph without statements', () => {
-    const result = dotviz.render('graph');
+    const result = dotviz.render('graph // missing body');
     expectFailureResult(result).toMatchInlineSnapshot(`
       [
         {
           "level": "error",
-          "message": "Unexpected end of file, expected graph name.",
+          "location": {
+            "column": 21,
+            "index": 21,
+            "line": 1,
+          },
+          "message": "Unexpected end of file, expected '{'.",
         },
       ]
     `);
@@ -745,7 +755,12 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
-          "message": "Unexpected '[', expected graph name.",
+          "location": {
+            "column": 6,
+            "index": 6,
+            "line": 1,
+          },
+          "message": "Unexpected '[', expected '{'.",
         },
       ]
     `);
@@ -757,6 +772,11 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
+          "location": {
+            "column": 6,
+            "index": 6,
+            "line": 1,
+          },
           "message": "Unexpected reserved keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".",
         },
       ]
@@ -769,6 +789,11 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
+          "location": {
+            "column": 11,
+            "index": 11,
+            "line": 1,
+          },
           "message": "Unexpected string "bad", expected '{'.",
         },
       ]
@@ -797,6 +822,11 @@ describe('Dot language support', () => {
       expectFailureResult(result).toStrictEqual([
         {
           level: 'error',
+          location: {
+            column: 11,
+            index: 11,
+            line: 1,
+          },
           message: `Unexpected ${tokenDebugMessage}, expected '{'.`,
         },
       ]);
@@ -809,7 +839,12 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
-          "message": "Unexpected '--', expected node, edge, subgraph or attribute statement.",
+          "location": {
+            "column": 8,
+            "index": 8,
+            "line": 1,
+          },
+          "message": "Unexpected '--', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").",
         },
       ]
     `);
@@ -817,31 +852,62 @@ describe('Dot language support', () => {
 
   it('error on invalid attributes syntax', () => {
     const result = dotviz.render(`
-        graph {
-          node {}
-        }
-      `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "Unexpected '{', expected '['.",
-          },
-        ]
-      `);
-  });
-
-  it('error on invalid syntax inside attribute list', () => {
-    const result = dotviz.render(`
-        graph {
-          node [ -> ]
-        }
-      `);
+      graph {
+        node {}
+      }
+    `);
     expectFailureResult(result).toMatchInlineSnapshot(`
       [
         {
           "level": "error",
-          "message": "Unexpected '->', expected attribute name.",
+          "location": {
+            "column": 13,
+            "index": 28,
+            "line": 3,
+          },
+          "message": "Unexpected '{', expected '['.",
+        },
+      ]
+    `);
+  });
+
+  it('error on invalid syntax inside attribute list', () => {
+    const result = dotviz.render(`
+      graph {
+        node [ -> ]
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 15,
+            "index": 30,
+            "line": 3,
+          },
+          "message": "Unexpected '->', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").",
+        },
+      ]
+    `);
+  });
+
+  it('error on unterminated block comment', () => {
+    const result = dotviz.render(`
+      graph {
+        test=/* never finishes
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 13,
+            "index": 28,
+            "line": 3,
+          },
+          "message": "Unexpected unterminated block comment '/* never finishes...', add a closing '*/' to the comment.",
         },
       ]
     `);
@@ -849,15 +915,20 @@ describe('Dot language support', () => {
 
   it('error on unterminated string', () => {
     const result = dotviz.render(`
-        graph {
-          test="never finishes
-        }
-      `);
+      graph {
+        test="never finishes
+      }
+    `);
     expectFailureResult(result).toMatchInlineSnapshot(`
       [
         {
           "level": "error",
-          "message": "(3:17) Unterminated string. Add a closing '"' to complete the string started here: '"never finishes\\n  ...'.",
+          "location": {
+            "column": 13,
+            "index": 28,
+            "line": 3,
+          },
+          "message": "Unterminated string '"never finishes\\n ...', add a closing '"' to the string.",
         },
       ]
     `);
@@ -865,15 +936,20 @@ describe('Dot language support', () => {
 
   it('error on unterminated html', () => {
     const result = dotviz.render(`
-        graph {
-          test=<never finishes
-        }
-      `);
+      graph {
+        test=<never finishes
+      }
+    `);
     expectFailureResult(result).toMatchInlineSnapshot(`
       [
         {
           "level": "error",
-          "message": "(3:17) Unterminated HTML string. Add a closing '>' to complete the HTML started here: '<never finishes\\n  ...'.",
+          "location": {
+            "column": 13,
+            "index": 28,
+            "line": 3,
+          },
+          "message": "Unterminated HTML string '<never finishes\\n ...', add a closing '>' to the HTML string.",
         },
       ]
     `);
@@ -889,6 +965,11 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
+          "location": {
+            "column": 10,
+            "index": 25,
+            "line": 3,
+          },
           "message": "Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.",
         },
       ]
@@ -905,6 +986,11 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
+          "location": {
+            "column": 10,
+            "index": 27,
+            "line": 3,
+          },
           "message": "Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.",
         },
       ]
@@ -921,7 +1007,12 @@ describe('Dot language support', () => {
       expectFailureResult(result).toStrictEqual([
         {
           level: 'error',
-          message: `(3:14) Unexpected character: '${badChar}'. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
+          location: {
+            column: 12,
+            index: 31,
+            line: 3,
+          },
+          message: `Unexpected character '${badChar}', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
         },
       ]);
     });
@@ -937,6 +1028,11 @@ describe('Dot language support', () => {
       [
         {
           "level": "error",
+          "location": {
+            "column": 22,
+            "index": 37,
+            "line": 3,
+          },
           "message": "Unexpected HTML string <bad>, expected '{'.",
         },
       ]

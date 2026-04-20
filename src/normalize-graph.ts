@@ -13,6 +13,8 @@ interface NormalizedGraphConfig {
 }
 
 export class NormalizedGraph {
+  root: NormalizedGraph;
+
   name: string | null;
   strict: boolean;
   directed: boolean;
@@ -27,6 +29,7 @@ export class NormalizedGraph {
   subgraphs = new Map<string | number, NormalizedSubgraph>();
 
   constructor(config: NormalizedGraphConfig, fixedAttributes: FixedAttributes) {
+    this.root = this;
     this.name = config.name;
     this.strict = config.strict;
     this.directed = config.directed;
@@ -233,6 +236,7 @@ export class NormalizedEdge {
 }
 
 export class NormalizedSubgraph {
+  root: NormalizedGraph;
   parent: NormalizedGraph | NormalizedSubgraph;
   ownedNodes = new Set<NormalizedNode>();
   ownedEdges = new Set<NormalizedEdge>();
@@ -249,6 +253,7 @@ export class NormalizedSubgraph {
     parent: NormalizedGraph | NormalizedSubgraph,
     name: string | null,
   ) {
+    this.root = parent.root;
     this.parent = parent;
     this.name = name;
   }

@@ -14,7 +14,7 @@
     "rewriteRelativeImportExtensions": true,
 
     // Interop Constraints
-    "erasableSyntaxOnly": true,
+    // "erasableSyntaxOnly": true,
 
     // For nodejs:
     // "lib": ["esnext"],
