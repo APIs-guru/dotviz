@@ -593,7 +593,7 @@ class Parser {
 
   #parseName(token: Token, description: string): string {
     const name = this.#parseValue(token, description);
-    /* v8 ignore start -- FIXME: it's weird edge case, so in future we should forbid using HTML as keys */
+    /* v8 ignore start -- FIXME: it's weird edge case, so in future we should forbid using HTML as names */
     if (typeof name === 'object') {
       this.#failWithError(`HTML as ${description} is not supported`, token);
     }
