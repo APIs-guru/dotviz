@@ -85,15 +85,9 @@ describe('Viz', () => {
     it('accepts default attributes', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph {}', {
-        graphAttributes: {
-          a: 123,
-        },
-        nodeAttributes: {
-          b: false,
-        },
-        edgeAttributes: {
-          c: 'test',
-        },
+        graphAttributes: { a: 123 },
+        nodeAttributes: { b: false },
+        edgeAttributes: { c: 'test' },
       });
 
       expectSuccessResult(result).toMatchInlineSnapshot(`
@@ -129,7 +123,19 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render('');
 
-      expectFailureResult(result).toMatchInlineSnapshot(`[]`);
+      expectFailureResult(result).toMatchInlineSnapshot(`
+        [
+          {
+            "level": "error",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
+            "message": "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
+          },
+        ]
+      `);
     });
 
     it('returns error messages for invalid input', async () => {
@@ -140,7 +146,12 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
+            "message": "Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);
@@ -157,8 +168,7 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "JSON error UnexpectedToken at 11:25: \`
-          "yInvert": "bad value",\`",
+            "message": "JSON error UnexpectedToken at 1:372: \`lse,"engine":"dot","yInvert":"bad value","reduce":false,"images":{}}\`",
           },
         ]
       `);
@@ -173,7 +183,12 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid1'",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
+            "message": "Unexpected identifier 'invalid1', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);
@@ -182,7 +197,12 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid2'",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
+            "message": "Unexpected identifier 'invalid2', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);
@@ -238,7 +258,12 @@ describe('Viz', () => {
         [
           {
             "level": "warning",
-            "message": "syntax ambiguity - badly delimited number '1.2.' in line 1 of input splits into two tokens",
+            "location": {
+              "column": 12,
+              "index": 12,
+              "line": 1,
+            },
+            "message": "Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.",
           },
         ]
       `);
@@ -252,7 +277,12 @@ describe('Viz', () => {
         [
           {
             "level": "warning",
-            "message": "syntax ambiguity - badly delimited number '1.2.' in line 1 of input splits into two tokens",
+            "location": {
+              "column": 26,
+              "index": 26,
+              "line": 1,
+            },
+            "message": "Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.",
           },
           {
             "level": "error",
@@ -313,22 +343,8 @@ describe('Viz', () => {
         [
           {
             "level": "error",
+            "location": undefined,
             "message": "Format: "invalid" not recognized. Use one of: dot gv svg",
-          },
-        ]
-      `);
-    });
-
-    it('returns an error that contains newlines as a single item', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.render('graph { " }');
-
-      expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "syntax error in line 1 scanning a quoted string (missing endquote? longer than 16384?)
-        String starting:" }",
           },
         ]
       `);

@@ -79,7 +79,12 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
+            "message": "Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);
@@ -93,7 +98,12 @@ describe('Viz', () => {
         [
           {
             "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
+            "message": "Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
       `);

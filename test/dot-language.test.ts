@@ -1,0 +1,1083 @@
+import * as VizJSPackage from '@viz-js/viz';
+import { describe, expect, it } from 'vitest';
+
+import * as DotVizPackage from '../src/index.ts';
+import {
+  expectFailureResult,
+  expectSuccessResult,
+} from './util/render-result.ts';
+
+const vizJS = await VizJSPackage.instance();
+const dotviz = await DotVizPackage.instance();
+
+function renderString(dot: string): DotVizPackage.RenderResult {
+  const dotvizResult = dotviz.render(dot);
+  const vizJSResult = vizJS.render(dot);
+  expect(dotvizResult).toStrictEqual(vizJSResult);
+  return dotvizResult;
+}
+
+describe('Dot language support', () => {
+  it('empty graph', () => {
+    const result = renderString('graph {}');
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,0,0"];
+      	node [label="\\N"];
+      }
+    `);
+
+    const directedResult = renderString('digraph {}');
+    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,0,0"];
+      	node [label="\\N"];
+      }
+    `);
+  });
+
+  it('strict empty graph', () => {
+    const result = renderString('strict graph {}');
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      strict graph {
+      	graph [bb="0,0,0,0"];
+      	node [label="\\N"];
+      }
+    `);
+  });
+
+  it('named graph', () => {
+    const result = renderString('graph test {}');
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph test {
+      	graph [bb="0,0,0,0"];
+      	node [label="\\N"];
+      }
+    `);
+
+    const stringResult = renderString('graph "test" {}');
+    expect(stringResult).toStrictEqual(result);
+
+    const keywordResult = renderString('graph "graph" {}');
+    expectSuccessResult(keywordResult).toMatchInlineSnapshot(`
+      graph "graph" {
+      	graph [bb="0,0,0,0"];
+      	node [label="\\N"];
+      }
+    `);
+  });
+
+  it('skip ignored characters', () => {
+    const result = renderString(`
+      graph
+      \n\r\t\uFEFF
+      # comment
+      // another one
+      /* start comment
+         end comment */
+      {}
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,0,0"];
+      	node [label="\\N"];
+      }
+    `);
+  });
+
+  it('empty attributes', () => {
+    const result = renderString(`
+      graph {
+        graph []
+        node []
+        edge []
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,0,0"];
+      	node [label="\\N"];
+      }
+    `);
+
+    const multipleResult = renderString(`
+      graph {
+        graph [][]
+        node [][]
+        edge [][]
+      }
+    `);
+    expect(multipleResult).toStrictEqual(result);
+  });
+
+  it('global attributes', () => {
+    const result = renderString(`
+      graph {
+        graph [a=valueA]
+        node [b=valueB]
+        edge [c=valueC]
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [a=valueA,
+      		bb="0,0,0,0"
+      	];
+      	node [b=valueB,
+      		label="\\N"
+      	];
+      	edge [c=valueC];
+      }
+    `);
+
+    const mergeResult = renderString(`
+      graph {
+        graph [a=badA a=valueA]
+        node [b=badB b=valueB]
+        edge [c=badC c=valueC]
+      }
+    `);
+    expect(mergeResult).toStrictEqual(result);
+    const mergeListsResult = renderString(`
+      graph {
+        graph [a=badA][a=valueA]
+        node [b=badB][b=valueB]
+        edge [c=badC][c=valueC]
+      }
+    `);
+    expect(mergeListsResult).toStrictEqual(result);
+  });
+
+  it('empty strings as global attributes', () => {
+    const result = renderString(`
+      graph {
+        graph [a=""]
+        node [b=""]
+        edge [c=""]
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [a="",
+      		bb="0,0,0,0"
+      	];
+      	node [b="",
+      		label="\\N"
+      	];
+      	edge [c=""];
+      }
+    `);
+  });
+
+  it('various values as attributes', () => {
+    const result = renderString(String.raw`
+      graph {
+        graph [
+          str1="",
+          str2="\"",
+          str3="\\\"",
+          str4="a",
+          str5="\
+          a",
+          str6="\na",
+        ]
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(String.raw`
+      graph {
+      	graph [bb="0,0,0,0",
+      		str1="",
+      		str2="\"",
+      		str3="\\\"",
+      		str4=a,
+      		str5="          a",
+      		str6="\na"
+      	];
+      	node [label="\N"];
+      }
+    `);
+  });
+
+  it('global graph attributes shorthand', () => {
+    const result = renderString(`
+      graph {
+        a=valueA
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [a=valueA,
+      		bb="0,0,0,0"
+      	];
+      	node [label="\\N"];
+      }
+    `);
+
+    const mergeResult = renderString(`
+      graph {
+        a=badA
+        a=valueA
+      }
+    `);
+    expect(mergeResult).toStrictEqual(result);
+  });
+
+  it('single edge', () => {
+    const result = renderString(`
+      graph {
+        b -- a
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	b	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	b -- a	[pos="27,71.697 27,60.846 27,46.917 27,36.104"];
+      }
+    `);
+
+    const directedResult = renderString(`
+      digraph {
+        b -> a
+      }
+    `);
+
+    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	b	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	b -> a	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"];
+      }
+    `);
+  });
+
+  it('two edges', () => {
+    const result = renderString(`
+      graph {
+        b -- a
+        a -- b
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	b	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	b -- a	[pos="21.122,72.055 19.954,61.049 19.959,46.764 21.138,35.789"];
+      	a -- b	[pos="32.862,35.789 34.041,46.764 34.046,61.049 32.878,72.055"];
+      }
+    `);
+
+    const directedResult = renderString(`
+      digraph {
+        b -> a
+        a -> b
+      }
+    `);
+
+    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	b	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	b -> a	[pos="e,21.138,35.789 21.122,72.055 20.328,64.574 20.076,55.579 20.367,47.137"];
+      	a -> b	[pos="e,32.878,72.055 32.862,35.789 33.663,43.248 33.922,52.237 33.639,60.686"];
+      }
+    `);
+  });
+
+  it('chain of edges', () => {
+    const result = renderString(`
+      graph {
+        c -- b -- a [valueA=a]
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,54,180"];
+      	node [label="\\N"];
+      	c	[height=0.5,
+      		pos="27,162",
+      		width=0.75];
+      	b	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	c -- b	[pos="27,143.7 27,132.85 27,118.92 27,108.1",
+      		valueA=a];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	b -- a	[pos="27,71.697 27,60.846 27,46.917 27,36.104",
+      		valueA=a];
+      }
+    `);
+
+    const directedResult = renderString(`
+      digraph {
+        c -> b -> a [valueA=a]
+      }
+    `);
+
+    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,180"];
+      	node [label="\\N"];
+      	c	[height=0.5,
+      		pos="27,162",
+      		width=0.75];
+      	b	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	c -> b	[pos="e,27,108.1 27,143.7 27,136.41 27,127.73 27,119.54",
+      		valueA=a];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	b -> a	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536",
+      		valueA=a];
+      }
+    `);
+  });
+
+  it('chain of edges with node lists', () => {
+    const result = renderString(`
+      graph {
+        a,b -- c,d -- e,f [valueA=a]
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,126,180"];
+      	node [label="\\N"];
+      	a	[height=0.5,
+      		pos="27,162",
+      		width=0.75];
+      	c	[height=0.5,
+      		pos="27,90",
+      		width=0.75];
+      	a -- c	[pos="27,143.7 27,132.85 27,118.92 27,108.1",
+      		valueA=a];
+      	d	[height=0.5,
+      		pos="99,90",
+      		width=0.75];
+      	a -- d	[pos="41.918,146.5 54.275,134.48 71.749,117.49 84.101,105.49",
+      		valueA=a];
+      	b	[height=0.5,
+      		pos="99,162",
+      		width=0.75];
+      	b -- c	[pos="84.082,146.5 71.725,134.48 54.251,117.49 41.899,105.49",
+      		valueA=a];
+      	b -- d	[pos="99,143.7 99,132.85 99,118.92 99,108.1",
+      		valueA=a];
+      	e	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	c -- e	[pos="27,71.697 27,60.846 27,46.917 27,36.104",
+      		valueA=a];
+      	f	[height=0.5,
+      		pos="99,18",
+      		width=0.75];
+      	c -- f	[pos="41.918,74.496 54.275,62.482 71.749,45.494 84.101,33.485",
+      		valueA=a];
+      	d -- e	[pos="84.082,74.496 71.725,62.482 54.251,45.494 41.899,33.485",
+      		valueA=a];
+      	d -- f	[pos="99,71.697 99,60.846 99,46.917 99,36.104",
+      		valueA=a];
+      }
+    `);
+  });
+
+  it('empty strings as subgraph attributes', () => {
+    const result = renderString(`
+        graph {
+         	node [a=""];
+         	{ node [a=""] }
+        }
+      `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+        graph {
+        	graph [bb="0,0,0,0"];
+        	node [a="",
+        		label="\\N"
+        	];
+        	{
+        	}
+        }
+      `);
+  });
+
+  it('merge top-level subgraphs with the same name', () => {
+    const result = renderString(`
+      graph {
+        subgraph a { a1 }
+        subgraph b { b1 }
+        subgraph a { a2 }
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,198,36"];
+      	node [label="\\N"];
+      	subgraph a {
+      		a1	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a2	[height=0.5,
+      			pos="171,18",
+      			width=0.75];
+      	}
+      	subgraph b {
+      		b1	[height=0.5,
+      			pos="99,18",
+      			width=0.75];
+      	}
+      }
+    `);
+  });
+
+  it('merge nested subgraphs with the same name', () => {
+    const result = renderString(`
+      graph {
+        {
+          subgraph a { a1 }
+          subgraph b { b1 }
+          subgraph a { a2 }
+        }
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,198,36"];
+      	node [label="\\N"];
+      	{
+      		subgraph a {
+      			a1	[height=0.5,
+      				pos="27,18",
+      				width=0.75];
+      			a2	[height=0.5,
+      				pos="171,18",
+      				width=0.75];
+      		}
+      		subgraph b {
+      			b1	[height=0.5,
+      				pos="99,18",
+      				width=0.75];
+      		}
+      	}
+      }
+    `);
+  });
+
+  it('change edge attributes inside subgraph', () => {
+    const result = renderString(`
+        digraph {
+          {
+            a->b
+            edge [color=red]
+            b->a
+          }
+        }
+      `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [color=red];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -> b	[color="",
+      			pos="e,21.138,35.789 21.122,72.055 20.328,64.574 20.076,55.579 20.367,47.137"];
+      		b -> a	[pos="e,32.878,72.055 32.862,35.789 33.663,43.248 33.922,52.237 33.639,60.686"];
+      	}
+      }
+    `);
+  });
+
+  it('connect nodes in subgraphs with edges', () => {
+    const result = renderString(`
+      digraph {
+        subgraph tails { a b } -> subgraph heads { c d }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,126,108"];
+      	node [label="\\N"];
+      	subgraph tails {
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="99,90",
+      			width=0.75];
+      	}
+      	subgraph heads {
+      		c	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		d	[height=0.5,
+      			pos="99,18",
+      			width=0.75];
+      	}
+      	a -> c	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"];
+      	a -> d	[pos="e,84.101,33.485 41.918,74.496 51.765,64.923 64.861,52.19 76.026,41.336"];
+      	b -> c	[pos="e,41.899,33.485 84.082,74.496 74.235,64.923 61.139,52.19 49.974,41.336"];
+      	b -> d	[pos="e,99,36.104 99,71.697 99,64.407 99,55.726 99,47.536"];
+      }
+    `);
+  });
+
+  it('deduplicate edges with the same key', () => {
+    const result = renderString(`
+      graph {
+        {
+          edge [test=<no_key>]
+          a -- b
+          edge [test=key1]
+          a -- b [key = 1]
+          edge [test=bad1]
+          b -- a [key = 1]
+          edge [test=bad2]
+          a -- b [key = 1]
+          edge [test=key2]
+          a -- b [key=2]
+        }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [test=key2];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -- b	[pos="15.56,73.465 12.81,61.865 12.813,46.082 15.57,34.492",
+      			test=<no_key>];
+      		a -- b	[key=1,
+      			pos="27,71.697 27,60.846 27,46.917 27,36.104",
+      			test=key1];
+      		a -- b	[key=2,
+      			pos="38.44,73.465 41.19,61.865 41.187,46.082 38.43,34.492"];
+      	}
+      }
+    `);
+  });
+
+  it('deduplicate edges with the same key in directed graph', () => {
+    const result = renderString(`
+      digraph {
+        {
+          edge [test=<no_key>]
+          a -> b
+          edge [test=key1]
+          a -> b [key = 1]
+          edge [test=key1]
+          b -> a [key = 1]
+          edge [test=bad1]
+          a -> b [key = 1]
+          edge [test=bad2]
+          b -> a [key = 1]
+          edge [test=key2]
+          a -> b [key=2]
+        }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [test=key2];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -> b	[pos="e,10.643,32.455 10.626,75.503 6.8265,66.4 5.8204,54.129 7.6076,43.348",
+      			test=<no_key>];
+      		a -> b	[key=1,
+      			pos="e,21.138,35.789 21.122,72.055 20.328,64.574 20.076,55.579 20.367,47.137",
+      			test=key1];
+      		a -> b	[key=2,
+      			pos="e,43.357,32.455 43.374,75.503 47.173,66.4 48.18,54.129 46.392,43.348"];
+      		b -> a	[key=1,
+      			pos="e,32.878,72.055 32.862,35.789 33.663,43.248 33.922,52.237 33.639,60.686",
+      			test=key1];
+      	}
+      }
+    `);
+  });
+
+  it('deduplicate edges in strict graph', () => {
+    const result = renderString(`
+      strict graph {
+        {
+          edge [test=1]
+          a -- b
+          edge [test=2]
+          b -- a
+          edge [test=3]
+          a -- b
+        }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      strict graph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [test=3];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -- b	[pos="27,71.697 27,60.846 27,46.917 27,36.104",
+      			test=1];
+      	}
+      }
+    `);
+  });
+
+  it('deduplicate edges in strict directed graph', () => {
+    const result = renderString(`
+      strict digraph {
+        {
+          edge [test=1]
+          a -> b
+          edge [test=2]
+          b -> a
+          edge [test=3]
+          a -> b
+        }
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      strict digraph {
+      	graph [bb="0,0,54,108"];
+      	node [label="\\N"];
+      	{
+      		edge [test=3];
+      		a	[height=0.5,
+      			pos="27,90",
+      			width=0.75];
+      		b	[height=0.5,
+      			pos="27,18",
+      			width=0.75];
+      		a -> b	[pos="e,21.138,35.789 21.122,72.055 20.328,64.574 20.076,55.579 20.367,47.137",
+      			test=1];
+      		b -> a	[pos="e,32.878,72.055 32.862,35.789 33.663,43.248 33.922,52.237 33.639,60.686",
+      			test=2];
+      	}
+      }
+    `);
+  });
+
+  it('error on missing graph at the beginning of file', () => {
+    const result = dotviz.render('test');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 0,
+            "index": 0,
+            "line": 1,
+          },
+          "message": "Unexpected identifier 'test', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
+        },
+      ]
+    `);
+  });
+
+  it('error on graph without statements', () => {
+    const result = dotviz.render('graph // missing body');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 21,
+            "index": 21,
+            "line": 1,
+          },
+          "message": "Unexpected end of file, expected '{'.",
+        },
+      ]
+    `);
+  });
+
+  it('error on using square brackets for graph definition', () => {
+    const result = dotviz.render('graph []');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 6,
+            "index": 6,
+            "line": 1,
+          },
+          "message": "Unexpected '[', expected '{'.",
+        },
+      ]
+    `);
+  });
+
+  it('error on using keyword as graph name', () => {
+    const result = dotviz.render('graph subgraph {}');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 6,
+            "index": 6,
+            "line": 1,
+          },
+          "message": "Unexpected reserved keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".",
+        },
+      ]
+    `);
+  });
+
+  it('error on invalid graph definition', () => {
+    const result = dotviz.render('graph name "bad"');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 11,
+            "index": 11,
+            "line": 1,
+          },
+          "message": "Unexpected string "bad", expected '{'.",
+        },
+      ]
+    `);
+  });
+  describe('error on invalid graph definition with various tokens', () => {
+    it.for([
+      [',', `','`],
+      [':', `':'`],
+      [';', `';'`],
+      ['=', `'='`],
+      ['[', `'['`],
+      [']', `']'`],
+      ['}', `'}'`],
+      ['->', `'->'`],
+      ['--', `'--'`],
+      ['node', `keyword 'node'`],
+      ['edge', `keyword 'edge'`],
+      ['graph', `keyword 'graph'`],
+      ['digraph', `keyword 'digraph'`],
+      ['subgraph', `keyword 'subgraph'`],
+      ['strict', `keyword 'strict'`],
+      ['', 'end of file'],
+    ])('token $0', ([token, tokenDebugMessage]) => {
+      const result = dotviz.render('graph name ' + token);
+      expectFailureResult(result).toStrictEqual([
+        {
+          level: 'error',
+          location: {
+            column: 11,
+            index: 11,
+            line: 1,
+          },
+          message: `Unexpected ${tokenDebugMessage}, expected '{'.`,
+        },
+      ]);
+    });
+  });
+
+  it('error on invalid syntax in graph statement list', () => {
+    const result = dotviz.render('graph { -- }');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 8,
+            "index": 8,
+            "line": 1,
+          },
+          "message": "Unexpected '--', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").",
+        },
+      ]
+    `);
+  });
+
+  it('error on invalid attributes syntax', () => {
+    const result = dotviz.render(`
+      graph {
+        node {}
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 13,
+            "index": 28,
+            "line": 3,
+          },
+          "message": "Unexpected '{', expected '['.",
+        },
+      ]
+    `);
+  });
+
+  it('error on invalid syntax inside attribute list', () => {
+    const result = dotviz.render(`
+      graph {
+        node [ -> ]
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 15,
+            "index": 30,
+            "line": 3,
+          },
+          "message": "Unexpected '->', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").",
+        },
+      ]
+    `);
+  });
+
+  it('error on unterminated block comment', () => {
+    const result = dotviz.render(`
+      graph {
+        test=/* never finishes
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 13,
+            "index": 28,
+            "line": 3,
+          },
+          "message": "Unexpected unterminated block comment '/* never finishes...', add a closing '*/' to the comment.",
+        },
+      ]
+    `);
+  });
+
+  it('error on unterminated string', () => {
+    const result = dotviz.render(`
+      graph {
+        test="never finishes
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 13,
+            "index": 28,
+            "line": 3,
+          },
+          "message": "Unterminated string '"never finishes\\n ...', add a closing '"' to the string.",
+        },
+      ]
+    `);
+  });
+
+  it('error on unterminated html', () => {
+    const result = dotviz.render(`
+      graph {
+        test=<never finishes
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 13,
+            "index": 28,
+            "line": 3,
+          },
+          "message": "Unterminated HTML string '<never finishes\\n ...', add a closing '>' to the HTML string.",
+        },
+      ]
+    `);
+  });
+
+  it('error on unexpected port in node statement', () => {
+    const result = dotviz.render(`
+      graph {
+        a:bad_port
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 10,
+            "index": 25,
+            "line": 3,
+          },
+          "message": "Unexpected 'bad_port' port in node statement",
+        },
+      ]
+    `);
+  });
+
+  it('error on invalid compass point', () => {
+    const result = dotviz.render(`
+      graph {
+        a:port:bad_point
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 15,
+            "index": 30,
+            "line": 3,
+          },
+          "message": "Invalid compass point identifier 'bad_point'. Allowed values: n, ne, e, se, s, sw, w, nw, c, _.",
+        },
+      ]
+    `);
+  });
+
+  it('error on using directed edges in an undirected graph', () => {
+    const result = dotviz.render(`
+      graph {
+        a -> a
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 10,
+            "index": 25,
+            "line": 3,
+          },
+          "message": "Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.",
+        },
+      ]
+    `);
+  });
+
+  it('error on using undirected edges in a directed graph', () => {
+    const result = dotviz.render(`
+      digraph {
+        a -- a
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 10,
+            "index": 27,
+            "line": 3,
+          },
+          "message": "Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.",
+        },
+      ]
+    `);
+  });
+
+  describe('error on invalid syntax inside subgraph', () => {
+    it.for(['&', '/', '-', '.'])('character $0', (badChar) => {
+      const result = dotviz.render(`
+        digraph {
+          { ${badChar} }
+        }
+      `);
+      expectFailureResult(result).toStrictEqual([
+        {
+          level: 'error',
+          location: {
+            column: 12,
+            index: 31,
+            line: 3,
+          },
+          message: `Unexpected character '${badChar}', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
+        },
+      ]);
+    });
+  });
+
+  it('error on invalid syntax in named subgraph definition', () => {
+    const result = dotviz.render(`
+      graph {
+        subgraph name <bad>
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 22,
+            "index": 37,
+            "line": 3,
+          },
+          "message": "Unexpected HTML string <bad>, expected '{'.",
+        },
+      ]
+    `);
+  });
+});
