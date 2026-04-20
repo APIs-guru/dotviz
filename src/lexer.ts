@@ -461,6 +461,19 @@ interface PortID {
   portToken: Token;
 }
 
+const validCompassPoints = new Set([
+  'n',
+  'ne',
+  'e',
+  'se',
+  's',
+  'sw',
+  'w',
+  'nw',
+  'c',
+  '_',
+]);
+
 type NodeID = [NormalizedNode, PortID | null];
 
 class Parser {
@@ -813,8 +826,18 @@ class Parser {
 
     // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
     if (this.#optional(Kind[':'])) {
-      // FIXME: validate values
-      port += ':' + this.#expectedName('compass point value');
+      const compassToken = this.#readToken();
+      const compass = this.#parseName(compassToken, 'compass point value');
+
+      if (!validCompassPoints.has(compass)) {
+        const debugToken = this.#lexer.tokenToDebug(compassToken);
+        const allowedValues = [...validCompassPoints.values()].join(', ');
+        this.#failWithError(
+          `Invalid compass point ${debugToken}. Allowed values: ${allowedValues}.`,
+          compassToken,
+        );
+      }
+      port += ':' + compass;
     }
     return { port, portToken };
   }
