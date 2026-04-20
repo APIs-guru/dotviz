@@ -1,10 +1,10 @@
 import type { Attributes, Graph } from './graph.d.ts';
-import { parseDot } from './lexer.ts';
 import {
   type FixedAttributes,
   NormalizedGraph,
   normalizeGraph,
 } from './normalize-graph.ts';
+import { parseDot } from './parser.ts';
 
 /**
  * @property format
