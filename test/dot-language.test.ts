@@ -955,7 +955,7 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('error on using directed edges in an undirected graph', () => {
+  it('error on unexpected port in node statement', () => {
     const result = dotviz.render(`
       graph {
         a:bad_port
@@ -971,6 +971,27 @@ describe('Dot language support', () => {
             "line": 3,
           },
           "message": "Unexpected 'bad_port' port in node statement",
+        },
+      ]
+    `);
+  });
+
+  it('error on invalid compass point', () => {
+    const result = dotviz.render(`
+      graph {
+        a:port:bad_point
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 15,
+            "index": 30,
+            "line": 3,
+          },
+          "message": "Invalid compass point identifier 'bad_point'. Allowed values: n, ne, e, se, s, sw, w, nw, c, _.",
         },
       ]
     `);
