@@ -958,6 +958,27 @@ describe('Dot language support', () => {
   it('error on using directed edges in an undirected graph', () => {
     const result = dotviz.render(`
       graph {
+        a:bad_port
+      }
+    `);
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      [
+        {
+          "level": "error",
+          "location": {
+            "column": 10,
+            "index": 25,
+            "line": 3,
+          },
+          "message": "Unexpected 'bad_port' port in node statement",
+        },
+      ]
+    `);
+  });
+
+  it('error on using directed edges in an undirected graph', () => {
+    const result = dotviz.render(`
+      graph {
         a -> a
       }
     `);
