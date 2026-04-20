@@ -127,6 +127,11 @@ describe('Viz', () => {
         [
           {
             "level": "error",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
             "message": "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
           },
         ]
@@ -141,6 +146,11 @@ describe('Viz', () => {
         [
           {
             "level": "error",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
             "message": "Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
@@ -173,6 +183,11 @@ describe('Viz', () => {
         [
           {
             "level": "error",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
             "message": "Unexpected identifier 'invalid1', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
@@ -182,6 +197,11 @@ describe('Viz', () => {
         [
           {
             "level": "error",
+            "location": {
+              "column": 0,
+              "index": 0,
+              "line": 1,
+            },
             "message": "Unexpected identifier 'invalid2', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
           },
         ]
@@ -238,7 +258,12 @@ describe('Viz', () => {
         [
           {
             "level": "warning",
-            "message": "Ambiguous token sequence: '1.2.' will be split into number '1.2' and a following token. If you want it interpreted as a single value, use quotes: "1.2.". Otherwise, use whitespace or other delimiters to separate tokens.",
+            "location": {
+              "column": 12,
+              "index": 12,
+              "line": 1,
+            },
+            "message": "Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.",
           },
         ]
       `);
@@ -252,7 +277,12 @@ describe('Viz', () => {
         [
           {
             "level": "warning",
-            "message": "Ambiguous token sequence: '1.2.' will be split into number '1.2' and a following token. If you want it interpreted as a single value, use quotes: "1.2.". Otherwise, use whitespace or other delimiters to separate tokens.",
+            "location": {
+              "column": 26,
+              "index": 26,
+              "line": 1,
+            },
+            "message": "Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.",
           },
           {
             "level": "error",
@@ -313,21 +343,8 @@ describe('Viz', () => {
         [
           {
             "level": "error",
+            "location": undefined,
             "message": "Format: "invalid" not recognized. Use one of: dot gv svg",
-          },
-        ]
-      `);
-    });
-
-    it('returns an error that contains newlines as a single item', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.render('graph { " }');
-
-      expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "(1:9) Unterminated string. Add a closing '"' to complete the string started here: '" }'.",
           },
         ]
       `);

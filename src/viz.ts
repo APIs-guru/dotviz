@@ -98,9 +98,16 @@ export interface MultipleSuccessResult {
   errors: RenderError[];
 }
 
+export interface Location {
+  index: number;
+  line: number;
+  column: number;
+}
+
 export interface RenderError {
   level: 'error' | 'warning' | undefined;
   message: string;
+  location: Location | undefined;
 }
 
 /**
@@ -234,6 +241,7 @@ export class Viz {
               {
                 level: 'error',
                 message: `Format: "${name}" not recognized. Use one of: dot gv svg`,
+                location: undefined,
               },
             ],
           };
