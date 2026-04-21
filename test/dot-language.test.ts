@@ -176,11 +176,13 @@ describe('Dot language support', () => {
         graph [
           str1="",
           str2="\"",
-          str3="\\\"",
-          str4="a",
-          str5="\
+          str3="\"a",
+          str4="\\\"",
+          str5="\\a\\",
+          str6="a",
+          str7="\
           a",
-          str6="\na",
+          str8="\na",
         ]
       }
     `);
@@ -189,10 +191,12 @@ describe('Dot language support', () => {
       	graph [bb="0,0,0,0",
       		str1="",
       		str2="\"",
-      		str3="\\\"",
-      		str4=a,
-      		str5="          a",
-      		str6="\na"
+      		str3="\"a",
+      		str4="\\\"",
+      		str5="\\a\\",
+      		str6=a,
+      		str7="          a",
+      		str8="\na"
       	];
       	node [label="\N"];
       }

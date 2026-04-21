@@ -360,7 +360,7 @@ class Lexer {
           break;
         case Char['\\']:
           ++this.#nextIndex;
-          escapedChar = true;
+          escapedChar = !escapedChar;
           continue;
         case Char['"']:
           ++this.#nextIndex;
