@@ -13,8 +13,6 @@ interface NormalizedGraphConfig {
 }
 
 export class NormalizedGraph {
-  root: NormalizedGraph;
-
   name: string | null;
   strict: boolean;
   directed: boolean;
@@ -24,12 +22,11 @@ export class NormalizedGraph {
   graphAttributes: Attributes;
   nodeAttributes: Attributes;
   edgeAttributes: Attributes;
-  allNodes = new Map<string, NormalizedNode>();
-  allEdges = new Map<string | number, NormalizedEdge>();
-  subgraphs = new Map<string | number, NormalizedSubgraph>();
+  #allNodes = new Map<string, NormalizedNode>();
+  #allEdges = new Map<string | number, NormalizedEdge>();
+  #subgraphs = new Map<string | number, NormalizedSubgraph>();
 
   constructor(config: NormalizedGraphConfig, fixedAttributes: FixedAttributes) {
-    this.root = this;
     this.name = config.name;
     this.strict = config.strict;
     this.directed = config.directed;
@@ -51,7 +48,7 @@ export class NormalizedGraph {
         defaultAttributes[key] = this.graphAttributes[key] ?? '';
       }
     }
-    for (const subgraph of this.subgraphs.values()) {
+    for (const subgraph of this.#subgraphs.values()) {
       subgraph.applyDefaultGraphAttributes(defaultAttributes);
     }
 
@@ -69,7 +66,7 @@ export class NormalizedGraph {
         defaultAttributes[key] = '';
       }
     }
-    for (const node of this.allNodes.values()) {
+    for (const node of this.#allNodes.values()) {
       node.applyDefaultAttributes(defaultAttributes);
     }
 
@@ -87,7 +84,7 @@ export class NormalizedGraph {
         defaultAttributes[key] = '';
       }
     }
-    for (const edge of this.allEdges.values()) {
+    for (const edge of this.#allEdges.values()) {
       edge.applyDefaultAttributes(defaultAttributes);
     }
     this.edgeAttributes = {
@@ -98,33 +95,33 @@ export class NormalizedGraph {
   }
 
   upsertNode(name: string): [NormalizedNode, boolean] {
-    const node = this.allNodes.get(name);
+    const node = this.#allNodes.get(name);
     if (node !== undefined) {
       return [node, false];
     }
 
-    const newNode = new NormalizedNode(this.allNodes.size, name);
+    const newNode = new NormalizedNode(this.#allNodes.size, name);
     newNode.mergeAttributes(this.nodeAttributes);
-    this.allNodes.set(name, newNode);
+    this.#allNodes.set(name, newNode);
     return [newNode, true];
   }
 
   upsertEdge(config: NormalizedEdgeConfig): [NormalizedEdge, boolean] {
-    const key = this.edgeKey(config);
+    const key = this.#edgeKey(config);
     if (key) {
-      const edge = this.allEdges.get(key);
+      const edge = this.#allEdges.get(key);
       if (edge !== undefined) {
         return [edge, false];
       }
     }
 
-    const newEdge = new NormalizedEdge(this.allEdges.size, config);
+    const newEdge = new NormalizedEdge(this.#allEdges.size, config);
     newEdge.mergeAttributes(this.edgeAttributes);
-    this.allEdges.set(key ?? newEdge.index, newEdge);
+    this.#allEdges.set(key ?? newEdge.index, newEdge);
     return [newEdge, true];
   }
 
-  edgeKey(config: NormalizedEdgeConfig): string | undefined {
+  #edgeKey(config: NormalizedEdgeConfig): string | undefined {
     let tail = config.tail.index;
     let head = config.head.index;
 
@@ -144,16 +141,32 @@ export class NormalizedGraph {
 
   upsertSubgraph(name: string | null): NormalizedSubgraph {
     if (name !== null) {
-      const subgraph = this.subgraphs.get(name);
+      const subgraph = this.#subgraphs.get(name);
       if (subgraph) {
         return subgraph;
       }
     }
 
-    const key = name ?? this.subgraphs.size;
+    const key = name ?? this.#subgraphs.size;
     const newSubgraph = new NormalizedSubgraph(this, name);
-    this.subgraphs.set(key, newSubgraph);
+    this.#subgraphs.set(key, newSubgraph);
     return newSubgraph;
+  }
+
+  getRoot(): this {
+    return this;
+  }
+
+  getAllNodes(): NormalizedNode[] {
+    return [...this.#allNodes.values()];
+  }
+
+  getAllEdges(): NormalizedEdge[] {
+    return [...this.#allEdges.values()];
+  }
+
+  getSubgraphs(): NormalizedSubgraph[] {
+    return [...this.#subgraphs.values()];
   }
 
   toJSON() {
@@ -164,9 +177,9 @@ export class NormalizedGraph {
       graphAttributes: this.graphAttributes,
       nodeAttributes: this.nodeAttributes,
       edgeAttributes: this.edgeAttributes,
-      allNodes: [...this.allNodes.values()],
-      allEdges: [...this.allEdges.values()],
-      subgraphs: [...this.subgraphs.values()],
+      allNodes: this.getAllNodes(),
+      allEdges: this.getAllEdges(),
+      subgraphs: this.getSubgraphs(),
     };
   }
 }
@@ -236,27 +249,27 @@ export class NormalizedEdge {
 }
 
 export class NormalizedSubgraph {
-  root: NormalizedGraph;
-  parent: NormalizedGraph | NormalizedSubgraph;
+  #root: NormalizedGraph;
+  #parent: NormalizedGraph | NormalizedSubgraph;
 
   // Contains all nodes/edges created within this subgraph AND its nested subgraphs.
-  nodesCreatedInScope = new Set<NormalizedNode>();
-  edgesCreatedInScope = new Set<NormalizedEdge>();
+  #nodesCreatedInScope = new Set<NormalizedNode>();
+  #edgesCreatedInScope = new Set<NormalizedEdge>();
 
   name: string | null = null;
   graphAttributes: Attributes = {};
   nodeAttributes: Attributes = {};
   edgeAttributes: Attributes = {};
-  nodeIndexes = new Set<NormalizedNode>();
-  edgeIndexes = new Set<NormalizedEdge>();
-  subgraphs = new Map<string | number, NormalizedSubgraph>();
+  #nodeIndexes = new Set<NormalizedNode>();
+  #edgeIndexes = new Set<NormalizedEdge>();
+  #subgraphs = new Map<string | number, NormalizedSubgraph>();
 
   constructor(
     parent: NormalizedGraph | NormalizedSubgraph,
     name: string | null,
   ) {
-    this.root = parent.root;
-    this.parent = parent;
+    this.#root = parent.getRoot();
+    this.#parent = parent;
     this.name = name;
   }
 
@@ -265,7 +278,7 @@ export class NormalizedSubgraph {
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = this.graphAttributes[key] ?? '';
     }
-    for (const subgraph of this.subgraphs.values()) {
+    for (const subgraph of this.#subgraphs.values()) {
       subgraph.applyDefaultGraphAttributes(defaultAttributes);
     }
 
@@ -277,7 +290,7 @@ export class NormalizedSubgraph {
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = this.nodeAttributes[key] ?? '';
     }
-    for (const node of this.nodesCreatedInScope) {
+    for (const node of this.#nodesCreatedInScope) {
       node.applyDefaultAttributes(defaultAttributes);
     }
 
@@ -289,7 +302,7 @@ export class NormalizedSubgraph {
     for (const key of Object.keys(newAttributes)) {
       defaultAttributes[key] = this.edgeAttributes[key] ?? '';
     }
-    for (const edge of this.edgesCreatedInScope) {
+    for (const edge of this.#edgesCreatedInScope) {
       edge.applyDefaultAttributes(defaultAttributes);
     }
     this.edgeAttributes = { ...this.edgeAttributes, ...newAttributes };
@@ -300,22 +313,22 @@ export class NormalizedSubgraph {
   }
 
   upsertNode(name: string): [NormalizedNode, boolean] {
-    const [node, isCreated] = this.parent.upsertNode(name);
+    const [node, isCreated] = this.#parent.upsertNode(name);
 
-    this.nodeIndexes.add(node);
+    this.#nodeIndexes.add(node);
     if (isCreated) {
-      this.nodesCreatedInScope.add(node);
+      this.#nodesCreatedInScope.add(node);
       node.mergeAttributes(this.nodeAttributes);
     }
     return [node, isCreated];
   }
 
   upsertEdge(config: NormalizedEdgeConfig): [NormalizedEdge, boolean] {
-    const [edge, isCreated] = this.parent.upsertEdge(config);
+    const [edge, isCreated] = this.#parent.upsertEdge(config);
 
-    this.edgeIndexes.add(edge);
+    this.#edgeIndexes.add(edge);
     if (isCreated) {
-      this.edgesCreatedInScope.add(edge);
+      this.#edgesCreatedInScope.add(edge);
       edge.mergeAttributes(this.edgeAttributes);
     }
     return [edge, isCreated];
@@ -323,24 +336,32 @@ export class NormalizedSubgraph {
 
   upsertSubgraph(name: string | null): NormalizedSubgraph {
     if (name !== null) {
-      const subgraph = this.subgraphs.get(name);
+      const subgraph = this.#subgraphs.get(name);
       if (subgraph) {
         return subgraph;
       }
     }
 
-    const key = name ?? this.subgraphs.size;
+    const key = name ?? this.#subgraphs.size;
     const newSubgraph = new NormalizedSubgraph(this, name);
-    this.subgraphs.set(key, newSubgraph);
+    this.#subgraphs.set(key, newSubgraph);
     return newSubgraph;
   }
 
+  getRoot(): NormalizedGraph {
+    return this.#root;
+  }
+
   sortedNodes(): NormalizedNode[] {
-    return [...this.nodeIndexes].toSorted((a, b) => a.index - b.index);
+    return [...this.#nodeIndexes].toSorted((a, b) => a.index - b.index);
   }
 
   sortedEdges(): NormalizedEdge[] {
-    return [...this.edgeIndexes].toSorted((a, b) => a.index - b.index);
+    return [...this.#edgeIndexes].toSorted((a, b) => a.index - b.index);
+  }
+
+  getSubgraphs(): NormalizedSubgraph[] {
+    return [...this.#subgraphs.values()];
   }
 
   toJSON() {
@@ -351,7 +372,7 @@ export class NormalizedSubgraph {
       edgeAttributes: this.edgeAttributes,
       nodeIndexes: this.sortedNodes().map((node) => node.index),
       edgeIndexes: this.sortedEdges().map((edge) => edge.index),
-      subgraphs: [...this.subgraphs.values()],
+      subgraphs: this.getSubgraphs(),
     };
   }
 }

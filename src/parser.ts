@@ -884,7 +884,7 @@ class Parser {
   }
 
   #optionalEdgeOp(owner: NormalizedGraph | NormalizedSubgraph): boolean {
-    const { directed } = owner.root;
+    const { directed } = owner.getRoot();
     const kind = this.#peekKind();
     if (kind === Kind['--']) {
       const token = this.#readToken();
