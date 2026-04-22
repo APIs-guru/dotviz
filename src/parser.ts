@@ -1,4 +1,5 @@
 import type { Attributes } from './graph.d.ts';
+import { type Location, printLocation } from './location.ts';
 import {
   extractKeyFromEdgeAttributes,
   type FixedAttributes,
@@ -6,7 +7,7 @@ import {
   NormalizedNode,
   NormalizedSubgraph,
 } from './normalize-graph.ts';
-import type { FailureResult, Location, RenderError } from './viz.ts';
+import type { FailureResult, RenderError } from './viz.ts';
 
 const Char = {
   '\t': 0x09,
@@ -124,8 +125,8 @@ class Lexer {
   }
 
   #readNewLine(): void {
-    ++this.#nextIndex;
     ++this.#line;
+    ++this.#nextIndex;
     this.#lineStart = this.#nextIndex;
   }
 
@@ -139,12 +140,16 @@ class Lexer {
     }
   }
 
-  #readBlockComment(): Token | null {
-    const start: Location = {
+  #nextIndexLocation(): Location {
+    return {
       index: this.#nextIndex,
       line: this.#line,
-      column: this.#nextIndex - this.#lineStart,
+      column: this.#nextIndex - this.#lineStart + 1,
     };
+  }
+
+  #readBlockComment(): Token | null {
+    const start = this.#nextIndexLocation();
 
     this.#nextIndex += 2; // skip `/*`
     while (true) {
@@ -207,49 +212,13 @@ class Lexer {
     }
   }
 
-  extractText(token: Token): string {
-    const start = token.start.index;
-    const end = start + token.length;
-    return this.#dotStr.slice(start, end);
-  }
-
-  tokenToDebug(token: Token): string {
-    const value = debugStringValue(this.extractText(token));
-    const { kind } = token;
-    switch (kind) {
-      case Kind.EOF:
-        return 'end of file';
-      case Kind.Number:
-        return `number '${value}'`;
-      case Kind.Name:
-        return `identifier '${value}'`;
-      case Kind.String:
-        return `string ${value}`;
-      case Kind.HTML:
-        return `HTML string ${value}`;
-      case Kind.UnexpectedChar:
-        return `character '${value}'`;
-      case Kind.UnterminatedString:
-        return `unterminated string '${value}'`;
-      case Kind.UnterminatedHTML:
-        return `unterminated HTML string '${value}'`;
-      case Kind.UnterminatedBlockComment:
-        return `unterminated block comment '${value}'`;
-    }
-    return kindStr(kind);
-  }
-
   nextToken(): Token {
     const invalidToken = this.#skipUntilTokenStart();
     if (invalidToken) {
       return invalidToken;
     }
-    const start: Location = {
-      index: this.#nextIndex,
-      line: this.#line,
-      column: this.#nextIndex - this.#lineStart,
-    };
 
+    const start = this.#nextIndexLocation();
     const char = this.#peekChar();
     switch (char) {
       case undefined:
@@ -476,6 +445,48 @@ const validCompassPoints = new Set([
 
 type NodeID = [NormalizedNode, PortID | null];
 
+class ParserError implements RenderError {
+  level = 'error' as const;
+  message: string;
+  location: Location;
+  #dotStr: string;
+
+  constructor(message: string, location: Location, dotStr: string) {
+    this.message = message;
+    this.location = location;
+    this.#dotStr = dotStr;
+  }
+
+  toString() {
+    return printLocation(
+      'ParserError: ' + this.message,
+      this.#dotStr,
+      this.location,
+    );
+  }
+}
+
+class ParserWarning implements RenderError {
+  level = 'warning' as const;
+  message: string;
+  location: Location;
+  #dotStr: string;
+
+  constructor(message: string, location: Location, dotStr: string) {
+    this.message = message;
+    this.location = location;
+    this.#dotStr = dotStr;
+  }
+
+  toString() {
+    return printLocation(
+      'ParserWarning: ' + this.message,
+      this.#dotStr,
+      this.location,
+    );
+  }
+}
+
 class Parser {
   static #AbortError = new Error(
     'Internal error, thrown when parsing of dot file fails',
@@ -507,11 +518,13 @@ class Parser {
     }
   }
 
+  #dotStr: string;
   #lexer: Lexer;
   #peekToken: Token;
-  #diagnostics: RenderError[] = [];
+  #diagnostics: (ParserError | ParserWarning)[] = [];
 
   constructor(dotStr: string) {
+    this.#dotStr = dotStr;
     this.#lexer = new Lexer(dotStr);
     this.#peekToken = this.#lexer.nextToken();
   }
@@ -528,10 +541,42 @@ class Parser {
     return this.#peekToken.kind;
   }
 
+  #extractText(token: Token): string {
+    const start = token.start.index;
+    const end = start + token.length;
+    return this.#dotStr.slice(start, end);
+  }
+
+  #tokenToDebug(token: Token): string {
+    const value = debugStringValue(this.#extractText(token));
+    const { kind } = token;
+    switch (kind) {
+      case Kind.EOF:
+        return 'end of file';
+      case Kind.Number:
+        return `number '${value}'`;
+      case Kind.Name:
+        return `identifier '${value}'`;
+      case Kind.String:
+        return `string ${value}`;
+      case Kind.HTML:
+        return `HTML string ${value}`;
+      case Kind.UnexpectedChar:
+        return `character '${value}'`;
+      case Kind.UnterminatedString:
+        return `unterminated string '${value}'`;
+      case Kind.UnterminatedHTML:
+        return `unterminated HTML string '${value}'`;
+      case Kind.UnterminatedBlockComment:
+        return `unterminated block comment '${value}'`;
+    }
+    return kindStr(kind);
+  }
+
   #readToken(): Token {
     const result = this.#peekToken;
     if (result.kind === Kind.UnterminatedBlockComment) {
-      const tokenDebug = this.#lexer.tokenToDebug(result);
+      const tokenDebug = this.#tokenToDebug(result);
       this.#failWithError(
         `Unexpected ${tokenDebug}, add a closing '*/' to the comment.`,
         result,
@@ -564,16 +609,18 @@ class Parser {
       return;
     }
 
-    const lastTokenText = this.#lexer.tokenToDebug(lastToken);
-    const nextTokenText = this.#lexer.tokenToDebug(nextToken);
+    const lastTokenText = this.#tokenToDebug(lastToken);
+    const nextTokenText = this.#tokenToDebug(nextToken);
     const ambiguousText: string = debugStringValue(
-      this.#lexer.extractText(lastToken) + this.#lexer.extractText(nextToken),
+      this.#extractText(lastToken) + this.#extractText(nextToken),
     );
-    this.#diagnostics.push({
-      level: 'warning',
-      message: `Ambiguous token sequence: '${ambiguousText}' will be split into ${lastTokenText} and ${nextTokenText}. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.`,
-      location: lastToken.start,
-    });
+    const message =
+      `Ambiguous token sequence: '${ambiguousText}' will be split into ${lastTokenText} and ${nextTokenText}.` +
+      ' If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.';
+
+    this.#diagnostics.push(
+      new ParserWarning(message, lastToken.start, this.#dotStr),
+    );
   }
 
   #optional(kind: Kind): boolean {
@@ -587,7 +634,7 @@ class Parser {
   #expected(kind: LiteralKind | KeywordKind): void {
     if (!this.#optional(kind)) {
       const token = this.#readToken();
-      const tokenDebug = this.#lexer.tokenToDebug(token);
+      const tokenDebug = this.#tokenToDebug(token);
       this.#failWithError(
         `Unexpected ${tokenDebug}, expected ${kindStr(kind)}.`,
         token,
@@ -622,14 +669,14 @@ class Parser {
 
   #parseValue(token: Token, description: string): string | { html: string } {
     if (token.kind & KEYWORD) {
-      const keyword = this.#lexer.extractText(token);
+      const keyword = this.#extractText(token);
       this.#failWithError(
         `Unexpected reserved keyword '${keyword}' where ${description} was expected. If you want to use it as an identifier, enclose it in quotes: "${keyword}".`,
         token,
       );
     }
 
-    const text = this.#lexer.extractText(token);
+    const text = this.#extractText(token);
     switch (token.kind) {
       case Kind.Name:
       case Kind.Number:
@@ -645,7 +692,7 @@ class Parser {
         return { html: text.slice(1, -1) };
     }
 
-    const tokenDebug = this.#lexer.tokenToDebug(token);
+    const tokenDebug = this.#tokenToDebug(token);
     switch (token.kind) {
       case Kind.UnterminatedString:
         return this.#failWithError(
@@ -666,11 +713,7 @@ class Parser {
   }
 
   #failWithError(message: string, token: Token): never {
-    this.#diagnostics.push({
-      level: 'error',
-      message,
-      location: token.start,
-    });
+    this.#diagnostics.push(new ParserError(message, token.start, this.#dotStr));
     throw Parser.#AbortError;
   }
 
@@ -688,7 +731,7 @@ class Parser {
 
     if (!directed && !this.#optional(Kind.graph)) {
       const token = this.#readToken();
-      const tokenDebug = this.#lexer.tokenToDebug(token);
+      const tokenDebug = this.#tokenToDebug(token);
       this.#failWithError(
         `Unexpected ${tokenDebug}, expected keyword ` +
           (strict
@@ -799,7 +842,7 @@ class Parser {
         break;
       default: {
         const token = this.#readToken();
-        const tokenDebug = this.#lexer.tokenToDebug(token);
+        const tokenDebug = this.#tokenToDebug(token);
         this.#failWithError(
           `Unexpected ${tokenDebug}, expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
           token,
@@ -830,7 +873,7 @@ class Parser {
       const compass = this.#parseName(compassToken, 'compass point value');
 
       if (!validCompassPoints.has(compass)) {
-        const debugToken = this.#lexer.tokenToDebug(compassToken);
+        const debugToken = this.#tokenToDebug(compassToken);
         const allowedValues = [...validCompassPoints.values()].join(', ');
         this.#failWithError(
           `Invalid compass point ${debugToken}. Allowed values: ${allowedValues}.`,

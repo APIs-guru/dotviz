@@ -1,4 +1,5 @@
 import type { Attributes, Graph } from './graph.d.ts';
+import type { Location } from './location.ts';
 import {
   type FixedAttributes,
   NormalizedGraph,
@@ -98,16 +99,12 @@ export interface MultipleSuccessResult {
   errors: RenderError[];
 }
 
-export interface Location {
-  index: number;
-  line: number;
-  column: number;
-}
-
 export interface RenderError {
-  level: 'error' | 'warning' | undefined;
+  level: 'error' | 'warning';
   message: string;
-  location: Location | undefined;
+  location: Location | null;
+
+  toString(): string;
 }
 
 /**
@@ -238,11 +235,10 @@ export class Viz {
             status: 'failure',
             output: null,
             errors: [
-              {
-                level: 'error',
-                message: `Format: "${name}" not recognized. Use one of: dot gv svg`,
-                location: undefined,
-              },
+              new RenderingBackendError(
+                'error',
+                `Format: "${name}" not recognized. Use one of: dot gv svg`,
+              ),
             ],
           };
       }
@@ -276,6 +272,10 @@ export class Viz {
     try {
       const str: string = this._utf8Decoder.decode(outputJSONBuf);
       const response = JSON.parse(str) as MultipleRenderResult;
+      response.errors = response.errors.map(
+        (error) => new RenderingBackendError(error.level, error.message),
+      );
+
       let output: Record<string, string> | null = null;
       if (response.output) {
         output = {};
@@ -353,5 +353,20 @@ export class Viz {
 
     view.setUint32(nwritten_ptr, totalWritten, true);
     return 0;
+  }
+}
+
+class RenderingBackendError implements RenderError {
+  level: 'warning' | 'error';
+  message: string;
+  location = null;
+
+  constructor(level: 'warning' | 'error', message: string) {
+    this.level = level;
+    this.message = message;
+  }
+
+  toString() {
+    return 'RenderingBackendError: ' + this.message;
   }
 }

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
-import { expectSuccessResult } from './util/render-result.ts';
+import { expectErrors, expectSuccessResult } from './util/render-result.ts';
 
 const __dirname = import.meta.dirname;
 function readSnapshot(filepath: string): string {
@@ -51,13 +51,10 @@ describe('Viz', () => {
           dot: expect.any(String) as unknown,
           svg: expect.any(String) as unknown,
         },
-        errors: [
-          {
-            level: 'warning',
-            message: 'layers not supported in dot output',
-          },
-        ],
+        errors: expect.any(Array) as unknown[],
       });
+
+      expectErrors(result).toMatchInlineSnapshot(`RenderingBackendError: layers not supported in dot output`);
 
       expectString(result.output?.dot).toMatchInlineSnapshot(`
         digraph G {

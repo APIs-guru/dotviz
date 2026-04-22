@@ -2,9 +2,11 @@ import * as VizJSPackage from '@viz-js/viz';
 import { describe, expect, it } from 'vitest';
 
 import * as DotVizPackage from '../src/index.ts';
+import { dedent } from './util/dedent.ts';
 import {
   expectFailureResult,
   expectSuccessResult,
+  stringifyErrors,
 } from './util/render-result.ts';
 
 const vizJS = await VizJSPackage.instance();
@@ -722,85 +724,50 @@ describe('Dot language support', () => {
   it('error on missing graph at the beginning of file', () => {
     const result = dotviz.render('test');
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 0,
-            "index": 0,
-            "line": 1,
-          },
-          "message": "Unexpected identifier 'test', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.",
-        },
-      ]
+      ParserError: Unexpected identifier 'test', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
+
+      1 | test
+        | ^
     `);
   });
 
   it('error on graph without statements', () => {
     const result = dotviz.render('graph // missing body');
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 21,
-            "index": 21,
-            "line": 1,
-          },
-          "message": "Unexpected end of file, expected '{'.",
-        },
-      ]
+      ParserError: Unexpected end of file, expected '{'.
+
+      1 | graph // missing body
+        |                      ^
     `);
   });
 
   it('error on using square brackets for graph definition', () => {
     const result = dotviz.render('graph []');
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 6,
-            "index": 6,
-            "line": 1,
-          },
-          "message": "Unexpected '[', expected '{'.",
-        },
-      ]
+      ParserError: Unexpected '[', expected '{'.
+
+      1 | graph []
+        |       ^
     `);
   });
 
   it('error on using keyword as graph name', () => {
     const result = dotviz.render('graph subgraph {}');
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 6,
-            "index": 6,
-            "line": 1,
-          },
-          "message": "Unexpected reserved keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".",
-        },
-      ]
+      ParserError: Unexpected reserved keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".
+
+      1 | graph subgraph {}
+        |       ^
     `);
   });
 
   it('error on invalid graph definition', () => {
     const result = dotviz.render('graph name "bad"');
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 11,
-            "index": 11,
-            "line": 1,
-          },
-          "message": "Unexpected string "bad", expected '{'.",
-        },
-      ]
+      ParserError: Unexpected string "bad", expected '{'.
+
+      1 | graph name "bad"
+        |            ^
     `);
   });
   describe('error on invalid graph definition with various tokens', () => {
@@ -823,34 +790,22 @@ describe('Dot language support', () => {
       ['', 'end of file'],
     ])('token $0', ([token, tokenDebugMessage]) => {
       const result = dotviz.render('graph name ' + token);
-      expectFailureResult(result).toStrictEqual([
-        {
-          level: 'error',
-          location: {
-            column: 11,
-            index: 11,
-            line: 1,
-          },
-          message: `Unexpected ${tokenDebugMessage}, expected '{'.`,
-        },
-      ]);
+      expect(stringifyErrors(result.errors)).toStrictEqual(dedent`
+        ParserError: Unexpected ${tokenDebugMessage}, expected '{'.
+
+        1 | graph name ${token}
+          |            ^
+      `);
     });
   });
 
   it('error on invalid syntax in graph statement list', () => {
     const result = dotviz.render('graph { -- }');
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 8,
-            "index": 8,
-            "line": 1,
-          },
-          "message": "Unexpected '--', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").",
-        },
-      ]
+      ParserError: Unexpected '--', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
+
+      1 | graph { -- }
+        |         ^
     `);
   });
 
@@ -861,17 +816,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 13,
-            "index": 28,
-            "line": 3,
-          },
-          "message": "Unexpected '{', expected '['.",
-        },
-      ]
+      ParserError: Unexpected '{', expected '['.
+
+      2 |       graph {
+      3 |         node {}
+        |              ^
+      4 |       }
     `);
   });
 
@@ -882,17 +832,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 15,
-            "index": 30,
-            "line": 3,
-          },
-          "message": "Unexpected '->', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").",
-        },
-      ]
+      ParserError: Unexpected '->', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").
+
+      2 |       graph {
+      3 |         node [ -> ]
+        |                ^
+      4 |       }
     `);
   });
 
@@ -903,17 +848,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 13,
-            "index": 28,
-            "line": 3,
-          },
-          "message": "Unexpected unterminated block comment '/* never finishes...', add a closing '*/' to the comment.",
-        },
-      ]
+      ParserError: Unexpected unterminated block comment '/* never finishes...', add a closing '*/' to the comment.
+
+      2 |       graph {
+      3 |         test=/* never finishes
+        |              ^
+      4 |       }
     `);
   });
 
@@ -924,17 +864,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 13,
-            "index": 28,
-            "line": 3,
-          },
-          "message": "Unterminated string '"never finishes\\n ...', add a closing '"' to the string.",
-        },
-      ]
+      ParserError: Unterminated string '"never finishes\\n ...', add a closing '"' to the string.
+
+      2 |       graph {
+      3 |         test="never finishes
+        |              ^
+      4 |       }
     `);
   });
 
@@ -945,17 +880,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 13,
-            "index": 28,
-            "line": 3,
-          },
-          "message": "Unterminated HTML string '<never finishes\\n ...', add a closing '>' to the HTML string.",
-        },
-      ]
+      ParserError: Unterminated HTML string '<never finishes\\n ...', add a closing '>' to the HTML string.
+
+      2 |       graph {
+      3 |         test=<never finishes
+        |              ^
+      4 |       }
     `);
   });
 
@@ -966,17 +896,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 10,
-            "index": 25,
-            "line": 3,
-          },
-          "message": "Unexpected 'bad_port' port in node statement",
-        },
-      ]
+      ParserError: Unexpected 'bad_port' port in node statement
+
+      2 |       graph {
+      3 |         a:bad_port
+        |           ^
+      4 |       }
     `);
   });
 
@@ -987,17 +912,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 15,
-            "index": 30,
-            "line": 3,
-          },
-          "message": "Invalid compass point identifier 'bad_point'. Allowed values: n, ne, e, se, s, sw, w, nw, c, _.",
-        },
-      ]
+      ParserError: Invalid compass point identifier 'bad_point'. Allowed values: n, ne, e, se, s, sw, w, nw, c, _.
+
+      2 |       graph {
+      3 |         a:port:bad_point
+        |                ^
+      4 |       }
     `);
   });
 
@@ -1008,17 +928,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 10,
-            "index": 25,
-            "line": 3,
-          },
-          "message": "Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.",
-        },
-      ]
+      ParserError: Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.
+
+      2 |       graph {
+      3 |         a -> a
+        |           ^
+      4 |       }
     `);
   });
 
@@ -1029,17 +944,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 10,
-            "index": 27,
-            "line": 3,
-          },
-          "message": "Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.",
-        },
-      ]
+      ParserError: Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.
+
+      2 |       digraph {
+      3 |         a -- a
+        |           ^
+      4 |       }
     `);
   });
 
@@ -1050,17 +960,14 @@ describe('Dot language support', () => {
           { ${badChar} }
         }
       `);
-      expectFailureResult(result).toStrictEqual([
-        {
-          level: 'error',
-          location: {
-            column: 12,
-            index: 31,
-            line: 3,
-          },
-          message: `Unexpected character '${badChar}', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
-        },
-      ]);
+      expect(stringifyErrors(result.errors)).toStrictEqual(dedent`
+        ParserError: Unexpected character '${badChar}', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
+
+        2 |         digraph {
+        3 |           { ${badChar} }
+          |             ^
+        4 |         }
+      `);
     });
   });
 
@@ -1071,17 +978,12 @@ describe('Dot language support', () => {
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      [
-        {
-          "level": "error",
-          "location": {
-            "column": 22,
-            "index": 37,
-            "line": 3,
-          },
-          "message": "Unexpected HTML string <bad>, expected '{'.",
-        },
-      ]
+      ParserError: Unexpected HTML string <bad>, expected '{'.
+
+      2 |       graph {
+      3 |         subgraph name <bad>
+        |                       ^
+      4 |       }
     `);
   });
 });

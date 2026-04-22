@@ -7,17 +7,9 @@ import { describe, expect, it, type TestContext } from 'vitest';
 
 import * as DotVizPackage from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
+import { stringifyErrors } from './util/render-result.ts';
 
 const useVizJS = process.env.USE_VIZ_JS != null;
-const renderFormats = useVizJS
-  ? async (input: string, formats: string[], options: { engine: string }) => {
-      const instance = await VizPackage.instance();
-      return instance.renderFormats(input, formats, options);
-    }
-  : async (input: string, formats: string[], options: { engine: string }) => {
-      const instance = await DotVizPackage.instance();
-      return instance.renderFormats(input, formats, options);
-    };
 
 // FIXME: many files are modified with replaced fonts and removed unicode symbols
 // update after we fully support native fonts
@@ -609,9 +601,33 @@ describe('miscellaneous', () => {
 
 const graphvizSnapshotDir = fileURLToPath(import.meta.resolve('./graphviz'));
 const fontWarningRegExp =
-  /^Warning: no hard-coded metrics for '[^']+'. {2}Falling back to 'Times' metrics$/;
+  /Warning: no hard-coded metrics for '[^']+'. {2}Falling back to 'Times' metrics$/;
 const asciiWarningRegExp =
-  /^Warning: no value for width of non-ASCII character [0-9]+. Falling back to width of space character$/;
+  /Warning: no value for width of non-ASCII character [0-9]+. Falling back to width of space character$/;
+function filterErrors<T extends { message: string }>(errors: T[]): T[] {
+  return errors.filter(
+    ({ message }) =>
+      !fontWarningRegExp.test(message) && !asciiWarningRegExp.test(message),
+  );
+}
+
+async function renderUsingVizJS(
+  input: string,
+  formats: string[],
+  options: { engine: string },
+) {
+  const instance = await VizPackage.instance();
+  return instance.renderFormats(input, formats, options);
+}
+
+async function renderUsingDotViz(
+  input: string,
+  formats: string[],
+  options: { engine: string },
+) {
+  const instance = await DotVizPackage.instance();
+  return instance.renderFormats(input, formats, options);
+}
 
 async function snapshotGvFile({ task }: TestContext) {
   const [engine, gvFile] = task.name.split(': ');
@@ -621,14 +637,24 @@ async function snapshotGvFile({ task }: TestContext) {
 
   const gvPath = path.join(graphvizSnapshotDir, gvFile);
   const gvString = fs.readFileSync(gvPath, 'utf8');
-  const result = await renderFormats(gvString, ['dot', 'svg'], { engine });
-  const errors = result.errors.filter(
-    (e) =>
-      fontWarningRegExp.test(e.message) || asciiWarningRegExp.test(e.message),
-  );
+  let output;
+  if (useVizJS) {
+    const result = await renderUsingVizJS(gvString, ['dot', 'svg'], { engine });
+    expect(filterErrors(result.errors)).toStrictEqual([]);
 
-  const output = result.output;
-  expect(result).toStrictEqual({ status: 'success', output, errors });
+    const errors = result.errors;
+    output = result.output;
+    expect(result).toStrictEqual({ status: 'success', output, errors });
+  } else {
+    const result = await renderUsingDotViz(gvString, ['dot', 'svg'], {
+      engine,
+    });
+    expect(stringifyErrors(filterErrors(result.errors))).toBe('');
+
+    const errors = result.errors;
+    output = result.output;
+    expect(result).toStrictEqual({ status: 'success', output, errors });
+  }
 
   const dot = output?.dot;
   const svg = useVizJS
