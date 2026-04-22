@@ -548,27 +548,42 @@ class Parser {
   }
 
   #tokenToDebug(token: Token): string {
-    const value = debugStringValue(this.#extractText(token));
     const { kind } = token;
     switch (kind) {
       case Kind.EOF:
         return 'end of file';
-      case Kind.Number:
+      case Kind.Number: {
+        const value = debugStringValue(this.#extractText(token));
         return `number '${value}'`;
-      case Kind.Name:
-        return `identifier '${value}'`;
-      case Kind.String:
-        return `string ${value}`;
-      case Kind.HTML:
-        return `HTML string ${value}`;
-      case Kind.UnexpectedChar:
+      }
+      case Kind.Name: {
+        const value = debugStringValue(this.#extractText(token));
+        return `identifier '${debugStringValue(value)}'`;
+      }
+      case Kind.String: {
+        const value = debugStringValue(this.#extractText(token).slice(1, -1));
+        return `string "${value}"`;
+      }
+      case Kind.HTML: {
+        const value = debugStringValue(this.#extractText(token).slice(1, -1));
+        return `HTML string <${value}>`;
+      }
+      case Kind.UnexpectedChar: {
+        const value = debugStringValue(this.#extractText(token));
         return `character '${value}'`;
-      case Kind.UnterminatedString:
+      }
+      case Kind.UnterminatedString: {
+        const value = debugStringValue(this.#extractText(token));
         return `unterminated string '${value}'`;
-      case Kind.UnterminatedHTML:
+      }
+      case Kind.UnterminatedHTML: {
+        const value = debugStringValue(this.#extractText(token));
         return `unterminated HTML string '${value}'`;
-      case Kind.UnterminatedBlockComment:
+      }
+      case Kind.UnterminatedBlockComment: {
+        const value = debugStringValue(this.#extractText(token));
         return `unterminated block comment '${value}'`;
+      }
     }
     return kindStr(kind);
   }

@@ -761,17 +761,9 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('error on invalid graph definition', () => {
-    const result = dotviz.render('graph name "bad"');
-    expectFailureResult(result).toMatchInlineSnapshot(`
-      ParserError: Unexpected string "bad", expected '{'.
-
-      1 | graph name "bad"
-        |            ^
-    `);
-  });
   describe('error on invalid graph definition with various tokens', () => {
     it.for([
+      ['', 'end of file'],
       [',', `','`],
       [':', `':'`],
       [';', `';'`],
@@ -787,7 +779,13 @@ describe('Dot language support', () => {
       ['digraph', `keyword 'digraph'`],
       ['subgraph', `keyword 'subgraph'`],
       ['strict', `keyword 'strict'`],
-      ['', 'end of file'],
+      ['"bad"', `string "bad"`],
+      ['"veryveryveryveryvery long string"', `string "veryveryveryveryv..."`],
+      ['<bad>', `HTML string <bad>`],
+      [
+        '<veryveryveryveryvery long HTML string>',
+        `HTML string <veryveryveryveryv...>`,
+      ],
     ])('token $0', ([token, tokenDebugMessage]) => {
       const result = dotviz.render('graph name ' + token);
       expect(stringifyErrors(result.errors)).toStrictEqual(dedent`
