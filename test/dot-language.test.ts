@@ -810,7 +810,7 @@ describe('Dot language support', () => {
   });
 
   it('error on invalid attributes syntax', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       graph {
         node {}
       }
@@ -818,15 +818,15 @@ describe('Dot language support', () => {
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected '{', expected '['.
 
-      2 |       graph {
-      3 |         node {}
-        |              ^
-      4 |       }
+      1 | graph {
+      2 |   node {}
+        |        ^
+      3 | }
     `);
   });
 
   it('error on invalid syntax inside attribute list', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       graph {
         node [ -> ]
       }
@@ -834,63 +834,63 @@ describe('Dot language support', () => {
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected '->', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
-      2 |       graph {
-      3 |         node [ -> ]
-        |                ^
-      4 |       }
+      1 | graph {
+      2 |   node [ -> ]
+        |          ^
+      3 | }
     `);
   });
 
   it('error on unterminated block comment', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       graph {
         test=/* never finishes
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      ParserError: Unexpected unterminated block comment '/* never finishes...', add a closing '*/' to the comment.
+      ParserError: Unexpected unterminated block comment '/* never finishes\\n}', add a closing '*/' to the comment.
 
-      2 |       graph {
-      3 |         test=/* never finishes
-        |              ^
-      4 |       }
+      1 | graph {
+      2 |   test=/* never finishes
+        |        ^
+      3 | }
     `);
   });
 
   it('error on unterminated string', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       graph {
         test="never finishes
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      ParserError: Unterminated string '"never finishes\\n ...', add a closing '"' to the string.
+      ParserError: Unterminated string '"never finishes\\n}', add a closing '"' to the string.
 
-      2 |       graph {
-      3 |         test="never finishes
-        |              ^
-      4 |       }
+      1 | graph {
+      2 |   test="never finishes
+        |        ^
+      3 | }
     `);
   });
 
   it('error on unterminated html', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       graph {
         test=<never finishes
       }
     `);
     expectFailureResult(result).toMatchInlineSnapshot(`
-      ParserError: Unterminated HTML string '<never finishes\\n ...', add a closing '>' to the HTML string.
+      ParserError: Unterminated HTML string '<never finishes\\n}', add a closing '>' to the HTML string.
 
-      2 |       graph {
-      3 |         test=<never finishes
-        |              ^
-      4 |       }
+      1 | graph {
+      2 |   test=<never finishes
+        |        ^
+      3 | }
     `);
   });
 
   it('error on unexpected port in node statement', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       graph {
         a:bad_port
       }
@@ -898,15 +898,15 @@ describe('Dot language support', () => {
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected 'bad_port' port in node statement
 
-      2 |       graph {
-      3 |         a:bad_port
-        |           ^
-      4 |       }
+      1 | graph {
+      2 |   a:bad_port
+        |     ^
+      3 | }
     `);
   });
 
   it('error on invalid compass point', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       graph {
         a:port:bad_point
       }
@@ -914,15 +914,15 @@ describe('Dot language support', () => {
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Invalid compass point identifier 'bad_point'. Allowed values: n, ne, e, se, s, sw, w, nw, c, _.
 
-      2 |       graph {
-      3 |         a:port:bad_point
-        |                ^
-      4 |       }
+      1 | graph {
+      2 |   a:port:bad_point
+        |          ^
+      3 | }
     `);
   });
 
   it('error on using directed edges in an undirected graph', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       graph {
         a -> a
       }
@@ -930,15 +930,15 @@ describe('Dot language support', () => {
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.
 
-      2 |       graph {
-      3 |         a -> a
-        |           ^
-      4 |       }
+      1 | graph {
+      2 |   a -> a
+        |     ^
+      3 | }
     `);
   });
 
   it('error on using undirected edges in a directed graph', () => {
-    const result = dotviz.render(`
+    const result = dotviz.render(dedent`
       digraph {
         a -- a
       }
@@ -946,16 +946,16 @@ describe('Dot language support', () => {
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.
 
-      2 |       digraph {
-      3 |         a -- a
-        |           ^
-      4 |       }
+      1 | digraph {
+      2 |   a -- a
+        |     ^
+      3 | }
     `);
   });
 
   describe('error on invalid syntax inside subgraph', () => {
     it.for(['&', '/', '-', '.'])('character $0', (badChar) => {
-      const result = dotviz.render(`
+      const result = dotviz.render(dedent`
         digraph {
           { ${badChar} }
         }
@@ -963,10 +963,10 @@ describe('Dot language support', () => {
       expect(stringifyErrors(result.errors)).toStrictEqual(dedent`
         ParserError: Unexpected character '${badChar}', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
-        2 |         digraph {
-        3 |           { ${badChar} }
-          |             ^
-        4 |         }
+        1 | digraph {
+        2 |   { ${badChar} }
+          |     ^
+        3 | }
       `);
     });
   });
