@@ -830,11 +830,14 @@ describe('Dot language support', () => {
       ['subgraph', `keyword 'subgraph'`],
       ['strict', `keyword 'strict'`],
       ['"bad"', `string "bad"`],
-      ['"veryveryveryveryvery long string"', `string "veryveryveryveryv..."`],
+      [
+        '"very very very very very long string"',
+        `string "very very very ve..."`,
+      ],
       ['<bad>', `HTML string <bad>`],
       [
-        '<veryveryveryveryvery long HTML string>',
-        `HTML string <veryveryveryveryv...>`,
+        '<very very very very long HTML string>',
+        `HTML string <very very very ve...>`,
       ],
     ])('token $0', ([token, tokenDebugMessage]) => {
       const result = dotviz.render('graph name ' + token);

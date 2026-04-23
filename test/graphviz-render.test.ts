@@ -54,7 +54,9 @@ describe('Viz', () => {
         errors: expect.any(Array) as unknown[],
       });
 
-      expectErrors(result).toMatchInlineSnapshot(`RenderingBackendError: layers not supported in dot output`);
+      expectErrors(result).toMatchInlineSnapshot(
+        `RenderingBackendError: layers not supported in dot output`,
+      );
 
       expectString(result.output?.dot).toMatchInlineSnapshot(`
         digraph G {
