@@ -640,7 +640,7 @@ class Parser {
 
   #optional(kind: Kind): boolean {
     if (this.#peekToken.kind === kind) {
-      this.#peekToken = this.#lexer.nextToken();
+      this.#readToken();
       return true;
     }
     return false;

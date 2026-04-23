@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import * as DotVizPackage from '../src/index.ts';
 import { dedent } from './util/dedent.ts';
 import {
+  expectErrors,
   expectFailureResult,
   expectSuccessResult,
   stringifyErrors,
@@ -748,6 +749,36 @@ describe('Dot language support', () => {
 
       1 | graph []
         |       ^
+    `);
+  });
+
+  it('warns on ambiguous token sequences', () => {
+    const result = dotviz.render(dedent`
+      digraph-1 {
+        version=2.0.0
+        hex_number=0x5f
+      }
+    `);
+    expectErrors(result).toMatchInlineSnapshot(`
+      ParserWarning: Ambiguous token sequence: 'digraph-1' will be split into keyword 'digraph' and number '-1'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
+
+      1 | digraph-1 {
+        | ^
+      2 |   version=2.0.0
+
+      ParserWarning: Ambiguous token sequence: '2.0.0' will be split into number '2.0' and number '.0'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
+
+      1 | digraph-1 {
+      2 |   version=2.0.0
+        |           ^
+      3 |   hex_number=0x5f
+
+      ParserWarning: Ambiguous token sequence: '0x5f' will be split into number '0' and identifier 'x5f'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
+
+      2 |   version=2.0.0
+      3 |   hex_number=0x5f
+        |              ^
+      4 | }
     `);
   });
 
