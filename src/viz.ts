@@ -1,9 +1,9 @@
 import type { Attributes, Graph } from './graph.d.ts';
 import type { Location } from './location.ts';
 import {
-  type FixedAttributes,
   NormalizedGraph,
   normalizeGraph,
+  type OverrideAttributes,
 } from './normalize-graph.ts';
 import { parseDot } from './parser.ts';
 
@@ -154,12 +154,12 @@ export class Viz {
     formats: readonly string[],
     options: RenderOptions = {},
   ): MultipleRenderResult {
-    const fixedAttributes: FixedAttributes = {
+    const overrideAttributes: OverrideAttributes = {
       graphAttributes: options.graphAttributes,
       nodeAttributes: options.nodeAttributes,
       edgeAttributes: options.edgeAttributes,
     };
-    return this._renderInput(input, formats, fixedAttributes, options);
+    return this._renderInput(input, formats, overrideAttributes, options);
   }
 
   /**
@@ -200,20 +200,20 @@ export class Viz {
   _renderInput(
     input: string | Graph,
     formats: readonly string[],
-    fixedAttributes: FixedAttributes,
+    overrideAttributes: OverrideAttributes,
     options: RenderOptions,
   ): MultipleRenderResult {
     let graph: NormalizedGraph;
     const warnings: RenderError[] = [];
     if (typeof input === 'string') {
-      const result = parseDot(input, fixedAttributes);
+      const result = parseDot(input, overrideAttributes);
       if (result.status === 'failure') {
         return result;
       }
       graph = result.output;
       warnings.push(...result.errors);
     } else {
-      graph = normalizeGraph(input, fixedAttributes);
+      graph = normalizeGraph(input, overrideAttributes);
     }
 
     let renderGv = false;

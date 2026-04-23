@@ -1,6 +1,6 @@
 import type { Attributes, Graph, Subgraph } from './graph.d.ts';
 
-export interface FixedAttributes {
+export interface OverrideAttributes {
   graphAttributes: Attributes | undefined;
   nodeAttributes: Attributes | undefined;
   edgeAttributes: Attributes | undefined;
@@ -13,12 +13,13 @@ interface NormalizedGraphConfig {
 }
 
 export class NormalizedGraph {
+  overrideGraphAttributes: Attributes;
+  overrideNodeAttributes: Attributes;
+  overrideEdgeAttributes: Attributes;
+
   name: string | null;
   strict: boolean;
   directed: boolean;
-  fixedGraphAttributes: Attributes;
-  fixedNodeAttributes: Attributes;
-  fixedEdgeAttributes: Attributes;
   graphAttributes: Attributes;
   nodeAttributes: Attributes;
   edgeAttributes: Attributes;
@@ -26,25 +27,26 @@ export class NormalizedGraph {
   #allEdges = new Map<string | number, NormalizedEdge>();
   #subgraphs = new Map<string | number, NormalizedSubgraph>();
 
-  constructor(config: NormalizedGraphConfig, fixedAttributes: FixedAttributes) {
+  constructor(
+    config: NormalizedGraphConfig,
+    overrideAttributes: OverrideAttributes,
+  ) {
+    this.overrideGraphAttributes = overrideAttributes.graphAttributes ?? {};
+    this.overrideNodeAttributes = overrideAttributes.nodeAttributes ?? {};
+    this.overrideEdgeAttributes = overrideAttributes.edgeAttributes ?? {};
+    this.graphAttributes = { ...this.overrideGraphAttributes };
+    this.nodeAttributes = { ...this.overrideNodeAttributes };
+    this.edgeAttributes = { ...this.overrideEdgeAttributes };
+
     this.name = config.name;
     this.strict = config.strict;
     this.directed = config.directed;
-    this.graphAttributes = this.fixedGraphAttributes = {
-      ...fixedAttributes.graphAttributes,
-    };
-    this.nodeAttributes = this.fixedNodeAttributes = {
-      ...fixedAttributes.nodeAttributes,
-    };
-    this.edgeAttributes = this.fixedEdgeAttributes = {
-      ...fixedAttributes.edgeAttributes,
-    };
   }
 
   mergeGraphAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      if (this.fixedGraphAttributes[key] === undefined) {
+      if (this.overrideGraphAttributes[key] === undefined) {
         defaultAttributes[key] = this.graphAttributes[key] ?? '';
       }
     }
@@ -55,14 +57,14 @@ export class NormalizedGraph {
     this.graphAttributes = {
       ...this.graphAttributes,
       ...newAttributes,
-      ...this.fixedGraphAttributes,
+      ...this.overrideGraphAttributes,
     };
   }
 
   mergeNodeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      if (this.fixedNodeAttributes[key] === undefined) {
+      if (this.overrideNodeAttributes[key] === undefined) {
         defaultAttributes[key] = '';
       }
     }
@@ -73,14 +75,14 @@ export class NormalizedGraph {
     this.nodeAttributes = {
       ...this.nodeAttributes,
       ...newAttributes,
-      ...this.fixedNodeAttributes,
+      ...this.overrideNodeAttributes,
     };
   }
 
   mergeEdgeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      if (this.fixedEdgeAttributes[key] === undefined) {
+      if (this.overrideEdgeAttributes[key] === undefined) {
         defaultAttributes[key] = '';
       }
     }
@@ -90,7 +92,7 @@ export class NormalizedGraph {
     this.edgeAttributes = {
       ...this.edgeAttributes,
       ...newAttributes,
-      ...this.fixedEdgeAttributes,
+      ...this.overrideEdgeAttributes,
     };
   }
 
@@ -289,7 +291,7 @@ export class NormalizedSubgraph {
   mergeNodeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = this.nodeAttributes[key] ?? '';
+      defaultAttributes[key] = '';
     }
     for (const node of this.#nodesCreatedInScope) {
       node.applyDefaultAttributes(defaultAttributes);
@@ -301,7 +303,7 @@ export class NormalizedSubgraph {
   mergeEdgeAttributes(newAttributes: Attributes) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = this.edgeAttributes[key] ?? '';
+      defaultAttributes[key] = '';
     }
     for (const edge of this.#edgesCreatedInScope) {
       edge.applyDefaultAttributes(defaultAttributes);
@@ -380,7 +382,7 @@ export class NormalizedSubgraph {
 
 export function normalizeGraph(
   config: Graph,
-  fixedAttributes: FixedAttributes,
+  overrideAttributes: OverrideAttributes,
 ): NormalizedGraph {
   const graph = new NormalizedGraph(
     {
@@ -388,7 +390,7 @@ export function normalizeGraph(
       strict: config.strict ?? false,
       directed: config.directed ?? true,
     },
-    fixedAttributes,
+    overrideAttributes,
   );
   applyDefinitions(graph, config);
   return graph;

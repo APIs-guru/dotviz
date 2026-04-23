@@ -2,10 +2,10 @@ import type { Attributes } from './graph.d.ts';
 import { type Location, printLocation } from './location.ts';
 import {
   extractKeyFromEdgeAttributes,
-  type FixedAttributes,
   NormalizedGraph,
   NormalizedNode,
   NormalizedSubgraph,
+  type OverrideAttributes,
 } from './normalize-graph.ts';
 import type { FailureResult, RenderError } from './viz.ts';
 
@@ -497,11 +497,11 @@ class Parser {
 
   static parseDot(
     dotStr: string,
-    fixedAttributes: FixedAttributes,
+    overrideAttributes: OverrideAttributes,
   ): ParseResult {
     const parser = new Parser(dotStr);
     try {
-      const graph = parser.#parseGraph(fixedAttributes);
+      const graph = parser.#parseGraph(overrideAttributes);
       return {
         status: 'success',
         output: graph,
@@ -735,7 +735,7 @@ class Parser {
     throw Parser.#AbortError;
   }
 
-  #parseGraph(fixedAttributes: FixedAttributes): NormalizedGraph {
+  #parseGraph(overrideAttributes: OverrideAttributes): NormalizedGraph {
     if (this.#isEOF()) {
       this.#failWithError(
         "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
@@ -762,7 +762,7 @@ class Parser {
     const name = this.#optionalName('graph name');
     const graph = new NormalizedGraph(
       { strict, directed, name },
-      fixedAttributes,
+      overrideAttributes,
     );
     // FIXME: check if it's viz.js hack or it also present in graphviz
     graph.mergeNodeAttributes({ label: String.raw`\N` });
