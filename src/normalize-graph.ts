@@ -108,7 +108,7 @@ export class NormalizedGraph {
 
   upsertEdge(config: NormalizedEdgeConfig): [NormalizedEdge, boolean] {
     const hashKey = this.#edgeHashKey(config);
-    if (hashKey) {
+    if (hashKey !== null) {
       const edge = this.#allEdges.get(hashKey);
       if (edge !== undefined) {
         return [edge, false];
@@ -122,7 +122,7 @@ export class NormalizedGraph {
     return [newEdge, true];
   }
 
-  #edgeHashKey(config: NormalizedEdgeConfig): string | undefined {
+  #edgeHashKey(config: NormalizedEdgeConfig): string | null {
     let tail = config.tail.index;
     let head = config.head.index;
 
@@ -135,7 +135,7 @@ export class NormalizedGraph {
     }
 
     if (config.key == null) {
-      return undefined;
+      return null;
     }
     return tail.toString() + ':' + head.toString() + ':' + config.key;
   }

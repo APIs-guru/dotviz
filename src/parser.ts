@@ -561,7 +561,7 @@ class Parser {
       }
       case Kind.Name: {
         const value = debugStringValue(this.#extractText(token));
-        return `identifier '${debugStringValue(value)}'`;
+        return `identifier '${value}'`;
       }
       case Kind.String: {
         const value = debugStringValue(this.#extractText(token).slice(1, -1));
@@ -615,14 +615,14 @@ class Parser {
 
     const lastKind = lastToken.kind;
     const lastCanClash =
-      lastKind & KEYWORD || lastKind === Kind.Name || lastKind == Kind.Number;
+      lastKind & KEYWORD || lastKind === Kind.Name || lastKind === Kind.Number;
     if (!lastCanClash) {
       return;
     }
 
     const nextKind = nextToken.kind;
     const nextCanClash =
-      nextKind & KEYWORD || nextKind === Kind.Name || nextKind == Kind.Number;
+      nextKind & KEYWORD || nextKind === Kind.Name || nextKind === Kind.Number;
     if (!nextCanClash) {
       return;
     }
