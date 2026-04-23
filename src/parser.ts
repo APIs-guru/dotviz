@@ -425,11 +425,6 @@ export interface ParseSuccessResult {
 
 export type ParseResult = ParseSuccessResult | FailureResult;
 
-interface PortID {
-  port: string;
-  portToken: Token;
-}
-
 const validCompassPoints = new Set([
   'n',
   'ne',
@@ -443,7 +438,15 @@ const validCompassPoints = new Set([
   '_',
 ]);
 
-type NodeID = [NormalizedNode, PortID | null];
+interface PortID {
+  portValue: string;
+  portValueToken: Token;
+}
+
+interface NodeID {
+  node: NormalizedNode;
+  port: PortID | null;
+}
 
 class ParserError implements RenderError {
   level = 'error' as const;
@@ -800,7 +803,7 @@ class Parser {
       }
 
       const [node] = owner.upsertNode(this.#parseName(token, 'node name'));
-      const nodeIDs: NodeID[] = [[node, this.#optionalNodePort()]];
+      const nodeIDs: NodeID[] = [{ node, port: this.#optionalNodePort() }];
       while (this.#optional(Kind[','])) {
         nodeIDs.push(this.#parseNodeID(owner));
       }
@@ -812,11 +815,12 @@ class Parser {
 
       // node_stmt: node_id [ attr_list ]
       const attributes = this.#optionalAttrList();
-      for (const [node, port] of nodeIDs) {
+      for (const { node, port } of nodeIDs) {
         if (port) {
+          const { portValue, portValueToken } = port;
           this.#failWithError(
-            `Unexpected '${port.port}' port in node statement`,
-            port.portToken,
+            `Unexpected '${portValue}' port in node statement`,
+            portValueToken,
           );
         }
         if (attributes) {
@@ -870,7 +874,7 @@ class Parser {
     // node_id:	ID [ port ]
     const name = this.#expectedName('node name');
     const [node] = owner.upsertNode(name);
-    return [node, this.#optionalNodePort()];
+    return { node, port: this.#optionalNodePort() };
   }
 
   #optionalNodePort(): PortID | null {
@@ -879,8 +883,8 @@ class Parser {
       return null;
     }
 
-    const portToken = this.#readToken();
-    let port = this.#parseName(portToken, 'port name');
+    const portValueToken = this.#readToken();
+    let portValue = this.#parseName(portValueToken, 'port name');
 
     // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
     if (this.#optional(Kind[':'])) {
@@ -895,9 +899,9 @@ class Parser {
           compassToken,
         );
       }
-      port += ':' + compass;
+      portValue += ':' + compass;
     }
-    return { port, portToken };
+    return { portValue, portValueToken };
   }
 
   #optionalAttrList(): Attributes | null {
@@ -938,7 +942,7 @@ class Parser {
   ): NodeID[] {
     const subgraph = owner.upsertSubgraph(name);
     this.#parseStatementList(subgraph);
-    return subgraph.sortedNodes().map((node) => [node, null]);
+    return subgraph.sortedNodes().map((node) => ({ node, port: null }));
   }
 
   #optionalEdgeOp(owner: NormalizedGraph | NormalizedSubgraph): boolean {
@@ -1002,14 +1006,18 @@ class Parser {
       [key, attributes] = extractKeyFromEdgeAttributes(attributes);
     }
     for (const [tailID, headID] of newEdges) {
-      const [tail, tailPort] = tailID;
-      const [head, headPort] = headID;
+      const { node: tail, port: tailport } = tailID;
+      const { node: head, port: headport } = headID;
       const [edge] = owner.upsertEdge({ tail, head, key });
-      edge.mergeAttributes({
-        headport: headPort?.port,
-        tailport: tailPort?.port,
-        ...attributes,
-      });
+      if (tailport) {
+        edge.mergeAttributes({ tailport: tailport.portValue });
+      }
+      if (headport) {
+        edge.mergeAttributes({ headport: headport.portValue });
+      }
+      if (attributes) {
+        edge.mergeAttributes(attributes);
+      }
     }
   }
 }

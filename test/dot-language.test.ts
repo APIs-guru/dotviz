@@ -569,6 +569,25 @@ describe('Dot language support', () => {
     `);
   });
 
+  it('preserve edge ports across multiple declarations', () => {
+    const result = renderString(`
+      strict digraph {
+        a -> a:n
+        a -> a
+      }
+    `);
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      strict digraph {
+      	graph [bb="0,0,72,42.271"];
+      	node [label="\\N"];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	a -> a:n	[pos="e,27,36.321 52.896,12.188 63.282,12.858 72,17.371 72,27.16 72,41.632 52.95,44.571 37.62,40.614"];
+      }
+    `);
+  });
+
   it('deduplicate edges with the same key', () => {
     const result = renderString(`
       graph {

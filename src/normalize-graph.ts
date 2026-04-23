@@ -107,21 +107,22 @@ export class NormalizedGraph {
   }
 
   upsertEdge(config: NormalizedEdgeConfig): [NormalizedEdge, boolean] {
-    const key = this.#edgeKey(config);
-    if (key) {
-      const edge = this.#allEdges.get(key);
+    const hashKey = this.#edgeHashKey(config);
+    if (hashKey) {
+      const edge = this.#allEdges.get(hashKey);
       if (edge !== undefined) {
         return [edge, false];
       }
     }
 
     const newEdge = new NormalizedEdge(this.#allEdges.size, config);
+
     newEdge.mergeAttributes(this.edgeAttributes);
-    this.#allEdges.set(key ?? newEdge.index, newEdge);
+    this.#allEdges.set(hashKey ?? newEdge.index, newEdge);
     return [newEdge, true];
   }
 
-  #edgeKey(config: NormalizedEdgeConfig): string | undefined {
+  #edgeHashKey(config: NormalizedEdgeConfig): string | undefined {
     let tail = config.tail.index;
     let head = config.head.index;
 
