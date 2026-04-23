@@ -24,6 +24,9 @@ describe('Viz', () => {
           graphAttributes: { testGraph: 'valueGraphBad' },
           nodeAttributes: { testNode: 'valueNodeBad' },
           edgeAttributes: { shape: 'valueEdgeBad' },
+          // check what attributes are applied to:
+          subgraphs: [{}],
+          nodes: [{ name: 'a' }],
           edges: [{ tail: 'a', head: 'a' }],
         },
         {
@@ -42,6 +45,8 @@ describe('Viz', () => {
         		testNode=valueNode
         	];
         	edge [shape=valueEdge];
+        	{
+        	}
         	a	[height=0.5,
         		pos="27,18",
         		width=0.75];
