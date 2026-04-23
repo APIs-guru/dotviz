@@ -703,8 +703,6 @@ class Parser {
         return text
           .slice(1, -1)
           .replaceAll(String.raw`\"`, '"')
-          .replaceAll('\\\r\n', '')
-          .replaceAll('\\\r', '')
           .replaceAll('\\\n', '');
       case Kind.HTML:
         return { html: text.slice(1, -1) };
