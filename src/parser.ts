@@ -425,7 +425,7 @@ export interface ParseSuccessResult {
 
 export type ParseResult = ParseSuccessResult | FailureResult;
 
-const validCompassPoints = new Set([
+const COMPASS_POINTS = new Set([
   'n',
   'ne',
   'e',
@@ -550,7 +550,7 @@ class Parser {
     return this.#dotStr.slice(start, end);
   }
 
-  #tokenToDebug(token: Token): string {
+  #describeToken(token: Token): string {
     const { kind } = token;
     switch (kind) {
       case Kind.EOF:
@@ -598,9 +598,9 @@ class Parser {
   #readToken(): Token {
     const result = this.#peekToken;
     if (result.kind === Kind.UnterminatedBlockComment) {
-      const tokenDebug = this.#tokenToDebug(result);
+      const tokenDesc = this.#describeToken(result);
       this.#failWithError(
-        `Unexpected ${tokenDebug}, add a closing '*/' to the comment.`,
+        `Unexpected ${tokenDesc}, add a closing '*/' to the comment.`,
         result,
       );
     }
@@ -631,8 +631,8 @@ class Parser {
       return;
     }
 
-    const lastTokenText = this.#tokenToDebug(lastToken);
-    const nextTokenText = this.#tokenToDebug(nextToken);
+    const lastTokenText = this.#describeToken(lastToken);
+    const nextTokenText = this.#describeToken(nextToken);
     const ambiguousText: string = formatStringForMessage(
       this.#extractText(lastToken) + this.#extractText(nextToken),
     );
@@ -656,9 +656,9 @@ class Parser {
   #expected(kind: LiteralKind | KeywordKind): void {
     if (!this.#optional(kind)) {
       const token = this.#readToken();
-      const tokenDebug = this.#tokenToDebug(token);
+      const tokenDesc = this.#describeToken(token);
       this.#failWithError(
-        `Unexpected ${tokenDebug}, expected ${literalOrKeywordLabel(kind)}.`,
+        `Unexpected ${tokenDesc}, expected ${literalOrKeywordLabel(kind)}.`,
         token,
       );
     }
@@ -712,21 +712,21 @@ class Parser {
         return { html: text.slice(1, -1) };
     }
 
-    const tokenDebug = this.#tokenToDebug(token);
+    const tokenDesc = this.#describeToken(token);
     switch (token.kind) {
       case Kind.UnterminatedString:
         return this.#failWithError(
-          `${capitalize(tokenDebug)}, add a closing '"' to the string.`,
+          `${capitalize(tokenDesc)}, add a closing '"' to the string.`,
           token,
         );
       case Kind.UnterminatedHTML:
         return this.#failWithError(
-          `${capitalize(tokenDebug)}, add a closing '>' to the HTML string.`,
+          `${capitalize(tokenDesc)}, add a closing '>' to the HTML string.`,
           token,
         );
       default:
         this.#failWithError(
-          `Unexpected ${tokenDebug}, expected ${description}. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
+          `Unexpected ${tokenDesc}, expected ${description}. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
           token,
         );
     }
@@ -751,9 +751,9 @@ class Parser {
 
     if (!directed && !this.#optional(Kind.graph)) {
       const token = this.#readToken();
-      const tokenDebug = this.#tokenToDebug(token);
+      const tokenDesc = this.#describeToken(token);
       this.#failWithError(
-        `Unexpected ${tokenDebug}, expected keyword ` +
+        `Unexpected ${tokenDesc}, expected keyword ` +
           (strict
             ? `'graph' or 'digraph' after 'strict'.`
             : `'strict', 'graph' or 'digraph' at the beginning of the file.`),
@@ -863,9 +863,9 @@ class Parser {
         break;
       default: {
         const token = this.#readToken();
-        const tokenDebug = this.#tokenToDebug(token);
+        const tokenDesc = this.#describeToken(token);
         this.#failWithError(
-          `Unexpected ${tokenDebug}, expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
+          `Unexpected ${tokenDesc}, expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").`,
           token,
         );
       }
@@ -893,11 +893,11 @@ class Parser {
       const compassToken = this.#readToken();
       const compass = this.#parseName(compassToken, 'compass point value');
 
-      if (!validCompassPoints.has(compass)) {
-        const debugToken = this.#tokenToDebug(compassToken);
-        const allowedValues = [...validCompassPoints.values()].join(', ');
+      if (!COMPASS_POINTS.has(compass)) {
+        const tokenDesc = this.#describeToken(compassToken);
+        const allowedValues = [...COMPASS_POINTS.values()].join(', ');
         this.#failWithError(
-          `Invalid compass point ${debugToken}. Allowed values: ${allowedValues}.`,
+          `Invalid compass point ${tokenDesc}. Allowed values: ${allowedValues}.`,
           compassToken,
         );
       }
