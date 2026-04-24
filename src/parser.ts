@@ -366,6 +366,14 @@ class Lexer {
   }
 }
 
+function canTokenClash(token: Token): boolean {
+  return (
+    token.kind === Kind.Name ||
+    token.kind === Kind.Number ||
+    (token.kind & KEYWORD) !== 0
+  );
+}
+
 function literalOrKeywordLabel(kind: LiteralKind | KeywordKind): string {
   if (kind & LITERAL) {
     let literal = String.fromCodePoint(kind ^ LITERAL);
@@ -379,8 +387,8 @@ function literalOrKeywordLabel(kind: LiteralKind | KeywordKind): string {
   return `keyword '${keyword}'`;
 }
 
-function formatStringForMessage(string: string) {
-  const truncated = string.length > 20 ? string.slice(0, 17) + '...' : string;
+function formatValueForMessage(value: string) {
+  const truncated = value.length > 20 ? value.slice(0, 17) + '...' : value;
   return JSON.stringify(truncated)
     .replaceAll(String.raw`\"`, '"')
     .replaceAll(String.raw`\\`, '\\')
@@ -556,39 +564,39 @@ class Parser {
       case Kind.EOF:
         return 'end of file';
       case Kind.Number: {
-        const value = formatStringForMessage(this.#extractText(token));
+        const value = formatValueForMessage(this.#extractText(token));
         return `number '${value}'`;
       }
       case Kind.Name: {
-        const value = formatStringForMessage(this.#extractText(token));
+        const value = formatValueForMessage(this.#extractText(token));
         return `identifier '${value}'`;
       }
       case Kind.String: {
-        const value = formatStringForMessage(
+        const value = formatValueForMessage(
           this.#extractText(token).slice(1, -1),
         );
         return `string "${value}"`;
       }
       case Kind.HTML: {
-        const value = formatStringForMessage(
+        const value = formatValueForMessage(
           this.#extractText(token).slice(1, -1),
         );
         return `HTML string <${value}>`;
       }
       case Kind.UnexpectedChar: {
-        const value = formatStringForMessage(this.#extractText(token));
+        const value = formatValueForMessage(this.#extractText(token));
         return `character '${value}'`;
       }
       case Kind.UnterminatedString: {
-        const value = formatStringForMessage(this.#extractText(token));
+        const value = formatValueForMessage(this.#extractText(token));
         return `unterminated string '${value}'`;
       }
       case Kind.UnterminatedHTML: {
-        const value = formatStringForMessage(this.#extractText(token));
+        const value = formatValueForMessage(this.#extractText(token));
         return `unterminated HTML string '${value}'`;
       }
       case Kind.UnterminatedBlockComment: {
-        const value = formatStringForMessage(this.#extractText(token));
+        const value = formatValueForMessage(this.#extractText(token));
         return `unterminated block comment '${value}'`;
       }
     }
@@ -613,36 +621,25 @@ class Parser {
   #warnIfAmbiguous(lastToken: Token, nextToken: Token): void {
     const lastEnd = lastToken.start.index + lastToken.length;
     const nextStart = nextToken.start.index;
-    if (lastEnd !== nextStart) {
-      return;
+
+    if (
+      lastEnd === nextStart &&
+      canTokenClash(lastToken) &&
+      canTokenClash(nextToken)
+    ) {
+      const lastTokenText = this.#describeToken(lastToken);
+      const nextTokenText = this.#describeToken(nextToken);
+      const ambiguousText: string = formatValueForMessage(
+        this.#extractText(lastToken) + this.#extractText(nextToken),
+      );
+      const message =
+        `Ambiguous token sequence: '${ambiguousText}' will be split into ${lastTokenText} and ${nextTokenText}.` +
+        ' If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.';
+
+      this.#diagnostics.push(
+        new ParserWarning(message, lastToken.start, this.#dotStr),
+      );
     }
-
-    const lastKind = lastToken.kind;
-    const lastCanClash =
-      lastKind & KEYWORD || lastKind === Kind.Name || lastKind === Kind.Number;
-    if (!lastCanClash) {
-      return;
-    }
-
-    const nextKind = nextToken.kind;
-    const nextCanClash =
-      nextKind & KEYWORD || nextKind === Kind.Name || nextKind === Kind.Number;
-    if (!nextCanClash) {
-      return;
-    }
-
-    const lastTokenText = this.#describeToken(lastToken);
-    const nextTokenText = this.#describeToken(nextToken);
-    const ambiguousText: string = formatStringForMessage(
-      this.#extractText(lastToken) + this.#extractText(nextToken),
-    );
-    const message =
-      `Ambiguous token sequence: '${ambiguousText}' will be split into ${lastTokenText} and ${nextTokenText}.` +
-      ' If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.';
-
-    this.#diagnostics.push(
-      new ParserWarning(message, lastToken.start, this.#dotStr),
-    );
   }
 
   #optional(kind: Kind): boolean {
