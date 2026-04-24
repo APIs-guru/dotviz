@@ -70,7 +70,7 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('skip ignored characters', () => {
+  it('ignores whitespace and comments', () => {
     const result = renderString(`
       graph
       \n\r\t\uFEFF
@@ -569,7 +569,7 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('preserve edge ports across multiple declarations', () => {
+  it('strict graph deduplication keeps ports from first edge declaration', () => {
     const result = renderString(`
       strict digraph {
         a -> a:n

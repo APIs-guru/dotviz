@@ -1,11 +1,11 @@
 import type { Attributes } from './graph.d.ts';
 import { type Location, printLocation } from './location.ts';
 import {
-  extractKeyFromEdgeAttributes,
   NormalizedGraph,
   NormalizedNode,
   NormalizedSubgraph,
   type OverrideAttributes,
+  splitEdgeKey,
 } from './normalize-graph.ts';
 import type { FailureResult, RenderError } from './viz.ts';
 
@@ -262,7 +262,7 @@ class Lexer {
   #readNumber(start: Location): Token {
     // [-]?.[0-9]⁺ or [-]?[0-9]⁺(.[0-9]*)?
     this.#skipChar(Char['-']);
-    const sawPeriod = this.#skipChar(Char['.']);
+    const hasLeadingDecimalPoint = this.#skipChar(Char['.']);
     if (!isDigit(this.#peekChar())) {
       this.#nextIndex = start.index + 1;
       return { kind: Kind.UnexpectedChar, start, length: 1 };
@@ -270,7 +270,7 @@ class Lexer {
     while (isDigit(this.#peekChar())) {
       ++this.#nextIndex;
     }
-    if (!sawPeriod) {
+    if (!hasLeadingDecimalPoint) {
       this.#skipChar(Char['.']);
       while (isDigit(this.#peekChar())) {
         ++this.#nextIndex;
@@ -282,7 +282,7 @@ class Lexer {
   }
 
   #readHTML(start: Location): Token {
-    let unclosedAngleBrackets = 0;
+    let nestDepth = 0;
     do {
       switch (this.#peekChar()) {
         case undefined:
@@ -296,24 +296,24 @@ class Lexer {
           break;
         case Char['<']:
           ++this.#nextIndex;
-          ++unclosedAngleBrackets;
+          ++nestDepth;
           break;
         case Char['>']:
           ++this.#nextIndex;
-          --unclosedAngleBrackets;
+          --nestDepth;
           break;
         default:
           ++this.#nextIndex;
           break;
       }
-    } while (unclosedAngleBrackets !== 0);
+    } while (nestDepth !== 0);
 
     const length = this.#nextIndex - start.index;
     return { kind: Kind.HTML, start, length };
   }
 
   #readString(start: Location): Token {
-    let escapedChar = false;
+    let isEscaped = false;
     ++this.#nextIndex; // skip opening `"`
     while (true) {
       switch (this.#peekChar()) {
@@ -325,23 +325,23 @@ class Lexer {
           };
         case Char['\n']:
           this.#readNewLine();
-          escapedChar = false;
+          isEscaped = false;
           break;
         case Char['\\']:
           ++this.#nextIndex;
-          escapedChar = !escapedChar;
+          isEscaped = !isEscaped;
           continue;
         case Char['"']:
           ++this.#nextIndex;
-          if (!escapedChar) {
+          if (!isEscaped) {
             const length = this.#nextIndex - start.index;
             return { kind: Kind.String, start, length };
           }
-          escapedChar = false;
+          isEscaped = false;
           break;
         default:
           ++this.#nextIndex;
-          escapedChar = false;
+          isEscaped = false;
           break;
       }
     }
@@ -366,7 +366,7 @@ class Lexer {
   }
 }
 
-function kindStr(kind: LiteralKind | KeywordKind): string {
+function literalOrKeywordLabel(kind: LiteralKind | KeywordKind): string {
   if (kind & LITERAL) {
     let literal = String.fromCodePoint(kind ^ LITERAL);
     if (kind === Kind['--'] || kind === Kind['->']) {
@@ -379,8 +379,8 @@ function kindStr(kind: LiteralKind | KeywordKind): string {
   return `keyword '${keyword}'`;
 }
 
-function debugStringValue(value: string) {
-  const truncated = value.length > 20 ? value.slice(0, 17) + '...' : value;
+function formatStringForMessage(string: string) {
+  const truncated = string.length > 20 ? string.slice(0, 17) + '...' : string;
   return JSON.stringify(truncated)
     .replaceAll(String.raw`\"`, '"')
     .replaceAll(String.raw`\\`, '\\')
@@ -536,8 +536,8 @@ class Parser {
     return this.#peekToken.kind === Kind.EOF;
   }
 
-  #peekIs(flags: number): boolean {
-    return (this.#peekToken.kind & flags) != 0;
+  #peekIs(mask: number): boolean {
+    return (this.#peekToken.kind & mask) != 0;
   }
 
   #peekKind(): Kind {
@@ -556,39 +556,43 @@ class Parser {
       case Kind.EOF:
         return 'end of file';
       case Kind.Number: {
-        const value = debugStringValue(this.#extractText(token));
+        const value = formatStringForMessage(this.#extractText(token));
         return `number '${value}'`;
       }
       case Kind.Name: {
-        const value = debugStringValue(this.#extractText(token));
+        const value = formatStringForMessage(this.#extractText(token));
         return `identifier '${value}'`;
       }
       case Kind.String: {
-        const value = debugStringValue(this.#extractText(token).slice(1, -1));
+        const value = formatStringForMessage(
+          this.#extractText(token).slice(1, -1),
+        );
         return `string "${value}"`;
       }
       case Kind.HTML: {
-        const value = debugStringValue(this.#extractText(token).slice(1, -1));
+        const value = formatStringForMessage(
+          this.#extractText(token).slice(1, -1),
+        );
         return `HTML string <${value}>`;
       }
       case Kind.UnexpectedChar: {
-        const value = debugStringValue(this.#extractText(token));
+        const value = formatStringForMessage(this.#extractText(token));
         return `character '${value}'`;
       }
       case Kind.UnterminatedString: {
-        const value = debugStringValue(this.#extractText(token));
+        const value = formatStringForMessage(this.#extractText(token));
         return `unterminated string '${value}'`;
       }
       case Kind.UnterminatedHTML: {
-        const value = debugStringValue(this.#extractText(token));
+        const value = formatStringForMessage(this.#extractText(token));
         return `unterminated HTML string '${value}'`;
       }
       case Kind.UnterminatedBlockComment: {
-        const value = debugStringValue(this.#extractText(token));
+        const value = formatStringForMessage(this.#extractText(token));
         return `unterminated block comment '${value}'`;
       }
     }
-    return kindStr(kind);
+    return literalOrKeywordLabel(kind);
   }
 
   #readToken(): Token {
@@ -629,7 +633,7 @@ class Parser {
 
     const lastTokenText = this.#tokenToDebug(lastToken);
     const nextTokenText = this.#tokenToDebug(nextToken);
-    const ambiguousText: string = debugStringValue(
+    const ambiguousText: string = formatStringForMessage(
       this.#extractText(lastToken) + this.#extractText(nextToken),
     );
     const message =
@@ -654,7 +658,7 @@ class Parser {
       const token = this.#readToken();
       const tokenDebug = this.#tokenToDebug(token);
       this.#failWithError(
-        `Unexpected ${tokenDebug}, expected ${kindStr(kind)}.`,
+        `Unexpected ${tokenDebug}, expected ${literalOrKeywordLabel(kind)}.`,
         token,
       );
     }
@@ -940,7 +944,7 @@ class Parser {
   ): NodeID[] {
     const subgraph = owner.upsertSubgraph(name);
     this.#parseStatementList(subgraph);
-    return subgraph.sortedNodes().map((node) => ({ node, port: null }));
+    return subgraph.sortedMemberNodes().map((node) => ({ node, port: null }));
   }
 
   #optionalEdgeOp(owner: NormalizedGraph | NormalizedSubgraph): boolean {
@@ -995,13 +999,15 @@ class Parser {
           newEdges.push([tail, head]);
         }
       }
+
+      // head of this step becomes the tail on next step, e.g. a -> b -> c
       tailNodes = headNodes;
     } while (this.#optionalEdgeOp(owner));
 
     let key: string | null = null;
     let attributes = this.#optionalAttrList();
     if (attributes) {
-      [key, attributes] = extractKeyFromEdgeAttributes(attributes);
+      [key, attributes] = splitEdgeKey(attributes);
     }
     for (const [tailID, headID] of newEdges) {
       const { node: tail, port: tailport } = tailID;

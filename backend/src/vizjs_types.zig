@@ -59,8 +59,8 @@ pub const Subgraph = struct {
     graphAttributes: Attributes,
     nodeAttributes: Attributes,
     edgeAttributes: Attributes,
-    nodeIndexes: []usize,
-    edgeIndexes: []usize,
+    memberNodes: []usize,
+    memberEdges: []usize,
     subgraphs: []Subgraph,
 };
 

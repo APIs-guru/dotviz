@@ -263,8 +263,8 @@ export class NormalizedSubgraph {
   graphAttributes: Attributes = {};
   nodeAttributes: Attributes = {};
   edgeAttributes: Attributes = {};
-  #nodeIndexes = new Set<NormalizedNode>();
-  #edgeIndexes = new Set<NormalizedEdge>();
+  #memberNodes = new Set<NormalizedNode>();
+  #memberEdges = new Set<NormalizedEdge>();
   #subgraphs = new Map<string | number, NormalizedSubgraph>();
 
   constructor(
@@ -318,7 +318,7 @@ export class NormalizedSubgraph {
   upsertNode(name: string): [NormalizedNode, boolean] {
     const [node, isCreated] = this.#parent.upsertNode(name);
 
-    this.#nodeIndexes.add(node);
+    this.#memberNodes.add(node);
     if (isCreated) {
       this.#nodesCreatedInScope.add(node);
       node.mergeAttributes(this.nodeAttributes);
@@ -329,7 +329,7 @@ export class NormalizedSubgraph {
   upsertEdge(config: NormalizedEdgeConfig): [NormalizedEdge, boolean] {
     const [edge, isCreated] = this.#parent.upsertEdge(config);
 
-    this.#edgeIndexes.add(edge);
+    this.#memberEdges.add(edge);
     if (isCreated) {
       this.#edgesCreatedInScope.add(edge);
       edge.mergeAttributes(this.edgeAttributes);
@@ -355,12 +355,12 @@ export class NormalizedSubgraph {
     return this.#root;
   }
 
-  sortedNodes(): NormalizedNode[] {
-    return [...this.#nodeIndexes].toSorted((a, b) => a.index - b.index);
+  sortedMemberNodes(): NormalizedNode[] {
+    return [...this.#memberNodes].toSorted((a, b) => a.index - b.index);
   }
 
-  sortedEdges(): NormalizedEdge[] {
-    return [...this.#edgeIndexes].toSorted((a, b) => a.index - b.index);
+  sortedMemberEdges(): NormalizedEdge[] {
+    return [...this.#memberEdges].toSorted((a, b) => a.index - b.index);
   }
 
   getSubgraphs(): NormalizedSubgraph[] {
@@ -373,8 +373,8 @@ export class NormalizedSubgraph {
       graphAttributes: this.graphAttributes,
       nodeAttributes: this.nodeAttributes,
       edgeAttributes: this.edgeAttributes,
-      nodeIndexes: this.sortedNodes().map((node) => node.index),
-      edgeIndexes: this.sortedEdges().map((edge) => edge.index),
+      memberNodes: this.sortedMemberNodes().map((node) => node.index),
+      memberEdges: this.sortedMemberEdges().map((edge) => edge.index),
       subgraphs: this.getSubgraphs(),
     };
   }
@@ -412,20 +412,20 @@ function applyDefinitions(
 
   const { nodes, edges, subgraphs } = config;
   if (nodes) {
-    for (const config of nodes) {
-      const [node] = owner.upsertNode(config.name);
-      if (config.attributes) {
-        node.mergeAttributes(config.attributes);
+    for (const nodeConfig of nodes) {
+      const [node] = owner.upsertNode(nodeConfig.name);
+      if (nodeConfig.attributes) {
+        node.mergeAttributes(nodeConfig.attributes);
       }
     }
   }
 
   if (edges) {
-    for (const config of edges) {
-      const [tail] = owner.upsertNode(config.tail);
-      const [head] = owner.upsertNode(config.head);
-      const [key, attributes] = config.attributes
-        ? extractKeyFromEdgeAttributes(config.attributes)
+    for (const edgeConfig of edges) {
+      const [tail] = owner.upsertNode(edgeConfig.tail);
+      const [head] = owner.upsertNode(edgeConfig.head);
+      const [key, attributes] = edgeConfig.attributes
+        ? splitEdgeKey(edgeConfig.attributes)
         : [null, undefined];
       const [edge] = owner.upsertEdge({ tail, head, key });
       if (attributes) {
@@ -435,14 +435,14 @@ function applyDefinitions(
   }
 
   if (subgraphs) {
-    for (const config of subgraphs) {
-      const subgraph = owner.upsertSubgraph(config.name ?? null);
-      applyDefinitions(subgraph, config);
+    for (const subgraphConfig of subgraphs) {
+      const subgraph = owner.upsertSubgraph(subgraphConfig.name ?? null);
+      applyDefinitions(subgraph, subgraphConfig);
     }
   }
 }
 
-export function extractKeyFromEdgeAttributes(
+export function splitEdgeKey(
   attributes: Attributes,
 ): [string | null, Attributes] {
   const { key } = attributes;

@@ -117,11 +117,11 @@ fn readSubgraphJSON(
     setDefaultAttributes(allocator, subgraph, subgraph_json.nodeAttributes, graphviz.AGNODE);
     setDefaultAttributes(allocator, subgraph, subgraph_json.edgeAttributes, graphviz.AGEDGE);
 
-    for (subgraph_json.nodeIndexes) |node| {
+    for (subgraph_json.memberNodes) |node| {
         _ = graphviz.agsubnode(subgraph, allNodes[node], graphviz.true);
     }
 
-    for (subgraph_json.edgeIndexes) |edge| {
+    for (subgraph_json.memberEdges) |edge| {
         _ = graphviz.agsubedge(subgraph, allEdges[edge], graphviz.true);
     }
 
