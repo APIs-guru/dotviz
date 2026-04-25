@@ -119,6 +119,9 @@ pub fn buildGraphviz(
     lib_mod.addCSourceFile(.{ .file = b.path(
         "src/graphviz_build/src/drand48.c",
     ) });
+    lib_mod.addCSourceFile(.{ .file = b.path(
+        "src/graphviz_build/src/qsort.c",
+    ) });
     lib_mod.addIncludePath(graphviz_dep.path("lib/cdt"));
     lib_mod.addIncludePath(graphviz_dep.path("lib/cgraph"));
     const expat_dep = b.dependency("libexpat", .{
