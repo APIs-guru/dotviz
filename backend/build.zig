@@ -322,24 +322,24 @@ pub fn buildGraphviz(
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_sfdpgen.addCSourceFiles(.{
+    lib_sfdpgen.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/sfdpgen"),
         .files = &src_sfdpgen,
     });
     addInclude(lib_sfdpgen, graphviz_dep);
-    lib_sfdpgen.addConfigHeader(config_h);
+    lib_sfdpgen.root_module.addConfigHeader(config_h);
 
     const lib_sparse = b.addLibrary(.{
         .name = "sparse",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_sparse.addCSourceFiles(.{
+    lib_sparse.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/sparse"),
         .files = &src_sparse,
     });
     addInclude(lib_sparse, graphviz_dep);
-    lib_sparse.addConfigHeader(config_h);
+    lib_sparse.root_module.addConfigHeader(config_h);
 
     const lib_twopigen = b.addLibrary(.{
         .name = "twopigen",
@@ -358,24 +358,24 @@ pub fn buildGraphviz(
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_patchwork.addCSourceFiles(.{
+    lib_patchwork.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/patchwork"),
         .files = &src_patchwork,
     });
     addInclude(lib_patchwork, graphviz_dep);
-    lib_patchwork.addConfigHeader(config_h);
+    lib_patchwork.root_module.addConfigHeader(config_h);
 
     const lib_osage = b.addLibrary(.{
         .name = "osage",
         .root_module = lib_mod,
         .linkage = .static,
     });
-    lib_osage.addCSourceFiles(.{
+    lib_osage.root_module.addCSourceFiles(.{
         .root = graphviz_dep.path("lib/osage"),
         .files = &src_osage,
     });
     addInclude(lib_osage, graphviz_dep);
-    lib_osage.addConfigHeader(config_h);
+    lib_osage.root_module.addConfigHeader(config_h);
 
     const lib_plugin_dot_layout = b.addLibrary(.{
         .name = "dot_layout",
