@@ -190,7 +190,7 @@ pub fn buildGraphviz(
     lib_cgraph.root_module.addIncludePath(graphviz_dep.path("lib/cgraph"));
 
     const lib_common = b.addLibrary(.{
-        .name = "gvc",
+        .name = "common",
         .root_module = lib_mod,
         .linkage = .static,
     });
