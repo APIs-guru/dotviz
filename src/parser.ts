@@ -433,6 +433,16 @@ export interface ParseSuccessResult {
 
 export type ParseResult = ParseSuccessResult | FailureResult;
 
+interface ParsedID {
+  value: string | { html: string };
+  token: Token;
+}
+
+interface ParsedName {
+  value: string;
+  token: Token;
+}
+
 const COMPASS_POINTS = new Set([
   'n',
   'ne',
@@ -446,14 +456,24 @@ const COMPASS_POINTS = new Set([
   '_',
 ]);
 
-interface PortID {
-  portValue: string;
-  portValueToken: Token;
+interface NodeID {
+  name: ParsedName;
+  port: PortID | null;
 }
 
-interface NodeID {
+interface PortID {
+  name: ParsedName;
+  compass: ParsedName | null;
+}
+
+interface EdgeEndpoint {
   node: NormalizedNode;
-  port: PortID | null;
+  port: EdgePort | null;
+}
+
+interface EdgePort {
+  name: string;
+  compass: string | null;
 }
 
 class ParserError implements RenderError {
@@ -532,12 +552,14 @@ class Parser {
   #dotStr: string;
   #lexer: Lexer;
   #peekToken: Token;
+  #peekToken2: Token;
   #diagnostics: (ParserError | ParserWarning)[] = [];
 
   constructor(dotStr: string) {
     this.#dotStr = dotStr;
     this.#lexer = new Lexer(dotStr);
     this.#peekToken = this.#lexer.nextToken();
+    this.#peekToken2 = this.#lexer.nextToken();
   }
 
   #isEOF(): boolean {
@@ -613,7 +635,8 @@ class Parser {
       );
     }
 
-    this.#peekToken = this.#lexer.nextToken();
+    this.#peekToken = this.#peekToken2;
+    this.#peekToken2 = this.#lexer.nextToken();
     this.#warnIfAmbiguous(result, this.#peekToken);
     return result;
   }
@@ -663,30 +686,23 @@ class Parser {
 
   #optionalName(description: string): string | null {
     if (this.#peekIs(ID | KEYWORD)) {
-      return this.#expectedName(description);
+      return this.#expectedName(description).value;
     }
     return null;
   }
 
-  #expectedName(description: string): string {
-    return this.#parseName(this.#readToken(), description);
-  }
-
-  #expectedValue(description: string): string | { html: string } {
-    return this.#parseValue(this.#readToken(), description);
-  }
-
-  #parseName(token: Token, description: string): string {
-    const name = this.#parseValue(token, description);
+  #expectedName(description: string): ParsedName {
+    const { value, token } = this.#expectedValue(description);
     /* v8 ignore start -- FIXME: it's weird edge case, so in future we should forbid using HTML as names */
-    if (typeof name === 'object') {
+    if (typeof value === 'object') {
       this.#failWithError(`HTML as ${description} is not supported`, token);
     }
     /* v8 ignore end */
-    return name;
+    return { value, token };
   }
 
-  #parseValue(token: Token, description: string): string | { html: string } {
+  #expectedValue(description: string): ParsedID {
+    const token = this.#readToken();
     if (token.kind & KEYWORD) {
       const keyword = this.#extractText(token);
       this.#failWithError(
@@ -699,14 +715,17 @@ class Parser {
     switch (token.kind) {
       case Kind.Name:
       case Kind.Number:
-        return text;
+        return { value: text, token };
       case Kind.String:
-        return text
-          .slice(1, -1)
-          .replaceAll(String.raw`\"`, '"')
-          .replaceAll('\\\n', '');
+        return {
+          value: text
+            .slice(1, -1)
+            .replaceAll(String.raw`\"`, '"')
+            .replaceAll('\\\n', ''),
+          token,
+        };
       case Kind.HTML:
-        return { html: text.slice(1, -1) };
+        return { value: { html: text.slice(1, -1) }, token };
     }
 
     const tokenDesc = this.#describeToken(token);
@@ -796,38 +815,32 @@ class Parser {
   #parseStatement(owner: NormalizedGraph | NormalizedSubgraph): void {
     // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
     if (this.#peekIs(ID)) {
-      const token = this.#readToken();
-      if (this.#optional(Kind['='])) {
+      if (this.#peekToken2.kind === Kind['=']) {
         // ID '=' ID
-        const name = this.#parseName(token, 'attribute name');
-        const attributes: Attributes = {
-          [name]: this.#expectedValue('attribute value'),
-        };
+        const attributes: Attributes = {};
+        this.#parseAttr(attributes);
         owner.mergeGraphAttributes(attributes);
         return;
       }
 
-      const [node] = owner.upsertNode(this.#parseName(token, 'node name'));
-      const nodeIDs: NodeID[] = [{ node, port: this.#optionalNodePort() }];
-      while (this.#optional(Kind[','])) {
-        nodeIDs.push(this.#parseNodeID(owner));
-      }
-
+      const nodeIDs = this.#parseNodeIDList();
       if (this.#optionalEdgeOp(owner)) {
-        this.#parseEdges(nodeIDs, owner);
+        const tailNodes = this.#upsertEdgeEndpoints(owner, nodeIDs);
+        this.#parseEdges(owner, tailNodes);
         return;
       }
 
       // node_stmt: node_id [ attr_list ]
       const attributes = this.#optionalAttrList();
-      for (const { node, port } of nodeIDs) {
+      for (const { name, port } of nodeIDs) {
         if (port) {
-          const { portValue, portValueToken } = port;
+          const { value, token } = port.name;
           this.#failWithError(
-            `Unexpected '${portValue}' port in node statement`,
-            portValueToken,
+            `Unexpected '${value}' port in node statement`,
+            token,
           );
         }
+        const [node] = owner.upsertNode(name.value);
         node.mergeAttributes(attributes);
       }
       return;
@@ -835,16 +848,22 @@ class Parser {
 
     switch (this.#peekKind()) {
       case Kind['{']: {
-        const tailNodes = this.#parseSubgraph(owner, null);
+        const subgraph = this.#parseSubgraph(owner, null);
         if (this.#optionalEdgeOp(owner)) {
-          this.#parseEdges(tailNodes, owner);
+          const tailNodes = subgraph
+            .sortedMemberNodes()
+            .map((node) => ({ node, port: null }));
+          this.#parseEdges(owner, tailNodes);
         }
         break;
       }
       case Kind.subgraph: {
-        const tailNodes = this.#parseNamedSubgraph(owner);
+        const subgraph = this.#parseNamedSubgraph(owner);
         if (this.#optionalEdgeOp(owner)) {
-          this.#parseEdges(tailNodes, owner);
+          const tailNodes = subgraph
+            .sortedMemberNodes()
+            .map((node) => ({ node, port: null }));
+          this.#parseEdges(owner, tailNodes);
         }
         break;
       }
@@ -873,11 +892,30 @@ class Parser {
     }
   }
 
-  #parseNodeID(owner: NormalizedGraph | NormalizedSubgraph): NodeID {
+  #upsertEdgeEndpoints(
+    owner: NormalizedGraph | NormalizedSubgraph,
+    nodeIDs: NodeID[],
+  ): EdgeEndpoint[] {
+    return nodeIDs.map(({ name, port }) => ({
+      node: owner.upsertNode(name.value)[0],
+      port: port
+        ? { name: port.name.value, compass: port.compass?.value ?? null }
+        : null,
+    }));
+  }
+
+  #parseNodeIDList(): NodeID[] {
+    const list: NodeID[] = [];
+    do {
+      list.push(this.#parseNodeID());
+    } while (this.#optional(Kind[',']));
+    return list;
+  }
+
+  #parseNodeID(): NodeID {
     // node_id:	ID [ port ]
     const name = this.#expectedName('node name');
-    const [node] = owner.upsertNode(name);
-    return { node, port: this.#optionalNodePort() };
+    return { name, port: this.#optionalNodePort() };
   }
 
   #optionalNodePort(): PortID | null {
@@ -886,25 +924,23 @@ class Parser {
       return null;
     }
 
-    const portValueToken = this.#readToken();
-    let portValue = this.#parseName(portValueToken, 'port name');
+    const name = this.#expectedName('port name');
+    if (!this.#optional(Kind[':'])) {
+      return { name, compass: null };
+    }
 
     // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
-    if (this.#optional(Kind[':'])) {
-      const compassToken = this.#readToken();
-      const compass = this.#parseName(compassToken, 'compass point value');
+    const compass = this.#expectedName('compass point value');
 
-      if (!COMPASS_POINTS.has(compass)) {
-        const tokenDesc = this.#describeToken(compassToken);
-        const allowedValues = [...COMPASS_POINTS.values()].join(', ');
-        this.#failWithError(
-          `Invalid compass point ${tokenDesc}. Allowed values: ${allowedValues}.`,
-          compassToken,
-        );
-      }
-      portValue += ':' + compass;
+    if (!COMPASS_POINTS.has(compass.value)) {
+      const tokenDesc = this.#describeToken(compass.token);
+      const allowedValues = [...COMPASS_POINTS.values()].join(', ');
+      this.#failWithError(
+        `Invalid compass point ${tokenDesc}. Allowed values: ${allowedValues}.`,
+        compass.token,
+      );
     }
-    return { portValue, portValueToken };
+    return { name, compass };
   }
 
   #optionalAttrList(): Attributes {
@@ -919,9 +955,7 @@ class Parser {
       this.#expected(Kind['[']);
       // a_list: ID '=' ID [ (';' | ',') ] [ a_list ]
       while (!this.#optional(Kind[']'])) {
-        const name = this.#expectedName('attribute name');
-        this.#expected(Kind['=']);
-        attributes[name] = this.#expectedValue('attribute value');
+        this.#parseAttr(attributes);
 
         // Either ';' or ',' but doesn't allow both
         if (!this.#optional(Kind[';'])) {
@@ -933,7 +967,15 @@ class Parser {
     return attributes;
   }
 
-  #parseNamedSubgraph(owner: NormalizedGraph | NormalizedSubgraph): NodeID[] {
+  #parseAttr(attributes: Attributes): void {
+    const name = this.#expectedName('attribute name').value;
+    this.#expected(Kind['=']);
+    attributes[name] = this.#expectedValue('attribute value').value;
+  }
+
+  #parseNamedSubgraph(
+    owner: NormalizedGraph | NormalizedSubgraph,
+  ): NormalizedSubgraph {
     this.#expected(Kind.subgraph);
     const name = this.#optionalName('subgraph name');
     return this.#parseSubgraph(owner, name);
@@ -942,7 +984,7 @@ class Parser {
   #parseSubgraph(
     owner: NormalizedGraph | NormalizedSubgraph,
     name: string | null,
-  ): NodeID[] {
+  ): NormalizedSubgraph {
     const subgraph = owner.upsertSubgraph({
       name,
       graphAttributes: {},
@@ -950,7 +992,7 @@ class Parser {
       edgeAttributes: {},
     });
     this.#parseStatementList(subgraph);
-    return subgraph.sortedMemberNodes().map((node) => ({ node, port: null }));
+    return subgraph;
   }
 
   #optionalEdgeOp(owner: NormalizedGraph | NormalizedSubgraph): boolean {
@@ -980,24 +1022,25 @@ class Parser {
   }
 
   #parseEdges(
-    tailNodes: NodeID[],
     owner: NormalizedGraph | NormalizedSubgraph,
+    tailNodes: EdgeEndpoint[],
   ) {
-    const newEdges: [NodeID, NodeID][] = [];
+    const newEdges: [EdgeEndpoint, EdgeEndpoint][] = [];
     do {
-      let headNodes: NodeID[];
+      let headNodes: EdgeEndpoint[];
       switch (this.#peekKind()) {
         case Kind['{']:
-          headNodes = this.#parseSubgraph(owner, null);
+          headNodes = this.#parseSubgraph(owner, null)
+            .sortedMemberNodes()
+            .map((node) => ({ node, port: null }));
           break;
         case Kind.subgraph:
-          headNodes = this.#parseNamedSubgraph(owner);
+          headNodes = this.#parseNamedSubgraph(owner)
+            .sortedMemberNodes()
+            .map((node) => ({ node, port: null }));
           break;
         default:
-          headNodes = [];
-          do {
-            headNodes.push(this.#parseNodeID(owner));
-          } while (this.#optional(Kind[',']));
+          headNodes = this.#upsertEdgeEndpoints(owner, this.#parseNodeIDList());
       }
 
       for (const tail of tailNodes) {
@@ -1016,10 +1059,18 @@ class Parser {
       const { node: head, port: headport } = headID;
       const [edge] = owner.upsertEdge({ tail, head, key });
       if (tailport) {
-        edge.mergeAttributes({ tailport: tailport.portValue });
+        edge.mergeAttributes({
+          tailport: tailport.compass
+            ? tailport.name + ':' + tailport.compass
+            : tailport.name,
+        });
       }
       if (headport) {
-        edge.mergeAttributes({ headport: headport.portValue });
+        edge.mergeAttributes({
+          headport: headport.compass
+            ? headport.name + ':' + headport.compass
+            : headport.name,
+        });
       }
       edge.mergeAttributes(attributes);
     }
