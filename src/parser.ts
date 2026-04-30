@@ -760,11 +760,17 @@ class Parser {
 
     const name = this.#optionalName('graph name');
     const graph = new NormalizedGraph(
-      { strict, directed, name },
+      {
+        strict,
+        directed,
+        name,
+        graphAttributes: {},
+        // FIXME: check if it's viz.js hack or it also present in graphviz
+        nodeAttributes: { label: String.raw`\N` },
+        edgeAttributes: {},
+      },
       overrideAttributes,
     );
-    // FIXME: check if it's viz.js hack or it also present in graphviz
-    graph.mergeNodeAttributes({ label: String.raw`\N` });
 
     this.#parseStatementList(graph);
     return graph;
@@ -939,7 +945,12 @@ class Parser {
     owner: NormalizedGraph | NormalizedSubgraph,
     name: string | null,
   ): NodeID[] {
-    const subgraph = owner.upsertSubgraph(name);
+    const subgraph = owner.upsertSubgraph({
+      name,
+      graphAttributes: {},
+      nodeAttributes: {},
+      edgeAttributes: {},
+    });
     this.#parseStatementList(subgraph);
     return subgraph.sortedMemberNodes().map((node) => ({ node, port: null }));
   }

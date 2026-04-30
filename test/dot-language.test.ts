@@ -237,31 +237,75 @@ describe('Dot language support', () => {
         a
         {
           b
-          node [test1=1]
+          node [nodeAttr1=1]
         }
-        node [test2=2]
+        node [nodeAttr2=2]
+        graph [graphAttr=3]
       }
     `);
 
     expectSuccessResult(result).toMatchInlineSnapshot(`
       graph {
-      	graph [bb="0,0,126,36"];
+      	graph [bb="0,0,126,36",
+      		graphAttr=3
+      	];
       	node [label="\\N",
-      		test2=2
+      		nodeAttr2=2
       	];
       	{
-      		node [test1=1];
+      		graph [graphAttr=""];
+      		node [nodeAttr1=1];
       		b	[height=0.5,
+      			nodeAttr1="",
+      			nodeAttr2="",
       			pos="99,18",
-      			test1="",
-      			test2="",
       			width=0.75];
       	}
       	a	[height=0.5,
+      		nodeAttr2="",
       		pos="27,18",
-      		test2="",
       		width=0.75];
       }
+    `);
+  });
+
+  it('attributes in options override attributes in dot', () => {
+    const dot = `
+      digraph {
+        graph [ testGraph=valueGraphBad ]
+        node [ testNode=valueNodeBad ]
+        edge [ shape=valueEdgeBad]
+
+        // check what attributes are applied to:
+        {}
+        a
+        a -> a
+      },
+    `;
+    const options = {
+      graphAttributes: { testGraph: 'valueGraph' },
+      nodeAttributes: { testNode: 'valueNode' },
+      edgeAttributes: { shape: 'valueEdge' },
+    };
+    const result = dotviz.render(dot, options);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,72,36",
+      		testGraph=valueGraph
+      	];
+      	node [label="\\N",
+      		testNode=valueNode
+      	];
+      	edge [shape=valueEdge];
+      	{
+      	}
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	a -> a	[pos="e,52.443,11.309 52.443,24.691 63.028,25.152 72,22.922 72,18 72,15.001 68.668,13.001 63.67,12.001"];
+      }
+
     `);
   });
 
