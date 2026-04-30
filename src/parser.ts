@@ -693,11 +693,13 @@ class Parser {
 
   #expectedName(description: string): ParsedName {
     const { value, token } = this.#expectedValue(description);
-    /* v8 ignore start -- FIXME: it's weird edge case, so in future we should forbid using HTML as names */
     if (typeof value === 'object') {
-      this.#failWithError(`HTML as ${description} is not supported`, token);
+      const html = this.#extractText(token);
+      this.#failWithError(
+        `HTML string as ${description} is not supported. If you want to use it as an identifier, enclose it in quotes: "${html}".`,
+        token,
+      );
     }
-    /* v8 ignore end */
     return { value, token };
   }
 

@@ -889,6 +889,16 @@ describe('Dot language support', () => {
     `);
   });
 
+  it('error on using HTML string as a graph name', () => {
+    const result = dotviz.render('graph <SomeHTML> {}');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      ParserError: HTML string as graph name is not supported. If you want to use it as an identifier, enclose it in quotes: "<SomeHTML>".
+
+      1 | graph <SomeHTML> {}
+        |       ^
+    `);
+  });
+
   describe('error on invalid graph definition with various tokens', () => {
     it.for([
       ['', 'end of file'],
