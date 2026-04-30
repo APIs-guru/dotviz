@@ -255,10 +255,6 @@ export class NormalizedSubgraph {
   #root: NormalizedGraph;
   #parent: NormalizedGraph | NormalizedSubgraph;
 
-  // Contains all nodes/edges created within this subgraph AND its nested subgraphs.
-  #nodesCreatedInScope = new Set<NormalizedNode>();
-  #edgesCreatedInScope = new Set<NormalizedEdge>();
-
   name: string | null = null;
   graphAttributes: Attributes = {};
   nodeAttributes: Attributes = {};
@@ -289,25 +285,10 @@ export class NormalizedSubgraph {
   }
 
   mergeNodeAttributes(newAttributes: Attributes) {
-    const defaultAttributes: Attributes = {};
-    for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = '';
-    }
-    for (const node of this.#nodesCreatedInScope) {
-      node.applyDefaultAttributes(defaultAttributes);
-    }
-
     this.nodeAttributes = { ...this.nodeAttributes, ...newAttributes };
   }
 
   mergeEdgeAttributes(newAttributes: Attributes) {
-    const defaultAttributes: Attributes = {};
-    for (const key of Object.keys(newAttributes)) {
-      defaultAttributes[key] = '';
-    }
-    for (const edge of this.#edgesCreatedInScope) {
-      edge.applyDefaultAttributes(defaultAttributes);
-    }
     this.edgeAttributes = { ...this.edgeAttributes, ...newAttributes };
   }
 
@@ -320,7 +301,6 @@ export class NormalizedSubgraph {
 
     this.#memberNodes.add(node);
     if (isCreated) {
-      this.#nodesCreatedInScope.add(node);
       node.mergeAttributes(this.nodeAttributes);
     }
     return [node, isCreated];
@@ -331,7 +311,6 @@ export class NormalizedSubgraph {
 
     this.#memberEdges.add(edge);
     if (isCreated) {
-      this.#edgesCreatedInScope.add(edge);
       edge.mergeAttributes(this.edgeAttributes);
     }
     return [edge, isCreated];

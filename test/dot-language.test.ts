@@ -231,6 +231,40 @@ describe('Dot language support', () => {
     expect(mergeResult).toStrictEqual(result);
   });
 
+  it('apply default attributes values', () => {
+    const result = renderString(`
+      graph {
+        a
+        {
+          b
+          node [test1=1]
+        }
+        node [test2=2]
+      }
+    `);
+
+    expectSuccessResult(result).toMatchInlineSnapshot(`
+      graph {
+      	graph [bb="0,0,126,36"];
+      	node [label="\\N",
+      		test2=2
+      	];
+      	{
+      		node [test1=1];
+      		b	[height=0.5,
+      			pos="99,18",
+      			test1="",
+      			test2="",
+      			width=0.75];
+      	}
+      	a	[height=0.5,
+      		pos="27,18",
+      		test2="",
+      		width=0.75];
+      }
+    `);
+  });
+
   it('single edge', () => {
     const result = renderString(`
       graph {
