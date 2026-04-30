@@ -828,9 +828,7 @@ class Parser {
             portValueToken,
           );
         }
-        if (attributes) {
-          node.mergeAttributes(attributes);
-        }
+        node.mergeAttributes(attributes);
       }
       return;
     }
@@ -909,8 +907,8 @@ class Parser {
     return { portValue, portValueToken };
   }
 
-  #optionalAttrList(): Attributes | null {
-    return this.#peekKind() === Kind['['] ? this.#parseAttrList() : null;
+  #optionalAttrList(): Attributes {
+    return this.#peekKind() === Kind['['] ? this.#parseAttrList() : {};
   }
 
   #parseAttrList(): Attributes {
@@ -1012,11 +1010,7 @@ class Parser {
       tailNodes = headNodes;
     } while (this.#optionalEdgeOp(owner));
 
-    let key: string | null = null;
-    let attributes = this.#optionalAttrList();
-    if (attributes) {
-      [key, attributes] = splitEdgeKey(attributes);
-    }
+    const [key, attributes] = splitEdgeKey(this.#optionalAttrList());
     for (const [tailID, headID] of newEdges) {
       const { node: tail, port: tailport } = tailID;
       const { node: head, port: headport } = headID;
@@ -1027,9 +1021,7 @@ class Parser {
       if (headport) {
         edge.mergeAttributes({ headport: headport.portValue });
       }
-      if (attributes) {
-        edge.mergeAttributes(attributes);
-      }
+      edge.mergeAttributes(attributes);
     }
   }
 }

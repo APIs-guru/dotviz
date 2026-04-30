@@ -410,9 +410,7 @@ function applyDefinitions(
   if (nodes) {
     for (const nodeConfig of nodes) {
       const [node] = owner.upsertNode(nodeConfig.name);
-      if (nodeConfig.attributes) {
-        node.mergeAttributes(nodeConfig.attributes);
-      }
+      node.mergeAttributes(nodeConfig.attributes ?? {});
     }
   }
 
@@ -420,13 +418,9 @@ function applyDefinitions(
     for (const edgeConfig of edges) {
       const [tail] = owner.upsertNode(edgeConfig.tail);
       const [head] = owner.upsertNode(edgeConfig.head);
-      const [key, attributes] = edgeConfig.attributes
-        ? splitEdgeKey(edgeConfig.attributes)
-        : [null, undefined];
+      const [key, attributes] = splitEdgeKey(edgeConfig.attributes ?? {});
       const [edge] = owner.upsertEdge({ tail, head, key });
-      if (attributes) {
-        edge.mergeAttributes(attributes);
-      }
+      edge.mergeAttributes(attributes);
     }
   }
 
