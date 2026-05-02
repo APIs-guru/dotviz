@@ -825,6 +825,7 @@ class Parser {
         return;
       }
 
+      // node_stmt: node_id [ attr_list ]
       const nodeIDs = this.#parseNodeIDList();
       if (this.#optionalEdgeOp(scope)) {
         const tailNodes = this.#upsertEdgeEndpoints(scope, nodeIDs);
@@ -832,7 +833,6 @@ class Parser {
         return;
       }
 
-      // node_stmt: node_id [ attr_list ]
       const attributes = this.#optionalAttrList();
       for (const { name, port } of nodeIDs) {
         if (port) {
@@ -842,8 +842,7 @@ class Parser {
             token,
           );
         }
-        const node = scope.root.upsertNode(scope, name.value);
-        node.mergeAttributes(attributes);
+        scope.root.upsertNode(scope, { name: name.value, attributes });
       }
       return;
     }
@@ -899,7 +898,7 @@ class Parser {
     nodeIDs: NodeID[],
   ): EdgeEndpoint[] {
     return nodeIDs.map(({ name, port }) => ({
-      node: scope.root.upsertNode(scope, name.value),
+      node: scope.root.upsertNode(scope, { name: name.value, attributes: {} }),
       port: port
         ? { name: port.name.value, compass: port.compass?.value ?? null }
         : null,
@@ -945,12 +944,12 @@ class Parser {
     return { name, compass };
   }
 
-  #optionalAttrList(): Attributes {
+  #optionalAttrList(): Readonly<Attributes> {
     return this.#peekKind() === Kind['['] ? this.#parseAttrList() : {};
   }
 
-  #parseAttrList(): Attributes {
-    const attributes: Attributes = {};
+  #parseAttrList(): Readonly<Attributes> {
+    const attributes: Readonly<Attributes> = {};
 
     // attr_list:	'[' [ a_list ] ']' [ attr_list ]
     do {
@@ -1059,7 +1058,12 @@ class Parser {
     for (const [tailID, headID] of newEdges) {
       const { node: tail, port: tailport } = tailID;
       const { node: head, port: headport } = headID;
-      const edge = scope.root.upsertEdge(scope, { tail, head, key });
+      const edge = scope.root.upsertEdge(scope, {
+        tail,
+        head,
+        key,
+        attributes,
+      });
       if (tailport) {
         edge.mergeAttributes({
           tailport: tailport.compass
@@ -1074,7 +1078,6 @@ class Parser {
             : headport.name,
         });
       }
-      edge.mergeAttributes(attributes);
     }
   }
 }

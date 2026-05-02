@@ -112,16 +112,20 @@ export class NormalizedGraph {
 
   upsertNode(
     scope: NormalizedGraph | NormalizedSubgraph,
-    name: string,
+    config: NormalizedNodeConfig,
   ): NormalizedNode {
+    const { name } = config;
     const node = this.#allNodes.get(name);
     if (node !== undefined) {
       scope.addNode(node);
+      node.mergeAttributes(config.attributes);
       return node;
     }
 
-    const newNode = new NormalizedNode(this.#allNodes.size, name);
-    newNode.mergeAttributes(scope.resolvedNodeDefaults);
+    const newNode = new NormalizedNode(this.#allNodes.size, {
+      name,
+      attributes: { ...scope.resolvedNodeDefaults, ...config.attributes },
+    });
     scope.addNode(newNode);
     return newNode;
   }
@@ -135,12 +139,17 @@ export class NormalizedGraph {
       const edge = this.#allEdges.get(hashKey);
       if (edge !== undefined) {
         scope.addEdge(edge);
+        edge.mergeAttributes(config.attributes);
         return edge;
       }
     }
 
-    const newEdge = new NormalizedEdge(this.#allEdges.size, config);
-    newEdge.mergeAttributes(scope.resolvedEdgeDefaults);
+    const newEdge = new NormalizedEdge(this.#allEdges.size, {
+      tail: config.tail,
+      head: config.head,
+      key: config.key,
+      attributes: { ...scope.resolvedEdgeDefaults, ...config.attributes },
+    });
     scope.addEdge(newEdge);
     return newEdge;
   }
@@ -222,28 +231,34 @@ export class NormalizedGraph {
   }
 }
 
+export interface NormalizedNodeConfig {
+  readonly name: string;
+  readonly attributes: Attributes;
+}
+
 export class NormalizedNode {
   readonly index: number;
   readonly name: string;
-  #attributes: Attributes = {};
+  attributes: Readonly<Attributes>;
 
-  constructor(index: number, name: string) {
+  constructor(index: number, config: NormalizedNodeConfig) {
     this.index = index;
-    this.name = name;
+    this.name = config.name;
+    this.attributes = config.attributes;
   }
 
-  mergeAttributes(newAttributes: Readonly<Attributes>) {
-    this.#attributes = { ...this.#attributes, ...newAttributes };
+  mergeAttributes(newAttributes: Readonly<Attributes>): void {
+    this.attributes = { ...this.attributes, ...newAttributes };
   }
 
-  applyDefaultAttributes(defaults: Readonly<Attributes>) {
-    this.#attributes = { ...defaults, ...this.#attributes };
+  applyDefaultAttributes(defaults: Readonly<Attributes>): void {
+    this.attributes = { ...defaults, ...this.attributes };
   }
 
   toJSON() {
     return {
       name: this.name,
-      attributes: this.#attributes,
+      attributes: this.attributes,
     };
   }
 }
@@ -252,6 +267,7 @@ interface NormalizedEdgeConfig {
   readonly tail: NormalizedNode;
   readonly head: NormalizedNode;
   readonly key: string | null;
+  readonly attributes: Readonly<Attributes>;
 }
 
 export class NormalizedEdge {
@@ -259,13 +275,14 @@ export class NormalizedEdge {
   readonly tail: NormalizedNode;
   readonly head: NormalizedNode;
   readonly key: string | null;
-  attributes: Readonly<Attributes> = {};
+  attributes: Readonly<Attributes>;
 
   constructor(index: number, config: NormalizedEdgeConfig) {
     this.index = index;
     this.tail = config.tail;
     this.head = config.head;
     this.key = config.key;
+    this.attributes = config.attributes;
   }
 
   mergeAttributes(newAttributes: Readonly<Attributes>) {
@@ -427,19 +444,23 @@ function applyDefinitions(
   const root = scope.root;
   const { nodes, edges, subgraphs } = config;
   if (nodes) {
-    for (const nodeConfig of nodes) {
-      const node = root.upsertNode(scope, nodeConfig.name);
-      node.mergeAttributes(nodeConfig.attributes ?? {});
+    for (const { name, attributes } of nodes) {
+      root.upsertNode(scope, { name, attributes: attributes ?? {} });
     }
   }
 
   if (edges) {
     for (const edgeConfig of edges) {
-      const tail = root.upsertNode(scope, edgeConfig.tail);
-      const head = root.upsertNode(scope, edgeConfig.head);
+      const tail = root.upsertNode(scope, {
+        name: edgeConfig.tail,
+        attributes: {},
+      });
+      const head = root.upsertNode(scope, {
+        name: edgeConfig.head,
+        attributes: {},
+      });
       const [key, attributes] = splitEdgeKey(edgeConfig.attributes ?? {});
-      const edge = root.upsertEdge(scope, { tail, head, key });
-      edge.mergeAttributes(attributes);
+      root.upsertEdge(scope, { tail, head, key, attributes });
     }
   }
 
