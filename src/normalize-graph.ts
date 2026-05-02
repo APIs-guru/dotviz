@@ -132,24 +132,26 @@ export class NormalizedGraph {
 
   upsertEdge(
     scope: NormalizedGraph | NormalizedSubgraph,
-    config: NormalizedEdgeConfig,
+    rawConfig: NormalizedEdgeConfig,
   ): NormalizedEdge {
-    const hashKey = this.#edgeHashKey(config);
+    const resolvedConfig = normalizeEdgeConfig({
+      tail: rawConfig.tail,
+      head: rawConfig.head,
+      key: rawConfig.key,
+      attributes: { ...scope.resolvedEdgeDefaults, ...rawConfig.attributes },
+    });
+
+    const hashKey = this.#edgeHashKey(resolvedConfig);
     if (hashKey !== null) {
       const edge = this.#allEdges.get(hashKey);
       if (edge !== undefined) {
         scope.addEdge(edge);
-        edge.mergeAttributes(config.attributes);
+        edge.mergeAttributes(normalizeEdgeConfig(rawConfig).attributes);
         return edge;
       }
     }
 
-    const newEdge = new NormalizedEdge(this.#allEdges.size, {
-      tail: config.tail,
-      head: config.head,
-      key: config.key,
-      attributes: { ...scope.resolvedEdgeDefaults, ...config.attributes },
-    });
+    const newEdge = new NormalizedEdge(this.#allEdges.size, resolvedConfig);
     scope.addEdge(newEdge);
     return newEdge;
   }
@@ -164,8 +166,8 @@ export class NormalizedGraph {
   }
 
   #edgeHashKey(config: NormalizedEdgeConfig): string | null {
-    let tail = config.tail.index;
-    let head = config.head.index;
+    let tail = config.tail.node.index;
+    let head = config.head.node.index;
 
     if (!this.directed && head > tail) {
       [tail, head] = [head, tail];
@@ -263,17 +265,27 @@ export class NormalizedNode {
   }
 }
 
+export interface EdgePort {
+  readonly name: string;
+  readonly compass: string | null;
+}
+
+export interface EdgeEndpoint {
+  readonly node: NormalizedNode;
+  readonly port: EdgePort | null;
+}
+
 interface NormalizedEdgeConfig {
-  readonly tail: NormalizedNode;
-  readonly head: NormalizedNode;
+  readonly tail: EdgeEndpoint;
+  readonly head: EdgeEndpoint;
   readonly key: string | null;
   readonly attributes: Readonly<Attributes>;
 }
 
 export class NormalizedEdge {
   readonly index: number;
-  readonly tail: NormalizedNode;
-  readonly head: NormalizedNode;
+  readonly tail: EdgeEndpoint;
+  readonly head: EdgeEndpoint;
   readonly key: string | null;
   attributes: Readonly<Attributes>;
 
@@ -295,8 +307,8 @@ export class NormalizedEdge {
 
   toJSON() {
     return {
-      tail: this.tail.index,
-      head: this.head.index,
+      tail: { node: this.tail.node.index, port: this.tail.port },
+      head: { node: this.head.node.index, port: this.head.port },
       key: this.key,
       attributes: this.attributes,
     };
@@ -459,8 +471,12 @@ function applyDefinitions(
         name: edgeConfig.head,
         attributes: {},
       });
-      const [key, attributes] = splitEdgeKey(edgeConfig.attributes ?? {});
-      root.upsertEdge(scope, { tail, head, key, attributes });
+      root.upsertEdge(scope, {
+        tail: { node: tail, port: null },
+        head: { node: head, port: null },
+        key: null,
+        attributes: edgeConfig.attributes ?? {},
+      });
     }
   }
 
@@ -477,21 +493,38 @@ function applyDefinitions(
   }
 }
 
-export function splitEdgeKey(
-  attributes: Attributes,
-): [string | null, Attributes] {
-  const { key } = attributes;
-  if (key == null) {
-    return [null, attributes];
-  }
-
-  const attributesCopy = { ...attributes };
-  delete attributesCopy.key;
+function normalizeEdgeConfig(
+  config: NormalizedEdgeConfig,
+): NormalizedEdgeConfig {
+  const { key, tailport, headport, ...attributes } = config.attributes;
 
   /* v8 ignore start -- FIXME: it's weird edge case, so in future we should forbid using HTML as keys */
   if (typeof key === 'object') {
     throw new TypeError('HTML as edge key is not supported');
   }
+  if (typeof tailport === 'object') {
+    throw new TypeError('HTML as tailport is not supported');
+  }
+  if (typeof headport === 'object') {
+    throw new TypeError('HTML as headport is not supported');
+  }
   /* v8 ignore end */
-  return [key.toString(), attributesCopy];
+  return {
+    key: config.key ?? key?.toString() ?? null,
+    tail: {
+      node: config.tail.node,
+      port: config.tail.port ?? splitPortString(tailport?.toString()),
+    },
+    head: {
+      node: config.head.node,
+      port: config.head.port ?? splitPortString(headport?.toString()),
+    },
+    attributes,
+  };
+}
+
+function splitPortString(str: string | undefined): EdgePort | null {
+  if (str === undefined) return null;
+  const [name, compass] = str.split(':') as [string, string | undefined];
+  return { name, compass: compass ?? null };
 }

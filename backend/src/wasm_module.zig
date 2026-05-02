@@ -1,7 +1,8 @@
 const std = @import("std");
 const testing = std.testing;
-const vizjs_types = @import("vizjs_types.zig");
 const wasm_allocator = std.heap.wasm_allocator;
+
+const vizjs_types = @import("vizjs_types.zig");
 
 pub const graphviz = @cImport({
     @cInclude("geom.h");
@@ -74,6 +75,19 @@ fn setAttributes(
     }
 }
 
+fn edgePortToString(
+    allocator: std.mem.Allocator,
+    port: vizjs_types.EdgePort,
+) [:0]const u8 {
+    if (port.compass) |compass| {
+        return std.fmt.allocPrintSentinel(allocator, "{s}:{s}", .{ port.name, compass }, 0) catch @panic(
+            "cannot allocPrintSentinel in edgePortToString",
+        );
+    } else {
+        return port.name;
+    }
+}
+
 fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph_json: vizjs_types.Graph) void {
     setDefaultAttributes(allocator, graph, graph_json.graphAttributes, graphviz.AGRAPH);
     setDefaultAttributes(allocator, graph, graph_json.nodeAttributes, graphviz.AGNODE);
@@ -92,10 +106,16 @@ fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph
         "cannot alloc for allEdges",
     );
     for (graph_json.allEdges, 0..) |edge_json, i| {
-        const tail_node = allNodes[edge_json.tail];
-        const head_node = allNodes[edge_json.head];
+        const tail_node = allNodes[edge_json.tail.node];
+        const head_node = allNodes[edge_json.head.node];
         const key: [*c]const u8 = edge_json.key orelse null;
         const edge = graphviz.agedge(graph, tail_node, head_node, key, graphviz.true);
+        if (edge_json.tail.port) |port| {
+            _ = graphviz.agsafeset_text(edge, "tailport", edgePortToString(allocator, port), "");
+        }
+        if (edge_json.head.port) |port| {
+            _ = graphviz.agsafeset_text(edge, "headport", edgePortToString(allocator, port), "");
+        }
         setAttributes(allocator, edge, edge_json.attributes);
         allEdges[i] = edge;
     }

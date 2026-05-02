@@ -47,9 +47,19 @@ pub const Node = struct {
     attributes: Attributes,
 };
 
+pub const EdgePort = struct {
+    name: [:0]const u8,
+    compass: ?[:0]const u8,
+};
+
+pub const EdgeEndpoint = struct {
+    node: usize,
+    port: ?EdgePort,
+};
+
 pub const Edge = struct {
-    tail: usize,
-    head: usize,
+    tail: EdgeEndpoint,
+    head: EdgeEndpoint,
     key: ?[:0]const u8,
     attributes: Attributes,
 };

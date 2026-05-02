@@ -37,8 +37,8 @@ Agsym_t *agattr_html(Agraph_t *g, int kind, const char *name, const char *value)
 Agnode_t *agsubnode(Agraph_t *g, Agnode_t *n, int createflag);
 Agedge_t *agsubedge(Agraph_t *g, Agedge_t *e, int createflag);
 
-int agsafeset_text(void *obj, char *name, const char *value, const char *def);
-int agsafeset_html(void *obj, char *name, const char *value, const char *def);
+int agsafeset_text(void *obj, const char *name, const char *value, const char *def);
+int agsafeset_html(void *obj, const char *name, const char *value, const char *def);
 
 void dot_layout(graph_t *g);
 void dot_cleanup(graph_t *g);

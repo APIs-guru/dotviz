@@ -1,11 +1,10 @@
 import type { Attributes } from './graph.d.ts';
 import { type Location, printLocation } from './location.ts';
 import {
+  type EdgeEndpoint,
   NormalizedGraph,
-  NormalizedNode,
   NormalizedSubgraph,
   type OverrideAttributes,
-  splitEdgeKey,
 } from './normalize-graph.ts';
 import type { FailureResult, RenderError } from './viz.ts';
 
@@ -464,16 +463,6 @@ interface NodeID {
 interface PortID {
   readonly name: ParsedName;
   readonly compass: ParsedName | null;
-}
-
-interface EdgeEndpoint {
-  readonly node: NormalizedNode;
-  readonly port: EdgePort | null;
-}
-
-interface EdgePort {
-  readonly name: string;
-  readonly compass: string | null;
 }
 
 class ParserError implements RenderError {
@@ -1054,30 +1043,9 @@ class Parser {
       tailNodes = headNodes;
     } while (this.#optionalEdgeOp(scope));
 
-    const [key, attributes] = splitEdgeKey(this.#optionalAttrList());
-    for (const [tailID, headID] of newEdges) {
-      const { node: tail, port: tailport } = tailID;
-      const { node: head, port: headport } = headID;
-      const edge = scope.root.upsertEdge(scope, {
-        tail,
-        head,
-        key,
-        attributes,
-      });
-      if (tailport) {
-        edge.mergeAttributes({
-          tailport: tailport.compass
-            ? tailport.name + ':' + tailport.compass
-            : tailport.name,
-        });
-      }
-      if (headport) {
-        edge.mergeAttributes({
-          headport: headport.compass
-            ? headport.name + ':' + headport.compass
-            : headport.name,
-        });
-      }
+    const attributes = this.#optionalAttrList();
+    for (const [tail, head] of newEdges) {
+      scope.root.upsertEdge(scope, { tail, head, key: null, attributes });
     }
   }
 }
