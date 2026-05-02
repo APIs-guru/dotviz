@@ -97,13 +97,13 @@ const Kind = {
 type Kind = (typeof Kind)[keyof typeof Kind];
 
 interface Token {
-  kind: Kind;
-  start: Location;
-  length: number;
+  readonly kind: Kind;
+  readonly start: Location;
+  readonly length: number;
 }
 
 class Lexer {
-  #dotStr: string;
+  readonly #dotStr: string;
   #line = 1;
   #lineStart = 0;
   #nextIndex = 0;
@@ -426,21 +426,21 @@ function isNameContinue(code: number | undefined): boolean {
 }
 
 export interface ParseSuccessResult {
-  status: 'success';
-  output: NormalizedGraph;
-  errors: RenderError[];
+  readonly status: 'success';
+  readonly output: NormalizedGraph;
+  readonly errors: RenderError[];
 }
 
 export type ParseResult = ParseSuccessResult | FailureResult;
 
 interface ParsedID {
-  value: string | { html: string };
-  token: Token;
+  readonly value: string | { html: string };
+  readonly token: Token;
 }
 
 interface ParsedName {
-  value: string;
-  token: Token;
+  readonly value: string;
+  readonly token: Token;
 }
 
 const COMPASS_POINTS = new Set([
@@ -457,30 +457,30 @@ const COMPASS_POINTS = new Set([
 ]);
 
 interface NodeID {
-  name: ParsedName;
-  port: PortID | null;
+  readonly name: ParsedName;
+  readonly port: PortID | null;
 }
 
 interface PortID {
-  name: ParsedName;
-  compass: ParsedName | null;
+  readonly name: ParsedName;
+  readonly compass: ParsedName | null;
 }
 
 interface EdgeEndpoint {
-  node: NormalizedNode;
-  port: EdgePort | null;
+  readonly node: NormalizedNode;
+  readonly port: EdgePort | null;
 }
 
 interface EdgePort {
-  name: string;
-  compass: string | null;
+  readonly name: string;
+  readonly compass: string | null;
 }
 
 class ParserError implements RenderError {
-  level = 'error' as const;
-  message: string;
-  location: Location;
-  #dotStr: string;
+  readonly level = 'error' as const;
+  readonly message: string;
+  readonly location: Readonly<Location>;
+  readonly #dotStr: string;
 
   constructor(message: string, location: Location, dotStr: string) {
     this.message = message;
@@ -498,10 +498,10 @@ class ParserError implements RenderError {
 }
 
 class ParserWarning implements RenderError {
-  level = 'warning' as const;
-  message: string;
-  location: Location;
-  #dotStr: string;
+  readonly level = 'warning' as const;
+  readonly message: string;
+  readonly location: Readonly<Location>;
+  readonly #dotStr: string;
 
   constructor(message: string, location: Location, dotStr: string) {
     this.message = message;
@@ -519,7 +519,7 @@ class ParserWarning implements RenderError {
 }
 
 class Parser {
-  static #AbortError = new Error(
+  static readonly #AbortError = new Error(
     'Internal error, thrown when parsing of dot file fails',
   );
 
@@ -549,11 +549,11 @@ class Parser {
     }
   }
 
-  #dotStr: string;
-  #lexer: Lexer;
+  readonly #dotStr: string;
+  readonly #lexer: Lexer;
   #peekToken: Token;
   #peekToken2: Token;
-  #diagnostics: (ParserError | ParserWarning)[] = [];
+  readonly #diagnostics: Readonly<ParserError | ParserWarning>[] = [];
 
   constructor(dotStr: string) {
     this.#dotStr = dotStr;

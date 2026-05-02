@@ -1,33 +1,33 @@
 import type { Attributes, Graph, Subgraph } from './graph.d.ts';
 
 export interface OverrideAttributes {
-  graphAttributes: Attributes | undefined;
-  nodeAttributes: Attributes | undefined;
-  edgeAttributes: Attributes | undefined;
+  readonly graphAttributes: Readonly<Attributes> | undefined;
+  readonly nodeAttributes: Readonly<Attributes> | undefined;
+  readonly edgeAttributes: Readonly<Attributes> | undefined;
 }
 
 interface NormalizedGraphConfig {
-  name: string | null;
-  strict: boolean;
-  directed: boolean;
-  graphAttributes: Attributes;
-  nodeAttributes: Attributes;
-  edgeAttributes: Attributes;
+  readonly name: string | null;
+  readonly strict: boolean;
+  readonly directed: boolean;
+  readonly graphAttributes: Readonly<Attributes>;
+  readonly nodeAttributes: Readonly<Attributes>;
+  readonly edgeAttributes: Readonly<Attributes>;
 }
 
 export class NormalizedGraph {
-  readonly overrideGraphAttributes: Attributes;
-  readonly overrideNodeAttributes: Attributes;
-  readonly overrideEdgeAttributes: Attributes;
+  readonly #overrideGraphAttributes: Readonly<Attributes>;
+  readonly #overrideNodeAttributes: Readonly<Attributes>;
+  readonly #overrideEdgeAttributes: Readonly<Attributes>;
   readonly parent = null;
   readonly root = this;
 
   readonly name: string | null;
   readonly strict: boolean;
   readonly directed: boolean;
-  graphAttributes: Attributes;
-  nodeAttributes: Attributes;
-  edgeAttributes: Attributes;
+  graphAttributes: Readonly<Attributes>;
+  nodeAttributes: Readonly<Attributes>;
+  edgeAttributes: Readonly<Attributes>;
   readonly #allNodes = new Map<string, NormalizedNode>();
   readonly #allEdges = new Map<string | number, NormalizedEdge>();
   readonly #subgraphs = new Map<string | number, NormalizedSubgraph>();
@@ -36,20 +36,20 @@ export class NormalizedGraph {
     config: NormalizedGraphConfig,
     overrideAttributes: OverrideAttributes,
   ) {
-    this.overrideGraphAttributes = overrideAttributes.graphAttributes ?? {};
-    this.overrideNodeAttributes = overrideAttributes.nodeAttributes ?? {};
-    this.overrideEdgeAttributes = overrideAttributes.edgeAttributes ?? {};
+    this.#overrideGraphAttributes = overrideAttributes.graphAttributes ?? {};
+    this.#overrideNodeAttributes = overrideAttributes.nodeAttributes ?? {};
+    this.#overrideEdgeAttributes = overrideAttributes.edgeAttributes ?? {};
     this.graphAttributes = {
       ...config.graphAttributes,
-      ...this.overrideGraphAttributes,
+      ...this.#overrideGraphAttributes,
     };
     this.nodeAttributes = {
       ...config.nodeAttributes,
-      ...this.overrideNodeAttributes,
+      ...this.#overrideNodeAttributes,
     };
     this.edgeAttributes = {
       ...config.edgeAttributes,
-      ...this.overrideEdgeAttributes,
+      ...this.#overrideEdgeAttributes,
     };
 
     this.name = config.name;
@@ -57,10 +57,10 @@ export class NormalizedGraph {
     this.directed = config.directed;
   }
 
-  mergeGraphAttributes(newAttributes: Attributes) {
+  mergeGraphAttributes(newAttributes: Readonly<Attributes>) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      if (this.overrideGraphAttributes[key] === undefined) {
+      if (this.#overrideGraphAttributes[key] === undefined) {
         defaultAttributes[key] = this.graphAttributes[key] ?? '';
       }
     }
@@ -71,14 +71,14 @@ export class NormalizedGraph {
     this.graphAttributes = {
       ...this.graphAttributes,
       ...newAttributes,
-      ...this.overrideGraphAttributes,
+      ...this.#overrideGraphAttributes,
     };
   }
 
-  mergeNodeAttributes(newAttributes: Attributes) {
+  mergeNodeAttributes(newAttributes: Readonly<Attributes>) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      if (this.overrideNodeAttributes[key] === undefined) {
+      if (this.#overrideNodeAttributes[key] === undefined) {
         defaultAttributes[key] = '';
       }
     }
@@ -89,14 +89,14 @@ export class NormalizedGraph {
     this.nodeAttributes = {
       ...this.nodeAttributes,
       ...newAttributes,
-      ...this.overrideNodeAttributes,
+      ...this.#overrideNodeAttributes,
     };
   }
 
-  mergeEdgeAttributes(newAttributes: Attributes) {
+  mergeEdgeAttributes(newAttributes: Readonly<Attributes>) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      if (this.overrideEdgeAttributes[key] === undefined) {
+      if (this.#overrideEdgeAttributes[key] === undefined) {
         defaultAttributes[key] = '';
       }
     }
@@ -106,7 +106,7 @@ export class NormalizedGraph {
     this.edgeAttributes = {
       ...this.edgeAttributes,
       ...newAttributes,
-      ...this.overrideEdgeAttributes,
+      ...this.#overrideEdgeAttributes,
     };
   }
 
@@ -225,7 +225,7 @@ export class NormalizedGraph {
 export class NormalizedNode {
   readonly index: number;
   readonly name: string;
-  attributes: Attributes = {};
+  #attributes: Attributes = {};
 
   constructor(index: number, name: string) {
     this.index = index;
@@ -233,25 +233,25 @@ export class NormalizedNode {
   }
 
   mergeAttributes(newAttributes: Readonly<Attributes>) {
-    this.attributes = { ...this.attributes, ...newAttributes };
+    this.#attributes = { ...this.#attributes, ...newAttributes };
   }
 
   applyDefaultAttributes(defaults: Readonly<Attributes>) {
-    this.attributes = { ...defaults, ...this.attributes };
+    this.#attributes = { ...defaults, ...this.#attributes };
   }
 
   toJSON() {
     return {
       name: this.name,
-      attributes: this.attributes,
+      attributes: this.#attributes,
     };
   }
 }
 
 interface NormalizedEdgeConfig {
-  tail: NormalizedNode;
-  head: NormalizedNode;
-  key: string | null;
+  readonly tail: NormalizedNode;
+  readonly head: NormalizedNode;
+  readonly key: string | null;
 }
 
 export class NormalizedEdge {
@@ -259,7 +259,7 @@ export class NormalizedEdge {
   readonly tail: NormalizedNode;
   readonly head: NormalizedNode;
   readonly key: string | null;
-  attributes: Attributes = {};
+  attributes: Readonly<Attributes> = {};
 
   constructor(index: number, config: NormalizedEdgeConfig) {
     this.index = index;
@@ -287,20 +287,20 @@ export class NormalizedEdge {
 }
 
 interface NormalizedSubgraphConfig {
-  name: string | null;
-  graphAttributes: Attributes;
-  nodeAttributes: Attributes;
-  edgeAttributes: Attributes;
+  readonly name: string | null;
+  readonly graphAttributes: Attributes;
+  readonly nodeAttributes: Attributes;
+  readonly edgeAttributes: Attributes;
 }
 
 export class NormalizedSubgraph {
   readonly root: NormalizedGraph;
   readonly parent: NormalizedGraph | NormalizedSubgraph;
 
-  readonly name: string | null = null;
-  graphAttributes: Attributes = {};
-  nodeAttributes: Attributes = {};
-  edgeAttributes: Attributes = {};
+  readonly name: string | null;
+  graphAttributes: Readonly<Attributes>;
+  nodeAttributes: Readonly<Attributes>;
+  edgeAttributes: Readonly<Attributes>;
   readonly #memberNodes = new Set<NormalizedNode>();
   readonly #memberEdges = new Set<NormalizedEdge>();
   readonly #subgraphs = new Map<string | number, NormalizedSubgraph>();
