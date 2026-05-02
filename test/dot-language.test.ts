@@ -74,9 +74,10 @@ describe('Dot language support', () => {
     const result = renderString(`
       graph
       \n\r\t\uFEFF
-      # comment
-      // another one
+      # comment with # in the middle
+      // another one with / and // in the middle
       /* start comment
+         /* and * in the middle
          end comment */
       {}
     `);
@@ -233,38 +234,56 @@ describe('Dot language support', () => {
 
   it('apply default attributes values', () => {
     const result = renderString(`
-      graph {
+      digraph {
         a
+        a -> a
         {
           b
+          b -> b
+          {}
           node [nodeAttr1=1]
+          edge [edgeAttr1=1]
+          graph[graphAttr1=1]
         }
         node [nodeAttr2=2]
-        graph [graphAttr=3]
+        edge [edgeAttr2=2]
+        graph [graphAttr2=2]
       }
     `);
 
     expectSuccessResult(result).toMatchInlineSnapshot(`
-      graph {
-      	graph [bb="0,0,126,36",
-      		graphAttr=3
+      digraph {
+      	graph [bb="0,0,162,36",
+      		graphAttr2=2
       	];
       	node [label="\\N",
       		nodeAttr2=2
       	];
+      	edge [edgeAttr2=2];
       	{
-      		graph [graphAttr=""];
+      		graph [graphAttr1=1,
+      			graphAttr2=""
+      		];
       		node [nodeAttr1=1];
+      		edge [edgeAttr1=1];
+      		{
+      			graph [graphAttr1=""];
+      		}
       		b	[height=0.5,
       			nodeAttr1="",
       			nodeAttr2="",
-      			pos="99,18",
+      			pos="117,18",
       			width=0.75];
+      		b -> b	[edgeAttr1="",
+      			edgeAttr2="",
+      			pos="e,142.44,11.309 142.44,24.691 153.03,25.152 162,22.922 162,18 162,15.001 158.67,13.001 153.67,12.001"];
       	}
       	a	[height=0.5,
       		nodeAttr2="",
       		pos="27,18",
       		width=0.75];
+      	a -> a	[edgeAttr2="",
+      		pos="e,52.443,11.309 52.443,24.691 63.028,25.152 72,22.922 72,18 72,15.001 68.668,13.001 63.67,12.001"];
       }
     `);
   });
@@ -817,6 +836,13 @@ describe('Dot language support', () => {
       	}
       }
     `);
+  });
+
+  it('error on empty string', () => {
+    const result = dotviz.render('');
+    expectFailureResult(result).toMatchInlineSnapshot(
+      `ParserError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
+    );
   });
 
   it('error on missing graph at the beginning of file', () => {
