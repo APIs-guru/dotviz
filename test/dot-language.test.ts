@@ -9,14 +9,19 @@ import {
   expectSuccessResult,
   stringifyErrors,
 } from './util/render-result.ts';
+import { USE_VIZ_JS } from './util/use-viz-js.ts';
 
-const vizJS = await VizJSPackage.instance();
+const vizJS = USE_VIZ_JS ? await VizJSPackage.instance() : null;
 const dotviz = await DotVizPackage.instance();
 
 function renderString(dot: string): DotVizPackage.RenderResult {
   const dotvizResult = dotviz.render(dot);
-  const vizJSResult = vizJS.render(dot);
-  expect(dotvizResult).toStrictEqual(vizJSResult);
+  /* v8 ignore start -- run as separate step */
+  if (vizJS) {
+    const vizJSResult = vizJS.render(dot);
+    expect(dotvizResult).toStrictEqual(vizJSResult);
+  }
+  /* v8 ignore end */
   return dotvizResult;
 }
 
@@ -315,7 +320,7 @@ describe('Dot language support', () => {
         {}
         a
         a -> a
-      }
+      },
     `;
     const options = {
       graphAttributes: { testGraph: 'valueGraph' },
@@ -340,6 +345,7 @@ describe('Dot language support', () => {
       		width=0.75];
       	a -> a	[pos="e,52.443,11.309 52.443,24.691 63.028,25.152 72,22.922 72,18 72,15.001 68.668,13.001 63.67,12.001"];
       }
+
     `);
   });
 

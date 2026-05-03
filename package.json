@@ -45,13 +45,14 @@
     "preversion": "bash ./scripts/check-git.sh && npm ci --ignore-scripts",
     "version": "npm test",
     "build:npm": "node scripts/build-npm.ts",
-    "test": "npm run lint && npm run check && npm run testonly && npm run prettier:check && npm run check:spelling",
+    "test": "npm run lint && npm run check && npm run testonly && npm run test:vizjs && npm run prettier:check && npm run check:spelling",
     "lint": "eslint --cache --max-warnings 0 .",
     "check": "tsc",
     "prettier": "prettier --write --list-different .",
     "prettier:check": "prettier --check .",
     "check:spelling": "cspell --cache --no-progress \"**/*\"",
     "testonly": "vitest run --coverage test/*.test.ts",
+    "test:vizjs": "USE_VIZ_JS=1 vitest run test/*.test.ts",
     "docs": "typedoc types/index.d.ts"
   }
 }
