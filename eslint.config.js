@@ -15,7 +15,7 @@ export default defineConfig([
       'npmDist/',
       'lib/',
       'test/types/',
-      'backend/zig-pkg/**',
+      'backend/**',
     ],
   },
   {
