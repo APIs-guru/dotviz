@@ -187,6 +187,7 @@ describe('Dot language support', () => {
           str7="\
           a",
           str8="\na",
+          str9="a" + /* empty string */ "" + "b"
         ]
       }
     `);
@@ -200,7 +201,8 @@ describe('Dot language support', () => {
       		str5="\\a\\",
       		str6=a,
       		str7="          a",
-      		str8="\na"
+      		str8="\na",
+      		str9=ab
       	];
       	node [label="\N"];
       }
@@ -1050,6 +1052,23 @@ describe('Dot language support', () => {
       1 | graph {
       2 |   test=<never finishes
         |        ^
+      3 | }
+    `);
+  });
+
+  it('error on invalid string concatantion', () => {
+    const result = dotviz.render(dedent`
+      graph {
+        test="string" + "and" + id
+      }
+    `);
+
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      ParserError: Unexpected identifier 'id', expected a string literal.
+
+      1 | graph {
+      2 |   test="string" + "and" + id
+        |                           ^
       3 | }
     `);
   });

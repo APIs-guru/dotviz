@@ -16,6 +16,7 @@ const Char = {
   '"': 0x22,
   '#': 0x23,
   '*': 0x2a,
+  '+': 0x2b,
   ',': 0x2c,
   '-': 0x2d,
   '.': 0x2e,
@@ -44,6 +45,7 @@ const LITERAL = 0x01_00 as const;
 const LiteralKind = {
   '--': 0x01_2d, // Char['-'] | LITERAL
   '->': 0x01_3e, // Char['>'] | LITERAL
+  '+': 0x01_2b, //  Char['+'] | LITERAL
   ',': 0x01_2c, //  Char[','] | LITERAL
   ':': 0x01_3a, //  Char[':'] | LITERAL
   ';': 0x01_3b, //  Char[';'] | LITERAL
@@ -222,6 +224,7 @@ class Lexer {
     switch (char) {
       case undefined:
         return { kind: Kind.EOF, start, length: 0 };
+      case Char['+']:
       case Char[',']:
       case Char[':']:
       case Char[';']:
@@ -698,21 +701,17 @@ class Parser {
       );
     }
 
-    const text = this.#extractText(token);
     switch (token.kind) {
       case Kind.Name:
       case Kind.Number:
-        return { value: text, token };
+        return { value: this.#extractText(token), token };
       case Kind.String:
+        return { value: this.#readString(token), token };
+      case Kind.HTML:
         return {
-          value: text
-            .slice(1, -1)
-            .replaceAll(String.raw`\"`, '"')
-            .replaceAll('\\\n', ''),
+          value: { html: this.#extractText(token).slice(1, -1) },
           token,
         };
-      case Kind.HTML:
-        return { value: { html: text.slice(1, -1) }, token };
     }
 
     const tokenDesc = this.#describeToken(token);
@@ -733,6 +732,23 @@ class Parser {
           token,
         );
     }
+  }
+
+  #readString(firstToken: Token): string {
+    let text = this.#extractText(firstToken).slice(1, -1);
+
+    while (this.#optional(Kind['+'])) {
+      const token = this.#readToken();
+      if (token.kind !== Kind.String) {
+        this.#failWithError(
+          `Unexpected ${this.#describeToken(token)}, expected a string literal.`,
+          token,
+        );
+      }
+      text += this.#extractText(token).slice(1, -1);
+    }
+
+    return text.replaceAll(String.raw`\"`, '"').replaceAll('\\\n', '');
   }
 
   #failWithError(message: string, token: Token): never {
