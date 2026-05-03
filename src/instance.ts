@@ -52,14 +52,7 @@ export async function instance(
           );
         return 52; // WASI_ERRNO_NOTSUP
       },
-      environ_sizes_get(environCount: number, environBufSize: number) {
-        // @ts-expect-error not sure how to properly type it
-        const memory: Uint8Array = instance.exports.memory;
-        const view = new DataView(memory.buffer);
-        view.setUint32(environCount, 0, true);
-        view.setUint32(environBufSize, 0, true);
-        return 0;
-      },
+      environ_sizes_get: wasiErrnoNoSys,
       /* v8 ignore next -- FIXME: removed, but currently used by graphviz */
       path_filestat_get() {
         return 44; // __WASI_ERRNO_NOENT
