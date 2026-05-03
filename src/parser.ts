@@ -540,14 +540,14 @@ class Parser {
   readonly #dotStr: string;
   readonly #lexer: Lexer;
   #peekToken: Token;
-  #peekToken2: Token;
+  #peekAheadToken: Token;
   readonly #diagnostics: Readonly<ParserError | ParserWarning>[] = [];
 
   constructor(dotStr: string) {
     this.#dotStr = dotStr;
     this.#lexer = new Lexer(dotStr);
     this.#peekToken = this.#lexer.nextToken();
-    this.#peekToken2 = this.#lexer.nextToken();
+    this.#peekAheadToken = this.#lexer.nextToken();
   }
 
   #isEOF(): boolean {
@@ -623,8 +623,8 @@ class Parser {
       );
     }
 
-    this.#peekToken = this.#peekToken2;
-    this.#peekToken2 = this.#lexer.nextToken();
+    this.#peekToken = this.#peekAheadToken;
+    this.#peekAheadToken = this.#lexer.nextToken();
     this.#warnIfAmbiguous(result, this.#peekToken);
     return result;
   }
@@ -706,7 +706,7 @@ class Parser {
       case Kind.Number:
         return { value: this.#extractText(token), token };
       case Kind.String:
-        return { value: this.#readString(token), token };
+        return { value: this.#readConcatenatedString(token), token };
       case Kind.HTML:
         return {
           value: { html: this.#extractText(token).slice(1, -1) },
@@ -734,7 +734,7 @@ class Parser {
     }
   }
 
-  #readString(firstToken: Token): string {
+  #readConcatenatedString(firstToken: Token): string {
     let text = this.#extractText(firstToken).slice(1, -1);
 
     while (this.#optional(Kind['+'])) {
@@ -798,7 +798,7 @@ class Parser {
     return graph;
   }
 
-  #parseStatementList(scope: NormalizedGraph | NormalizedSubgraph): void {
+  #parseStatementList(owner: NormalizedGraph | NormalizedSubgraph): void {
     // '{' stmt_list '}'
     this.#expected(Kind['{']);
     while (!this.#optional(Kind['}'])) {
@@ -810,31 +810,31 @@ class Parser {
       }
 
       // stmt_list	:	[ stmt [ ';' ] stmt_list ]
-      this.#parseStatement(scope);
+      this.#parseStatement(owner);
       this.#optional(Kind[';']);
     }
   }
 
-  #parseStatement(scope: NormalizedGraph | NormalizedSubgraph): void {
+  #parseStatement(owner: NormalizedGraph | NormalizedSubgraph): void {
     // stmt: node_stmt |	edge_stmt |	attr_stmt |	ID '=' ID |	subgraph
     if (this.#peekIs(ID)) {
-      if (this.#peekToken2.kind === Kind['=']) {
+      if (this.#peekAheadToken.kind === Kind['=']) {
         // ID '=' ID
         const attributes: Attributes = {};
         this.#parseAttr(attributes);
-        scope.mergeGraphAttributes(attributes);
+        owner.mergeGraphAttributes(attributes);
         return;
       }
 
       // node_stmt: node_id [ attr_list ]
       const nodeIDs = this.#parseNodeIDList();
-      if (this.#optionalEdgeOp(scope)) {
-        const tailNodes = this.#upsertEdgeEndpoints(scope, nodeIDs);
-        this.#parseEdges(scope, tailNodes);
+      if (this.#optionalEdgeOp(owner)) {
+        const tailNodes = this.#upsertEdgeEndpoints(owner, nodeIDs);
+        this.#parseEdges(owner, tailNodes);
         return;
       }
 
-      const attributes = this.#optionalAttrList();
+      const attributes = this.#optionalAttrListOrEmpty();
       for (const { node, port } of nodeIDs) {
         if (port != null) {
           this.#failWithError(
@@ -842,29 +842,29 @@ class Parser {
             port.token,
           );
         }
-        scope.root.upsertNode(scope, { name: node.value, attributes });
+        owner.root.upsertNode(owner, { name: node.value, attributes });
       }
       return;
     }
 
     switch (this.#peekKind()) {
       case Kind['{']: {
-        const subgraph = this.#parseSubgraph(scope, null);
-        if (this.#optionalEdgeOp(scope)) {
+        const subgraph = this.#parseSubgraph(owner, null);
+        if (this.#optionalEdgeOp(owner)) {
           const tailNodes = subgraph
             .sortedMemberNodes()
             .map((node) => node.defaultEndpoint);
-          this.#parseEdges(scope, tailNodes);
+          this.#parseEdges(owner, tailNodes);
         }
         break;
       }
       case Kind.subgraph: {
-        const subgraph = this.#parseNamedSubgraph(scope);
-        if (this.#optionalEdgeOp(scope)) {
+        const subgraph = this.#parseNamedSubgraph(owner);
+        if (this.#optionalEdgeOp(owner)) {
           const tailNodes = subgraph
             .sortedMemberNodes()
             .map((node) => node.defaultEndpoint);
-          this.#parseEdges(scope, tailNodes);
+          this.#parseEdges(owner, tailNodes);
         }
         break;
       }
@@ -872,15 +872,15 @@ class Parser {
       // attr_stmt:	(graph | node | edge) attr_list
       case Kind.graph:
         this.#readToken();
-        scope.mergeGraphAttributes(this.#parseAttrList());
+        owner.mergeGraphAttributes(this.#parseAttrList());
         break;
       case Kind.node:
         this.#readToken();
-        scope.mergeNodeAttributes(this.#parseAttrList());
+        owner.mergeNodeAttributes(this.#parseAttrList());
         break;
       case Kind.edge:
         this.#readToken();
-        scope.mergeEdgeAttributes(this.#parseAttrList());
+        owner.mergeEdgeAttributes(this.#parseAttrList());
         break;
       default: {
         const token = this.#readToken();
@@ -894,11 +894,11 @@ class Parser {
   }
 
   #upsertEdgeEndpoints(
-    scope: NormalizedGraph | NormalizedSubgraph,
+    owner: NormalizedGraph | NormalizedSubgraph,
     nodeIDs: NodeID[],
   ): NormalizedEdgeEndpoint[] {
     return nodeIDs.map((nodeID) => {
-      const node = scope.root.upsertNode(scope, {
+      const node = owner.root.upsertNode(owner, {
         name: nodeID.node.value,
         attributes: {},
       });
@@ -949,12 +949,12 @@ class Parser {
     return { node, port, compass };
   }
 
-  #optionalAttrList(): Readonly<Attributes> {
+  #optionalAttrListOrEmpty(): Readonly<Attributes> {
     return this.#peekKind() === Kind['['] ? this.#parseAttrList() : {};
   }
 
   #parseAttrList(): Readonly<Attributes> {
-    const attributes: Readonly<Attributes> = {};
+    const attributes: Attributes = {};
 
     // attr_list:	'[' [ a_list ] ']' [ attr_list ]
     do {
@@ -980,18 +980,18 @@ class Parser {
   }
 
   #parseNamedSubgraph(
-    scope: NormalizedGraph | NormalizedSubgraph,
+    owner: NormalizedGraph | NormalizedSubgraph,
   ): NormalizedSubgraph {
     this.#expected(Kind.subgraph);
     const name = this.#optionalName('subgraph name');
-    return this.#parseSubgraph(scope, name);
+    return this.#parseSubgraph(owner, name);
   }
 
   #parseSubgraph(
-    scope: NormalizedGraph | NormalizedSubgraph,
+    owner: NormalizedGraph | NormalizedSubgraph,
     name: string | null,
   ): NormalizedSubgraph {
-    const subgraph = scope.upsertSubgraph({
+    const subgraph = owner.upsertSubgraph({
       name,
       graphAttributes: {},
       nodeAttributes: {},
@@ -1001,8 +1001,8 @@ class Parser {
     return subgraph;
   }
 
-  #optionalEdgeOp(scope: NormalizedGraph | NormalizedSubgraph): boolean {
-    const { directed } = scope.root;
+  #optionalEdgeOp(owner: NormalizedGraph | NormalizedSubgraph): boolean {
+    const { directed } = owner.root;
     const kind = this.#peekKind();
     if (kind === Kind['--']) {
       const token = this.#readToken();
@@ -1028,7 +1028,7 @@ class Parser {
   }
 
   #parseEdges(
-    scope: NormalizedGraph | NormalizedSubgraph,
+    owner: NormalizedGraph | NormalizedSubgraph,
     tailNodes: NormalizedEdgeEndpoint[],
   ) {
     const newEdges: [NormalizedEdgeEndpoint, NormalizedEdgeEndpoint][] = [];
@@ -1036,17 +1036,17 @@ class Parser {
       let headNodes: NormalizedEdgeEndpoint[];
       switch (this.#peekKind()) {
         case Kind['{']:
-          headNodes = this.#parseSubgraph(scope, null)
+          headNodes = this.#parseSubgraph(owner, null)
             .sortedMemberNodes()
             .map((node) => node.defaultEndpoint);
           break;
         case Kind.subgraph:
-          headNodes = this.#parseNamedSubgraph(scope)
+          headNodes = this.#parseNamedSubgraph(owner)
             .sortedMemberNodes()
             .map((node) => node.defaultEndpoint);
           break;
         default:
-          headNodes = this.#upsertEdgeEndpoints(scope, this.#parseNodeIDList());
+          headNodes = this.#upsertEdgeEndpoints(owner, this.#parseNodeIDList());
       }
 
       for (const tail of tailNodes) {
@@ -1057,11 +1057,11 @@ class Parser {
 
       // head of this step becomes the tail on next step, e.g. a -> b -> c
       tailNodes = headNodes;
-    } while (this.#optionalEdgeOp(scope));
+    } while (this.#optionalEdgeOp(owner));
 
-    const attributes = this.#optionalAttrList();
+    const attributes = this.#optionalAttrListOrEmpty();
     for (const [tail, head] of newEdges) {
-      scope.root.upsertEdge(scope, { tail, head, key: null, attributes });
+      owner.root.upsertEdge(owner, { tail, head, key: null, attributes });
     }
   }
 }

@@ -19,7 +19,7 @@ export class NormalizedGraph {
   readonly #overrideGraphAttributes: Readonly<Attributes>;
   readonly #overrideNodeAttributes: Readonly<Attributes>;
   readonly #overrideEdgeAttributes: Readonly<Attributes>;
-  readonly parent = null;
+  readonly owner = null;
   readonly root = this;
 
   readonly name: string | null;
@@ -61,6 +61,7 @@ export class NormalizedGraph {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
       if (this.#overrideGraphAttributes[key] === undefined) {
+        // Seed with the current value (or '') so existing subgraphs retain whatever was in effect before this change.
         defaultAttributes[key] = this.graphAttributes[key] ?? '';
       }
     }
@@ -78,10 +79,12 @@ export class NormalizedGraph {
   mergeNodeAttributes(newAttributes: Readonly<Attributes>) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      if (this.#overrideNodeAttributes[key] === undefined) {
+      if (this.nodeAttributes[key] === undefined) {
+        // Seed existing nodes with '' so a later-declared default doesn't retroactively win
         defaultAttributes[key] = '';
       }
     }
+
     for (const node of this.#allNodes.values()) {
       node.applyDefaultAttributes(defaultAttributes);
     }
@@ -96,10 +99,12 @@ export class NormalizedGraph {
   mergeEdgeAttributes(newAttributes: Readonly<Attributes>) {
     const defaultAttributes: Attributes = {};
     for (const key of Object.keys(newAttributes)) {
-      if (this.#overrideEdgeAttributes[key] === undefined) {
+      if (this.edgeAttributes[key] === undefined) {
+        // Seed existing edges with '' so a later-declared default doesn't retroactively win
         defaultAttributes[key] = '';
       }
     }
+
     for (const edge of this.#allEdges.values()) {
       edge.applyDefaultAttributes(defaultAttributes);
     }
@@ -111,50 +116,50 @@ export class NormalizedGraph {
   }
 
   upsertNode(
-    scope: NormalizedGraph | NormalizedSubgraph,
+    owner: NormalizedGraph | NormalizedSubgraph,
     config: NormalizedNodeConfig,
   ): NormalizedNode {
     const { name } = config;
     const node = this.#allNodes.get(name);
     if (node !== undefined) {
-      scope.addNode(node);
+      owner.addNode(node);
       node.mergeAttributes(config.attributes);
       return node;
     }
 
     const newNode = new NormalizedNode(this.#allNodes.size, {
       name,
-      attributes: { ...scope.resolvedNodeDefaults, ...config.attributes },
+      attributes: { ...owner.resolvedNodeDefaults, ...config.attributes },
     });
-    scope.addNode(newNode);
+    owner.addNode(newNode);
     return newNode;
   }
 
   upsertEdge(
-    scope: NormalizedGraph | NormalizedSubgraph,
+    owner: NormalizedGraph | NormalizedSubgraph,
     config: NormalizedEdgeConfig,
   ): NormalizedEdge {
     const newEdge = new NormalizedEdge(
       this.#allEdges.size,
-      normalizeEdgeConfig({
+      applyAttributesToEdgeConfig({
         tail: config.tail,
         head: config.head,
         key: config.key,
-        attributes: { ...scope.resolvedEdgeDefaults, ...config.attributes },
+        attributes: { ...owner.resolvedEdgeDefaults, ...config.attributes },
       }),
     );
 
-    const hashKey = this.#edgeHashKey(newEdge);
-    if (hashKey !== null) {
-      const edge = this.#allEdges.get(hashKey);
+    const deduplicateKey = this.#edgeDeduplicateKey(newEdge);
+    if (deduplicateKey !== null) {
+      const edge = this.#allEdges.get(deduplicateKey);
       if (edge !== undefined) {
-        scope.addEdge(edge);
-        edge.mergeAttributes(normalizeEdgeConfig(config).attributes);
+        owner.addEdge(edge);
+        edge.mergeAttributes(applyAttributesToEdgeConfig(config).attributes);
         return edge;
       }
     }
 
-    scope.addEdge(newEdge);
+    owner.addEdge(newEdge);
     return newEdge;
   }
 
@@ -163,11 +168,11 @@ export class NormalizedGraph {
   }
 
   addEdge(edge: NormalizedEdge): void {
-    const hashKey = this.#edgeHashKey(edge);
-    this.#allEdges.set(hashKey ?? edge.index, edge);
+    const deduplicateKey = this.#edgeDeduplicateKey(edge);
+    this.#allEdges.set(deduplicateKey ?? edge.index, edge);
   }
 
-  #edgeHashKey(edge: NormalizedEdge): string | null {
+  #edgeDeduplicateKey(edge: NormalizedEdge): string | null {
     const { key } = edge;
     if (key === null && !this.strict) {
       return null;
@@ -177,7 +182,8 @@ export class NormalizedGraph {
     if (!this.directed) {
       const shouldSwap =
         head.port.node.index > tail.port.node.index ||
-        head.port.index > tail.port.index;
+        (head.port.node.index === tail.port.node.index &&
+          head.port.index > tail.port.index);
       if (shouldSwap) {
         [tail, head] = [head, tail];
       }
@@ -363,7 +369,7 @@ interface NormalizedSubgraphConfig {
 
 export class NormalizedSubgraph {
   readonly root: NormalizedGraph;
-  readonly parent: NormalizedGraph | NormalizedSubgraph;
+  readonly owner: NormalizedGraph | NormalizedSubgraph;
 
   readonly name: string | null;
   graphAttributes: Readonly<Attributes>;
@@ -374,11 +380,11 @@ export class NormalizedSubgraph {
   readonly #subgraphs = new Map<string | number, NormalizedSubgraph>();
 
   constructor(
-    parent: NormalizedGraph | NormalizedSubgraph,
+    owner: NormalizedGraph | NormalizedSubgraph,
     config: NormalizedSubgraphConfig,
   ) {
-    this.root = parent.root;
-    this.parent = parent;
+    this.root = owner.root;
+    this.owner = owner;
     this.name = config.name;
     this.graphAttributes = config.graphAttributes;
     this.nodeAttributes = config.nodeAttributes;
@@ -410,12 +416,12 @@ export class NormalizedSubgraph {
   }
 
   addNode(node: NormalizedNode): void {
-    this.parent.addNode(node);
+    this.owner.addNode(node);
     this.#memberNodes.add(node);
   }
 
   addEdge(edge: NormalizedEdge): void {
-    this.parent.addEdge(edge);
+    this.owner.addEdge(edge);
     this.#memberEdges.add(edge);
   }
 
@@ -437,11 +443,11 @@ export class NormalizedSubgraph {
   }
 
   get resolvedNodeDefaults(): Attributes {
-    return { ...this.parent.resolvedNodeDefaults, ...this.nodeAttributes };
+    return { ...this.owner.resolvedNodeDefaults, ...this.nodeAttributes };
   }
 
   get resolvedEdgeDefaults(): Attributes {
-    return { ...this.parent.resolvedEdgeDefaults, ...this.edgeAttributes };
+    return { ...this.owner.resolvedEdgeDefaults, ...this.edgeAttributes };
   }
 
   sortedMemberNodes(): NormalizedNode[] {
@@ -489,28 +495,28 @@ export function normalizeGraph(
 }
 
 function applyDefinitions(
-  scope: NormalizedGraph | NormalizedSubgraph,
+  owner: NormalizedGraph | NormalizedSubgraph,
   config: Graph | Subgraph,
 ) {
-  const root = scope.root;
+  const root = owner.root;
   const { nodes, edges, subgraphs } = config;
   if (nodes) {
     for (const { name, attributes } of nodes) {
-      root.upsertNode(scope, { name, attributes: attributes ?? {} });
+      root.upsertNode(owner, { name, attributes: attributes ?? {} });
     }
   }
 
   if (edges) {
     for (const edgeConfig of edges) {
-      const tail = root.upsertNode(scope, {
+      const tail = root.upsertNode(owner, {
         name: edgeConfig.tail,
         attributes: {},
       });
-      const head = root.upsertNode(scope, {
+      const head = root.upsertNode(owner, {
         name: edgeConfig.head,
         attributes: {},
       });
-      root.upsertEdge(scope, {
+      root.upsertEdge(owner, {
         tail: tail.defaultEndpoint,
         head: head.defaultEndpoint,
         key: null,
@@ -521,7 +527,7 @@ function applyDefinitions(
 
   if (subgraphs) {
     for (const subgraphConfig of subgraphs) {
-      const subgraph = scope.upsertSubgraph({
+      const subgraph = owner.upsertSubgraph({
         name: subgraphConfig.name ?? null,
         graphAttributes: subgraphConfig.graphAttributes ?? {},
         nodeAttributes: subgraphConfig.nodeAttributes ?? {},
@@ -532,7 +538,7 @@ function applyDefinitions(
   }
 }
 
-function normalizeEdgeConfig(
+function applyAttributesToEdgeConfig(
   config: NormalizedEdgeConfig,
 ): NormalizedEdgeConfig {
   const { key, tailport, headport, ...attributes } = config.attributes;
@@ -551,13 +557,13 @@ function normalizeEdgeConfig(
 
   return {
     key: config.key ?? key?.toString() ?? null,
-    tail: mergePortString(config.tail, tailport?.toString()),
-    head: mergePortString(config.head, headport?.toString()),
+    tail: applyPortString(config.tail, tailport?.toString()),
+    head: applyPortString(config.head, headport?.toString()),
     attributes,
   };
 }
 
-function mergePortString(
+function applyPortString(
   endpoint: NormalizedEdgeEndpoint,
   str: string | undefined,
 ): NormalizedEdgeEndpoint {
@@ -565,6 +571,7 @@ function mergePortString(
   const [port, compass] = str.split(':') as [string, string | undefined];
   return {
     port: endpoint.port.node.upsertPort(port),
+    // FIXME: missing validation of compass
     compass: compass ?? null,
   };
 }

@@ -178,6 +178,13 @@ describe('Dot language support', () => {
     const result = renderString(String.raw`
       graph {
         graph [
+          html1=<>
+          html2=<<>>
+          name1=a
+          num1=0
+          num2=-0
+          num3=.0
+          num4=0.0
           str1="",
           str2="\"",
           str3="\"a",
@@ -194,6 +201,13 @@ describe('Dot language support', () => {
     expectSuccessResult(result).toMatchInlineSnapshot(String.raw`
       graph {
       	graph [bb="0,0,0,0",
+      		html1=<>,
+      		html2=<<>>,
+      		name1=a,
+      		num1=0,
+      		num2=-0,
+      		num3=.0,
+      		num4=0.0,
       		str1="",
       		str2="\"",
       		str3="\"a",
@@ -301,7 +315,7 @@ describe('Dot language support', () => {
         {}
         a
         a -> a
-      },
+      }
     `;
     const options = {
       graphAttributes: { testGraph: 'valueGraph' },
@@ -326,7 +340,6 @@ describe('Dot language support', () => {
       		width=0.75];
       	a -> a	[pos="e,52.443,11.309 52.443,24.691 63.028,25.152 72,22.922 72,18 72,15.001 68.668,13.001 63.67,12.001"];
       }
-
     `);
   });
 
@@ -1056,7 +1069,7 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('error on invalid string concatantion', () => {
+  it('error on invalid string concatenation', () => {
     const result = dotviz.render(dedent`
       graph {
         test="string" + "and" + id
