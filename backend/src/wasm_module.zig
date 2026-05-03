@@ -197,7 +197,7 @@ const WasmString = packed struct(u64) {
 
 fn stringifyResponseJSON(response: vizjs_types.RenderResponse) WasmString {
     // use global WASM allocator since response is need to be passed to JS
-    var json_writer = std.io.Writer.Allocating.init(wasm_allocator);
+    var json_writer = std.Io.Writer.Allocating.init(wasm_allocator);
     var formatter: std.json.Formatter(vizjs_types.RenderResponse) = .{
         .options = .{},
         .value = response,

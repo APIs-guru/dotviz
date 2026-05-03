@@ -50,6 +50,7 @@ overrides:
       - agseterrf
       - agreseterrors
 words:
+  - poll_oneoff # WASI
   - testonly
   - dotviz
   - Goncharov
