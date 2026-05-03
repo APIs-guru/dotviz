@@ -77,14 +77,20 @@ fn setAttributes(
 
 fn edgePortToString(
     allocator: std.mem.Allocator,
-    port: vizjs_types.EdgePort,
-) [:0]const u8 {
-    if (port.compass) |compass| {
-        return std.fmt.allocPrintSentinel(allocator, "{s}:{s}", .{ port.name, compass }, 0) catch @panic(
-            "cannot allocPrintSentinel in edgePortToString",
-        );
+    endpoint_json: vizjs_types.EdgeEndpoint,
+) ?[:0]const u8 {
+    const maybePort = endpoint_json.port.name;
+    const maybeCompass = endpoint_json.compass;
+    if (maybePort) |port| {
+        if (maybeCompass) |compass| {
+            return std.fmt.allocPrintSentinel(allocator, "{s}:{s}", .{ port, compass }, 0) catch @panic(
+                "cannot allocPrintSentinel in edgePortToString",
+            );
+        } else {
+            return port;
+        }
     } else {
-        return port.name;
+        return maybeCompass orelse null;
     }
 }
 
@@ -106,15 +112,18 @@ fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph
         "cannot alloc for allEdges",
     );
     for (graph_json.allEdges, 0..) |edge_json, i| {
-        const tail_node = allNodes[edge_json.tail.node];
-        const head_node = allNodes[edge_json.head.node];
+        const tail = edge_json.tail;
+        const head = edge_json.head;
+
+        const tail_node = allNodes[tail.port.node];
+        const head_node = allNodes[head.port.node];
         const key: [*c]const u8 = edge_json.key orelse null;
         const edge = graphviz.agedge(graph, tail_node, head_node, key, graphviz.true);
-        if (edge_json.tail.port) |port| {
-            _ = graphviz.agsafeset_text(edge, "tailport", edgePortToString(allocator, port), "");
+        if (edgePortToString(allocator, tail)) |tailport| {
+            _ = graphviz.agsafeset_text(edge, "tailport", tailport, "");
         }
-        if (edge_json.head.port) |port| {
-            _ = graphviz.agsafeset_text(edge, "headport", edgePortToString(allocator, port), "");
+        if (edgePortToString(allocator, head)) |headport| {
+            _ = graphviz.agsafeset_text(edge, "headport", headport, "");
         }
         setAttributes(allocator, edge, edge_json.attributes);
         allEdges[i] = edge;

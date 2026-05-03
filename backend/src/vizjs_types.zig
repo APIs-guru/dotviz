@@ -48,13 +48,13 @@ pub const Node = struct {
 };
 
 pub const EdgePort = struct {
-    name: [:0]const u8,
-    compass: ?[:0]const u8,
+    node: usize,
+    name: ?[:0]const u8,
 };
 
 pub const EdgeEndpoint = struct {
-    node: usize,
-    port: ?EdgePort,
+    port: EdgePort,
+    compass: ?[:0]const u8,
 };
 
 pub const Edge = struct {

@@ -1,7 +1,7 @@
 import type { Attributes } from './graph.d.ts';
 import { type Location, printLocation } from './location.ts';
 import {
-  type EdgeEndpoint,
+  type NormalizedEdgeEndpoint,
   NormalizedGraph,
   NormalizedSubgraph,
   type OverrideAttributes,
@@ -456,12 +456,8 @@ const COMPASS_POINTS = new Set([
 ]);
 
 interface NodeID {
-  readonly name: ParsedName;
-  readonly port: PortID | null;
-}
-
-interface PortID {
-  readonly name: ParsedName;
+  readonly node: ParsedName;
+  readonly port: ParsedName | null;
   readonly compass: ParsedName | null;
 }
 
@@ -823,15 +819,14 @@ class Parser {
       }
 
       const attributes = this.#optionalAttrList();
-      for (const { name, port } of nodeIDs) {
-        if (port) {
-          const { value, token } = port.name;
+      for (const { node, port } of nodeIDs) {
+        if (port != null) {
           this.#failWithError(
-            `Unexpected '${value}' port in node statement`,
-            token,
+            `Unexpected '${port.value}' port in node statement`,
+            port.token,
           );
         }
-        scope.root.upsertNode(scope, { name: name.value, attributes });
+        scope.root.upsertNode(scope, { name: node.value, attributes });
       }
       return;
     }
@@ -842,7 +837,7 @@ class Parser {
         if (this.#optionalEdgeOp(scope)) {
           const tailNodes = subgraph
             .sortedMemberNodes()
-            .map((node) => ({ node, port: null }));
+            .map((node) => node.defaultEndpoint);
           this.#parseEdges(scope, tailNodes);
         }
         break;
@@ -852,7 +847,7 @@ class Parser {
         if (this.#optionalEdgeOp(scope)) {
           const tailNodes = subgraph
             .sortedMemberNodes()
-            .map((node) => ({ node, port: null }));
+            .map((node) => node.defaultEndpoint);
           this.#parseEdges(scope, tailNodes);
         }
         break;
@@ -885,13 +880,21 @@ class Parser {
   #upsertEdgeEndpoints(
     scope: NormalizedGraph | NormalizedSubgraph,
     nodeIDs: NodeID[],
-  ): EdgeEndpoint[] {
-    return nodeIDs.map(({ name, port }) => ({
-      node: scope.root.upsertNode(scope, { name: name.value, attributes: {} }),
-      port: port
-        ? { name: port.name.value, compass: port.compass?.value ?? null }
-        : null,
-    }));
+  ): NormalizedEdgeEndpoint[] {
+    return nodeIDs.map((nodeID) => {
+      const node = scope.root.upsertNode(scope, {
+        name: nodeID.node.value,
+        attributes: {},
+      });
+      const compass = nodeID.compass?.value ?? null;
+      if (nodeID.port == null) {
+        return nodeID.compass
+          ? { port: node.defaultPort, compass }
+          : node.defaultEndpoint;
+      }
+      const port = node.upsertPort(nodeID.port.value);
+      return { port, compass };
+    });
   }
 
   #parseNodeIDList(): NodeID[] {
@@ -904,19 +907,16 @@ class Parser {
 
   #parseNodeID(): NodeID {
     // node_id:	ID [ port ]
-    const name = this.#expectedName('node name');
-    return { name, port: this.#optionalNodePort() };
-  }
+    const node = this.#expectedName('node name');
 
-  #optionalNodePort(): PortID | null {
     // port: ':' ID [ ':' compass_pt ]
     if (!this.#optional(Kind[':'])) {
-      return null;
+      return { node, port: null, compass: null };
     }
 
-    const name = this.#expectedName('port name');
+    const port = this.#expectedName('port name');
     if (!this.#optional(Kind[':'])) {
-      return { name, compass: null };
+      return { node, port, compass: null };
     }
 
     // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
@@ -930,7 +930,7 @@ class Parser {
         compass.token,
       );
     }
-    return { name, compass };
+    return { node, port, compass };
   }
 
   #optionalAttrList(): Readonly<Attributes> {
@@ -1013,21 +1013,21 @@ class Parser {
 
   #parseEdges(
     scope: NormalizedGraph | NormalizedSubgraph,
-    tailNodes: EdgeEndpoint[],
+    tailNodes: NormalizedEdgeEndpoint[],
   ) {
-    const newEdges: [EdgeEndpoint, EdgeEndpoint][] = [];
+    const newEdges: [NormalizedEdgeEndpoint, NormalizedEdgeEndpoint][] = [];
     do {
-      let headNodes: EdgeEndpoint[];
+      let headNodes: NormalizedEdgeEndpoint[];
       switch (this.#peekKind()) {
         case Kind['{']:
           headNodes = this.#parseSubgraph(scope, null)
             .sortedMemberNodes()
-            .map((node) => ({ node, port: null }));
+            .map((node) => node.defaultEndpoint);
           break;
         case Kind.subgraph:
           headNodes = this.#parseNamedSubgraph(scope)
             .sortedMemberNodes()
-            .map((node) => ({ node, port: null }));
+            .map((node) => node.defaultEndpoint);
           break;
         default:
           headNodes = this.#upsertEdgeEndpoints(scope, this.#parseNodeIDList());

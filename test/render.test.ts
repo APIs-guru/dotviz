@@ -149,7 +149,7 @@ describe('Viz', () => {
       });
 
       expectFailureResult(result).toMatchInlineSnapshot(
-        `RenderingBackendError: JSON error UnexpectedToken at 1:414: \`lse,"engine":"dot","yInvert":"bad value","reduce":false,"images":{}}\``,
+        `RenderingBackendError: JSON error UnexpectedToken at 1:462: \`lse,"engine":"dot","yInvert":"bad value","reduce":false,"images":{}}\``,
       );
     });
 

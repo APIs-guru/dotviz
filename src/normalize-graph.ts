@@ -132,26 +132,28 @@ export class NormalizedGraph {
 
   upsertEdge(
     scope: NormalizedGraph | NormalizedSubgraph,
-    rawConfig: NormalizedEdgeConfig,
+    config: NormalizedEdgeConfig,
   ): NormalizedEdge {
-    const resolvedConfig = normalizeEdgeConfig({
-      tail: rawConfig.tail,
-      head: rawConfig.head,
-      key: rawConfig.key,
-      attributes: { ...scope.resolvedEdgeDefaults, ...rawConfig.attributes },
-    });
+    const newEdge = new NormalizedEdge(
+      this.#allEdges.size,
+      normalizeEdgeConfig({
+        tail: config.tail,
+        head: config.head,
+        key: config.key,
+        attributes: { ...scope.resolvedEdgeDefaults, ...config.attributes },
+      }),
+    );
 
-    const hashKey = this.#edgeHashKey(resolvedConfig);
+    const hashKey = this.#edgeHashKey(newEdge);
     if (hashKey !== null) {
       const edge = this.#allEdges.get(hashKey);
       if (edge !== undefined) {
         scope.addEdge(edge);
-        edge.mergeAttributes(normalizeEdgeConfig(rawConfig).attributes);
+        edge.mergeAttributes(normalizeEdgeConfig(config).attributes);
         return edge;
       }
     }
 
-    const newEdge = new NormalizedEdge(this.#allEdges.size, resolvedConfig);
     scope.addEdge(newEdge);
     return newEdge;
   }
@@ -165,22 +167,29 @@ export class NormalizedGraph {
     this.#allEdges.set(hashKey ?? edge.index, edge);
   }
 
-  #edgeHashKey(config: NormalizedEdgeConfig): string | null {
-    let tail = config.tail.node.index;
-    let head = config.head.node.index;
-
-    if (!this.directed && head > tail) {
-      [tail, head] = [head, tail];
-    }
-
-    if (this.strict) {
-      return tail.toString() + ':' + head.toString();
-    }
-
-    if (config.key == null) {
+  #edgeHashKey(edge: NormalizedEdge): string | null {
+    const { key } = edge;
+    if (key === null && !this.strict) {
       return null;
     }
-    return tail.toString() + ':' + head.toString() + ':' + config.key;
+
+    let { tail, head } = edge;
+    if (!this.directed) {
+      const shouldSwap =
+        head.port.node.index > tail.port.node.index ||
+        head.port.index > tail.port.index;
+      if (shouldSwap) {
+        [tail, head] = [head, tail];
+      }
+    }
+
+    return [
+      tail.port.node.index.toString(),
+      tail.port.index.toString(),
+      head.port.node.index.toString(),
+      head.port.index.toString(),
+      key ?? '',
+    ].join(':');
   }
 
   upsertSubgraph(config: NormalizedSubgraphConfig): NormalizedSubgraph {
@@ -233,6 +242,27 @@ export class NormalizedGraph {
   }
 }
 
+export interface NormalizedPortConfig {
+  readonly node: NormalizedNode;
+  readonly name: string | null;
+}
+
+export class NormalizedPort {
+  readonly index: number;
+  readonly node: NormalizedNode;
+  readonly name: string | null;
+
+  constructor(index: number, config: NormalizedPortConfig) {
+    this.index = index;
+    this.node = config.node;
+    this.name = config.name;
+  }
+
+  toJSON() {
+    return { node: this.node.index, name: this.name };
+  }
+}
+
 export interface NormalizedNodeConfig {
   readonly name: string;
   readonly attributes: Attributes;
@@ -241,6 +271,11 @@ export interface NormalizedNodeConfig {
 export class NormalizedNode {
   readonly index: number;
   readonly name: string;
+  readonly defaultPort = new NormalizedPort(0, { node: this, name: null });
+  readonly defaultEndpoint = { port: this.defaultPort, compass: null };
+  readonly ports = new Map<string | null, NormalizedPort>([
+    [null, this.defaultPort],
+  ]);
   attributes: Readonly<Attributes>;
 
   constructor(index: number, config: NormalizedNodeConfig) {
@@ -257,6 +292,15 @@ export class NormalizedNode {
     this.attributes = { ...defaults, ...this.attributes };
   }
 
+  upsertPort(name: string): NormalizedPort {
+    const port = this.ports.get(name);
+    if (port) return port;
+
+    const newPort = new NormalizedPort(this.ports.size, { node: this, name });
+    this.ports.set(name, newPort);
+    return newPort;
+  }
+
   toJSON() {
     return {
       name: this.name,
@@ -265,27 +309,22 @@ export class NormalizedNode {
   }
 }
 
-export interface EdgePort {
-  readonly name: string;
+export interface NormalizedEdgeEndpoint {
+  readonly port: NormalizedPort;
   readonly compass: string | null;
 }
 
-export interface EdgeEndpoint {
-  readonly node: NormalizedNode;
-  readonly port: EdgePort | null;
-}
-
 interface NormalizedEdgeConfig {
-  readonly tail: EdgeEndpoint;
-  readonly head: EdgeEndpoint;
+  readonly tail: NormalizedEdgeEndpoint;
+  readonly head: NormalizedEdgeEndpoint;
   readonly key: string | null;
   readonly attributes: Readonly<Attributes>;
 }
 
 export class NormalizedEdge {
   readonly index: number;
-  readonly tail: EdgeEndpoint;
-  readonly head: EdgeEndpoint;
+  readonly tail: NormalizedEdgeEndpoint;
+  readonly head: NormalizedEdgeEndpoint;
   readonly key: string | null;
   attributes: Readonly<Attributes>;
 
@@ -307,8 +346,8 @@ export class NormalizedEdge {
 
   toJSON() {
     return {
-      tail: { node: this.tail.node.index, port: this.tail.port },
-      head: { node: this.head.node.index, port: this.head.port },
+      tail: this.tail,
+      head: this.head,
       key: this.key,
       attributes: this.attributes,
     };
@@ -472,8 +511,8 @@ function applyDefinitions(
         attributes: {},
       });
       root.upsertEdge(scope, {
-        tail: { node: tail, port: null },
-        head: { node: head, port: null },
+        tail: tail.defaultEndpoint,
+        head: head.defaultEndpoint,
         key: null,
         attributes: edgeConfig.attributes ?? {},
       });
@@ -509,22 +548,23 @@ function normalizeEdgeConfig(
     throw new TypeError('HTML as headport is not supported');
   }
   /* v8 ignore end */
+
   return {
     key: config.key ?? key?.toString() ?? null,
-    tail: {
-      node: config.tail.node,
-      port: config.tail.port ?? splitPortString(tailport?.toString()),
-    },
-    head: {
-      node: config.head.node,
-      port: config.head.port ?? splitPortString(headport?.toString()),
-    },
+    tail: mergePortString(config.tail, tailport?.toString()),
+    head: mergePortString(config.head, headport?.toString()),
     attributes,
   };
 }
 
-function splitPortString(str: string | undefined): EdgePort | null {
-  if (str === undefined) return null;
-  const [name, compass] = str.split(':') as [string, string | undefined];
-  return { name, compass: compass ?? null };
+function mergePortString(
+  endpoint: NormalizedEdgeEndpoint,
+  str: string | undefined,
+): NormalizedEdgeEndpoint {
+  if (str === undefined || str === '') return endpoint;
+  const [port, compass] = str.split(':') as [string, string | undefined];
+  return {
+    port: endpoint.port.node.upsertPort(port),
+    compass: compass ?? null,
+  };
 }
