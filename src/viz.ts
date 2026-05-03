@@ -1,4 +1,11 @@
 import type { Attributes, Graph } from './graph.d.ts';
+import type { Location } from './location.ts';
+import {
+  NormalizedGraph,
+  normalizeGraph,
+  type OverrideAttributes,
+} from './normalize-graph.ts';
+import { parseDot } from './parser.ts';
 
 /**
  * @property format
@@ -93,8 +100,11 @@ export interface MultipleSuccessResult {
 }
 
 export interface RenderError {
-  level: 'error' | 'warning' | undefined;
+  level: 'error' | 'warning';
   message: string;
+  location: Location | null;
+
+  toString(): string;
 }
 
 /**
@@ -144,7 +154,12 @@ export class Viz {
     formats: readonly string[],
     options: RenderOptions = {},
   ): MultipleRenderResult {
-    return this._renderInput(input, formats, options);
+    const overrideAttributes: OverrideAttributes = {
+      graphAttributes: options.graphAttributes,
+      nodeAttributes: options.nodeAttributes,
+      edgeAttributes: options.edgeAttributes,
+    };
+    return this._renderInput(input, formats, overrideAttributes, options);
   }
 
   /**
@@ -157,7 +172,7 @@ export class Viz {
   render(input: string | Graph, options: RenderOptions = {}): RenderResult {
     const format = options.format ?? 'dot';
 
-    const result = this._renderInput(input, [format], options);
+    const result = this.renderFormats(input, [format], options);
 
     return result.status === 'success'
       ? {
@@ -174,10 +189,9 @@ export class Viz {
     const result = this.render(input, options);
 
     if (result.status !== 'success') {
-      throw new Error(
-        result.errors.find((e) => e.level == 'error')?.message ??
-          'render failed',
-      );
+      let message = result.errors.find((e) => e.level == 'error')?.message;
+      message ??= 'Unknown error';
+      throw new Error(message);
     }
 
     return result.output;
@@ -186,56 +200,60 @@ export class Viz {
   _renderInput(
     input: string | Graph,
     formats: readonly string[],
+    overrideAttributes: OverrideAttributes,
     options: RenderOptions,
   ): MultipleRenderResult {
+    let graph: NormalizedGraph;
+    const warnings: RenderError[] = [];
+    if (typeof input === 'string') {
+      const result = parseDot(input, overrideAttributes);
+      if (result.status === 'failure') {
+        return result;
+      }
+      graph = result.output;
+      warnings.push(...result.errors);
+    } else {
+      graph = normalizeGraph(input, overrideAttributes);
+    }
+
     let renderGv = false;
     let renderDot = false;
     let renderSvg = false;
     for (const name of formats) {
       switch (name) {
-        case 'gv': {
+        case 'gv':
           renderGv = true;
           break;
-        }
-        case 'dot': {
+        case 'dot':
           renderDot = true;
           break;
-        }
-        case 'svg': {
+        case 'svg':
           renderSvg = true;
           break;
-        }
-        default: {
+        default:
           return {
             status: 'failure',
             output: null,
             errors: [
-              {
-                level: 'error',
-                message:
-                  'Format: "invalid" not recognized. Use one of: dot gv svg',
-              },
+              new RenderingBackendError(
+                'error',
+                `Format: "${name}" not recognized. Use one of: dot gv svg`,
+              ),
             ],
           };
-        }
       }
     }
-    const requestJSON = JSON.stringify(
-      {
-        graph: typeof input === 'string' ? { dot: input } : { graph: input },
-        graphAttributes: options.graphAttributes ?? null,
-        nodeAttributes: options.nodeAttributes ?? null,
-        edgeAttributes: options.edgeAttributes ?? null,
-        renderDot: renderDot || renderGv,
-        renderSvg,
-        engine: options.engine ?? 'dot',
-        yInvert: options.yInvert ?? false,
-        reduce: options.reduce ?? false,
-        images: this._normalizeImages(options.images),
-      },
-      null,
-      2,
-    );
+
+    const request = {
+      graph,
+      renderDot: renderDot || renderGv,
+      renderSvg,
+      engine: options.engine ?? 'dot',
+      yInvert: options.yInvert ?? false,
+      reduce: options.reduce ?? false,
+      images: this._normalizeImages(options.images),
+    };
+    const requestJSON = JSON.stringify(request);
     const cJson = this._utf8Encoder.encode(requestJSON);
     const jsonPtr = this._wasm.wasm_alloc(cJson.length);
     const inputJSONBuf = new Uint8Array(
@@ -254,6 +272,10 @@ export class Viz {
     try {
       const str: string = this._utf8Decoder.decode(outputJSONBuf);
       const response = JSON.parse(str) as MultipleRenderResult;
+      response.errors = response.errors.map(
+        (error) => new RenderingBackendError(error.level, error.message),
+      );
+
       let output: Record<string, string> | null = null;
       if (response.output) {
         output = {};
@@ -268,7 +290,7 @@ export class Viz {
         }
       }
       response.output = output;
-      return response;
+      return { ...response, errors: [...warnings, ...response.errors] };
     } finally {
       this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
     }
@@ -324,13 +346,27 @@ export class Viz {
         }
         break;
       }
-      default: {
+      default:
         console.trace(`fd_write: unknown fd ${fd.toString()}`);
         return 52; // WASI_ERRNO_NOTSUP
-      }
     }
 
     view.setUint32(nwritten_ptr, totalWritten, true);
     return 0;
+  }
+}
+
+class RenderingBackendError implements RenderError {
+  level: 'warning' | 'error';
+  message: string;
+  location = null;
+
+  constructor(level: 'warning' | 'error', message: string) {
+    this.level = level;
+    this.message = message;
+  }
+
+  toString() {
+    return 'RenderingBackendError: ' + this.message;
   }
 }

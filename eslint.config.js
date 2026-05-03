@@ -74,12 +74,21 @@ export default defineConfig([
       'import-x/no-duplicates': 'error',
 
       '@typescript-eslint/unbound-method': ['error', { ignoreStatic: true }],
+      '@typescript-eslint/no-unnecessary-condition': [
+        'error',
+        { allowConstantLoopConditions: 'only-allowed-literals' },
+      ],
 
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/prefer-query-selector': 'off',
       'unicorn/no-null': 'off',
       'unicorn/prefer-export-from': ['error', { ignoreUsedVariables: true }],
       'unicorn/prefer-ternary': ['error', 'only-single-line'],
+      'unicorn/number-literal-case': [
+        'error',
+        { hexadecimalValue: 'lowercase' }, // required to not have conflicts with prettier
+      ],
+      'unicorn/switch-case-braces': ['error', 'avoid'],
     },
   },
   {

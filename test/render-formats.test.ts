@@ -76,12 +76,10 @@ describe('Viz', () => {
       const result = viz.renderFormats('invalid', ['dot', 'svg']);
 
       expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
-          },
-        ]
+        ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
+
+        1 | invalid
+          | ^
       `);
     });
 
@@ -90,12 +88,10 @@ describe('Viz', () => {
       const result = viz.renderFormats('invalid', []);
 
       expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
-          },
-        ]
+        ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
+
+        1 | invalid
+          | ^
       `);
     });
   });

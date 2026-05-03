@@ -40,50 +40,50 @@ pub const AttributeValue = union(enum) {
     }
 };
 
-const CString = struct {
-    cstring: [:0]u8,
-
-    const Self = @This();
-
-    pub fn jsonParse(allocator: Allocator, source: anytype, options: ParseOptions) !Self {
-        const s = try json.innerParse([:0]u8, allocator, source, options);
-        return Self{ .string = s };
-    }
-};
-
 pub const Attributes = std.json.ArrayHashMap(AttributeValue);
 
 pub const Node = struct {
     name: [:0]const u8,
-    attributes: ?*Attributes = null,
+    attributes: Attributes,
+};
+
+pub const EdgePort = struct {
+    node: usize,
+    name: ?[:0]const u8,
+};
+
+pub const EdgeEndpoint = struct {
+    port: EdgePort,
+    compass: ?[:0]const u8,
 };
 
 pub const Edge = struct {
-    tail: [:0]const u8,
-    head: [:0]const u8,
-    attributes: ?*Attributes = null,
+    tail: EdgeEndpoint,
+    head: EdgeEndpoint,
+    key: ?[:0]const u8,
+    attributes: Attributes,
 };
 
 pub const Subgraph = struct {
-    name: ?[:0]const u8 = null,
-    graphAttributes: ?*Attributes = null,
-    nodeAttributes: ?*Attributes = null,
-    edgeAttributes: ?*Attributes = null,
-    nodes: ?[]Node = null,
-    edges: ?[]Edge = null,
-    subgraphs: ?[]Subgraph = null,
+    name: ?[:0]const u8,
+    graphAttributes: Attributes,
+    nodeAttributes: Attributes,
+    edgeAttributes: Attributes,
+    memberNodes: []usize,
+    memberEdges: []usize,
+    subgraphs: []Subgraph,
 };
 
 pub const Graph = struct {
-    name: ?[:0]const u8 = null,
-    directed: bool = true,
-    strict: bool = false,
-    graphAttributes: ?*Attributes = null,
-    nodeAttributes: ?*Attributes = null,
-    edgeAttributes: ?*Attributes = null,
-    nodes: ?[]Node = null,
-    edges: ?[]Edge = null,
-    subgraphs: ?[]Subgraph = null,
+    name: ?[:0]const u8,
+    directed: bool,
+    strict: bool,
+    graphAttributes: Attributes,
+    nodeAttributes: Attributes,
+    edgeAttributes: Attributes,
+    allNodes: []Node,
+    allEdges: []Edge,
+    subgraphs: []Subgraph,
 
     pub fn initFromJson(
         allocator: std.mem.Allocator,
@@ -97,12 +97,6 @@ pub const Graph = struct {
         );
         return res;
     }
-};
-
-const GraphInput = union(enum) {
-    // FIXME: should be [:0]u8 but due to bug in stdlib it is:
-    dot: []u8,
-    graph: Graph,
 };
 
 pub const ImageDimensions = struct {
@@ -124,10 +118,7 @@ pub const Engine = enum {
 };
 
 pub const RenderRequest = struct {
-    graph: GraphInput,
-    graphAttributes: ?*Attributes,
-    nodeAttributes: ?*Attributes,
-    edgeAttributes: ?*Attributes,
+    graph: Graph,
     renderDot: bool,
     renderSvg: bool,
     engine: [:0]const u8,
