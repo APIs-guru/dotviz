@@ -57,6 +57,13 @@ const LiteralKind = {
 } as const;
 type LiteralKind = (typeof LiteralKind)[keyof typeof LiteralKind];
 
+interface LiteralToken {
+  readonly kind: LiteralKind;
+  readonly start: Location;
+  readonly length: number;
+  readonly value: null;
+}
+
 const KEYWORD = 0x02_00 as const;
 const KeywordKind = {
   node: 0x02_00,
@@ -67,6 +74,13 @@ const KeywordKind = {
   strict: 0x02_05,
 } as const;
 type KeywordKind = (typeof KeywordKind)[keyof typeof KeywordKind];
+
+interface KeywordToken {
+  readonly kind: KeywordKind;
+  readonly start: Location;
+  readonly length: number;
+  readonly value: null;
+}
 
 const keywordStrings = [
   'node',
@@ -84,6 +98,14 @@ const IDKind = {
   String: 0x04_02,
   HTML: 0x04_03,
 } as const;
+type IDKind = (typeof IDKind)[keyof typeof IDKind];
+
+interface IDToken {
+  readonly kind: IDKind;
+  readonly start: Location;
+  readonly length: number;
+  readonly value: string;
+}
 
 const Kind = {
   EOF: 0,
@@ -97,11 +119,21 @@ const Kind = {
 } as const;
 type Kind = (typeof Kind)[keyof typeof Kind];
 
-interface Token {
-  readonly kind: Kind;
-  readonly start: Location;
-  readonly length: number;
-}
+type Token =
+  | LiteralToken
+  | KeywordToken
+  | IDToken
+  | {
+      readonly kind:
+        | typeof Kind.EOF
+        | typeof Kind.UnexpectedChar
+        | typeof Kind.UnterminatedString
+        | typeof Kind.UnterminatedHTML
+        | typeof Kind.UnterminatedBlockComment;
+      readonly start: Location;
+      readonly length: number;
+      readonly value: null;
+    };
 
 class Lexer {
   readonly #dotStr: string;
@@ -160,6 +192,7 @@ class Lexer {
             kind: Kind.UnterminatedBlockComment,
             start,
             length: this.#nextIndex - start.index,
+            value: null,
           };
         case Char['\n']:
           this.#readNewLine();
@@ -223,7 +256,7 @@ class Lexer {
     const char = this.#peekChar();
     switch (char) {
       case undefined:
-        return { kind: Kind.EOF, start, length: 0 };
+        return { kind: Kind.EOF, start, length: 0, value: null };
       case Char['+']:
       case Char[',']:
       case Char[':']:
@@ -234,7 +267,12 @@ class Lexer {
       case Char['{']:
       case Char['}']:
         ++this.#nextIndex;
-        return { kind: (char | LITERAL) as Kind, start, length: 1 };
+        return {
+          kind: (char | LITERAL) as LiteralKind,
+          start,
+          length: 1,
+          value: null,
+        };
       case Char['<']:
         return this.#readHTML(start);
       case Char['"']:
@@ -245,7 +283,12 @@ class Lexer {
           case Char['-']:
           case Char['>']:
             this.#nextIndex += 2;
-            return { kind: (nextChar | LITERAL) as Kind, start, length: 2 };
+            return {
+              kind: (nextChar | LITERAL) as LiteralKind,
+              start,
+              length: 2,
+              value: null,
+            };
         }
         break;
       }
@@ -258,7 +301,7 @@ class Lexer {
     }
 
     ++this.#nextIndex;
-    return { kind: Kind.UnexpectedChar, start, length: 1 };
+    return { kind: Kind.UnexpectedChar, start, length: 1, value: null };
   }
 
   #readNumber(start: Location): Token {
@@ -267,7 +310,7 @@ class Lexer {
     const hasLeadingDecimalPoint = this.#skipChar(Char['.']);
     if (!isDigit(this.#peekChar())) {
       this.#nextIndex = start.index + 1;
-      return { kind: Kind.UnexpectedChar, start, length: 1 };
+      return { kind: Kind.UnexpectedChar, start, length: 1, value: null };
     }
     while (isDigit(this.#peekChar())) {
       ++this.#nextIndex;
@@ -280,7 +323,8 @@ class Lexer {
     }
 
     const length = this.#nextIndex - start.index;
-    return { kind: Kind.Number, start, length };
+    const value = this.#dotStr.slice(start.index, this.#nextIndex);
+    return { kind: Kind.Number, start, length, value };
   }
 
   #readHTML(start: Location): Token {
@@ -292,6 +336,7 @@ class Lexer {
             kind: Kind.UnterminatedHTML,
             start,
             length: this.#nextIndex - start.index,
+            value: null,
           };
         case Char['\n']:
           this.#readNewLine();
@@ -311,12 +356,14 @@ class Lexer {
     } while (nestDepth !== 0);
 
     const length = this.#nextIndex - start.index;
-    return { kind: Kind.HTML, start, length };
+    const value = this.#dotStr.slice(start.index + 1, this.#nextIndex - 1);
+    return { kind: Kind.HTML, start, length, value };
   }
 
   #readString(start: Location): Token {
-    let isEscaped = false;
+    let value = '';
     ++this.#nextIndex; // skip opening `"`
+    let checkpoint = this.#nextIndex;
     while (true) {
       switch (this.#peekChar()) {
         case undefined:
@@ -324,26 +371,40 @@ class Lexer {
             kind: Kind.UnterminatedString,
             start,
             length: this.#nextIndex - start.index,
+            value: null,
+          };
+        case Char['"']:
+          value += this.#dotStr.slice(checkpoint, this.#nextIndex);
+          ++this.#nextIndex;
+          return {
+            kind: Kind.String,
+            start,
+            length: this.#nextIndex - start.index,
+            value,
           };
         case Char['\n']:
           this.#readNewLine();
-          isEscaped = false;
           break;
         case Char['\\']:
           ++this.#nextIndex;
-          isEscaped = !isEscaped;
-          continue;
-        case Char['"']:
-          ++this.#nextIndex;
-          if (!isEscaped) {
-            const length = this.#nextIndex - start.index;
-            return { kind: Kind.String, start, length };
+          switch (this.#peekChar()) {
+            case Char['"']:
+              value += this.#dotStr.slice(checkpoint, this.#nextIndex - 1);
+              checkpoint = this.#nextIndex; // set to `"` position
+              ++this.#nextIndex;
+              break;
+            case Char['\n']:
+              value += this.#dotStr.slice(checkpoint, this.#nextIndex - 1);
+              this.#readNewLine();
+              checkpoint = this.#nextIndex; // set to position after `\n`
+              break;
+            case Char['\\']:
+              ++this.#nextIndex;
+              break;
           }
-          isEscaped = false;
           break;
         default:
           ++this.#nextIndex;
-          isEscaped = false;
           break;
       }
     }
@@ -356,15 +417,18 @@ class Lexer {
     }
 
     const length = this.#nextIndex - start.index;
-    const maybeKeyword = this.#dotStr
-      .slice(start.index, this.#nextIndex)
-      .toLowerCase();
-    const keywordIndex = keywordStrings.indexOf(maybeKeyword);
+    const value = this.#dotStr.slice(start.index, this.#nextIndex);
+    const keywordIndex = keywordStrings.indexOf(value.toLowerCase());
     if (keywordIndex === -1) {
-      return { kind: Kind.Name, start, length };
+      return { kind: Kind.Name, start, length, value };
     }
 
-    return { kind: (keywordIndex | KEYWORD) as Kind, start, length };
+    return {
+      kind: (keywordIndex | KEYWORD) as KeywordKind,
+      start,
+      length,
+      value: null,
+    };
   }
 }
 
@@ -704,14 +768,11 @@ class Parser {
     switch (token.kind) {
       case Kind.Name:
       case Kind.Number:
-        return { value: this.#extractText(token), token };
+        return { value: token.value, token };
       case Kind.String:
         return { value: this.#readConcatenatedString(token), token };
       case Kind.HTML:
-        return {
-          value: { html: this.#extractText(token).slice(1, -1) },
-          token,
-        };
+        return { value: { html: token.value }, token };
     }
 
     const tokenDesc = this.#describeToken(token);
@@ -734,8 +795,8 @@ class Parser {
     }
   }
 
-  #readConcatenatedString(firstToken: Token): string {
-    let text = this.#extractText(firstToken).slice(1, -1);
+  #readConcatenatedString(firstToken: IDToken): string {
+    let text = firstToken.value;
 
     while (this.#optional(Kind['+'])) {
       const token = this.#readToken();
@@ -745,10 +806,9 @@ class Parser {
           token,
         );
       }
-      text += this.#extractText(token).slice(1, -1);
+      text += token.value;
     }
-
-    return text.replaceAll(String.raw`\"`, '"').replaceAll('\\\n', '');
+    return text;
   }
 
   #failWithError(message: string, token: Token): never {

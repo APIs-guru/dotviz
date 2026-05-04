@@ -179,53 +179,36 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('various values as attributes', () => {
-    const result = renderString(String.raw`
-      graph {
-        graph [
-          html1=<>
-          html2=<<>>
-          name1=a
-          num1=0
-          num2=-0
-          num3=.0
-          num4=0.0
-          str1="",
-          str2="\"",
-          str3="\"a",
-          str4="\\\"",
-          str5="\\a\\",
-          str6="a",
-          str7="\
-          a",
-          str8="\na",
-          str9="a" + /* empty string */ "" + "b"
-        ]
-      }
-    `);
-    expectSuccessResult(result).toMatchInlineSnapshot(String.raw`
-      graph {
-      	graph [bb="0,0,0,0",
-      		html1=<>,
-      		html2=<<>>,
-      		name1=a,
-      		num1=0,
-      		num2=-0,
-      		num3=.0,
-      		num4=0.0,
-      		str1="",
-      		str2="\"",
-      		str3="\"a",
-      		str4="\\\"",
-      		str5="\\a\\",
-      		str6=a,
-      		str7="          a",
-      		str8="\na",
-      		str9=ab
-      	];
-      	node [label="\N"];
-      }
-    `);
+  describe('various values as attributes', () => {
+    it.for([
+      [`<>`, null],
+      [`<<>>`, null],
+      [`a`, null],
+      [`0`, null],
+      [`-0`, null],
+      [`.0`, null],
+      [`""`, null],
+      [String.raw`"\""`, null],
+      [String.raw`"\"a"`, null],
+      [String.raw`"\\\""`, null],
+      [String.raw`"\\a\\"`, null],
+      [`"a"`, `a`],
+      [`"\n"`, null],
+      [`"\\\na"`, `a`],
+      [`"\\\\\na"`, null],
+      [String.raw`"\na"`, null],
+      [`"a" + /* empty string */ "" + "b"`, `ab`],
+    ] satisfies [string, string | null][])('value $0', ([input, output]) => {
+      const result = dotviz.render(`graph { test = ${input} } `);
+      expect(result.output?.trimEnd()).toStrictEqual(dedent`
+        graph {
+        	graph [bb="0,0,0,0",
+        		test=${output ?? input}
+        	];
+        	node [label="\\N"];
+        }
+      `);
+    });
   });
 
   it('global graph attributes shorthand', () => {

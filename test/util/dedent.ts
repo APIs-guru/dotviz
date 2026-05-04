@@ -31,7 +31,7 @@ function dedentString(string: string): string {
   // fixes indentation by removing leading spaces and tabs from each line
   let indent = '';
   for (const char of trimmedStr) {
-    if (char !== ' ') {
+    if (char !== ' ' && char !== '\t') {
       break;
     }
     indent += char;
