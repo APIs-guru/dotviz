@@ -188,16 +188,39 @@ describe('Dot language support', () => {
       [`-0`, null],
       [`.0`, null],
       [`""`, null],
+      [`"a"`, `a`],
+      [`"\n"`, null],
+      [`"a" + /* empty string */ "" + "b"`, `ab`],
+      // `\` + `"` → `"` (backslash consumed)
       [String.raw`"\""`, null],
       [String.raw`"\"a"`, null],
       [String.raw`"\\\""`, null],
       [String.raw`"\\a\\"`, null],
-      [`"a"`, `a`],
-      [`"\n"`, null],
-      [`"\\\na"`, `a`],
-      [`"\\\\\na"`, null],
-      [String.raw`"\na"`, null],
-      [`"a" + /* empty string */ "" + "b"`, `ab`],
+      [String.raw`"\\\\"`, null], // `\\` → both backslashes kept (not reduced to one)
+      [String.raw`"\n\t\r"`, null], // `\` + letter → both stored verbatim (not C-style escapes)
+      [`"\\\n"`, `""`], // `\<LF>` → nothing (line continuation)
+      [`"\\\\\na"`, null], // `\\<LF>` → `\\` + literal LF (NOT a continuation)
+      [`"\\\\\\\na"`, String.raw`"\\a"`], // `\\\<LF>` → `\\` stored, continuation on 3rd backslash
+      [`"\\\\\\\\\na"`, null], // `\\\\<LF>` → all four backslashes + literal LF
+    ] satisfies [string, string | null][])('value $0', ([input, output]) => {
+      const result = renderString(`graph { test = ${input} } `);
+      expect(result.output?.trimEnd()).toStrictEqual(dedent`
+        graph {
+        	graph [bb="0,0,0,0",
+        		test=${output ?? input}
+        	];
+        	node [label="\\N"];
+        }
+      `);
+    });
+  });
+
+  describe('Handle Windows-style line endings in quoted strings (dotviz only)', () => {
+    it.for([
+      [`"\\\r\n"`, `""`], // `\<CR><LF>` → continuation (same as `\<LF>`)
+      [`"a\\\r\nb"`, `ab`], // `\<CR><LF>` → continuation, text on both sides kept
+      [`"\\\\\\\r\n"`, String.raw`"\\"`], // `\\\<CR><LF>` → `\\` stored, continuation on 3rd backslash
+      [`"a\\\rb"`, null], // `\<CR>` alone (no LF) → verbatim `\`+CR pair, not a continuation
     ] satisfies [string, string | null][])('value $0', ([input, output]) => {
       const result = dotviz.render(`graph { test = ${input} } `);
       expect(result.output?.trimEnd()).toStrictEqual(dedent`

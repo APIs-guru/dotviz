@@ -384,26 +384,33 @@ class Lexer {
           };
         case Char['\n']:
           this.#readNewLine();
+          continue; // restart loop
+        default: // skip all characters except EOF, `"`, <LF> and `\`
+          ++this.#nextIndex;
+          continue; // restart loop
+        case Char['\\']: // exclude `\` from default to handle the escaped character below
+      }
+
+      const slashIndex = this.#nextIndex;
+      ++this.#nextIndex; // skip `\`
+      switch (this.#peekChar()) {
+        case Char['\r']:
+          ++this.#nextIndex;
+          if (this.#peekChar() !== Char['\n']) {
+            continue; // not a newline, restart loop
+          }
+        // fallthrough to handle newline
+        case Char['\n']:
+          value += this.#dotStr.slice(checkpoint, slashIndex);
+          this.#readNewLine();
+          checkpoint = this.#nextIndex; // set to position after `\n`
+          break;
+        case Char['"']:
+          value += this.#dotStr.slice(checkpoint, slashIndex);
+          checkpoint = this.#nextIndex; // set to `"` position
+          ++this.#nextIndex;
           break;
         case Char['\\']:
-          ++this.#nextIndex;
-          switch (this.#peekChar()) {
-            case Char['"']:
-              value += this.#dotStr.slice(checkpoint, this.#nextIndex - 1);
-              checkpoint = this.#nextIndex; // set to `"` position
-              ++this.#nextIndex;
-              break;
-            case Char['\n']:
-              value += this.#dotStr.slice(checkpoint, this.#nextIndex - 1);
-              this.#readNewLine();
-              checkpoint = this.#nextIndex; // set to position after `\n`
-              break;
-            case Char['\\']:
-              ++this.#nextIndex;
-              break;
-          }
-          break;
-        default:
           ++this.#nextIndex;
           break;
       }
