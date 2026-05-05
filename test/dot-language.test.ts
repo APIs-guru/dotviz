@@ -326,7 +326,7 @@ describe('Dot language support', () => {
         {}
         a
         a -> a
-      },
+      }
     `;
     const options = {
       graphAttributes: { testGraph: 'valueGraph' },
@@ -868,7 +868,7 @@ describe('Dot language support', () => {
   it('error on empty string', () => {
     const result = dotviz.render('');
     expectFailureResult(result).toMatchInlineSnapshot(
-      `ParserError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
+      `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
     );
   });
 

@@ -6,7 +6,7 @@ import {
   NormalizedSubgraph,
   type OverrideAttributes,
 } from './normalize-graph.ts';
-import type { FailureResult, RenderError } from './viz.ts';
+import type { RenderError } from './viz.ts';
 
 const Char = {
   '\t': 0x09,
@@ -498,14 +498,6 @@ function isNameContinue(code: number | undefined): boolean {
   return code !== undefined && (isNameStart(code) || isDigit(code));
 }
 
-export interface ParseSuccessResult {
-  readonly status: 'success';
-  readonly output: NormalizedGraph;
-  readonly errors: RenderError[];
-}
-
-export type ParseResult = ParseSuccessResult | FailureResult;
-
 interface ParsedID {
   readonly value: string | { html: string };
   readonly token: Token;
@@ -577,6 +569,11 @@ class ParserWarning implements RenderError {
   }
 }
 
+export interface ParseResult {
+  readonly graph: NormalizedGraph | null;
+  readonly diagnostics: (ParserWarning | ParserError)[];
+}
+
 class Parser {
   static readonly #AbortError = new Error(
     'Internal error, thrown when parsing of dot file fails',
@@ -585,34 +582,33 @@ class Parser {
   static parseDot(
     dotStr: string,
     overrideAttributes: OverrideAttributes,
-  ): ParseResult {
+  ): ParseResult[] {
     const parser = new Parser(dotStr);
+    const result: ParseResult[] = [];
     try {
-      const graph = parser.#parseGraph(overrideAttributes);
-      return {
-        status: 'success',
-        output: graph,
-        errors: parser.#diagnostics,
-      };
+      while (!parser.#isEOF()) {
+        const graph = parser.#parseGraph(overrideAttributes);
+        const diagnostics = parser.#diagnostics.splice(0);
+        result.push({ graph, diagnostics });
+      }
     } catch (error: unknown) {
       /* c8 ignore start -- Should only happen in case of internal errors */
       if (error !== Parser.#AbortError) {
         throw error;
       }
       /* c8 ignore end */
-      return {
-        status: 'failure',
-        output: null,
-        errors: parser.#diagnostics,
-      };
+      const diagnostics = parser.#diagnostics.splice(0);
+      result.push({ graph: null, diagnostics });
     }
+
+    return result;
   }
 
   readonly #dotStr: string;
   readonly #lexer: Lexer;
   #peekToken: Token;
   #peekAheadToken: Token;
-  readonly #diagnostics: Readonly<ParserError | ParserWarning>[] = [];
+  readonly #diagnostics: (ParserError | ParserWarning)[] = [];
 
   constructor(dotStr: string) {
     this.#dotStr = dotStr;
@@ -824,13 +820,6 @@ class Parser {
   }
 
   #parseGraph(overrideAttributes: OverrideAttributes): NormalizedGraph {
-    if (this.#isEOF()) {
-      this.#failWithError(
-        "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
-        this.#readToken(),
-      );
-    }
-
     // graph:	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
     const strict = this.#optional(Kind.strict);
     const directed = this.#optional(Kind.digraph);

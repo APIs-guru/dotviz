@@ -100,9 +100,9 @@ export interface MultipleSuccessResult {
 }
 
 export interface RenderError {
-  level: 'error' | 'warning';
-  message: string;
-  location: Location | null;
+  readonly level: 'error' | 'warning';
+  readonly message: string;
+  readonly location: Location | null;
 
   toString(): string;
 }
@@ -206,12 +206,36 @@ export class Viz {
     let graph: NormalizedGraph;
     const warnings: RenderError[] = [];
     if (typeof input === 'string') {
-      const result = parseDot(input, overrideAttributes);
-      if (result.status === 'failure') {
-        return result;
+      const graphList = parseDot(input, overrideAttributes);
+      if (graphList.length === 0) {
+        return {
+          status: 'failure',
+          output: null,
+          errors: [
+            ...warnings,
+            new RenderingBackendError(
+              "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
+            ),
+          ],
+        };
       }
-      graph = result.output;
-      warnings.push(...result.errors);
+
+      for (const { diagnostics } of graphList) {
+        warnings.push(...diagnostics);
+      }
+
+      if (graphList.length > 1) {
+        warnings.push(
+          new RenderingBackendWarning(
+            'Multiple graphs found. Using the first one.',
+          ),
+        );
+      }
+
+      if (graphList[0].graph == null) {
+        return { status: 'failure', output: null, errors: warnings };
+      }
+      graph = graphList[0].graph;
     } else {
       graph = normalizeGraph(input, overrideAttributes);
     }
@@ -236,7 +260,6 @@ export class Viz {
             output: null,
             errors: [
               new RenderingBackendError(
-                'error',
                 `Format: "${name}" not recognized. Use one of: dot gv svg`,
               ),
             ],
@@ -272,8 +295,10 @@ export class Viz {
     try {
       const str: string = this._utf8Decoder.decode(outputJSONBuf);
       const response = JSON.parse(str) as MultipleRenderResult;
-      response.errors = response.errors.map(
-        (error) => new RenderingBackendError(error.level, error.message),
+      response.errors = response.errors.map((error) =>
+        error.level === 'warning'
+          ? new RenderingBackendWarning(error.message)
+          : new RenderingBackendError(error.message),
       );
 
       let output: Record<string, string> | null = null;
@@ -357,16 +382,29 @@ export class Viz {
 }
 
 class RenderingBackendError implements RenderError {
-  level: 'warning' | 'error';
-  message: string;
-  location = null;
+  readonly level = 'error';
+  readonly message: string;
+  readonly location = null;
 
-  constructor(level: 'warning' | 'error', message: string) {
-    this.level = level;
+  constructor(message: string) {
     this.message = message;
   }
 
   toString() {
     return 'RenderingBackendError: ' + this.message;
+  }
+}
+
+class RenderingBackendWarning implements RenderError {
+  readonly level = 'warning';
+  message: string;
+  location = null;
+
+  constructor(message: string) {
+    this.message = message;
+  }
+
+  toString() {
+    return 'RenderingBackendWarning: ' + this.message;
   }
 }

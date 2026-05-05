@@ -9,9 +9,6 @@ export function printLocation(
   body: string,
   location: Location,
 ): string {
-  if (body === '') {
-    return message;
-  }
   return message + '\n\n' + printCodeFrame(body, location);
 }
 

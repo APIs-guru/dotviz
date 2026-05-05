@@ -606,7 +606,9 @@ const asciiWarningRegExp =
 function filterErrors<T extends { message: string }>(errors: T[]): T[] {
   return errors.filter(
     ({ message }) =>
-      !fontWarningRegExp.test(message) && !asciiWarningRegExp.test(message),
+      !fontWarningRegExp.test(message) &&
+      !asciiWarningRegExp.test(message) &&
+      message !== 'Multiple graphs found. Using the first one.',
   );
 }
 

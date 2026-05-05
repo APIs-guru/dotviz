@@ -8,15 +8,18 @@ import type {
 import { RawString } from './raw-string-serializer.ts';
 
 export function expectSuccessResult(result: RenderResult) {
-  const { output } = result;
-  expect(stringifyErrors(result.errors)).toStrictEqual('');
-  expect(result).toStrictEqual({
-    status: 'success',
-    output,
-    errors: [],
-  });
+  const { output, errors } = result;
+  expect(stringifyErrors(errors)).toStrictEqual('');
+  expect(result).toStrictEqual({ status: 'success', output, errors });
   assert.exists(output);
   return expect(new RawString(output));
+}
+
+export function expectSuccessResultWithWarnings(result: RenderResult) {
+  const { output, errors } = result;
+  expect(result).toStrictEqual({ status: 'success', output, errors });
+  assert.exists(output);
+  return expect(new RawString(stringifyErrors(errors) + '\n\n' + output));
 }
 
 export function expectFailureResult(

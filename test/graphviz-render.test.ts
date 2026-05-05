@@ -55,7 +55,7 @@ describe('Viz', () => {
       });
 
       expectErrors(result).toMatchInlineSnapshot(
-        `RenderingBackendError: layers not supported in dot output`,
+        `RenderingBackendWarning: layers not supported in dot output`,
       );
 
       expectString(result.output?.dot).toMatchInlineSnapshot(`
