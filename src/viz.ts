@@ -397,8 +397,8 @@ class RenderingBackendError implements RenderError {
 
 class RenderingBackendWarning implements RenderError {
   readonly level = 'warning';
-  message: string;
-  location = null;
+  readonly message: string;
+  readonly location = null;
 
   constructor(message: string) {
     this.message = message;
