@@ -7,6 +7,7 @@ import {
   expectErrors,
   expectFailureResult,
   expectSuccessResult,
+  expectSuccessResultWithWarnings,
   stringifyErrors,
 } from './util/render-result.ts';
 import { USE_VIZ_JS } from './util/use-viz-js.ts';
@@ -221,7 +222,9 @@ describe('Dot language support', () => {
       [`"\\\r\n"`, `""`], // `\<CR><LF>` → continuation (same as `\<LF>`)
       [`"a\\\r\nb"`, `ab`], // `\<CR><LF>` → continuation, text on both sides kept
       [`"\\\\\\\r\n"`, String.raw`"\\"`], // `\\\<CR><LF>` → `\\` stored, continuation on 3rd backslash
+      [`"\\\\\\\r\na"`, String.raw`"\\a"`], // `\\\<CR><LF>` with trailing content → same as above
       [`"a\\\rb"`, null], // `\<CR>` alone (no LF) → verbatim `\`+CR pair, not a continuation
+      [`"a\\\r"`, null], // `\<CR>` alone before closing quote → verbatim `\`+CR, quote still closes string
     ] satisfies [string, string | null][])('value $0', ([input, output]) => {
       const result = dotviz.render(`graph { test = ${input} } `);
       expect(result.output?.trimEnd()).toStrictEqual(dedent`
@@ -1244,5 +1247,47 @@ describe('Dot language support', () => {
       1 | digraph { label = <a> + <b> }
         |                       ^
     `);
+  });
+
+  describe('non-BMP (astral) Unicode character handling', () => {
+    it('parseDot captures a node name with astral char correctly (token value is correct)', () => {
+      const result = dotviz.render('graph { 😀 }');
+      expectSuccessResultWithWarnings(result).toMatchInlineSnapshot(`
+        RenderingBackendWarning: Warning: no value for width of non-ASCII character 240. Falling back to width of space character
+
+        graph {
+        	graph [bb="0,0,54,36"];
+        	node [label="\\N"];
+        	😀	[height=0.5,
+        		pos="27,18",
+        		width=0.75];
+        }
+      `);
+    });
+
+    it('parseDot captures a string attribute with astral char correctly (token value is correct)', () => {
+      const result = dotviz.render('graph { label="😀" }');
+      expectSuccessResult(result).toMatchInlineSnapshot(`
+        graph {
+        	graph [bb="0,0,30,24.8",
+        		label=😀,
+        		lheight=0.23,
+        		lp="15,12.4",
+        		lwidth=0.19
+        	];
+        	node [label="\\N"];
+        }
+      `);
+    });
+
+    it('correctly report error positions if dot contains unicode', () => {
+      const result = dotviz.render('graph { \u{1F600} [= }');
+      expectFailureResult(result).toMatchInlineSnapshot(`
+        ParserError: Unexpected '=', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").
+
+        1 | graph { 😀 [= }
+          |             ^
+      `);
+    });
   });
 });

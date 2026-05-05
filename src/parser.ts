@@ -8,6 +8,9 @@ import {
 } from './normalize-graph.ts';
 import type { RenderError } from './viz.ts';
 
+// To make parser internally consistent, all characters are read as UTF-16:
+/* eslint-disable unicorn/prefer-code-point */
+
 const Char = {
   '\t': 0x09,
   '\n': 0x0a,
@@ -145,8 +148,9 @@ class Lexer {
     this.#dotStr = dotStr;
   }
 
-  #peekChar(offset = 0): number | undefined {
-    return this.#dotStr.codePointAt(this.#nextIndex + offset);
+  #countNewLine(): void {
+    ++this.#line;
+    this.#lineStart = this.#nextIndex;
   }
 
   #skipChar(char: number): boolean {
@@ -157,19 +161,24 @@ class Lexer {
     return false;
   }
 
-  #readNewLine(): void {
-    ++this.#line;
-    ++this.#nextIndex;
-    this.#lineStart = this.#nextIndex;
+  #readChar(): number {
+    return this.#dotStr.charCodeAt(this.#nextIndex++);
+  }
+
+  #peekChar(): number {
+    return this.#dotStr.charCodeAt(this.#nextIndex);
+  }
+
+  #peekStr(str: string): boolean {
+    return this.#dotStr.startsWith(str, this.#nextIndex);
   }
 
   #readUntilNewLine(): void {
     while (this.#nextIndex < this.#dotStr.length) {
-      if (this.#peekChar() === Char['\n']) {
-        this.#readNewLine();
-        break;
+      if (this.#readChar() === Char['\n']) {
+        this.#countNewLine();
+        return;
       }
-      ++this.#nextIndex;
     }
   }
 
@@ -183,128 +192,113 @@ class Lexer {
 
   #readBlockComment(): Token | null {
     const start = this.#nextIndexLocation();
-
-    this.#nextIndex += 2; // skip `/*`
-    while (true) {
-      switch (this.#peekChar()) {
-        case undefined:
-          return {
-            kind: Kind.UnterminatedBlockComment,
-            start,
-            length: this.#nextIndex - start.index,
-            value: null,
-          };
+    this.#nextIndex += 2; // read `/` and `*`
+    while (this.#nextIndex < this.#dotStr.length) {
+      switch (this.#readChar()) {
         case Char['\n']:
-          this.#readNewLine();
+          this.#countNewLine();
           break;
         case Char['*']:
-          ++this.#nextIndex;
           if (this.#skipChar(Char['/'])) {
             return null;
           }
           break;
-        default:
-          ++this.#nextIndex;
       }
     }
+
+    return {
+      kind: Kind.UnterminatedBlockComment,
+      start,
+      length: this.#nextIndex - start.index,
+      value: null,
+    };
   }
 
-  #skipUntilTokenStart(): Token | null {
-    while (true) {
-      switch (this.#peekChar()) {
+  nextToken(): Token {
+    while (this.#nextIndex < this.#dotStr.length) {
+      const char = this.#peekChar();
+      switch (char) {
         // Ignored:
         case Char.BOM:
         case Char['\r']:
         case Char['\t']:
         case Char[' ']:
           ++this.#nextIndex;
-          break;
+          continue;
         case Char['\n']:
-          this.#readNewLine();
+          ++this.#nextIndex;
+          this.#countNewLine();
           continue;
         case Char['#']:
           this.#readUntilNewLine();
           continue;
         case Char['/']:
-          switch (this.#peekChar(1)) {
-            case Char['/']:
-              this.#readUntilNewLine();
-              continue;
-            case Char['*']: {
-              const invalidToken = this.#readBlockComment();
-              if (invalidToken) {
-                return invalidToken;
-              }
-              continue;
+          if (this.#peekStr('//')) {
+            this.#readUntilNewLine();
+            continue;
+          } else if (this.#peekStr('/*')) {
+            const invalidToken = this.#readBlockComment();
+            if (invalidToken) {
+              return invalidToken;
             }
-            default:
-              return null;
+            continue;
           }
-        default:
-          return null;
-      }
-    }
-  }
-
-  nextToken(): Token {
-    const invalidToken = this.#skipUntilTokenStart();
-    if (invalidToken) {
-      return invalidToken;
-    }
-
-    const start = this.#nextIndexLocation();
-    const char = this.#peekChar();
-    switch (char) {
-      case undefined:
-        return { kind: Kind.EOF, start, length: 0, value: null };
-      case Char['+']:
-      case Char[',']:
-      case Char[':']:
-      case Char[';']:
-      case Char['=']:
-      case Char['[']:
-      case Char[']']:
-      case Char['{']:
-      case Char['}']:
-        ++this.#nextIndex;
-        return {
-          kind: (char | LITERAL) as LiteralKind,
-          start,
-          length: 1,
-          value: null,
-        };
-      case Char['<']:
-        return this.#readHTML(start);
-      case Char['"']:
-        return this.#readString(start);
-      case Char['-']: {
-        const nextChar = this.#peekChar(1);
-        switch (nextChar) {
-          case Char['-']:
-          case Char['>']:
-            this.#nextIndex += 2;
-            return {
-              kind: (nextChar | LITERAL) as LiteralKind,
-              start,
-              length: 2,
-              value: null,
-            };
+          break;
+        case Char['+']:
+        case Char[',']:
+        case Char[':']:
+        case Char[';']:
+        case Char['=']:
+        case Char['[']:
+        case Char[']']:
+        case Char['{']:
+        case Char['}']: {
+          const start = this.#nextIndexLocation();
+          return {
+            kind: (this.#readChar() | LITERAL) as LiteralKind,
+            start,
+            length: 1,
+            value: null,
+          };
         }
-        break;
+        case Char['<']:
+          return this.#readHTML();
+        case Char['"']:
+          return this.#readString();
+        case Char['-']:
+          if (this.#peekStr('--')) {
+            const start = this.#nextIndexLocation();
+            this.#nextIndex += 2;
+            return { kind: Kind['--'], start, length: 2, value: null };
+          } else if (this.#peekStr('->')) {
+            const start = this.#nextIndexLocation();
+            this.#nextIndex += 2;
+            return { kind: Kind['->'], start, length: 2, value: null };
+          }
       }
-    }
-    if (isNameStart(char)) {
-      return this.#readName(start);
-    }
-    if (isNumberStart(char)) {
-      return this.#readNumber(start);
+
+      if (isNameStart(char)) {
+        return this.#readName();
+      }
+      if (isNumberStart(char)) {
+        return this.#readNumber();
+      }
+
+      const start = this.#nextIndexLocation();
+      ++this.#nextIndex;
+      return { kind: Kind.UnexpectedChar, start, length: 1, value: null };
     }
 
-    ++this.#nextIndex;
-    return { kind: Kind.UnexpectedChar, start, length: 1, value: null };
+    return {
+      kind: Kind.EOF,
+      start: this.#nextIndexLocation(),
+      length: 0,
+      value: null,
+    };
   }
 
-  #readNumber(start: Location): Token {
+  #readNumber(): Token {
+    const start = this.#nextIndexLocation();
     // [-]?.[0-9]⁺ or [-]?[0-9]⁺(.[0-9]*)?
     this.#skipChar(Char['-']);
     const hasLeadingDecimalPoint = this.#skipChar(Char['.']);
@@ -327,98 +321,95 @@ class Lexer {
     return { kind: Kind.Number, start, length, value };
   }
 
-  #readHTML(start: Location): Token {
+  #readHTML(): Token {
+    const start = this.#nextIndexLocation();
     let nestDepth = 0;
-    do {
-      switch (this.#peekChar()) {
-        case undefined:
-          return {
-            kind: Kind.UnterminatedHTML,
-            start,
-            length: this.#nextIndex - start.index,
-            value: null,
-          };
+    while (this.#nextIndex < this.#dotStr.length) {
+      switch (this.#readChar()) {
         case Char['\n']:
-          this.#readNewLine();
+          this.#countNewLine();
           break;
         case Char['<']:
-          ++this.#nextIndex;
           ++nestDepth;
           break;
         case Char['>']:
-          ++this.#nextIndex;
           --nestDepth;
-          break;
-        default:
-          ++this.#nextIndex;
-          break;
-      }
-    } while (nestDepth !== 0);
-
-    const length = this.#nextIndex - start.index;
-    const value = this.#dotStr.slice(start.index + 1, this.#nextIndex - 1);
-    return { kind: Kind.HTML, start, length, value };
-  }
-
-  #readString(start: Location): Token {
-    let value = '';
-    ++this.#nextIndex; // skip opening `"`
-    let checkpoint = this.#nextIndex;
-    while (true) {
-      switch (this.#peekChar()) {
-        case undefined:
-          return {
-            kind: Kind.UnterminatedString,
-            start,
-            length: this.#nextIndex - start.index,
-            value: null,
-          };
-        case Char['"']:
-          value += this.#dotStr.slice(checkpoint, this.#nextIndex);
-          ++this.#nextIndex;
-          return {
-            kind: Kind.String,
-            start,
-            length: this.#nextIndex - start.index,
-            value,
-          };
-        case Char['\n']:
-          this.#readNewLine();
-          continue; // restart loop
-        default: // skip all characters except EOF, `"`, <LF> and `\`
-          ++this.#nextIndex;
-          continue; // restart loop
-        case Char['\\']: // exclude `\` from default to handle the escaped character below
-      }
-
-      const slashIndex = this.#nextIndex;
-      ++this.#nextIndex; // skip `\`
-      switch (this.#peekChar()) {
-        case Char['\r']:
-          ++this.#nextIndex;
-          if (this.#peekChar() !== Char['\n']) {
-            continue; // not a newline, restart loop
+          if (nestDepth === 0) {
+            const length = this.#nextIndex - start.index;
+            const value = this.#dotStr.slice(
+              start.index + 1,
+              this.#nextIndex - 1,
+            );
+            return { kind: Kind.HTML, start, length, value };
           }
-        // fallthrough to handle newline
-        case Char['\n']:
-          value += this.#dotStr.slice(checkpoint, slashIndex);
-          this.#readNewLine();
-          checkpoint = this.#nextIndex; // set to position after `\n`
-          break;
-        case Char['"']:
-          value += this.#dotStr.slice(checkpoint, slashIndex);
-          checkpoint = this.#nextIndex; // set to `"` position
-          ++this.#nextIndex;
-          break;
-        case Char['\\']:
-          ++this.#nextIndex;
           break;
       }
     }
+
+    return {
+      kind: Kind.UnterminatedHTML,
+      start,
+      length: this.#nextIndex - start.index,
+      value: null,
+    };
   }
 
-  #readName(start: Location): Token {
-    ++this.#nextIndex;
+  #readString(): Token {
+    const start = this.#nextIndexLocation();
+    let value = '';
+    ++this.#nextIndex; // skip opening `"`
+    let checkpoint = this.#nextIndex;
+
+    let escapeStartIndex = undefined;
+    while (this.#nextIndex < this.#dotStr.length) {
+      switch (this.#readChar()) {
+        case Char['"']:
+          if (escapeStartIndex === undefined) {
+            value += this.#dotStr.slice(checkpoint, this.#nextIndex - 1);
+            return {
+              kind: Kind.String,
+              start,
+              length: this.#nextIndex - start.index,
+              value,
+            };
+          }
+          value += this.#dotStr.slice(checkpoint, escapeStartIndex);
+          checkpoint = this.#nextIndex - 1;
+          escapeStartIndex = undefined;
+          break;
+        case Char['\r']:
+          if (this.#peekChar() !== Char['\n']) {
+            escapeStartIndex = undefined;
+          }
+          break;
+        case Char['\n']:
+          this.#countNewLine();
+          if (escapeStartIndex !== undefined) {
+            value += this.#dotStr.slice(checkpoint, escapeStartIndex);
+            checkpoint = this.#nextIndex;
+            escapeStartIndex = undefined;
+          }
+          break;
+        case Char['\\']:
+          escapeStartIndex =
+            escapeStartIndex === undefined ? this.#nextIndex - 1 : undefined;
+          break;
+        default:
+          escapeStartIndex = undefined;
+          break;
+      }
+    }
+
+    return {
+      kind: Kind.UnterminatedString,
+      start,
+      length: this.#nextIndex - start.index,
+      value: null,
+    };
+  }
+
+  #readName(): Token {
+    const start = this.#nextIndexLocation();
     while (isNameContinue(this.#peekChar())) {
       ++this.#nextIndex;
     }
@@ -449,7 +440,7 @@ function canTokenClash(token: Token): boolean {
 
 function literalOrKeywordLabel(kind: LiteralKind | KeywordKind): string {
   if (kind & LITERAL) {
-    let literal = String.fromCodePoint(kind ^ LITERAL);
+    let literal = String.fromCharCode(kind ^ LITERAL);
     if (kind === Kind['--'] || kind === Kind['->']) {
       literal = '-' + literal;
     }
@@ -472,8 +463,8 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function isDigit(code: number | undefined): boolean {
-  return code != undefined && code >= Char['0'] && code <= Char['9'];
+function isDigit(code: number): boolean {
+  return code >= Char['0'] && code <= Char['9'];
 }
 
 function isNumberStart(code: number): boolean {
@@ -494,8 +485,8 @@ function isNameStart(code: number): boolean {
   return isLetter(code) || code === Char._ || code > 127;
 }
 
-function isNameContinue(code: number | undefined): boolean {
-  return code !== undefined && (isNameStart(code) || isDigit(code));
+function isNameContinue(code: number): boolean {
+  return isNameStart(code) || isDigit(code);
 }
 
 interface ParsedID {
