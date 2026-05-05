@@ -183,6 +183,7 @@ describe('Dot language support', () => {
     it.for([
       [`<>`, null],
       [`<<>>`, null],
+      [`<ab>`, null],
       [`a`, null],
       [`0`, null],
       [`-0`, null],
@@ -865,10 +866,15 @@ describe('Dot language support', () => {
     `);
   });
 
-  it('error on empty string', () => {
-    const result = dotviz.render('');
-    expectFailureResult(result).toMatchInlineSnapshot(
-      `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
+  describe('error on missing graph', () => {
+    it.for(['', '   \n  ', '// line comment', '/* block comment */'])(
+      'value $0',
+      (dot) => {
+        const result = dotviz.render(dot);
+        expectFailureResult(result).toMatchInlineSnapshot(
+          `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
+        );
+      },
     );
   });
 
@@ -1193,6 +1199,50 @@ describe('Dot language support', () => {
       3 |         subgraph name <bad>
         |                       ^
       4 |       }
+    `);
+  });
+
+  it('error on macro name syntax', () => {
+    // `dot` accepts the deprecated macro-name syntax with a warning and ignores the name.
+    const result = dotviz.render('digraph { node my_template = [shape=box] }');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      ParserError: Unexpected identifier 'my_template', expected '['.
+
+      1 | digraph { node my_template = [shape=box] }
+        |                ^
+    `);
+  });
+
+  describe('error on HTML string as names', () => {
+    it('node name', () => {
+      const result = dotviz.render('digraph { <foo> [x=1] }');
+      expectFailureResult(result).toMatchInlineSnapshot(`
+        ParserError: HTML string as node name is not supported. If you want to use it as an identifier, enclose it in quotes: "<foo>".
+
+        1 | digraph { <foo> [x=1] }
+          |           ^
+      `);
+    });
+
+    it('attribute name', () => {
+      const result = dotviz.render('digraph { a [<color>=red] }');
+      expectFailureResult(result).toMatchInlineSnapshot(`
+        ParserError: HTML string as attribute name is not supported. If you want to use it as an identifier, enclose it in quotes: "<color>".
+
+        1 | digraph { a [<color>=red] }
+          |              ^
+      `);
+    });
+  });
+
+  it('error on HTML + HTML string concatenation', () => {
+    // `dot` silently loses HTML tagging on concatenation: <a>+<b> → plain "ab". We simply reject it.
+    const result = dotviz.render('digraph { label = <a> + <b> }');
+    expectFailureResult(result).toMatchInlineSnapshot(`
+      ParserError: Unexpected '+', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
+
+      1 | digraph { label = <a> + <b> }
+        |                       ^
     `);
   });
 });
