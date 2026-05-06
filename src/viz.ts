@@ -259,6 +259,7 @@ export class Viz {
             status: 'failure',
             output: null,
             errors: [
+              ...warnings,
               new RenderingBackendError(
                 `Format: "${name}" not recognized. Use one of: dot gv svg`,
               ),
