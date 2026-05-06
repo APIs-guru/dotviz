@@ -58,6 +58,8 @@ words:
   - Graphviz
   - Dagre
   - rankdir
+  - lheight
+  - lwidth
   - headport
   - cmap
   - cmapx

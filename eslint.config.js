@@ -74,10 +74,6 @@ export default defineConfig([
       'import-x/no-duplicates': 'error',
 
       '@typescript-eslint/unbound-method': ['error', { ignoreStatic: true }],
-      '@typescript-eslint/no-unnecessary-condition': [
-        'error',
-        { allowConstantLoopConditions: 'only-allowed-literals' },
-      ],
 
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/prefer-query-selector': 'off',
