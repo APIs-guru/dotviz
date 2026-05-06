@@ -87,18 +87,21 @@
  * ```
  */
 export interface Graph {
-  name?: string;
+  name?: string | undefined;
   strict?: boolean;
   directed?: boolean;
-  graphAttributes?: Attributes;
-  nodeAttributes?: Attributes;
-  edgeAttributes?: Attributes;
-  nodes?: Node[];
-  edges?: Edge[];
-  subgraphs?: Subgraph[];
+  graphAttributes?: Attributes | undefined;
+  nodeAttributes?: Attributes | undefined;
+  edgeAttributes?: Attributes | undefined;
+  nodes?: Node[] | undefined;
+  edges?: Edge[] | undefined;
+  subgraphs?: Subgraph[] | undefined;
 }
 
-export type Attributes = Record<string, string | number | boolean | HTMLString>;
+export type Attributes = Record<
+  string,
+  string | number | boolean | HTMLString | undefined
+>;
 
 export interface HTMLString {
   html: string;
@@ -116,11 +119,11 @@ export interface Edge {
 }
 
 export interface Subgraph {
-  name?: string;
-  graphAttributes?: Attributes;
-  nodeAttributes?: Attributes;
-  edgeAttributes?: Attributes;
-  nodes?: Node[];
-  edges?: Edge[];
-  subgraphs?: Subgraph[];
+  name?: string | undefined;
+  graphAttributes?: Attributes | undefined;
+  nodeAttributes?: Attributes | undefined;
+  edgeAttributes?: Attributes | undefined;
+  nodes?: Node[] | undefined;
+  edges?: Edge[] | undefined;
+  subgraphs?: Subgraph[] | undefined;
 }

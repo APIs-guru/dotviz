@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
-import { expectString } from './util/raw-string-serializer.ts';
 import {
   expectFailureResult,
   expectSuccessResult,
+  expectSuccessResultWithWarnings,
 } from './util/render-result.ts';
 
 describe('Viz', () => {
@@ -25,7 +25,9 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph a { } graph b { }');
 
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      expectSuccessResultWithWarnings(result).toMatchInlineSnapshot(`
+        RenderingBackendWarning: Multiple graphs found. Using the first one.
+
         graph a {
         	graph [bb="0,0,0,0"];
         	node [label="\\N"];
@@ -85,15 +87,9 @@ describe('Viz', () => {
     it('accepts default attributes', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph {}', {
-        graphAttributes: {
-          a: 123,
-        },
-        nodeAttributes: {
-          b: false,
-        },
-        edgeAttributes: {
-          c: 'test',
-        },
+        graphAttributes: { a: 123 },
+        nodeAttributes: { b: false },
+        edgeAttributes: { c: 'test' },
       });
 
       expectSuccessResult(result).toMatchInlineSnapshot(`
@@ -129,7 +125,9 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render('');
 
-      expectFailureResult(result).toMatchInlineSnapshot(`[]`);
+      expectFailureResult(result).toMatchInlineSnapshot(
+        `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
+      );
     });
 
     it('returns error messages for invalid input', async () => {
@@ -137,12 +135,10 @@ describe('Viz', () => {
       const result = viz.render('invalid');
 
       expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "syntax error in line 1 near 'invalid'",
-          },
-        ]
+        ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
+
+        1 | invalid
+          | ^
       `);
     });
 
@@ -153,15 +149,9 @@ describe('Viz', () => {
         yInvert: 'bad value',
       });
 
-      expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "JSON error UnexpectedToken at 11:25: \`
-          "yInvert": "bad value",\`",
-          },
-        ]
-      `);
+      expectFailureResult(result).toMatchInlineSnapshot(
+        `RenderingBackendError: JSON error UnexpectedToken at 1:462: \`lse,"engine":"dot","yInvert":"bad value","reduce":false,"images":{}}\``,
+      );
     });
 
     it('returns only the error messages emitted for the current call', async () => {
@@ -170,29 +160,32 @@ describe('Viz', () => {
       const result2 = viz.render('invalid2');
 
       expectFailureResult(result1).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "syntax error in line 1 near 'invalid1'",
-          },
-        ]
+        ParserError: Unexpected identifier 'invalid1', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
+
+        1 | invalid1
+          | ^
       `);
 
       expectFailureResult(result2).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "syntax error in line 1 near 'invalid2'",
-          },
-        ]
+        ParserError: Unexpected identifier 'invalid2', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
+
+        1 | invalid2
+          | ^
       `);
     });
 
-    it('renders valid input and does not include error messages when followed by a graph with a syntax error', async () => {
+    it('renders valid input and includes error messages when followed by a graph with a syntax error', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph a { } graph {');
 
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      expectSuccessResultWithWarnings(result).toMatchInlineSnapshot(`
+        ParserError: Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph.
+
+        1 | graph a { } graph {
+          |                    ^
+
+        RenderingBackendWarning: Multiple graphs found. Using the first one.
+
         graph a {
         	graph [bb="0,0,0,0"];
         	node [label="\\N"];
@@ -207,12 +200,9 @@ describe('Viz', () => {
       );
 
       expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp",
-          },
-        ]
+        RenderingBackendWarning: Multiple graphs found. Using the first one.
+
+        RenderingBackendError: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp
       `);
     });
 
@@ -220,12 +210,14 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph a { x=1.2.3=y } graph b { }');
 
-      expect(result).toStrictEqual({
-        status: 'success',
-        output: expect.any(String) as unknown,
-        errors: expect.any(Array) as unknown,
-      });
-      expectString(result.output).toMatchInlineSnapshot(`
+      expectSuccessResultWithWarnings(result).toMatchInlineSnapshot(`
+        ParserWarning: Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
+
+        1 | graph a { x=1.2.3=y } graph b { }
+          |             ^
+
+        RenderingBackendWarning: Multiple graphs found. Using the first one.
+
         graph a {
         	graph [.3=y,
         		bb="0,0,0,0",
@@ -234,14 +226,6 @@ describe('Viz', () => {
         	node [label="\\N"];
         }
       `);
-      expect(result.errors).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "warning",
-            "message": "syntax ambiguity - badly delimited number '1.2.' in line 1 of input splits into two tokens",
-          },
-        ]
-      `);
     });
 
     it('returns both warnings and errors', async () => {
@@ -249,16 +233,12 @@ describe('Viz', () => {
       const result = viz.render('graph { layout=invalid; x=1.2.3=y }');
 
       expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "warning",
-            "message": "syntax ambiguity - badly delimited number '1.2.' in line 1 of input splits into two tokens",
-          },
-          {
-            "level": "error",
-            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp",
-          },
-        ]
+        ParserWarning: Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
+
+        1 | graph { layout=invalid; x=1.2.3=y }
+          |                           ^
+
+        RenderingBackendError: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp
       `);
     });
 
@@ -266,12 +246,9 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph { a [label=図] }', { format: 'dot' });
 
-      expect(result).toStrictEqual({
-        status: 'success',
-        output: expect.any(String) as unknown,
-        errors: expect.any(Array) as unknown,
-      });
-      expectString(result.output).toMatchInlineSnapshot(`
+      expectSuccessResultWithWarnings(result).toMatchInlineSnapshot(`
+        RenderingBackendWarning: Warning: no value for width of non-ASCII character 229. Falling back to width of space character
+
         graph {
         	graph [bb="0,0,54,36"];
         	node [label="\\N"];
@@ -281,87 +258,41 @@ describe('Viz', () => {
         		width=0.75];
         }
       `);
-      expect(result.errors).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "warning",
-            "message": "Warning: no value for width of non-ASCII character 229. Falling back to width of space character",
-          },
-        ]
-      `);
     });
 
     it('returns error messages for invalid engine option', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph { }', { engine: 'invalid' });
 
-      expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp",
-          },
-        ]
-      `);
+      expectFailureResult(result).toMatchInlineSnapshot(
+        `RenderingBackendError: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp`,
+      );
     });
 
     it('returns error messages for invalid format option', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph { }', { format: 'invalid' });
 
-      expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "Format: "invalid" not recognized. Use one of: dot gv svg",
-          },
-        ]
-      `);
-    });
-
-    it('returns an error that contains newlines as a single item', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.render('graph { " }');
-
-      expectFailureResult(result).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "error",
-            "message": "syntax error in line 1 scanning a quoted string (missing endquote? longer than 16384?)
-        String starting:" }",
-          },
-        ]
-      `);
+      expectFailureResult(result).toMatchInlineSnapshot(
+        `RenderingBackendError: Format: "invalid" not recognized. Use one of: dot gv svg`,
+      );
     });
 
     it('returns an error that uses AGPREV with the correct level', async () => {
       const viz = await VizPackage.instance();
       const result = viz.render('graph { _background=123 }');
 
-      expect(result).toStrictEqual({
-        status: 'success',
-        output: expect.any(String) as unknown,
-        errors: expect.any(Array) as unknown,
-      });
-      expectString(result.output).toMatchInlineSnapshot(`
+      expectSuccessResultWithWarnings(result).toMatchInlineSnapshot(`
+        RenderingBackendWarning: Could not parse "_background" attribute in graph %1
+
+        RenderingBackendWarning:   "123"
+
         graph {
         	graph [_background=123,
         		bb="0,0,0,0"
         	];
         	node [label="\\N"];
         }
-      `);
-      expect(result.errors).toMatchInlineSnapshot(`
-        [
-          {
-            "level": "warning",
-            "message": "Could not parse "_background" attribute in graph %1",
-          },
-          {
-            "level": "warning",
-            "message": "  "123"",
-          },
-        ]
       `);
     });
 

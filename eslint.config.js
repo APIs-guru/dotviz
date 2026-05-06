@@ -80,6 +80,11 @@ export default defineConfig([
       'unicorn/no-null': 'off',
       'unicorn/prefer-export-from': ['error', { ignoreUsedVariables: true }],
       'unicorn/prefer-ternary': ['error', 'only-single-line'],
+      'unicorn/number-literal-case': [
+        'error',
+        { hexadecimalValue: 'lowercase' }, // required to not have conflicts with prettier
+      ],
+      'unicorn/switch-case-braces': ['error', 'avoid'],
     },
   },
   {

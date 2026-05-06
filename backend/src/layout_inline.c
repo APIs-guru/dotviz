@@ -11,7 +11,6 @@
 #include "gvplugin_layout.h" // IWYU pragma: keep
 // undirected
 
-#include "entities.h"
 #include "streq.h"
 
 extern char *Gvfilepath;  /* Per-process path of files allowed in image
