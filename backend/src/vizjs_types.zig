@@ -49,23 +49,23 @@ pub const Node = struct {
 
 pub const EdgePort = struct {
     node: usize,
-    name: ?[:0]const u8,
+    name: ?[:0]const u8 = null,
 };
 
 pub const EdgeEndpoint = struct {
     port: EdgePort,
-    compass: ?[:0]const u8,
+    compass: ?[:0]const u8 = null,
 };
 
 pub const Edge = struct {
     tail: EdgeEndpoint,
     head: EdgeEndpoint,
-    key: ?[:0]const u8,
+    key: ?[:0]const u8 = null,
     attributes: Attributes,
 };
 
 pub const Subgraph = struct {
-    name: ?[:0]const u8,
+    name: ?[:0]const u8 = null,
     graphAttributes: Attributes,
     nodeAttributes: Attributes,
     edgeAttributes: Attributes,
@@ -75,7 +75,7 @@ pub const Subgraph = struct {
 };
 
 pub const Graph = struct {
-    name: ?[:0]const u8,
+    name: ?[:0]const u8 = null,
     directed: bool,
     strict: bool,
     graphAttributes: Attributes,

@@ -23,17 +23,17 @@ function printCodeFrame(body: string, location: Location): string {
   return printPrefixedLines([
     [lineIndex, lines[lineIndex - 1]],
     [lineIndex + 1, locationLine],
-    [null, ' '.repeat(columnIndex) + '^'],
+    [undefined, ' '.repeat(columnIndex) + '^'],
     [lineIndex + 2, lines[lineIndex + 1]],
   ]);
 }
 
 function printPrefixedLines(
-  lines: [number | null, string | undefined][],
+  lines: [number | undefined, string | undefined][],
 ): string {
   let padLen = 0;
   for (const [lineNum, line] of lines) {
-    if (line !== undefined && lineNum !== null) {
+    if (line !== undefined && lineNum !== undefined) {
       padLen = Math.max(padLen, lineNum.toString().length);
     }
   }

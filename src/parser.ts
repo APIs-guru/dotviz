@@ -64,7 +64,7 @@ interface LiteralToken {
   readonly kind: LiteralKind;
   readonly start: Location;
   readonly length: number;
-  readonly value: null;
+  readonly value: undefined;
 }
 
 const KEYWORD = 0x02_00 as const;
@@ -82,7 +82,7 @@ interface KeywordToken {
   readonly kind: KeywordKind;
   readonly start: Location;
   readonly length: number;
-  readonly value: null;
+  readonly value: undefined;
 }
 
 const keywordStrings = [
@@ -135,7 +135,7 @@ type Token =
         | typeof Kind.UnterminatedBlockComment;
       readonly start: Location;
       readonly length: number;
-      readonly value: null;
+      readonly value: undefined;
     };
 
 class Lexer {
@@ -190,7 +190,7 @@ class Lexer {
     };
   }
 
-  #readBlockComment(): Token | null {
+  #readBlockComment(): Token | undefined {
     const start = this.#nextIndexLocation();
     this.#nextIndex += 2; // read `/` and `*`
     while (this.#nextIndex < this.#dotStr.length) {
@@ -200,17 +200,18 @@ class Lexer {
           break;
         case Char['*']:
           if (this.#skipChar(Char['/'])) {
-            return null;
+            return undefined;
           }
           break;
       }
     }
 
+    const length = this.#nextIndex - start.index;
     return {
       kind: Kind.UnterminatedBlockComment,
       start,
-      length: this.#nextIndex - start.index,
-      value: null,
+      length,
+      value: undefined,
     };
   }
 
@@ -254,12 +255,8 @@ class Lexer {
         case Char['{']:
         case Char['}']: {
           const start = this.#nextIndexLocation();
-          return {
-            kind: (this.#readChar() | LITERAL) as LiteralKind,
-            start,
-            length: 1,
-            value: null,
-          };
+          const kind = (this.#readChar() | LITERAL) as LiteralKind;
+          return { kind, start, length: 1, value: undefined };
         }
         case Char['<']:
           return this.#readHTML();
@@ -269,14 +266,15 @@ class Lexer {
           if (this.#peekStr('--')) {
             const start = this.#nextIndexLocation();
             this.#nextIndex += 2;
-            return { kind: Kind['--'], start, length: 2, value: null };
+            return { kind: Kind['--'], start, length: 2, value: undefined };
           } else if (this.#peekStr('->')) {
             const start = this.#nextIndexLocation();
             this.#nextIndex += 2;
-            return { kind: Kind['->'], start, length: 2, value: null };
+            return { kind: Kind['->'], start, length: 2, value: undefined };
           }
       }
 
+      const start = this.#nextIndexLocation();
       if (isNameStart(char)) {
         return this.#readName();
       }
@@ -284,16 +282,15 @@ class Lexer {
         return this.#readNumber();
       }
 
-      const start = this.#nextIndexLocation();
       ++this.#nextIndex;
-      return { kind: Kind.UnexpectedChar, start, length: 1, value: null };
+      return { kind: Kind.UnexpectedChar, start, length: 1, value: undefined };
     }
 
     return {
       kind: Kind.EOF,
       start: this.#nextIndexLocation(),
       length: 0,
-      value: null,
+      value: undefined,
     };
   }
 
@@ -304,7 +301,7 @@ class Lexer {
     const hasLeadingDecimalPoint = this.#skipChar(Char['.']);
     if (!isDigit(this.#peekChar())) {
       this.#nextIndex = start.index + 1;
-      return { kind: Kind.UnexpectedChar, start, length: 1, value: null };
+      return { kind: Kind.UnexpectedChar, start, length: 1, value: undefined };
     }
     while (isDigit(this.#peekChar())) {
       ++this.#nextIndex;
@@ -350,7 +347,7 @@ class Lexer {
       kind: Kind.UnterminatedHTML,
       start,
       length: this.#nextIndex - start.index,
-      value: null,
+      value: undefined,
     };
   }
 
@@ -366,12 +363,8 @@ class Lexer {
         case Char['"']:
           if (escapeStartIndex === undefined) {
             value += this.#dotStr.slice(checkpoint, this.#nextIndex - 1);
-            return {
-              kind: Kind.String,
-              start,
-              length: this.#nextIndex - start.index,
-              value,
-            };
+            const length = this.#nextIndex - start.index;
+            return { kind: Kind.String, start, length, value };
           }
           value += this.#dotStr.slice(checkpoint, escapeStartIndex);
           checkpoint = this.#nextIndex - 1;
@@ -400,12 +393,8 @@ class Lexer {
       }
     }
 
-    return {
-      kind: Kind.UnterminatedString,
-      start,
-      length: this.#nextIndex - start.index,
-      value: null,
-    };
+    const length = this.#nextIndex - start.index;
+    return { kind: Kind.UnterminatedString, start, length, value: undefined };
   }
 
   #readName(): Token {
@@ -421,12 +410,8 @@ class Lexer {
       return { kind: Kind.Name, start, length, value };
     }
 
-    return {
-      kind: (keywordIndex | KEYWORD) as KeywordKind,
-      start,
-      length,
-      value: null,
-    };
+    const kind = (keywordIndex | KEYWORD) as KeywordKind;
+    return { kind, start, length, value: undefined };
   }
 }
 
@@ -514,8 +499,8 @@ const COMPASS_POINTS = new Set([
 
 interface NodeID {
   readonly node: ParsedName;
-  readonly port: ParsedName | null;
-  readonly compass: ParsedName | null;
+  readonly port: ParsedName | undefined;
+  readonly compass: ParsedName | undefined;
 }
 
 class ParserError implements RenderError {
@@ -561,7 +546,7 @@ class ParserWarning implements RenderError {
 }
 
 export interface ParseResult {
-  readonly graph: NormalizedGraph | null;
+  readonly graph: NormalizedGraph | undefined;
   readonly diagnostics: (ParserWarning | ParserError)[];
 }
 
@@ -589,7 +574,7 @@ class Parser {
       }
       /* c8 ignore end */
       const diagnostics = parser.#diagnostics.splice(0);
-      result.push({ graph: null, diagnostics });
+      result.push({ graph: undefined, diagnostics });
     }
 
     return result;
@@ -730,11 +715,11 @@ class Parser {
     }
   }
 
-  #optionalName(description: string): string | null {
+  #optionalName(description: string): string | undefined {
     if (this.#peekIs(ID | KEYWORD)) {
       return this.#expectedName(description).value;
     }
-    return null;
+    return undefined;
   }
 
   #expectedName(description: string): ParsedName {
@@ -883,7 +868,7 @@ class Parser {
 
       const attributes = this.#optionalAttrListOrEmpty();
       for (const { node, port } of nodeIDs) {
-        if (port != null) {
+        if (port !== undefined) {
           this.#failWithError(
             `Unexpected '${port.value}' port in node statement`,
             port.token,
@@ -896,7 +881,7 @@ class Parser {
 
     switch (this.#peekKind()) {
       case Kind['{']: {
-        const subgraph = this.#parseSubgraph(owner, null);
+        const subgraph = this.#parseSubgraph(owner, undefined);
         if (this.#optionalEdgeOp(owner)) {
           const tailNodes = subgraph
             .sortedMemberNodes()
@@ -949,8 +934,8 @@ class Parser {
         name: nodeID.node.value,
         attributes: {},
       });
-      const compass = nodeID.compass?.value ?? null;
-      if (nodeID.port == null) {
+      const compass = nodeID.compass?.value;
+      if (nodeID.port === undefined) {
         return nodeID.compass
           ? { port: node.defaultPort, compass }
           : node.defaultEndpoint;
@@ -974,12 +959,12 @@ class Parser {
 
     // port: ':' ID [ ':' compass_pt ]
     if (!this.#optional(Kind[':'])) {
-      return { node, port: null, compass: null };
+      return { node, port: undefined, compass: undefined };
     }
 
     const port = this.#expectedName('port name');
     if (!this.#optional(Kind[':'])) {
-      return { node, port, compass: null };
+      return { node, port, compass: undefined };
     }
 
     // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
@@ -1036,7 +1021,7 @@ class Parser {
 
   #parseSubgraph(
     owner: NormalizedGraph | NormalizedSubgraph,
-    name: string | null,
+    name: string | undefined,
   ): NormalizedSubgraph {
     const subgraph = owner.upsertSubgraph({
       name,
@@ -1083,7 +1068,7 @@ class Parser {
       let headNodes: NormalizedEdgeEndpoint[];
       switch (this.#peekKind()) {
         case Kind['{']:
-          headNodes = this.#parseSubgraph(owner, null)
+          headNodes = this.#parseSubgraph(owner, undefined)
             .sortedMemberNodes()
             .map((node) => node.defaultEndpoint);
           break;
@@ -1108,7 +1093,7 @@ class Parser {
 
     const attributes = this.#optionalAttrListOrEmpty();
     for (const [tail, head] of newEdges) {
-      owner.root.upsertEdge(owner, { tail, head, key: null, attributes });
+      owner.root.upsertEdge(owner, { tail, head, key: undefined, attributes });
     }
   }
 }

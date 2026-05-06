@@ -75,11 +75,10 @@ export default defineConfig([
 
       '@typescript-eslint/unbound-method': ['error', { ignoreStatic: true }],
 
+      'unicorn/no-useless-undefined': ['error', { checkArguments: false }],
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/prefer-query-selector': 'off',
-      'unicorn/no-null': 'off',
       'unicorn/prefer-export-from': ['error', { ignoreUsedVariables: true }],
-      'unicorn/prefer-ternary': ['error', 'only-single-line'],
       'unicorn/number-literal-case': [
         'error',
         { hexadecimalValue: 'lowercase' }, // required to not have conflicts with prettier
