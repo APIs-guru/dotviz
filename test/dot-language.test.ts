@@ -1250,7 +1250,7 @@ describe('Dot language support', () => {
   });
 
   describe('non-BMP (astral) Unicode character handling', () => {
-    it('parseDot captures a node name with astral char correctly (token value is correct)', () => {
+    it('correctly handles astral Unicode characters in node names', () => {
       const result = dotviz.render('graph { 😀 }');
       expectSuccessResultWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Warning: no value for width of non-ASCII character 240. Falling back to width of space character
@@ -1265,7 +1265,7 @@ describe('Dot language support', () => {
       `);
     });
 
-    it('parseDot captures a string attribute with astral char correctly (token value is correct)', () => {
+    it('correctly handles astral Unicode characters in string attributes', () => {
       const result = dotviz.render('graph { label="😀" }');
       expectSuccessResult(result).toMatchInlineSnapshot(`
         graph {

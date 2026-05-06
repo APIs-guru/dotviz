@@ -17,7 +17,7 @@ function printCodeFrame(body: string, location: Location): string {
   const columnIndex = location.column - 1;
 
   // FIXME print `${source.name}:${lineNum}:${columnNum}\n`;
-  const lines = body.split(/\r\n|[\n\r]/g);
+  const lines = body.split(/\r\n|\n/g);
   const locationLine = lines[lineIndex];
 
   return printPrefixedLines([
