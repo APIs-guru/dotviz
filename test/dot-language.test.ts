@@ -12,7 +12,7 @@ import {
 } from './util/render-result.ts';
 import { USE_VIZ_JS } from './util/use-viz-js.ts';
 
-const vizJS = USE_VIZ_JS ? await VizJSPackage.instance() : null;
+const vizJS = USE_VIZ_JS ? await VizJSPackage.instance() : undefined;
 const dotviz = await DotVizPackage.instance();
 
 function renderString(dot: string): DotVizPackage.RenderResult {
@@ -182,39 +182,42 @@ describe('Dot language support', () => {
 
   describe('various values as attributes', () => {
     it.for([
-      [`<>`, null],
-      [`<<>>`, null],
-      [`<ab>`, null],
-      [`a`, null],
-      [`0`, null],
-      [`-0`, null],
-      [`.0`, null],
-      [`""`, null],
+      [`<>`],
+      [`<<>>`],
+      [`<ab>`],
+      [`a`],
+      [`0`],
+      [`-0`],
+      [`.0`],
+      [`""`],
       [`"a"`, `a`],
-      [`"\n"`, null],
+      [`"\n"`],
       [`"a" + /* empty string */ "" + "b"`, `ab`],
       // `\` + `"` → `"` (backslash consumed)
-      [String.raw`"\""`, null],
-      [String.raw`"\"a"`, null],
-      [String.raw`"\\\""`, null],
-      [String.raw`"\\a\\"`, null],
-      [String.raw`"\\\\"`, null], // `\\` → both backslashes kept (not reduced to one)
-      [String.raw`"\n\t\r"`, null], // `\` + letter → both stored verbatim (not C-style escapes)
+      [String.raw`"\""`],
+      [String.raw`"\"a"`],
+      [String.raw`"\\\""`],
+      [String.raw`"\\a\\"`],
+      [String.raw`"\\\\"`], // `\\` → both backslashes kept (not reduced to one)
+      [String.raw`"\n\t\r"`], // `\` + letter → both stored verbatim (not C-style escapes)
       [`"\\\n"`, `""`], // `\<LF>` → nothing (line continuation)
-      [`"\\\\\na"`, null], // `\\<LF>` → `\\` + literal LF (NOT a continuation)
+      [`"\\\\\na"`], // `\\<LF>` → `\\` + literal LF (NOT a continuation)
       [`"\\\\\\\na"`, String.raw`"\\a"`], // `\\\<LF>` → `\\` stored, continuation on 3rd backslash
-      [`"\\\\\\\\\na"`, null], // `\\\\<LF>` → all four backslashes + literal LF
-    ] satisfies [string, string | null][])('value $0', ([input, output]) => {
-      const result = renderString(`graph { test = ${input} } `);
-      expect(result.output?.trimEnd()).toStrictEqual(dedent`
-        graph {
-        	graph [bb="0,0,0,0",
-        		test=${output ?? input}
-        	];
-        	node [label="\\N"];
-        }
-      `);
-    });
+      [`"\\\\\\\\\na"`], // `\\\\<LF>` → all four backslashes + literal LF
+    ] satisfies ([string, string] | [string])[])(
+      'value $0',
+      ([input, output]) => {
+        const result = renderString(`graph { test = ${input} } `);
+        expect(result.output?.trimEnd()).toStrictEqual(dedent`
+          graph {
+          	graph [bb="0,0,0,0",
+          		test=${output ?? input}
+          	];
+          	node [label="\\N"];
+          }
+        `);
+      },
+    );
   });
 
   describe('Handle Windows-style line endings in quoted strings (dotviz only)', () => {
@@ -223,19 +226,22 @@ describe('Dot language support', () => {
       [`"a\\\r\nb"`, `ab`], // `\<CR><LF>` → continuation, text on both sides kept
       [`"\\\\\\\r\n"`, String.raw`"\\"`], // `\\\<CR><LF>` → `\\` stored, continuation on 3rd backslash
       [`"\\\\\\\r\na"`, String.raw`"\\a"`], // `\\\<CR><LF>` with trailing content → same as above
-      [`"a\\\rb"`, null], // `\<CR>` alone (no LF) → verbatim `\`+CR pair, not a continuation
-      [`"a\\\r"`, null], // `\<CR>` alone before closing quote → verbatim `\`+CR, quote still closes string
-    ] satisfies [string, string | null][])('value $0', ([input, output]) => {
-      const result = dotviz.render(`graph { test = ${input} } `);
-      expect(result.output?.trimEnd()).toStrictEqual(dedent`
-        graph {
-        	graph [bb="0,0,0,0",
-        		test=${output ?? input}
-        	];
-        	node [label="\\N"];
-        }
-      `);
-    });
+      [`"a\\\rb"`], // `\<CR>` alone (no LF) → verbatim `\`+CR pair, not a continuation
+      [`"a\\\r"`], // `\<CR>` alone before closing quote → verbatim `\`+CR, quote still closes string
+    ] satisfies ([string, string] | [string])[])(
+      'value $0',
+      ([input, output]) => {
+        const result = dotviz.render(`graph { test = ${input} } `);
+        expect(result.output?.trimEnd()).toStrictEqual(dedent`
+          graph {
+          	graph [bb="0,0,0,0",
+          		test=${output ?? input}
+          	];
+          	node [label="\\N"];
+          }
+        `);
+      },
+    );
   });
 
   it('global graph attributes shorthand', () => {

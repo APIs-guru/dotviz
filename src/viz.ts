@@ -81,7 +81,7 @@ export interface SuccessResult {
  */
 export interface FailureResult {
   status: 'failure';
-  output: null;
+  output: undefined;
   errors: RenderError[];
 }
 
@@ -102,7 +102,7 @@ export interface MultipleSuccessResult {
 export interface RenderError {
   readonly level: 'error' | 'warning';
   readonly message: string;
-  readonly location: Location | null;
+  readonly location: Location | undefined;
 
   toString(): string;
 }
@@ -210,7 +210,7 @@ export class Viz {
       if (graphList.length === 0) {
         return {
           status: 'failure',
-          output: null,
+          output: undefined,
           errors: [
             ...warnings,
             new RenderingBackendError(
@@ -232,8 +232,8 @@ export class Viz {
         );
       }
 
-      if (graphList[0].graph == null) {
-        return { status: 'failure', output: null, errors: warnings };
+      if (graphList[0].graph === undefined) {
+        return { status: 'failure', output: undefined, errors: warnings };
       }
       graph = graphList[0].graph;
     } else {
@@ -257,7 +257,7 @@ export class Viz {
         default:
           return {
             status: 'failure',
-            output: null,
+            output: undefined,
             errors: [
               ...warnings,
               new RenderingBackendError(
@@ -302,7 +302,7 @@ export class Viz {
           : new RenderingBackendError(error.message),
       );
 
-      let output: Record<string, string> | null = null;
+      let output: Record<string, string> | undefined = undefined;
       if (response.output) {
         output = {};
         if (renderGv) {
@@ -385,7 +385,7 @@ export class Viz {
 class RenderingBackendError implements RenderError {
   readonly level = 'error';
   readonly message: string;
-  readonly location = null;
+  readonly location = undefined;
 
   constructor(message: string) {
     this.message = message;
@@ -399,7 +399,7 @@ class RenderingBackendError implements RenderError {
 class RenderingBackendWarning implements RenderError {
   readonly level = 'warning';
   readonly message: string;
-  readonly location = null;
+  readonly location = undefined;
 
   constructor(message: string) {
     this.message = message;

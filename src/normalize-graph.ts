@@ -7,7 +7,7 @@ export interface OverrideAttributes {
 }
 
 interface NormalizedGraphConfig {
-  readonly name: string | null;
+  readonly name: string | undefined;
   readonly strict: boolean;
   readonly directed: boolean;
   readonly graphAttributes: Readonly<Attributes>;
@@ -19,10 +19,10 @@ export class NormalizedGraph {
   readonly #overrideGraphAttributes: Readonly<Attributes>;
   readonly #overrideNodeAttributes: Readonly<Attributes>;
   readonly #overrideEdgeAttributes: Readonly<Attributes>;
-  readonly owner = null;
+  readonly owner = undefined;
   readonly root = this;
 
-  readonly name: string | null;
+  readonly name: string | undefined;
   readonly strict: boolean;
   readonly directed: boolean;
   graphAttributes: Readonly<Attributes>;
@@ -150,7 +150,7 @@ export class NormalizedGraph {
     );
 
     const deduplicateKey = this.#edgeDeduplicateKey(newEdge);
-    if (deduplicateKey !== null) {
+    if (deduplicateKey !== undefined) {
       const edge = this.#allEdges.get(deduplicateKey);
       if (edge !== undefined) {
         owner.addEdge(edge);
@@ -172,10 +172,10 @@ export class NormalizedGraph {
     this.#allEdges.set(deduplicateKey ?? edge.index, edge);
   }
 
-  #edgeDeduplicateKey(edge: NormalizedEdge): string | null {
+  #edgeDeduplicateKey(edge: NormalizedEdge): string | undefined {
     const { key } = edge;
-    if (key === null && !this.strict) {
-      return null;
+    if (key === undefined && !this.strict) {
+      return undefined;
     }
 
     let { tail, head } = edge;
@@ -200,7 +200,7 @@ export class NormalizedGraph {
 
   upsertSubgraph(config: NormalizedSubgraphConfig): NormalizedSubgraph {
     const { name } = config;
-    if (name !== null) {
+    if (name !== undefined) {
       const subgraph = this.#subgraphs.get(name);
       if (subgraph) {
         return subgraph;
@@ -250,13 +250,13 @@ export class NormalizedGraph {
 
 export interface NormalizedPortConfig {
   readonly node: NormalizedNode;
-  readonly name: string | null;
+  readonly name: string | undefined;
 }
 
 export class NormalizedPort {
   readonly index: number;
   readonly node: NormalizedNode;
-  readonly name: string | null;
+  readonly name: string | undefined;
 
   constructor(index: number, config: NormalizedPortConfig) {
     this.index = index;
@@ -277,10 +277,13 @@ export interface NormalizedNodeConfig {
 export class NormalizedNode {
   readonly index: number;
   readonly name: string;
-  readonly defaultPort = new NormalizedPort(0, { node: this, name: null });
-  readonly defaultEndpoint = { port: this.defaultPort, compass: null };
-  readonly ports = new Map<string | null, NormalizedPort>([
-    [null, this.defaultPort],
+  readonly defaultPort = new NormalizedPort(0, { node: this, name: undefined });
+  readonly defaultEndpoint: NormalizedEdgeEndpoint = {
+    port: this.defaultPort,
+    compass: undefined,
+  };
+  readonly ports = new Map<string | undefined, NormalizedPort>([
+    [undefined, this.defaultPort],
   ]);
   attributes: Readonly<Attributes>;
 
@@ -317,13 +320,13 @@ export class NormalizedNode {
 
 export interface NormalizedEdgeEndpoint {
   readonly port: NormalizedPort;
-  readonly compass: string | null;
+  readonly compass: string | undefined;
 }
 
 interface NormalizedEdgeConfig {
   readonly tail: NormalizedEdgeEndpoint;
   readonly head: NormalizedEdgeEndpoint;
-  readonly key: string | null;
+  readonly key: string | undefined;
   readonly attributes: Readonly<Attributes>;
 }
 
@@ -331,7 +334,7 @@ export class NormalizedEdge {
   readonly index: number;
   readonly tail: NormalizedEdgeEndpoint;
   readonly head: NormalizedEdgeEndpoint;
-  readonly key: string | null;
+  readonly key: string | undefined;
   attributes: Readonly<Attributes>;
 
   constructor(index: number, config: NormalizedEdgeConfig) {
@@ -361,7 +364,7 @@ export class NormalizedEdge {
 }
 
 interface NormalizedSubgraphConfig {
-  readonly name: string | null;
+  readonly name: string | undefined;
   readonly graphAttributes: Attributes;
   readonly nodeAttributes: Attributes;
   readonly edgeAttributes: Attributes;
@@ -371,7 +374,7 @@ export class NormalizedSubgraph {
   readonly root: NormalizedGraph;
   readonly owner: NormalizedGraph | NormalizedSubgraph;
 
-  readonly name: string | null;
+  readonly name: string | undefined;
   graphAttributes: Readonly<Attributes>;
   nodeAttributes: Readonly<Attributes>;
   edgeAttributes: Readonly<Attributes>;
@@ -429,7 +432,7 @@ export class NormalizedSubgraph {
     config: Readonly<NormalizedSubgraphConfig>,
   ): NormalizedSubgraph {
     const { name } = config;
-    if (name !== null) {
+    if (name !== undefined) {
       const subgraph = this.#subgraphs.get(name);
       if (subgraph) {
         return subgraph;
@@ -481,7 +484,7 @@ export function normalizeGraph(
 ): NormalizedGraph {
   const graph = new NormalizedGraph(
     {
-      name: config.name ?? null,
+      name: config.name,
       strict: config.strict ?? false,
       directed: config.directed ?? true,
       graphAttributes: config.graphAttributes ?? {},
@@ -519,7 +522,7 @@ function applyDefinitions(
       root.upsertEdge(owner, {
         tail: tail.defaultEndpoint,
         head: head.defaultEndpoint,
-        key: null,
+        key: undefined,
         attributes: edgeConfig.attributes ?? {},
       });
     }
@@ -528,7 +531,7 @@ function applyDefinitions(
   if (subgraphs) {
     for (const subgraphConfig of subgraphs) {
       const subgraph = owner.upsertSubgraph({
-        name: subgraphConfig.name ?? null,
+        name: subgraphConfig.name,
         graphAttributes: subgraphConfig.graphAttributes ?? {},
         nodeAttributes: subgraphConfig.nodeAttributes ?? {},
         edgeAttributes: subgraphConfig.edgeAttributes ?? {},
@@ -556,7 +559,7 @@ function applyAttributesToEdgeConfig(
   /* v8 ignore end */
 
   return {
-    key: config.key ?? key?.toString() ?? null,
+    key: config.key ?? key?.toString() ?? undefined,
     tail: applyPortString(config.tail, tailport?.toString()),
     head: applyPortString(config.head, headport?.toString()),
     attributes,
@@ -569,9 +572,6 @@ function applyPortString(
 ): NormalizedEdgeEndpoint {
   if (str === undefined || str === '') return endpoint;
   const [port, compass] = str.split(':') as [string, string | undefined];
-  return {
-    port: endpoint.port.node.upsertPort(port),
-    // FIXME: missing validation of compass
-    compass: compass ?? null,
-  };
+  // FIXME: missing validation of compass
+  return { port: endpoint.port.node.upsertPort(port), compass };
 }

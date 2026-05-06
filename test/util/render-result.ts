@@ -27,7 +27,7 @@ export function expectFailureResult(
 ) {
   expect(result).toStrictEqual({
     status: 'failure',
-    output: null,
+    output: undefined,
     errors: expect.any(Array) as unknown[],
   });
   return expectErrors(result);

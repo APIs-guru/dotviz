@@ -15,7 +15,7 @@ export class RawString {
   }
 }
 
-export function expectString(str: string | null | undefined) {
+export function expectString(str: string | undefined) {
   assert.exists(str);
   return expect(new RawString(str));
 }
