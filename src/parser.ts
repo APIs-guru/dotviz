@@ -169,8 +169,8 @@ class Lexer {
     return this.#dotStr.charCodeAt(this.#nextIndex);
   }
 
-  #peekStr(str: string): boolean {
-    return this.#dotStr.startsWith(str, this.#nextIndex);
+  #peekAheadChar(): number {
+    return this.#dotStr.charCodeAt(this.#nextIndex + 1);
   }
 
   #readUntilNewLine(): void {
@@ -234,15 +234,17 @@ class Lexer {
           this.#readUntilNewLine();
           continue;
         case Char['/']:
-          if (this.#peekStr('//')) {
-            this.#readUntilNewLine();
-            continue;
-          } else if (this.#peekStr('/*')) {
-            const invalidToken = this.#readBlockComment();
-            if (invalidToken) {
-              return invalidToken;
+          switch (this.#peekAheadChar()) {
+            case Char['/']:
+              this.#readUntilNewLine();
+              continue;
+            case Char['*']: {
+              const invalidToken = this.#readBlockComment();
+              if (invalidToken) {
+                return invalidToken;
+              }
+              continue;
             }
-            continue;
           }
           break;
         case Char['+']:
@@ -263,14 +265,17 @@ class Lexer {
         case Char['"']:
           return this.#readString();
         case Char['-']:
-          if (this.#peekStr('--')) {
-            const start = this.#nextIndexLocation();
-            this.#nextIndex += 2;
-            return { kind: Kind['--'], start, length: 2, value: undefined };
-          } else if (this.#peekStr('->')) {
-            const start = this.#nextIndexLocation();
-            this.#nextIndex += 2;
-            return { kind: Kind['->'], start, length: 2, value: undefined };
+          switch (this.#peekAheadChar()) {
+            case Char['-']: {
+              const start = this.#nextIndexLocation();
+              this.#nextIndex += 2;
+              return { kind: Kind['--'], start, length: 2, value: undefined };
+            }
+            case Char['>']: {
+              const start = this.#nextIndexLocation();
+              this.#nextIndex += 2;
+              return { kind: Kind['->'], start, length: 2, value: undefined };
+            }
           }
       }
 
