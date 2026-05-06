@@ -17,13 +17,6 @@ pub const graphviz = @cImport({
 extern var Y_invert: bool;
 extern var Reduce: bool;
 
-fn toCString(maybe_string: ?[:0]const u8) [*c]const u8 {
-    if (maybe_string) |string| {
-        return @ptrCast(string.ptr);
-    }
-    return null;
-}
-
 fn setDefaultAttributes(
     allocator: std.mem.Allocator,
     graph: ?*graphviz.Agraph_t,
@@ -130,7 +123,8 @@ fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph
     }
 
     for (graph_json.subgraphs) |subgraph_json| {
-        const subgraph = graphviz.agsubg(graph, toCString(subgraph_json.name), graphviz.true);
+        const name: [*c]const u8 = subgraph_json.name orelse null;
+        const subgraph = graphviz.agsubg(graph, name, graphviz.true);
         readSubgraphJSON(allocator, subgraph, subgraph_json, allNodes, allEdges);
     }
 }
@@ -155,7 +149,8 @@ fn readSubgraphJSON(
     }
 
     for (subgraph_json.subgraphs) |child_subgraph_json| {
-        const child_subgraph = graphviz.agsubg(subgraph, toCString(child_subgraph_json.name), graphviz.true);
+        const name: [*c]const u8 = child_subgraph_json.name orelse null;
+        const child_subgraph = graphviz.agsubg(subgraph, name, graphviz.true);
         readSubgraphJSON(allocator, child_subgraph, child_subgraph_json, allNodes, allEdges);
     }
 }
@@ -296,7 +291,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     const graph_json = request.graph;
     const graph = graphviz.wrapped_agopen(
-        toCString(graph_json.name),
+        graph_json.name orelse null,
         graph_json.directed,
         graph_json.strict,
     );
