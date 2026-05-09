@@ -314,71 +314,8 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         _ = graphviz.gvFreeContext(gvc);
     }
 
-    const engine = std.meta.stringToEnum(vizjs_types.Engine, request.engine) orelse {
-        const message = std.fmt.allocPrint(
-            wasm_allocator,
-            "Layout type: \"{s}\" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp",
-            .{request.engine},
-        ) catch @panic("cannot allocate error message");
-
-        var errors = parseAgerrMessages(arena_allocator);
-        errors.append(arena_allocator, .{
-            .level = .@"error",
-            .message = .{ .slice = message },
-        }) catch @panic("cannot append error");
-
-        return stringifyResponseJSON(.{
-            .status = .failure,
-            .errors = errors.items,
-            .output = null,
-        });
-    };
-
-    if (graphviz.agget(graph, "layout")) |layout_cstr| {
-        const layout_str = std.mem.span(layout_cstr);
-        const layout = std.meta.stringToEnum(vizjs_types.Engine, layout_str) orelse {
-            const message = std.fmt.allocPrint(
-                arena_allocator,
-                "Layout type: \"{s}\" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp",
-                .{layout_str},
-            ) catch @panic("cannot allocate error message");
-
-            var errors = parseAgerrMessages(arena_allocator);
-            errors.append(arena_allocator, .{
-                .level = .@"error",
-                .message = .{ .slice = message },
-            }) catch @panic("cannot append error");
-
-            return stringifyResponseJSON(.{
-                .status = .failure,
-                .errors = errors.items,
-                .output = null,
-            });
-        };
-
-        if (layout != engine) {
-            const message = std.fmt.allocPrint(
-                arena_allocator,
-                "Layouts should be the same. {} != {}",
-                .{ layout, engine },
-            ) catch @panic("cannot allocate error message");
-
-            var errors = parseAgerrMessages(arena_allocator);
-            errors.append(arena_allocator, .{
-                .level = .@"error",
-                .message = .{ .slice = message },
-            }) catch @panic("cannot append error");
-
-            return stringifyResponseJSON(.{
-                .status = .failure,
-                .errors = errors.items,
-                .output = null,
-            });
-        }
-    }
-
-    layoutRender(engine, gvc, graph);
-    defer layoutCleanup(engine, graph);
+    layoutRender(request.engine, gvc, graph);
+    defer layoutCleanup(request.engine, graph);
 
     var responseDot: ?[:0]const u8 = null;
     defer freeCString(responseDot);

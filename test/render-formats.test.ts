@@ -8,7 +8,7 @@ describe('Viz', () => {
   describe('renderFormats', () => {
     it('renders multiple output formats', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.renderFormats('graph a { }', ['dot', 'svg']);
+      const result = viz.render('graph a { }', { formats: ['dot', 'svg'] });
 
       expect(result).toStrictEqual({
         status: 'success',
@@ -43,12 +43,13 @@ describe('Viz', () => {
 
     it('renders with the same format twice', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.renderFormats('graph a { }', ['dot', 'dot']);
+      const result = viz.render('graph a { }', { formats: ['dot', 'dot'] });
 
       expect(result).toStrictEqual({
         status: 'success',
         output: {
           dot: expect.any(String) as unknown,
+          svg: undefined,
         },
         errors: [],
       });
@@ -62,18 +63,21 @@ describe('Viz', () => {
 
     it('renders with an empty array of formats', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.renderFormats('graph a { }', []);
+      const result = viz.render('graph a { }', { formats: [] });
 
       expect(result).toStrictEqual({
         status: 'success',
-        output: {},
+        output: {
+          dot: undefined,
+          svg: undefined,
+        },
         errors: [],
       });
     });
 
     it('returns error messages for invalid input', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.renderFormats('invalid', ['dot', 'svg']);
+      const result = viz.render('invalid', { formats: ['dot', 'svg'] });
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
@@ -85,7 +89,7 @@ describe('Viz', () => {
 
     it('returns error messages for invalid input and an empty array of formats', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.renderFormats('invalid', []);
+      const result = viz.render('invalid', { formats: [] });
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.

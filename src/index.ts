@@ -11,8 +11,6 @@ export { instance } from './instance.ts';
 export {
   type FailureResult,
   type ImageSize,
-  type MultipleRenderResult,
-  type MultipleSuccessResult,
   type RenderError,
   type RenderOptions,
   type RenderResult,

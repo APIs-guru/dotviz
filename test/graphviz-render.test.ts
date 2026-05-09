@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
-import { expectErrors, expectSuccessResult } from './util/render-result.ts';
+import { expectDot, expectErrors, expectSvg } from './util/render-result.ts';
 
 const __dirname = import.meta.dirname;
 function readSnapshot(filepath: string): string {
@@ -23,16 +23,16 @@ describe('Viz', () => {
           B[comment = "I am node B"]
           A -> B[comment = "I am an edge"]
         }`,
-        { format: 'svg' },
+        { formats: ['svg'] },
       );
 
-      await expectSuccessResult(result).toMatchFileSnapshot(
+      await expectSvg(result).toMatchFileSnapshot(
         './snapshots/comment_attribute.svg',
       );
     });
     it('layers support', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.renderFormats(
+      const result = viz.render(
         `digraph G {
          	layers="local:pvt:test:new:ofc";
 
@@ -42,7 +42,7 @@ describe('Viz', () => {
          	node2 -> node3  [layer="pvt:all"];	/* same as pvt:ofc */
          	node2 -> node4 [layer=3];		/* same as test */
         }`,
-        ['dot', 'svg'],
+        { formats: ['dot', 'svg'] },
       );
 
       expect(result).toStrictEqual({
@@ -92,23 +92,15 @@ describe('Viz', () => {
     });
     it('_background attribute', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.renderFormats(
+      const result = viz.render(
         `digraph G {
           _background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36";
           a -> b
         }`,
-        ['dot', 'svg'],
+        { formats: ['dot', 'svg'] },
       );
 
-      expect(result).toStrictEqual({
-        status: 'success',
-        output: {
-          dot: expect.any(String) as unknown,
-          svg: expect.any(String) as unknown,
-        },
-        errors: [],
-      });
-      expectString(result.output?.dot).toMatchInlineSnapshot(`
+      expectDot(result).toMatchInlineSnapshot(`
         digraph G {
         	graph [_background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36",
         		bb="0,0,54,108"
@@ -123,7 +115,7 @@ describe('Viz', () => {
         	a -> b	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"];
         }
       `);
-      await expectString(result.output?.svg).toMatchFileSnapshot(
+      await expectSvg(result).toMatchFileSnapshot(
         './snapshots/_background_attribute.svg',
       );
     });
@@ -131,35 +123,21 @@ describe('Viz', () => {
   it('multiple pages in ps, one in svg', async () => {
     const viz = await VizPackage.instance();
     const result = viz.render(readSnapshot('./snapshots/multiple_pages.gv'), {
-      format: 'svg',
+      formats: ['svg'],
     });
 
-    await expectSuccessResult(result).toMatchFileSnapshot(
+    await expectSvg(result).toMatchFileSnapshot(
       './snapshots/multiple_pages.svg',
     );
   });
   it('circo layout', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.renderFormats(
-      readSnapshot('./snapshots/circo.gv'),
-      ['dot', 'svg'],
-      { engine: 'circo' },
-    );
-
-    expect(result).toStrictEqual({
-      status: 'success',
-      output: {
-        dot: expect.any(String) as unknown,
-        svg: expect.any(String) as unknown,
-      },
-      errors: [],
+    const result = viz.render(readSnapshot('./snapshots/circo.gv'), {
+      formats: ['dot', 'svg'],
+      engine: 'circo',
     });
 
-    await expectString(result.output?.dot).toMatchFileSnapshot(
-      './snapshots/circo.dot',
-    );
-    await expectString(result.output?.svg).toMatchFileSnapshot(
-      './snapshots/circo.svg',
-    );
+    await expectDot(result).toMatchFileSnapshot('./snapshots/circo.dot');
+    await expectSvg(result).toMatchFileSnapshot('./snapshots/circo.svg');
   });
 });

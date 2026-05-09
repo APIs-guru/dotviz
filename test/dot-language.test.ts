@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 import * as DotVizPackage from '../src/index.ts';
 import { dedent } from './util/dedent.ts';
 import {
+  expectDot,
+  expectDotWithWarnings,
   expectErrors,
   expectFailureResult,
-  expectSuccessResult,
-  expectSuccessResultWithWarnings,
   stringifyErrors,
 } from './util/render-result.ts';
 import { USE_VIZ_JS } from './util/use-viz-js.ts';
@@ -20,7 +20,14 @@ function renderString(dot: string): DotVizPackage.RenderResult {
   /* v8 ignore start -- run as separate step */
   if (vizJS) {
     const vizJSResult = vizJS.render(dot);
-    expect(dotvizResult).toStrictEqual(vizJSResult);
+    expect({
+      status: dotvizResult.status,
+      output: dotvizResult.output?.dot,
+      errors: dotvizResult.errors.map((err) => ({
+        level: err.level,
+        message: err.message,
+      })),
+    }).toStrictEqual(vizJSResult);
   }
   /* v8 ignore end */
   return dotvizResult;
@@ -29,7 +36,7 @@ function renderString(dot: string): DotVizPackage.RenderResult {
 describe('Dot language support', () => {
   it('empty graph', () => {
     const result = renderString('graph {}');
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -37,7 +44,7 @@ describe('Dot language support', () => {
     `);
 
     const directedResult = renderString('digraph {}');
-    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+    expectDot(directedResult).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -47,7 +54,7 @@ describe('Dot language support', () => {
 
   it('strict empty graph', () => {
     const result = renderString('strict graph {}');
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       strict graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -57,7 +64,7 @@ describe('Dot language support', () => {
 
   it('named graph', () => {
     const result = renderString('graph test {}');
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph test {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -68,7 +75,7 @@ describe('Dot language support', () => {
     expect(stringResult).toStrictEqual(result);
 
     const keywordResult = renderString('graph "graph" {}');
-    expectSuccessResult(keywordResult).toMatchInlineSnapshot(`
+    expectDot(keywordResult).toMatchInlineSnapshot(`
       graph "graph" {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -87,7 +94,7 @@ describe('Dot language support', () => {
          end comment */
       {}
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -103,7 +110,7 @@ describe('Dot language support', () => {
         edge []
       }
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -129,7 +136,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [a=valueA,
       		bb="0,0,0,0"
@@ -167,7 +174,7 @@ describe('Dot language support', () => {
         edge [c=""]
       }
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [a="",
       		bb="0,0,0,0"
@@ -208,7 +215,7 @@ describe('Dot language support', () => {
       'value $0',
       ([input, output]) => {
         const result = renderString(`graph { test = ${input} } `);
-        expect(result.output?.trimEnd()).toStrictEqual(dedent`
+        expect(result.output?.dot?.trimEnd()).toStrictEqual(dedent`
           graph {
           	graph [bb="0,0,0,0",
           		test=${output ?? input}
@@ -232,7 +239,7 @@ describe('Dot language support', () => {
       'value $0',
       ([input, output]) => {
         const result = dotviz.render(`graph { test = ${input} } `);
-        expect(result.output?.trimEnd()).toStrictEqual(dedent`
+        expect(result.output?.dot?.trimEnd()).toStrictEqual(dedent`
           graph {
           	graph [bb="0,0,0,0",
           		test=${output ?? input}
@@ -251,7 +258,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [a=valueA,
       		bb="0,0,0,0"
@@ -288,7 +295,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,162,36",
       		graphAttr2=2
@@ -345,7 +352,7 @@ describe('Dot language support', () => {
     };
     const result = dotviz.render(dot, options);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,72,36",
       		testGraph=valueGraph
@@ -372,7 +379,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -392,7 +399,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+    expectDot(directedResult).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -415,7 +422,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -437,7 +444,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+    expectDot(directedResult).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -460,7 +467,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,180"];
       	node [label="\\N"];
@@ -486,7 +493,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(directedResult).toMatchInlineSnapshot(`
+    expectDot(directedResult).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,180"];
       	node [label="\\N"];
@@ -514,7 +521,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,126,180"];
       	node [label="\\N"];
@@ -563,7 +570,7 @@ describe('Dot language support', () => {
          	{ node [a=""] }
         }
       `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
         graph {
         	graph [bb="0,0,0,0"];
         	node [a="",
@@ -584,7 +591,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,198,36"];
       	node [label="\\N"];
@@ -616,7 +623,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,198,36"];
       	node [label="\\N"];
@@ -649,7 +656,7 @@ describe('Dot language support', () => {
           }
         }
       `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -675,7 +682,7 @@ describe('Dot language support', () => {
         subgraph tails { a b } -> subgraph heads { c d }
       }
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,126,108"];
       	node [label="\\N"];
@@ -710,7 +717,7 @@ describe('Dot language support', () => {
         a -> a
       }
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       strict digraph {
       	graph [bb="0,0,72,42.271"];
       	node [label="\\N"];
@@ -739,7 +746,7 @@ describe('Dot language support', () => {
         }
       }
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -782,7 +789,7 @@ describe('Dot language support', () => {
         }
       }
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -822,7 +829,7 @@ describe('Dot language support', () => {
         }
       }
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       strict graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -854,7 +861,7 @@ describe('Dot language support', () => {
         }
       }
     `);
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       strict digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -1257,8 +1264,8 @@ describe('Dot language support', () => {
 
   describe('non-BMP (astral) Unicode character handling', () => {
     it('correctly handles astral Unicode characters in node names', () => {
-      const result = dotviz.render('graph { 😀 }');
-      expectSuccessResultWithWarnings(result).toMatchInlineSnapshot(`
+      const result = renderString('graph { 😀 }');
+      expectDotWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Warning: no value for width of non-ASCII character 240. Falling back to width of space character
 
         graph {
@@ -1272,8 +1279,8 @@ describe('Dot language support', () => {
     });
 
     it('correctly handles astral Unicode characters in string attributes', () => {
-      const result = dotviz.render('graph { label="😀" }');
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      const result = renderString('graph { label="😀" }');
+      expectDot(result).toMatchInlineSnapshot(`
         graph {
         	graph [bb="0,0,30,24.8",
         		label=😀,
