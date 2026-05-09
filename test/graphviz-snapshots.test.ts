@@ -6,7 +6,7 @@ import * as VizPackage from '@viz-js/viz';
 import { assert, describe, expect, it, type TestContext } from 'vitest';
 
 import * as DotVizPackage from '../src/index.ts';
-import { isLayoutEngine } from '../src/viz.ts';
+import { isLayoutEngine, type OverrideAttributes } from '../src/viz.ts';
 import { expectString } from './util/raw-string-serializer.ts';
 import { USE_VIZ_JS } from './util/use-viz-js.ts';
 
@@ -176,73 +176,32 @@ describe('miscellaneous', () => {
   it('dot: graphs/clust4.gv', snapshotGvFile);
   it('dot: graphs/clust5.gv', snapshotGvFile);
   it('dot: graphs/clusters.gv', snapshotGvFile);
-  it('dot: graphs/clustlabel.gv', snapshotGvFile);
-  // Case(
-  //     "clustlabel",
-  //     Path("clustlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=t", "-Glabeljust=r"],
-  // ),
-  // Case(
-  //     "clustlabel",
-  //     Path("clustlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=b", "-Glabeljust=r"],
-  //     1,
-  // ),
-  // Case(
-  //     "clustlabel",
-  //     Path("clustlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=t", "-Glabeljust=l"],
-  //     2,
-  // ),
-  // Case(
-  //     "clustlabel",
-  //     Path("clustlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=b", "-Glabeljust=l"],
-  //     3,
-  // ),
-  // Case(
-  //     "clustlabel",
-  //     Path("clustlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=t", "-Glabeljust=c"],
-  //     4,
-  // ),
-  // Case(
-  //     "clustlabel",
-  //     Path("clustlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=b", "-Glabeljust=c"],
-  //     5,
-  // ),
-  // Case("clustlabel", Path("clustlabel.gv"), "dot", "ps", ["-Glabelloc=t"], 6),
-  // Case("clustlabel", Path("clustlabel.gv"), "dot", "ps", ["-Glabelloc=b"], 7),
 
+  it('dot: graphs/clustlabel.gv', snapshotGvFile);
+  it('dot: graphs/clustlabel.gv -Glabelloc=t', snapshotGvFile);
+  it('dot: graphs/clustlabel.gv -Glabelloc=b', snapshotGvFile);
+  it('dot: graphs/clustlabel.gv -Glabelloc=t -Glabeljust=r', snapshotGvFile);
+  it('dot: graphs/clustlabel.gv -Glabelloc=b -Glabeljust=r', snapshotGvFile);
+  it('dot: graphs/clustlabel.gv -Glabelloc=t -Glabeljust=l', snapshotGvFile);
+  it('dot: graphs/clustlabel.gv -Glabelloc=b -Glabeljust=l', snapshotGvFile);
+  it('dot: graphs/clustlabel.gv -Glabelloc=t -Glabeljust=c', snapshotGvFile);
+  it('dot: graphs/clustlabel.gv -Glabelloc=b -Glabeljust=c', snapshotGvFile);
+
+  // multiple edge colors
   it('dot: graphs/color.gv', snapshotGvFile);
-  // # color encodings
-  // # multiple edge colors
-  // Case("color", Path("color.gv"), "dot", "png", []),
-  // Case("color", Path("color.gv"), "dot", "png", ["-Gbgcolor=lightblue"]),
+  it('dot: graphs/color.gv -Gbgcolor=lightblue', snapshotGvFile);
 
   // pencolor, fontcolor, fillcolor
   it('dot: graphs/colors.gv', snapshotGvFile);
   it('dot: graphs/colorscheme.gv', snapshotGvFile);
   it('dot: graphs/compound.gv', snapshotGvFile);
+
   it('dot: graphs/crazy.gv', snapshotGvFile);
-  // Case("rotate", Path("crazy.gv"), "dot", "ps", ["-Glandscape"]),
-  // Case("rotate", Path("crazy.gv"), "dot", "ps", ["-Grotate=90"], 1),
-  // Case("rankdir", Path("crazy.gv"), "dot", "gv", ["-Grankdir=LR"]),
-  // Case("rankdir", Path("crazy.gv"), "dot", "gv", ["-Grankdir=BT"], 1),
-  // Case("rankdir", Path("crazy.gv"), "dot", "gv", ["-Grankdir=RL"], 2),
+  it('dot: graphs/crazy.gv -Glandscape=true', snapshotGvFile);
+  it('dot: graphs/crazy.gv -Grotate=90', snapshotGvFile);
+  it('dot: graphs/crazy.gv -Grankdir=LR', snapshotGvFile);
+  it('dot: graphs/crazy.gv -Grankdir=BT', snapshotGvFile);
+  it('dot: graphs/crazy.gv -Grankdir=RL', snapshotGvFile);
 
   it('dot: graphs/ctext.gv', snapshotGvFile);
   it('dot: graphs/d.gv', snapshotGvFile);
@@ -342,24 +301,17 @@ describe('miscellaneous', () => {
   it('dot: graphs/lsunix2.gv', snapshotGvFile);
   it('dot: graphs/lsunix3.gv', snapshotGvFile);
 
-  it('dot: graphs/mode.gv', snapshotGvFile);
-  // # check mode=hier
-  // Case("mode", Path("mode.gv"), "neato", "ps", ["-Gmode=KK"]),
-  // Case("mode", Path("mode.gv"), "neato", "ps", ["-Gmode=hier"], 1),
-  // Case("mode", Path("mode.gv"), "neato", "ps", ["-Gmode=hier", "-Glevelsgap=1"], 2),
-  // Case("model", Path("mode.gv"), "neato", "ps", ["-Gmodel=circuit"]),
-  // Case(
-  //     "model",
-  //     Path("mode.gv"),
-  //     "neato",
-  //     "ps",
-  //     ["-Goverlap=false", "-Gmodel=subset"],
-  //     1,
-  // Case("page", Path("mode.gv"), "neato", "ps", ["-Gpage=8.5,11"]),
-  // Case("page", Path("mode.gv"), "neato", "ps", ["-Gpage=8.5,11", "-Gpagedir=TL"], 1),
-  // Case("page", Path("mode.gv"), "neato", "ps", ["-Gpage=8.5,11", "-Gpagedir=TR"], 2),
-  // Case("size", Path("mode.gv"), "neato", "ps", ["-Gsize=5,5"]),
-  // Case("size", Path("mode.gv"), "neato", "png", ["-Gsize=5,5"]),
+  // check mode=hier
+  it('neato: graphs/mode.gv', snapshotGvFile);
+  // it('neato: graphs/mode.gv -Gmode=KK', snapshotGvFile);
+  it.skip('neato: graphs/mode.gv -Gmode=hier', snapshotGvFile);
+  it.skip('neato: graphs/mode.gv -Gmode=hier -Glevelsgap=1', snapshotGvFile);
+  it('neato: graphs/mode.gv -Gmodel=circuit', snapshotGvFile);
+  it('neato: graphs/mode.gv -Goverlap=false -Gmodel=subset', snapshotGvFile);
+  it('neato: graphs/mode.gv -Gpage=8.5,11', snapshotGvFile);
+  it('neato: graphs/mode.gv -Gpage=8.5,11 -Gpagedir=TL', snapshotGvFile);
+  it('neato: graphs/mode.gv -Gpage=8.5,11 -Gpagedir=TR', snapshotGvFile);
+  it('neato: graphs/mode.gv -Gsize=5,5', snapshotGvFile);
 
   it('dot: graphs/multi.gv', snapshotGvFile);
   it('dot: graphs/NaN.gv', snapshotGvFile);
@@ -369,28 +321,19 @@ describe('miscellaneous', () => {
   it('dot: graphs/ngk10_4.gv', snapshotGvFile);
   it('dot: graphs/nhg.gv', snapshotGvFile);
   it('dot: graphs/nojustify.gv', snapshotGvFile);
-  it('dot: graphs/ordering.gv', snapshotGvFile);
-  // Case("ordering", Path("ordering.gv"), "dot", "gv", ["-Gordering=in"]),
-  // Case("ordering", Path("ordering.gv"), "dot", "gv", ["-Gordering=out"], 1),
 
-  it('dot: graphs/overlap.gv', snapshotGvFile);
-  // Case("overlap", Path("overlap.gv"), "neato", "gv", ["-Goverlap=false"]),
-  // Case("overlap", Path("overlap.gv"), "neato", "gv", ["-Goverlap=scale"], 1),
-  // Case(
-  //     "neatosplines",
-  //     Path("overlap.gv"),
-  //     "neato",
-  //     "gv",
-  //     ["-Goverlap=false", "-Gsplines"],
-  // ),
-  // Case(
-  //     "neatosplines",
-  //     Path("overlap.gv"),
-  //     "neato",
-  //     "gv",
-  //     ["-Goverlap=false", "-Gsplines=polyline"],
-  //     1,
-  // ),
+  it('dot: graphs/ordering.gv', snapshotGvFile);
+  it('dot: graphs/ordering.gv -Gordering=in', snapshotGvFile);
+  it('dot: graphs/ordering.gv -Gordering=out', snapshotGvFile);
+
+  it('neato: graphs/overlap.gv', snapshotGvFile);
+  it('neato: graphs/overlap.gv -Goverlap=false', snapshotGvFile);
+  it('neato: graphs/overlap.gv -Goverlap=scale', snapshotGvFile);
+  it('neato: graphs/overlap.gv -Goverlap=false -Gsplines=true', snapshotGvFile);
+  it(
+    'neato: graphs/overlap.gv -Goverlap=false -Gsplines=polyline',
+    snapshotGvFile,
+  );
 
   it('dot: graphs/p.gv', snapshotGvFile);
   it('dot: graphs/p2.gv', snapshotGvFile);
@@ -399,8 +342,8 @@ describe('miscellaneous', () => {
 
   it('dot: graphs/pack.gv', snapshotGvFile);
   it('neato: graphs/pack.gv', snapshotGvFile);
-  // Case("pack", Path("pack.gv"), "neato", "gv", ["-Gpack=20"], 1),
-  // Case("pack", Path("pack.gv"), "neato", "gv", ["-Gpackmode=graph"], 2),
+  it('neato: graphs/pack.gv -Gpack=20', snapshotGvFile);
+  it('neato: graphs/pack.gv -Gpackmode=graph', snapshotGvFile);
 
   it('dot: graphs/Petersen.gv', snapshotGvFile);
   it('dot: graphs/pgram.gv', snapshotGvFile);
@@ -417,64 +360,22 @@ describe('miscellaneous', () => {
   it('dot: graphs/records.gv', snapshotGvFile);
 
   it('dot: graphs/root.gv', snapshotGvFile);
-  // Case("size_ex", Path("root.gv"), "dot", "ps", ["-Gsize=6,6!"]),
-  // Case("size_ex", Path("root.gv"), "dot", "png", ["-Gsize=6,6!"]),
+  it('dot: graphs/root.gv -Gsize=6,6!', snapshotGvFile);
   it('twopi: graphs/root.gv', snapshotGvFile);
 
   it('dot: graphs/rootlabel.gv', snapshotGvFile);
-  // Case(
-  //     "rootlabel",
-  //     Path("rootlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=t", "-Glabeljust=r"],
-  // ),
-  // Case(
-  //     "rootlabel",
-  //     Path("rootlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=b", "-Glabeljust=r"],
-  //     1,
-  // ),
-  // Case(
-  //     "rootlabel",
-  //     Path("rootlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=t", "-Glabeljust=l"],
-  //     2,
-  // ),
-  // Case(
-  //     "rootlabel",
-  //     Path("rootlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=b", "-Glabeljust=l"],
-  //     3,
-  // ),
-  // Case(
-  //     "rootlabel",
-  //     Path("rootlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=t", "-Glabeljust=c"],
-  //     4,
-  // ),
-  // Case(
-  //     "rootlabel",
-  //     Path("rootlabel.gv"),
-  //     "dot",
-  //     "ps",
-  //     ["-Glabelloc=b", "-Glabeljust=c"],
-  //     5,
-  // ),
-  // Case("rootlabel", Path("rootlabel.gv"), "dot", "ps", ["-Glabelloc=t"], 6),
-  // Case("rootlabel", Path("rootlabel.gv"), "dot", "ps", ["-Glabelloc=b"], 7),
+  it('dot: graphs/rootlabel.gv -Glabelloc=t -Glabeljust=r', snapshotGvFile);
+  it('dot: graphs/rootlabel.gv -Glabelloc=b -Glabeljust=r', snapshotGvFile);
+  it('dot: graphs/rootlabel.gv -Glabelloc=t -Glabeljust=l', snapshotGvFile);
+  it('dot: graphs/rootlabel.gv -Glabelloc=b -Glabeljust=l', snapshotGvFile);
+  it('dot: graphs/rootlabel.gv -Glabelloc=t -Glabeljust=c', snapshotGvFile);
+  it('dot: graphs/rootlabel.gv -Glabelloc=b -Glabeljust=c', snapshotGvFile);
+  it('dot: graphs/rootlabel.gv -Glabelloc=t', snapshotGvFile);
+  it('dot: graphs/rootlabel.gv -Glabelloc=b', snapshotGvFile);
 
   it('dot: graphs/rowcolsep.gv', snapshotGvFile);
-  // Case("rowcolsep", Path("rowcolsep.gv"), "dot", "gv", ["-Gnodesep=0.5"]),
-  // Case("rowcolsep", Path("rowcolsep.gv"), "dot", "gv", ["-Granksep=1.5"], 1),
+  it('dot: graphs/rowcolsep.gv -Gnodesep=0.5', snapshotGvFile);
+  it('dot: graphs/rowcolsep.gv -Granksep=1.5', snapshotGvFile);
 
   it('dot: graphs/rowe.gv', snapshotGvFile);
 
@@ -498,9 +399,10 @@ describe('miscellaneous', () => {
   it('dot: graphs/shapes.gv', snapshotGvFile);
   it('dot: graphs/shells.gv', snapshotGvFile);
   it('dot: graphs/sides.gv', snapshotGvFile);
+
   it('dot: graphs/size.gv', snapshotGvFile);
-  // Case("dotsplines", Path("size.gv"), "dot", "gv", ["-Gsplines=line"]),
-  // Case("dotsplines", Path("size.gv"), "dot", "gv", ["-Gsplines=polyline"], 1),
+  it('dot: graphs/size.gv -Gsplines=line', snapshotGvFile);
+  it('dot: graphs/size.gv -Gsplines=polyline', snapshotGvFile);
 
   it('dot: graphs/sq_rules.gv', snapshotGvFile);
   it('dot: graphs/states.gv', snapshotGvFile);
@@ -522,7 +424,8 @@ describe('miscellaneous', () => {
 
   it('dot: graphs/viewfile.gv', snapshotGvFile);
 
-  it('dot: graphs/viewport.gv', snapshotGvFile);
+  it('neato: graphs/viewport.gv', snapshotGvFile);
+  // FIXME: missing support for -n2 flag
   // Case(
   //     "viewport", Path("viewport.gv"), "neato", "png", ["-Gviewport=300,300", "-n2"]
   // ),
@@ -613,20 +516,54 @@ function filterErrors<T extends { message: string }>(errors: T[]): T[] {
 }
 
 async function snapshotGvFile({ task }: TestContext) {
-  const [engine, gvFile] = task.name.split(': ');
-  if (!gvFile || !isLayoutEngine(engine)) {
+  const [engine, nameRest] = task.name.split(': ');
+  if (!isLayoutEngine(engine) || !nameRest) {
     throw new Error(`Incorrectly formatted test name: ${task.name}`);
+  }
+
+  const [gvFile, ...cliArgs] = nameRest.split(' ');
+  const overrideAttributes = {
+    graphAttributes: {} as Record<string, string>,
+    nodeAttributes: {} as Record<string, string>,
+    edgeAttributes: {} as Record<string, string>,
+  } satisfies OverrideAttributes;
+
+  for (const arg of cliArgs) {
+    if (!arg.includes('=')) {
+      throw new Error(
+        `Missing '=' inside argument (note: graphviz uses 'true' as default value): ${arg}`,
+      );
+    }
+
+    if (arg.startsWith('-G')) {
+      const [key, value] = arg.replace('-G', '').split('=');
+      overrideAttributes.graphAttributes[key] = value;
+    } else if (arg.startsWith('-N')) {
+      const [key, value] = arg.replace('-N', '').split('=');
+      overrideAttributes.nodeAttributes[key] = value;
+    } else if (arg.startsWith('-E')) {
+      const [key, value] = arg.replace('-E', '').split('=');
+      overrideAttributes.edgeAttributes[key] = value;
+    }
   }
 
   const gvPath = path.join(graphvizSnapshotDir, gvFile);
   const gvString = fs.readFileSync(gvPath, 'utf8');
-  const basePath = gvPath.replace(/\.gv$/, `-snapshots/${engine}_engine`);
+
+  let basePath = gvPath.replace(/\.gv$/, `-snapshots/${engine}_engine`);
+  if (cliArgs.length > 0) {
+    basePath += `_${cliArgs.join('_')}`;
+  }
+
   const dotSnapshotPath = basePath + '.dot';
   const svgSnapshotPath = basePath + '.svg';
 
   if (USE_VIZ_JS) {
     const instance = await VizPackage.instance();
-    const result = instance.renderFormats(gvString, ['dot', 'svg'], { engine });
+    const result = instance.renderFormats(gvString, ['dot', 'svg'], {
+      ...overrideAttributes,
+      engine,
+    });
     const { errors, output } = result;
     expect(filterErrors(errors)).toStrictEqual([]);
     expect(result).toStrictEqual({ status: 'success', output, errors });
@@ -643,6 +580,7 @@ async function snapshotGvFile({ task }: TestContext) {
     const result = instance.renderDot(gvString, {
       formats: ['dot', 'svg'],
       engine,
+      overrideAttributes,
     });
     const { diagnostics, output } = result;
     expect(result).toStrictEqual({ status: 'success', output, diagnostics });
