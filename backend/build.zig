@@ -39,6 +39,18 @@ pub fn build(b: *std.Build) void {
     );
     lib.root_module.linkLibrary(graphviz_build);
 
+    const graphviz_dep = b.dependency("graphviz", .{
+        .target = target,
+        .optimize = graphviz_build_mode,
+    });
+    lib.root_module.addIncludePath(graphviz_dep.path("lib"));
+    lib.root_module.addIncludePath(graphviz_dep.path("lib/common"));
+    lib.root_module.addIncludePath(graphviz_dep.path("lib/util"));
+    lib.root_module.addIncludePath(graphviz_dep.path("lib/gvc"));
+    lib.root_module.addIncludePath(graphviz_dep.path("lib/cgraph"));
+    lib.root_module.addIncludePath(graphviz_dep.path("lib/cdt"));
+    lib.root_module.addIncludePath(graphviz_dep.path("lib/pathplan"));
+    lib.root_module.addIncludePath(graphviz_dep.path("lib/xdot"));
     lib.root_module.addIncludePath(b.path("src"));
     lib.root_module.addCSourceFiles(.{
         .files = &.{
@@ -429,13 +441,6 @@ pub fn buildGraphviz(
 
     const h = std.Build.Step.Compile.HeaderInstallation.Directory.Options{ .include_extensions = &.{".h"} };
     lib.installHeadersDirectory(graphviz_dep.path("lib"), "lib", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/common"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/pathplan"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/gvc"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/cdt"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/cgraph"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/util"), "", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/xdot"), "", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/util"), "util/", h);
     lib.installHeader(graphviz_dep.path("lib/gvc/gvc.h"), "gvc.h");
     lib.installHeadersDirectory(b.path("src/graphviz_build/inc/common"), "", .{});
@@ -503,7 +508,7 @@ const src_common = [_][]const u8{
 
 const src_util = [_][]const u8{
     //"xml.c",
-    "gv_fopen.c", "gv_find_me.c", "random.c", "base64.c",
+    "gv_fopen.c", "gv_find_me.c", "random.c", "base64.c", "list.c", "arena.c",
 };
 
 const src_pathplan = [_][]const u8{

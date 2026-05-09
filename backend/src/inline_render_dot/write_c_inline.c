@@ -23,6 +23,7 @@
 // graphviz headers
 #include "cghdr.h"
 #include "cgraph.h"
+#include "util/alloc.h"
 // clang-format on
 
 #define EMPTY(s) (((s) == 0) || (s)[0] == '\0')

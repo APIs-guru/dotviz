@@ -17,6 +17,7 @@
 #include "safe_job.h"
 #include "streq.h"
 #include "types.h"
+#include "util/alloc.h"
 #include "util/list.h"
 
 static bool is_natural_number(const char *sstr) {
@@ -93,8 +94,6 @@ static int chkOrder(graph_t *g) {
   return 0;
 }
 
-DEFINE_LIST(layer_names, char *)
-
 /* Parse the graph's layerselect attribute, which determines
  * which layers are emitted. The specification is the same used
  * by the layer attribute.
@@ -143,25 +142,26 @@ static int parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
   char *tok;
 
   char *layers = gv_strdup(p);
-  layer_names_t layerIDs = {0};
+  LIST(char *) layerIDs = {0};
 
   // inferred entry for the first (unnamed) layer
-  layer_names_append(&layerIDs, NULL);
+  LIST_APPEND(&layerIDs, NULL);
 
   for (tok = strtok(layers, layerDelims); tok;
        tok = strtok(NULL, layerDelims)) {
-    layer_names_append(&layerIDs, tok);
+    LIST_APPEND(&layerIDs, tok);
   }
 
-  assert(layer_names_size(&layerIDs) - 1 <= INT_MAX);
-  int ntok = (int)(layer_names_size(&layerIDs) - 1);
+  assert(LIST_SIZE(&layerIDs) - 1 <= INT_MAX);
+  int ntok = (int)(LIST_SIZE(&layerIDs) - 1);
 
   // if we found layers, save them for later reference
-  if (layer_names_size(&layerIDs) > 1) {
-    layer_names_append(&layerIDs, NULL); // add a terminating entry
-    *out_layerIDs = layer_names_detach(&layerIDs);
+  if (LIST_SIZE(&layerIDs) > 1) {
+    LIST_APPEND(&layerIDs, NULL); // add a terminating entry
+    size_t count = 0;
+    LIST_DETACH(&layerIDs, out_layerIDs, &count);
   }
-  layer_names_free(&layerIDs);
+  LIST_FREE(&layerIDs);
 
   return ntok;
 }

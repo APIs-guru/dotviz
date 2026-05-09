@@ -375,7 +375,7 @@ typedef struct {
 static void freeSeg(colorseg_t seg) { free(seg.color); }
 
 /* Sum of segment sizes should add to 1 */
-DEFINE_LIST_WITH_DTOR(colorsegs, colorseg_t, freeSeg)
+typedef LIST(colorseg_t) colorsegs_t;
 
 /* Find semicolon in s, replace with '\0'.
  * Convert remainder to float v.
@@ -421,7 +421,7 @@ static double getSegLen(strview_t *s) {
  * freed before returning.
  */
 static int parseSegs(const char *clrs, colorsegs_t *psegs) {
-  colorsegs_t segs = {0};
+  colorsegs_t segs = {.dtor = freeSeg};
   double v, left = 1;
   static atomic_flag warned;
   int rval = 0;
@@ -443,7 +443,7 @@ static int parseSegs(const char *clrs, colorsegs_t *psegs) {
         s.hasFraction = true;
       if (color.size > 0)
         s.color = strview_str(color);
-      colorsegs_append(&segs, s);
+      LIST_APPEND(&segs, s);
     } else {
       if (!atomic_flag_test_and_set(&warned)) {
         agerrorf("Illegal value in \"%s\" color attribute; float expected "
@@ -452,7 +452,7 @@ static int parseSegs(const char *clrs, colorsegs_t *psegs) {
         rval = 2;
       } else
         rval = 1;
-      colorsegs_free(&segs);
+      LIST_FREE(&segs);
       return rval;
     }
     if (AEQ0(left)) {
@@ -465,27 +465,27 @@ static int parseSegs(const char *clrs, colorsegs_t *psegs) {
   if (left > 0) {
     /* count zero segments */
     size_t nseg = 0;
-    for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
-      if (colorsegs_get(&segs, i).t <= 0)
+    for (size_t i = 0; i < LIST_SIZE(&segs); ++i) {
+      if (LIST_GET(&segs, i).t <= 0)
         nseg++;
     }
     if (nseg > 0) {
       double delta = left / (double)nseg;
-      for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
-        colorseg_t *s = colorsegs_at(&segs, i);
+      for (size_t i = 0; i < LIST_SIZE(&segs); ++i) {
+        colorseg_t *s = LIST_AT(&segs, i);
         if (s->t <= 0)
           s->t = delta;
       }
     } else {
-      colorsegs_back(&segs)->t += left;
+      LIST_BACK(&segs)->t += left;
     }
   }
 
   // terminate at the last positive segment
-  while (!colorsegs_is_empty(&segs)) {
-    if (colorsegs_back(&segs)->t > 0)
+  while (!LIST_IS_EMPTY(&segs)) {
+    if (LIST_BACK(&segs)->t > 0)
       break;
-    colorseg_t discard = colorsegs_pop_back(&segs);
+    colorseg_t discard = LIST_POP_BACK(&segs);
     freeSeg(discard);
   }
 
@@ -521,15 +521,15 @@ int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
     svg_set_penwidth(obj, THIN_LINE);
 
   angle0 = 0;
-  for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
-    const colorseg_t s = colorsegs_get(&segs, i);
+  for (size_t i = 0; i < LIST_SIZE(&segs); ++i) {
+    const colorseg_t s = LIST_GET(&segs, i);
     if (s.color == NULL)
       break;
     if (s.t <= 0)
       continue;
     svg_set_fillcolor(obj, s.color);
 
-    if (i + 1 == colorsegs_size(&segs))
+    if (i + 1 == LIST_SIZE(&segs))
       angle1 = 2 * M_PI;
     else
       angle1 = angle0 + 2 * M_PI * s.t;
@@ -541,7 +541,7 @@ int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
 
   if (save_penwidth > THIN_LINE)
     svg_set_penwidth(obj, save_penwidth);
-  colorsegs_free(&segs);
+  LIST_FREE(&segs);
   return rv;
 }
 
@@ -580,14 +580,14 @@ int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
 
   if (save_penwidth > THIN_LINE)
     svg_set_penwidth(obj, THIN_LINE);
-  for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
-    const colorseg_t s = colorsegs_get(&segs, i);
+  for (size_t i = 0; i < LIST_SIZE(&segs); ++i) {
+    const colorseg_t s = LIST_GET(&segs, i);
     if (s.color == NULL)
       break;
     if (s.t <= 0)
       continue;
     svg_set_fillcolor(obj, s.color);
-    if (i + 1 == colorsegs_size(&segs))
+    if (i + 1 == LIST_SIZE(&segs))
       pts[1].x = pts[2].x = lastx;
     else
       pts[1].x = pts[2].x = pts[0].x + xdelta * (s.t);
@@ -596,7 +596,7 @@ int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
   }
   if (save_penwidth > THIN_LINE)
     svg_set_penwidth(obj, save_penwidth);
-  colorsegs_free(&segs);
+  LIST_FREE(&segs);
   return rv;
 }
 
@@ -624,13 +624,13 @@ static void map_label(obj_state_t *obj, textlabel_t *lab) {
   rect2poly(p);
 }
 
-DEFINE_LIST(points, pointf)
+typedef LIST(pointf) points_t;
 
 static UNUSED void psmapOutput(const points_t *ps, size_t start, size_t n) {
-  const pointf first = points_get(ps, start);
+  const pointf first = LIST_GET(ps, start);
   fprintf(stdout, "newpath %f %f moveto\n", first.x, first.y);
   for (size_t i = start + 1; i < start + n; ++i) {
-    const pointf pt = points_get(ps, i);
+    const pointf pt = LIST_GET(ps, i);
     fprintf(stdout, "%f %f lineto\n", pt.x, pt.y);
   }
   fprintf(stdout, "closepath stroke\n");
@@ -649,7 +649,7 @@ typedef struct segitem_s {
     (L)->p = P;                                                                \
   }
 
-DEFINE_LIST(pbs_size, size_t)
+typedef LIST(size_t) pbs_size_t;
 
 static bool is_natural_number(const char *sstr) {
   const char *str = sstr;
@@ -718,7 +718,7 @@ static bool selectedlayer(SafeLayer *safe_layer, char *spec) {
                        safe_layer->safe_job->numLayers, spec);
 }
 
-DEFINE_LIST(layer_names, char *)
+typedef LIST(char *) layer_names_t;
 
 static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   pointf *pts = gv_calloc(numpts, sizeof(pointf));
@@ -1207,8 +1207,8 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
     left = 1;
     bz = ED_spl(e)->list[i];
     first = 1;
-    for (size_t j = 0; j < colorsegs_size(&segs); ++j) {
-      const colorseg_t s = colorsegs_get(&segs, j);
+    for (size_t j = 0; j < LIST_SIZE(&segs); ++j) {
+      const colorseg_t s = LIST_GET(&segs, j);
       if (s.color == NULL)
         break;
       if (AEQ0(s.t))
@@ -1242,8 +1242,8 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
      * Use local copy of penwidth to work around reset.
      */
     if (bz.sflag) {
-      svg_set_pencolor(obj, colorsegs_front(&segs)->color);
-      svg_set_fillcolor(obj, colorsegs_front(&segs)->color);
+      svg_set_pencolor(obj, LIST_FRONT(&segs)->color);
+      svg_set_fillcolor(obj, LIST_FRONT(&segs)->color);
       arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                 bz.sflag);
     }
@@ -1256,7 +1256,7 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
     if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
       svg_set_style(obj, styles);
   }
-  colorsegs_free(&segs);
+  LIST_FREE(&segs);
   return 0;
 }
 
@@ -2287,35 +2287,35 @@ char **parse_style(char *s) {
  * Note that memory for clrs must be freed by calling function.
  */
 bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
-  colorsegs_t segs = {0};
+  colorsegs_t segs = {.dtor = freeSeg};
   int rv;
   clrs[0] = NULL;
   clrs[1] = NULL;
 
   rv = parseSegs(colorlist, &segs);
-  if (rv || colorsegs_size(&segs) < 2 ||
-      colorsegs_front(&segs)->color == NULL) {
-    colorsegs_free(&segs);
+  if (rv || LIST_SIZE(&segs) < 2 ||
+      LIST_FRONT(&segs)->color == NULL) {
+    LIST_FREE(&segs);
     return false;
   }
 
-  if (colorsegs_size(&segs) > 2)
+  if (LIST_SIZE(&segs) > 2)
     agwarningf(
         "More than 2 colors specified for a gradient - ignoring remaining\n");
 
-  clrs[0] = gv_strdup(colorsegs_front(&segs)->color);
-  if (colorsegs_get(&segs, 1).color) {
-    clrs[1] = gv_strdup(colorsegs_get(&segs, 1).color);
+  clrs[0] = gv_strdup(LIST_FRONT(&segs)->color);
+  if (LIST_GET(&segs, 1).color) {
+    clrs[1] = gv_strdup(LIST_GET(&segs, 1).color);
   }
 
-  if (colorsegs_front(&segs)->hasFraction)
-    *frac = colorsegs_front(&segs)->t;
-  else if (colorsegs_get(&segs, 1).hasFraction)
-    *frac = 1 - colorsegs_get(&segs, 1).t;
+  if (LIST_FRONT(&segs)->hasFraction)
+    *frac = LIST_FRONT(&segs)->t;
+  else if (LIST_GET(&segs, 1).hasFraction)
+    *frac = 1 - LIST_GET(&segs, 1).t;
   else
     *frac = 0;
 
-  colorsegs_free(&segs);
+  LIST_FREE(&segs);
   return true;
 }
 
