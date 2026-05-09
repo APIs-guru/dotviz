@@ -194,6 +194,6 @@ const RenderOutput = struct {
 
 pub const RenderResponse = struct {
     status: RenderStatus,
-    errors: []const RenderError = &.{},
+    diagnostics: []const RenderError = &.{},
     output: ?RenderOutput,
 };

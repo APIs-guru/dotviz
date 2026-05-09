@@ -1,10 +1,5 @@
 import type { Attributes, Graph, Subgraph } from './graph.d.ts';
-
-export interface OverrideAttributes {
-  readonly graphAttributes: Readonly<Attributes> | undefined;
-  readonly nodeAttributes: Readonly<Attributes> | undefined;
-  readonly edgeAttributes: Readonly<Attributes> | undefined;
-}
+import type { OverrideAttributes } from './viz.ts';
 
 interface NormalizedGraphConfig {
   readonly name: string | undefined;

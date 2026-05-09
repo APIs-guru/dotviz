@@ -22,7 +22,10 @@ addEventListener(
     const { id, input, options } = event.data;
     const response: RenderResponse = {
       id,
-      result: viz.render(input, options),
+      result:
+        typeof input === 'string'
+          ? viz.renderDot(input, options)
+          : viz.renderGraph(input, options),
     };
     postMessage(response);
   },

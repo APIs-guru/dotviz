@@ -11,7 +11,7 @@ describe('Viz', () => {
   describe('render', () => {
     it('renders valid input with a single graph', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph a { }');
+      const result = viz.renderDot('graph a { }');
 
       expectDot(result).toMatchInlineSnapshot(`
         graph a {
@@ -23,7 +23,7 @@ describe('Viz', () => {
 
     it('renders valid input with multiple graphs', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph a { } graph b { }');
+      const result = viz.renderDot('graph a { } graph b { }');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Multiple graphs found. Using the first one.
@@ -38,20 +38,20 @@ describe('Viz', () => {
     it('each call renders the first graph in input', async () => {
       const viz = await VizPackage.instance();
       expect(
-        viz.render('graph a { } graph b { } graph c { }').output?.dot,
+        viz.renderDot('graph a { } graph b { } graph c { }').output?.dot,
       ).toMatch(/graph a {/);
-      expect(viz.render('graph d { } graph e { }').output?.dot).toMatch(
+      expect(viz.renderDot('graph d { } graph e { }').output?.dot).toMatch(
         /graph d {/,
       );
-      expect(viz.render('graph f { }').output?.dot).toMatch(/graph f {/);
+      expect(viz.renderDot('graph f { }').output?.dot).toMatch(/graph f {/);
     });
 
     it('accepts the format option, defaulting to dot', async () => {
       const viz = await VizPackage.instance();
 
-      expect(viz.render('digraph { a -> b }')).toStrictEqual({
+      expect(viz.renderDot('digraph { a -> b }')).toStrictEqual({
         status: 'success',
-        errors: [],
+        diagnostics: [],
         output: {
           dot: expect.stringMatching(/pos="/) as unknown,
           svg: undefined,
@@ -59,10 +59,10 @@ describe('Viz', () => {
       });
 
       expect(
-        viz.render('digraph { a -> b }', { formats: ['dot'] }),
+        viz.renderDot('digraph { a -> b }', { formats: ['dot'] }),
       ).toStrictEqual({
         status: 'success',
-        errors: [],
+        diagnostics: [],
         output: {
           dot: expect.stringMatching(/pos="/) as unknown,
           svg: undefined,
@@ -70,10 +70,10 @@ describe('Viz', () => {
       });
 
       expect(
-        viz.render('digraph { a -> b }', { formats: ['svg'] }),
+        viz.renderDot('digraph { a -> b }', { formats: ['svg'] }),
       ).toStrictEqual({
         status: 'success',
-        errors: [],
+        diagnostics: [],
         output: {
           dot: undefined,
           svg: expect.stringMatching(/<svg/) as unknown,
@@ -83,8 +83,8 @@ describe('Viz', () => {
 
     it('accepts yInvert option', async () => {
       const viz = await VizPackage.instance();
-      const result1 = viz.render('graph { a }', { yInvert: false });
-      const result2 = viz.render('graph { a }', { yInvert: true });
+      const result1 = viz.renderDot('graph { a }', { yInvert: false });
+      const result2 = viz.renderDot('graph { a }', { yInvert: true });
 
       expectDot(result1).toMatchInlineSnapshot(`
         graph {
@@ -109,10 +109,12 @@ describe('Viz', () => {
 
     it('accepts default attributes', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph {}', {
-        graphAttributes: { a: 123 },
-        nodeAttributes: { b: false },
-        edgeAttributes: { c: 'test' },
+      const result = viz.renderDot('graph {}', {
+        overrideAttributes: {
+          graphAttributes: { a: 123 },
+          nodeAttributes: { b: false },
+          edgeAttributes: { c: 'test' },
+        },
       });
 
       expectDot(result).toMatchInlineSnapshot(`
@@ -130,9 +132,11 @@ describe('Viz', () => {
 
     it('default attribute values can be html strings', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph {}', {
-        nodeAttributes: {
-          label: { html: '<b>test</b>' },
+      const result = viz.renderDot('graph {}', {
+        overrideAttributes: {
+          nodeAttributes: {
+            label: { html: '<b>test</b>' },
+          },
         },
       });
 
@@ -146,7 +150,7 @@ describe('Viz', () => {
 
     it('returns an error for empty input', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('');
+      const result = viz.renderDot('');
 
       expectFailureResult(result).toMatchInlineSnapshot(
         `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
@@ -155,7 +159,7 @@ describe('Viz', () => {
 
     it('returns error messages for invalid input', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('invalid');
+      const result = viz.renderDot('invalid');
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
@@ -167,7 +171,7 @@ describe('Viz', () => {
 
     it('returns error messages for invalid options', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('digraph {a -> b}', {
+      const result = viz.renderDot('digraph {a -> b}', {
         // @ts-expect-error invalid value for test
         yInvert: 'bad value',
       });
@@ -179,8 +183,8 @@ describe('Viz', () => {
 
     it('returns only the error messages emitted for the current call', async () => {
       const viz = await VizPackage.instance();
-      const result1 = viz.render('invalid1');
-      const result2 = viz.render('invalid2');
+      const result1 = viz.renderDot('invalid1');
+      const result2 = viz.renderDot('invalid2');
 
       expectFailureResult(result1).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid1', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
@@ -199,7 +203,7 @@ describe('Viz', () => {
 
     it('renders valid input and includes error messages when followed by a graph with a syntax error', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph a { } graph {');
+      const result = viz.renderDot('graph a { } graph {');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         ParserError: Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph.
@@ -218,7 +222,7 @@ describe('Viz', () => {
 
     it('returns error messages for layout errors', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render(
+      const result = viz.renderDot(
         'graph a { layout=invalid } graph b { layout=dot }',
       );
 
@@ -231,7 +235,9 @@ describe('Viz', () => {
 
     it('returns error message for conflicting layout', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph a { layout=dot }', { engine: 'circo' });
+      const result = viz.renderDot('graph a { layout=dot }', {
+        engine: 'circo',
+      });
 
       expectFailureResult(result).toMatchInlineSnapshot(
         `RenderingBackendError: Engine mismatch: layout attribute in graph ("dot") conflicts with engine option ("circo"). Remove one or make them match.`,
@@ -240,7 +246,7 @@ describe('Viz', () => {
 
     it('renders graphs with syntax warnings', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph a { x=1.2.3=y } graph b { }');
+      const result = viz.renderDot('graph a { x=1.2.3=y } graph b { }');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         ParserWarning: Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
@@ -262,7 +268,7 @@ describe('Viz', () => {
 
     it('returns both warnings and errors', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph { layout=invalid; x=1.2.3=y }');
+      const result = viz.renderDot('graph { layout=invalid; x=1.2.3=y }');
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserWarning: Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
@@ -276,7 +282,7 @@ describe('Viz', () => {
 
     it('returns error messages printed to stderr', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph { a [label=図] }');
+      const result = viz.renderDot('graph { a [label=図] }');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Warning: no value for width of non-ASCII character 229. Falling back to width of space character
@@ -294,7 +300,7 @@ describe('Viz', () => {
 
     it('returns an error that uses AGPREV with the correct level', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph { _background=123 }');
+      const result = viz.renderDot('graph { _background=123 }');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Could not parse "_background" attribute in graph %1
@@ -312,7 +318,7 @@ describe('Viz', () => {
 
     it('the graph is read with the default node label set', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph { a; b[label=test] }');
+      const result = viz.renderDot('graph { a; b[label=test] }');
 
       expectDot(result).toMatchInlineSnapshot(`
         graph {
@@ -331,7 +337,7 @@ describe('Viz', () => {
 
     it('accepts an images option', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph { a[image="test.png"] }', {
+      const result = viz.renderDot('graph { a[image="test.png"] }', {
         images: { 'test.png': { width: 300, height: 200 } },
       });
 
@@ -349,7 +355,7 @@ describe('Viz', () => {
 
     it('the same image can be used twice', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render(
+      const result = viz.renderDot(
         'graph { a[image="test.png"]; b[image="test.png"] }',
         { images: { 'test.png': { width: 300, height: 200 } } },
       );
@@ -372,7 +378,7 @@ describe('Viz', () => {
 
     it('accepts URLs for image names', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render(
+      const result = viz.renderDot(
         'graph { a[image="http://example.com/test.png"] }',
         {
           images: {
