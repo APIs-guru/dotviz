@@ -245,16 +245,6 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     defer arena.deinit();
     const arena_allocator = arena.allocator();
 
-    errors_strings = .{
-        .allocator = arena_allocator,
-        .array_list = .empty,
-    };
-
-    // Reset errors
-    _ = graphviz.agseterrf(viz_errorf);
-    _ = graphviz.agseterr(graphviz.AGWARN);
-    _ = graphviz.agreseterrors();
-
     const json_string = json_bytes[0..size];
     defer wasm_allocator.free(json_string);
 
@@ -273,19 +263,25 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         .{},
     ) catch |err| {
         const json_error = vizjs_types.JSONParseError.init(diag, err, json_string);
-        var errors = parseAgerrMessages(arena_allocator);
-        errors.append(arena_allocator, .{
-            .level = .@"error",
-            .message = .{
-                .err = json_error,
-            },
-        }) catch @panic("cannot append error");
         return stringifyResponseJSON(.{
             .status = .failure,
-            .errors = errors.items,
+            .diagnostics = &[_]vizjs_types.RenderError{.{
+                .level = .@"error",
+                .message = .{ .err = json_error },
+            }},
             .output = null,
         });
     };
+
+    errors_strings = .{
+        .allocator = arena_allocator,
+        .array_list = .empty,
+    };
+
+    // Reset errors
+    _ = graphviz.agseterrf(viz_errorf);
+    _ = graphviz.agseterr(graphviz.AGWARN);
+    _ = graphviz.agreseterrors();
 
     g_image_map = request.images;
 
@@ -298,7 +294,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     if (graph == null) {
         return stringifyResponseJSON(.{
             .status = .failure,
-            .errors = parseAgerrMessages(arena_allocator).items,
+            .diagnostics = parseAgerrMessages(arena_allocator).items,
             .output = null,
         });
     }
@@ -333,7 +329,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     const responseJSON = stringifyResponseJSON(.{
         .status = .success,
-        .errors = parseAgerrMessages(arena_allocator).items,
+        .diagnostics = parseAgerrMessages(arena_allocator).items,
         .output = .{
             .dot = responseDot,
             .svg = responseSvg,

@@ -4,9 +4,8 @@ import {
   type NormalizedEdgeEndpoint,
   NormalizedGraph,
   NormalizedSubgraph,
-  type OverrideAttributes,
 } from './normalize-graph.ts';
-import type { RenderError } from './viz.ts';
+import type { Diagnostic, OverrideAttributes } from './viz.ts';
 
 // To make parser internally consistent, all characters are read as UTF-16:
 /* eslint-disable unicorn/prefer-code-point */
@@ -508,7 +507,7 @@ interface NodeID {
   readonly compass: ParsedName | undefined;
 }
 
-class ParserError implements RenderError {
+class ParserError implements Diagnostic {
   readonly level = 'error' as const;
   readonly message: string;
   readonly location: Readonly<Location>;
@@ -529,7 +528,7 @@ class ParserError implements RenderError {
   }
 }
 
-class ParserWarning implements RenderError {
+class ParserWarning implements Diagnostic {
   readonly level = 'warning' as const;
   readonly message: string;
   readonly location: Readonly<Location>;

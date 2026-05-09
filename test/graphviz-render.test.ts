@@ -5,7 +5,11 @@ import { describe, expect, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
-import { expectDot, expectErrors, expectSvg } from './util/render-result.ts';
+import {
+  expectDiagnostics,
+  expectDot,
+  expectSvg,
+} from './util/render-result.ts';
 
 const __dirname = import.meta.dirname;
 function readSnapshot(filepath: string): string {
@@ -16,7 +20,7 @@ describe('Viz', () => {
   describe('render', () => {
     it('comment attribute', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render(
+      const result = viz.renderDot(
         `digraph {
           comment = "I am a graph"
           A[comment = "I am node A"]
@@ -32,7 +36,7 @@ describe('Viz', () => {
     });
     it('layers support', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render(
+      const result = viz.renderDot(
         `digraph G {
          	layers="local:pvt:test:new:ofc";
 
@@ -51,10 +55,10 @@ describe('Viz', () => {
           dot: expect.any(String) as unknown,
           svg: expect.any(String) as unknown,
         },
-        errors: expect.any(Array) as unknown[],
+        diagnostics: expect.any(Array) as unknown[],
       });
 
-      expectErrors(result).toMatchInlineSnapshot(
+      expectDiagnostics(result).toMatchInlineSnapshot(
         `RenderingBackendWarning: layers not supported in dot output`,
       );
 
@@ -92,7 +96,7 @@ describe('Viz', () => {
     });
     it('_background attribute', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render(
+      const result = viz.renderDot(
         `digraph G {
           _background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36";
           a -> b
@@ -122,9 +126,12 @@ describe('Viz', () => {
   });
   it('multiple pages in ps, one in svg', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.render(readSnapshot('./snapshots/multiple_pages.gv'), {
-      formats: ['svg'],
-    });
+    const result = viz.renderDot(
+      readSnapshot('./snapshots/multiple_pages.gv'),
+      {
+        formats: ['svg'],
+      },
+    );
 
     await expectSvg(result).toMatchFileSnapshot(
       './snapshots/multiple_pages.svg',
@@ -132,7 +139,7 @@ describe('Viz', () => {
   });
   it('circo layout', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.render(readSnapshot('./snapshots/circo.gv'), {
+    const result = viz.renderDot(readSnapshot('./snapshots/circo.gv'), {
       formats: ['dot', 'svg'],
       engine: 'circo',
     });

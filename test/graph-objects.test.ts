@@ -7,7 +7,7 @@ describe('Viz', () => {
   describe('rendering graph objects', () => {
     it('empty graph', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render({});
+      const result = viz.renderGraph({});
 
       expectDot(result).toMatchInlineSnapshot(`
         digraph {
@@ -19,7 +19,7 @@ describe('Viz', () => {
 
     it('attributes in options override options in input', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render(
+      const result = viz.renderGraph(
         {
           graphAttributes: { testGraph: 'valueGraphBad' },
           nodeAttributes: { testNode: 'valueNodeBad' },
@@ -30,9 +30,11 @@ describe('Viz', () => {
           edges: [{ tail: 'a', head: 'a' }],
         },
         {
-          graphAttributes: { testGraph: 'valueGraph' },
-          nodeAttributes: { testNode: 'valueNode' },
-          edgeAttributes: { shape: 'valueEdge' },
+          overrideAttributes: {
+            graphAttributes: { testGraph: 'valueGraph' },
+            nodeAttributes: { testNode: 'valueNode' },
+            edgeAttributes: { shape: 'valueEdge' },
+          },
         },
       );
 
@@ -57,7 +59,7 @@ describe('Viz', () => {
 
     it('just edges', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render({
+      const result = viz.renderGraph({
         edges: [{ tail: 'a', head: 'b' }],
       });
 
@@ -78,7 +80,7 @@ describe('Viz', () => {
 
     it('undirected graph', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render({
+      const result = viz.renderGraph({
         directed: false,
         edges: [{ tail: 'a', head: 'b' }],
       });
@@ -100,7 +102,7 @@ describe('Viz', () => {
 
     it('html attributes', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render({
+      const result = viz.renderGraph({
         nodes: [
           {
             name: 'a',
@@ -122,7 +124,7 @@ describe('Viz', () => {
 
     it('default attributes, nodes, edges, and nested subgraphs', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render({
+      const result = viz.renderGraph({
         graphAttributes: { rankdir: 'LR' },
         nodeAttributes: { shape: 'circle' },
         nodes: [
@@ -197,7 +199,7 @@ describe('Viz', () => {
   });
   it('html attributes with ports', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.render({
+    const result = viz.renderGraph({
       name: 'structs',
       nodeAttributes: { shape: 'plaintext' },
       nodes: [
@@ -302,7 +304,7 @@ describe('Viz', () => {
   });
   it('override default attributes', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.render({
+    const result = viz.renderGraph({
       nodeAttributes: { color: 'blue' },
       nodes: [{ name: 'a', attributes: { color: 'red' } }, { name: 'b' }],
     });
@@ -325,7 +327,7 @@ describe('Viz', () => {
   });
   it('applies subgraph attributes correctly', async () => {
     const viz = await VizPackage.instance();
-    const result = viz.render({
+    const result = viz.renderGraph({
       subgraphs: [
         {
           graphAttributes: { color: 'red' },

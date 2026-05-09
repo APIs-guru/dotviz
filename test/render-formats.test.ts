@@ -2,29 +2,25 @@ import { describe, expect, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
-import { expectFailureResult } from './util/render-result.ts';
+import {
+  expectDot,
+  expectFailureResult,
+  expectSvg,
+} from './util/render-result.ts';
 
 describe('Viz', () => {
   describe('renderFormats', () => {
     it('renders multiple output formats', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph a { }', { formats: ['dot', 'svg'] });
+      const result = viz.renderDot('graph a { }', { formats: ['dot', 'svg'] });
 
-      expect(result).toStrictEqual({
-        status: 'success',
-        output: {
-          dot: expect.any(String) as unknown,
-          svg: expect.any(String) as unknown,
-        },
-        errors: [],
-      });
-      expectString(result.output?.dot).toMatchInlineSnapshot(`
+      expectDot(result).toMatchInlineSnapshot(`
         graph a {
         	graph [bb="0,0,0,0"];
         	node [label="\\N"];
         }
       `);
-      expectString(result.output?.svg).toMatchInlineSnapshot(`
+      expectSvg(result).toMatchInlineSnapshot(`
         <?xml version="1.0" encoding="UTF-8" standalone="no"?>
         <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
          "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -43,7 +39,7 @@ describe('Viz', () => {
 
     it('renders with the same format twice', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph a { }', { formats: ['dot', 'dot'] });
+      const result = viz.renderDot('graph a { }', { formats: ['dot', 'dot'] });
 
       expect(result).toStrictEqual({
         status: 'success',
@@ -51,7 +47,7 @@ describe('Viz', () => {
           dot: expect.any(String) as unknown,
           svg: undefined,
         },
-        errors: [],
+        diagnostics: [],
       });
       expectString(result.output?.dot).toMatchInlineSnapshot(`
         graph a {
@@ -63,7 +59,7 @@ describe('Viz', () => {
 
     it('renders with an empty array of formats', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('graph a { }', { formats: [] });
+      const result = viz.renderDot('graph a { }', { formats: [] });
 
       expect(result).toStrictEqual({
         status: 'success',
@@ -71,13 +67,13 @@ describe('Viz', () => {
           dot: undefined,
           svg: undefined,
         },
-        errors: [],
+        diagnostics: [],
       });
     });
 
     it('returns error messages for invalid input', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('invalid', { formats: ['dot', 'svg'] });
+      const result = viz.renderDot('invalid', { formats: ['dot', 'svg'] });
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
@@ -89,7 +85,7 @@ describe('Viz', () => {
 
     it('returns error messages for invalid input and an empty array of formats', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.render('invalid', { formats: [] });
+      const result = viz.renderDot('invalid', { formats: [] });
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.

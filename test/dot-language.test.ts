@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 import * as DotVizPackage from '../src/index.ts';
 import { dedent } from './util/dedent.ts';
 import {
+  expectDiagnostics,
   expectDot,
   expectDotWithWarnings,
-  expectErrors,
   expectFailureResult,
-  stringifyErrors,
+  stringifyDiagnostics,
 } from './util/render-result.ts';
 import { USE_VIZ_JS } from './util/use-viz-js.ts';
 
@@ -16,14 +16,14 @@ const vizJS = USE_VIZ_JS ? await VizJSPackage.instance() : undefined;
 const dotviz = await DotVizPackage.instance();
 
 function renderString(dot: string): DotVizPackage.RenderResult {
-  const dotvizResult = dotviz.render(dot);
+  const dotvizResult = dotviz.renderDot(dot);
   /* v8 ignore start -- run as separate step */
   if (vizJS) {
     const vizJSResult = vizJS.render(dot);
     expect({
       status: dotvizResult.status,
       output: dotvizResult.output?.dot,
-      errors: dotvizResult.errors.map((err) => ({
+      errors: dotvizResult.diagnostics.map((err) => ({
         level: err.level,
         message: err.message,
       })),
@@ -238,7 +238,7 @@ describe('Dot language support', () => {
     ] satisfies ([string, string] | [string])[])(
       'value $0',
       ([input, output]) => {
-        const result = dotviz.render(`graph { test = ${input} } `);
+        const result = dotviz.renderDot(`graph { test = ${input} } `);
         expect(result.output?.dot?.trimEnd()).toStrictEqual(dedent`
           graph {
           	graph [bb="0,0,0,0",
@@ -345,12 +345,12 @@ describe('Dot language support', () => {
         a -> a
       }
     `;
-    const options = {
+    const overrideAttributes = {
       graphAttributes: { testGraph: 'valueGraph' },
       nodeAttributes: { testNode: 'valueNode' },
       edgeAttributes: { shape: 'valueEdge' },
     };
-    const result = dotviz.render(dot, options);
+    const result = dotviz.renderDot(dot, { overrideAttributes });
 
     expectDot(result).toMatchInlineSnapshot(`
       digraph {
@@ -886,7 +886,7 @@ describe('Dot language support', () => {
     it.for(['', '   \n  ', '// line comment', '/* block comment */'])(
       'value $0',
       (dot) => {
-        const result = dotviz.render(dot);
+        const result = dotviz.renderDot(dot);
         expectFailureResult(result).toMatchInlineSnapshot(
           `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
         );
@@ -895,7 +895,7 @@ describe('Dot language support', () => {
   });
 
   it('error on missing graph at the beginning of file', () => {
-    const result = dotviz.render('test');
+    const result = dotviz.renderDot('test');
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected identifier 'test', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
 
@@ -905,7 +905,7 @@ describe('Dot language support', () => {
   });
 
   it('error on graph without statements', () => {
-    const result = dotviz.render('graph // missing body');
+    const result = dotviz.renderDot('graph // missing body');
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected end of file, expected '{'.
 
@@ -915,7 +915,7 @@ describe('Dot language support', () => {
   });
 
   it('error on using square brackets for graph definition', () => {
-    const result = dotviz.render('graph []');
+    const result = dotviz.renderDot('graph []');
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected '[', expected '{'.
 
@@ -925,13 +925,13 @@ describe('Dot language support', () => {
   });
 
   it('warns on ambiguous token sequences', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       digraph-1 {
         version=2.0.0
         hex_number=0x5f
       }
     `);
-    expectErrors(result).toMatchInlineSnapshot(`
+    expectDiagnostics(result).toMatchInlineSnapshot(`
       ParserWarning: Ambiguous token sequence: 'digraph-1' will be split into keyword 'digraph' and number '-1'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
 
       1 | digraph-1 {
@@ -955,7 +955,7 @@ describe('Dot language support', () => {
   });
 
   it('error on using keyword as graph name', () => {
-    const result = dotviz.render('graph subgraph {}');
+    const result = dotviz.renderDot('graph subgraph {}');
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected reserved keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".
 
@@ -965,7 +965,7 @@ describe('Dot language support', () => {
   });
 
   it('error on using HTML string as a graph name', () => {
-    const result = dotviz.render('graph <SomeHTML> {}');
+    const result = dotviz.renderDot('graph <SomeHTML> {}');
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: HTML string as graph name is not supported. If you want to use it as an identifier, enclose it in quotes: "<SomeHTML>".
 
@@ -1003,8 +1003,8 @@ describe('Dot language support', () => {
         `HTML string <very very very ve...>`,
       ],
     ])('token $0', ([token, tokenDebugMessage]) => {
-      const result = dotviz.render('graph name ' + token);
-      expect(stringifyErrors(result.errors)).toStrictEqual(dedent`
+      const result = dotviz.renderDot('graph name ' + token);
+      expect(stringifyDiagnostics(result.diagnostics)).toStrictEqual(dedent`
         ParserError: Unexpected ${tokenDebugMessage}, expected '{'.
 
         1 | graph name ${token}
@@ -1014,7 +1014,7 @@ describe('Dot language support', () => {
   });
 
   it('error on invalid syntax in graph statement list', () => {
-    const result = dotviz.render('graph { -- }');
+    const result = dotviz.renderDot('graph { -- }');
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected '--', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
@@ -1024,7 +1024,7 @@ describe('Dot language support', () => {
   });
 
   it('error on invalid attributes syntax', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         node {}
       }
@@ -1040,7 +1040,7 @@ describe('Dot language support', () => {
   });
 
   it('error on invalid syntax inside attribute list', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         node [ -> ]
       }
@@ -1056,7 +1056,7 @@ describe('Dot language support', () => {
   });
 
   it('error on unterminated block comment', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         test=/* never finishes
       }
@@ -1072,7 +1072,7 @@ describe('Dot language support', () => {
   });
 
   it('error on unterminated string', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         test="never finishes
       }
@@ -1088,7 +1088,7 @@ describe('Dot language support', () => {
   });
 
   it('error on unterminated html', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         test=<never finishes
       }
@@ -1104,7 +1104,7 @@ describe('Dot language support', () => {
   });
 
   it('error on invalid string concatenation', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         test="string" + "and" + id
       }
@@ -1121,7 +1121,7 @@ describe('Dot language support', () => {
   });
 
   it('error on unexpected port in node statement', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         a:bad_port
       }
@@ -1137,7 +1137,7 @@ describe('Dot language support', () => {
   });
 
   it('error on invalid compass point', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         a:port:bad_point
       }
@@ -1153,7 +1153,7 @@ describe('Dot language support', () => {
   });
 
   it('error on using directed edges in an undirected graph', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       graph {
         a -> a
       }
@@ -1169,7 +1169,7 @@ describe('Dot language support', () => {
   });
 
   it('error on using undirected edges in a directed graph', () => {
-    const result = dotviz.render(dedent`
+    const result = dotviz.renderDot(dedent`
       digraph {
         a -- a
       }
@@ -1186,12 +1186,12 @@ describe('Dot language support', () => {
 
   describe('error on invalid syntax inside subgraph', () => {
     it.for(['&', '/', '-', '.'])('character $0', (badChar) => {
-      const result = dotviz.render(dedent`
+      const result = dotviz.renderDot(dedent`
         digraph {
           { ${badChar} }
         }
       `);
-      expect(stringifyErrors(result.errors)).toStrictEqual(dedent`
+      expect(stringifyDiagnostics(result.diagnostics)).toStrictEqual(dedent`
         ParserError: Unexpected character '${badChar}', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
         1 | digraph {
@@ -1203,7 +1203,7 @@ describe('Dot language support', () => {
   });
 
   it('error on invalid syntax in named subgraph definition', () => {
-    const result = dotviz.render(`
+    const result = dotviz.renderDot(`
       graph {
         subgraph name <bad>
       }
@@ -1220,7 +1220,9 @@ describe('Dot language support', () => {
 
   it('error on macro name syntax', () => {
     // `dot` accepts the deprecated macro-name syntax with a warning and ignores the name.
-    const result = dotviz.render('digraph { node my_template = [shape=box] }');
+    const result = dotviz.renderDot(
+      'digraph { node my_template = [shape=box] }',
+    );
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected identifier 'my_template', expected '['.
 
@@ -1231,7 +1233,7 @@ describe('Dot language support', () => {
 
   describe('error on HTML string as names', () => {
     it('node name', () => {
-      const result = dotviz.render('digraph { <foo> [x=1] }');
+      const result = dotviz.renderDot('digraph { <foo> [x=1] }');
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: HTML string as node name is not supported. If you want to use it as an identifier, enclose it in quotes: "<foo>".
 
@@ -1241,7 +1243,7 @@ describe('Dot language support', () => {
     });
 
     it('attribute name', () => {
-      const result = dotviz.render('digraph { a [<color>=red] }');
+      const result = dotviz.renderDot('digraph { a [<color>=red] }');
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: HTML string as attribute name is not supported. If you want to use it as an identifier, enclose it in quotes: "<color>".
 
@@ -1253,7 +1255,7 @@ describe('Dot language support', () => {
 
   it('error on HTML + HTML string concatenation', () => {
     // `dot` silently loses HTML tagging on concatenation: <a>+<b> → plain "ab". We simply reject it.
-    const result = dotviz.render('digraph { label = <a> + <b> }');
+    const result = dotviz.renderDot('digraph { label = <a> + <b> }');
     expectFailureResult(result).toMatchInlineSnapshot(`
       ParserError: Unexpected '+', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
@@ -1294,7 +1296,7 @@ describe('Dot language support', () => {
     });
 
     it('correctly report error positions if dot contains unicode', () => {
-      const result = dotviz.render('graph { \u{1F600} [= }');
+      const result = dotviz.renderDot('graph { \u{1F600} [= }');
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected '=', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").
 

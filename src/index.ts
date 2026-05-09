@@ -9,9 +9,9 @@ export type {
 } from './graph.d.ts';
 export { instance } from './instance.ts';
 export {
+  type Diagnostic,
   type FailureResult,
   type ImageSize,
-  type RenderError,
   type RenderOptions,
   type RenderResult,
   type SuccessResult,
