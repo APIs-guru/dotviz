@@ -163,7 +163,7 @@ extern int htmldebug;
 #if ! defined HTMLSTYPE && ! defined HTMLSTYPE_IS_DECLARED
 union HTMLSTYPE
 {
-#line 180 "../../lib/common/htmlparse.y"
+#line 174 "../../lib/common/htmlparse.y"
 
   int    i;
   htmltxt_t*  txt;
@@ -190,13 +190,9 @@ int htmlparse (htmlscan_t *scanner);
 #line 36 "../../lib/common/htmlparse.y"
 
 
-DEFINE_LIST(sfont, textfont_t *)
-
 static inline void free_ti(textspan_t item) {
   free(item.str);
 }
-
-DEFINE_LIST_WITH_DTOR(textspans, textspan_t, free_ti)
 
 static inline void free_hi(htextspan_t item) {
   for (size_t i = 0; i < item.nitems; i++) {
@@ -205,15 +201,13 @@ static inline void free_hi(htextspan_t item) {
   free(item.items);
 }
 
-DEFINE_LIST_WITH_DTOR(htextspans, htextspan_t, free_hi)
-
 struct htmlparserstate_s {
   htmllabel_t* lbl;       /* Generated label */
   htmltbl_t*   tblstack;  /* Stack of tables maintained during parsing */
-  textspans_t  fitemList;
-  htextspans_t fspanList;
+  LIST(textspan_t)  fitemList;
+  LIST(htextspan_t) fspanList;
   agxbuf*      str;       /* Buffer for text */
-  sfont_t      fontstack;
+  LIST(textfont_t *)      fontstack;
   GVC_t*       gvc;
 };
 
@@ -241,6 +235,6 @@ struct htmlscan_s {
   htmlparserstate_t parser;
 };
 
-#line 245 "htmlparse.h"
+#line 239 "htmlparse.h"
 
 #endif /* !YY_HTML_HTMLPARSE_H_INCLUDED  */
