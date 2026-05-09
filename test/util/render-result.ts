@@ -1,30 +1,32 @@
 import { assert, expect } from 'vitest';
 
-import type {
-  MultipleRenderResult,
-  RenderError,
-  RenderResult,
-} from '../../src/index.ts';
+import type { RenderError, RenderResult } from '../../src/index.ts';
 import { RawString } from './raw-string-serializer.ts';
 
-export function expectSuccessResult(result: RenderResult) {
+export function expectDot(result: RenderResult) {
   const { output, errors } = result;
   expect(stringifyErrors(errors)).toStrictEqual('');
   expect(result).toStrictEqual({ status: 'success', output, errors });
-  assert.exists(output);
-  return expect(new RawString(output));
+  assert.exists(output?.dot);
+  return expect(new RawString(output.dot));
 }
 
-export function expectSuccessResultWithWarnings(result: RenderResult) {
+export function expectSvg(result: RenderResult) {
+  const { output, errors } = result;
+  expect(stringifyErrors(errors)).toStrictEqual('');
+  expect(result).toStrictEqual({ status: 'success', output, errors });
+  assert.exists(output?.svg);
+  return expect(new RawString(output.svg));
+}
+
+export function expectDotWithWarnings(result: RenderResult) {
   const { output, errors } = result;
   expect(result).toStrictEqual({ status: 'success', output, errors });
-  assert.exists(output);
-  return expect(new RawString(stringifyErrors(errors) + '\n\n' + output));
+  assert.exists(output?.dot);
+  return expect(new RawString(stringifyErrors(errors) + '\n\n' + output.dot));
 }
 
-export function expectFailureResult(
-  result: RenderResult | MultipleRenderResult,
-) {
+export function expectFailureResult(result: RenderResult) {
   expect(result).toStrictEqual({
     status: 'failure',
     output: undefined,
@@ -33,7 +35,7 @@ export function expectFailureResult(
   return expectErrors(result);
 }
 
-export function expectErrors(result: RenderResult | MultipleRenderResult) {
+export function expectErrors(result: RenderResult) {
   assert.isArray(result.errors);
   return expect(new RawString(stringifyErrors(result.errors)));
 }

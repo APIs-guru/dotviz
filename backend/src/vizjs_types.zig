@@ -121,7 +121,7 @@ pub const RenderRequest = struct {
     graph: Graph,
     renderDot: bool,
     renderSvg: bool,
-    engine: [:0]const u8,
+    engine: Engine,
     yInvert: bool,
     reduce: bool,
     images: ImageDimensionsMap,

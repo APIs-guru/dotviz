@@ -8,8 +8,8 @@ import {
 import { parseDot } from './parser.ts';
 
 /**
- * @property format
- * The {@link https://www.graphviz.org/docs/outputs/ | Graphviz output format} to render. For example, `"dot"` or `"svg"`.
+ * @property formats
+ * {@link https://www.graphviz.org/docs/outputs/ | Graphviz output formats} to render. For example, `"dot"` or `"svg"`.
  *
  * @property engine
  * The {@link https://www.graphviz.org/docs/layouts/ | Graphviz layout engine} to use for graph layout. For example, `"dot"` or `"neato"`.
@@ -52,8 +52,8 @@ import { parseDot } from './parser.ts';
  * ```
  */
 export interface RenderOptions {
-  format?: string;
-  engine?: string;
+  formats?: OutputFormat[];
+  engine?: LayoutEngine;
   yInvert?: boolean;
   reduce?: boolean;
   graphAttributes?: Attributes;
@@ -68,11 +68,11 @@ export interface RenderOptions {
 export type RenderResult = SuccessResult | FailureResult;
 
 /**
- * Returned by {@link Viz.render} if rendering was successful. `errors` may contain warning messages even if the graph rendered successfully.
+ * Returned if rendering was successful. `errors` may contain warning messages even if the graph rendered successfully.
  */
 export interface SuccessResult {
   status: 'success';
-  output: string;
+  output: { dot: string | undefined; svg: string | undefined };
   errors: RenderError[];
 }
 
@@ -82,20 +82,6 @@ export interface SuccessResult {
 export interface FailureResult {
   status: 'failure';
   output: undefined;
-  errors: RenderError[];
-}
-
-/**
- * The result object returned by {@link Viz.renderFormats}.
- */
-export type MultipleRenderResult = MultipleSuccessResult | FailureResult;
-
-/**
- * Returned by {@link Viz.renderFormats} if rendering was successful. `errors` may contain warning messages even if the graph rendered successfully.
- */
-export interface MultipleSuccessResult {
-  status: 'success';
-  output: Record<string, string>;
   errors: RenderError[];
 }
 
@@ -124,6 +110,33 @@ export interface ImageSize {
 }
 
 /**
+ * The names of the {@link https://www.graphviz.org/docs/outputs/ | Graphviz output formats} supported at runtime.
+ */
+export const outputFormats = ['dot', 'svg'] as const;
+export type OutputFormat = (typeof outputFormats)[number];
+
+/**
+ * The names of the {@link https://www.graphviz.org/docs/layouts/ | Graphviz layout engines} supported at runtime.
+ */
+export const layoutEngines = [
+  'dot',
+  'circo',
+  'neato',
+  'fdp',
+  'twopi',
+  'patchwork',
+  'osage',
+  'sfdp',
+] as const;
+
+export type LayoutEngine = (typeof layoutEngines)[number];
+export function isLayoutEngine(value: unknown): value is LayoutEngine {
+  return (
+    typeof value === 'string' && layoutEngines.includes(value as LayoutEngine)
+  );
+}
+
+/**
  * The {@link Viz} class isn't exported, but it can be instantiated using the {@link instance} function.
  */
 export class Viz {
@@ -137,29 +150,12 @@ export class Viz {
     wasm_free(ptr: number, length: number): void;
     render(jsonPtr: number, jsonLength: number): bigint;
   };
-
   /**
    * @internal
    */
   constructor(instance: WebAssembly.Instance) {
     // @ts-expect-error not sure how to properly type it
     this._wasm = instance.exports;
-  }
-
-  /**
-   * Renders the graph described by the input for each format in `formats` and returns the result as an object. For a successful result, `output` is an object keyed by format.
-   */
-  renderFormats(
-    input: string | Graph,
-    formats: readonly string[],
-    options: RenderOptions = {},
-  ): MultipleRenderResult {
-    const overrideAttributes: OverrideAttributes = {
-      graphAttributes: options.graphAttributes,
-      nodeAttributes: options.nodeAttributes,
-      edgeAttributes: options.edgeAttributes,
-    };
-    return this._renderInput(input, formats, overrideAttributes, options);
   }
 
   /**
@@ -170,54 +166,22 @@ export class Viz {
    * This method does not throw an error if rendering failed, including for invalid DOT syntax, but it will throw for invalid types in input or unexpected runtime errors.
    */
   render(input: string | Graph, options: RenderOptions = {}): RenderResult {
-    const format = options.format ?? 'dot';
+    const overrideAttributes: OverrideAttributes = {
+      graphAttributes: options.graphAttributes,
+      nodeAttributes: options.nodeAttributes,
+      edgeAttributes: options.edgeAttributes,
+    };
 
-    const result = this.renderFormats(input, [format], options);
-
-    return result.status === 'success'
-      ? {
-          ...result,
-          output: result.output[format],
-        }
-      : result;
-  }
-
-  /**
-   * Renders the input and returns the result as a string. Throws an error if rendering failed.
-   */
-  renderString(input: string | Graph, options: RenderOptions = {}): string {
-    const result = this.render(input, options);
-
-    if (result.status !== 'success') {
-      let message = result.errors.find((e) => e.level == 'error')?.message;
-      message ??= 'Unknown error';
-      throw new Error(message);
-    }
-
-    return result.output;
-  }
-
-  _renderInput(
-    input: string | Graph,
-    formats: readonly string[],
-    overrideAttributes: OverrideAttributes,
-    options: RenderOptions,
-  ): MultipleRenderResult {
     let graph: NormalizedGraph;
     const warnings: RenderError[] = [];
     if (typeof input === 'string') {
       const graphList = parseDot(input, overrideAttributes);
       if (graphList.length === 0) {
-        return {
-          status: 'failure',
-          output: undefined,
-          errors: [
-            ...warnings,
-            new RenderingBackendError(
-              "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
-            ),
-          ],
-        };
+        return failureResult(
+          new RenderingBackendError(
+            "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
+          ),
+        );
       }
 
       for (const { diagnostics } of graphList) {
@@ -233,49 +197,43 @@ export class Viz {
       }
 
       if (graphList[0].graph === undefined) {
-        return { status: 'failure', output: undefined, errors: warnings };
+        return failureResult();
       }
       graph = graphList[0].graph;
     } else {
       graph = normalizeGraph(input, overrideAttributes);
     }
 
-    let renderGv = false;
-    let renderDot = false;
-    let renderSvg = false;
-    for (const name of formats) {
-      switch (name) {
-        case 'gv':
-          renderGv = true;
-          break;
-        case 'dot':
-          renderDot = true;
-          break;
-        case 'svg':
-          renderSvg = true;
-          break;
-        default:
-          return {
-            status: 'failure',
-            output: undefined,
-            errors: [
-              ...warnings,
-              new RenderingBackendError(
-                `Format: "${name}" not recognized. Use one of: dot gv svg`,
-              ),
-            ],
-          };
-      }
+    const layout = graph.graphAttributes.layout;
+    if (layout != undefined && !isLayoutEngine(layout)) {
+      return failureResult(
+        new RenderingBackendError(
+          `Layout type: ${JSON.stringify(layout)} not recognized. Use one of: ${layoutEngines.join(' ')}`,
+        ),
+      );
     }
 
+    if (
+      layout != undefined &&
+      options.engine != undefined &&
+      layout !== options.engine
+    ) {
+      return failureResult(
+        new RenderingBackendError(
+          `Engine mismatch: layout attribute in graph ("${layout}") conflicts with engine option ("${options.engine}"). Remove one or make them match.`,
+        ),
+      );
+    }
+
+    const formats = options.formats ?? ['dot'];
     const request = {
       graph,
-      renderDot: renderDot || renderGv,
-      renderSvg,
-      engine: options.engine ?? 'dot',
+      engine: options.engine ?? layout ?? 'dot',
       yInvert: options.yInvert ?? false,
       reduce: options.reduce ?? false,
       images: this._normalizeImages(options.images),
+      renderDot: formats.includes('dot'),
+      renderSvg: formats.includes('svg'),
     };
     const requestJSON = JSON.stringify(request);
     const cJson = this._utf8Encoder.encode(requestJSON);
@@ -295,30 +253,35 @@ export class Viz {
     const outputJSONBuf = new Uint8Array(this._wasm.memory.buffer, ptr, len);
     try {
       const str: string = this._utf8Decoder.decode(outputJSONBuf);
-      const response = JSON.parse(str) as MultipleRenderResult;
-      response.errors = response.errors.map((error) =>
-        error.level === 'warning'
-          ? new RenderingBackendWarning(error.message)
-          : new RenderingBackendError(error.message),
-      );
+      const response = JSON.parse(str) as RenderResult;
+      const errors = [
+        ...warnings,
+        ...response.errors.map((error) =>
+          error.level === 'warning'
+            ? new RenderingBackendWarning(error.message)
+            : new RenderingBackendError(error.message),
+        ),
+      ];
 
-      let output: Record<string, string> | undefined = undefined;
-      if (response.output) {
-        output = {};
-        if (renderGv) {
-          output.gv = response.output.dot;
-        }
-        if (renderDot) {
-          output.dot = response.output.dot;
-        }
-        if (renderSvg) {
-          output.svg = response.output.svg;
-        }
+      if (response.status === 'failure') {
+        return { status: 'failure', output: undefined, errors };
       }
-      response.output = output;
-      return { ...response, errors: [...warnings, ...response.errors] };
+
+      const output = {
+        dot: response.output.dot ?? undefined,
+        svg: response.output.svg ?? undefined,
+      };
+      return { status: 'success', output, errors };
     } finally {
       this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
+    }
+
+    function failureResult(error?: RenderError): FailureResult {
+      return {
+        status: 'failure',
+        output: undefined,
+        errors: error ? [...warnings, error] : warnings,
+      };
     }
   }
 

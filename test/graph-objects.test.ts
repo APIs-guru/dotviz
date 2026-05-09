@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
-import { expectSuccessResult } from './util/render-result.ts';
+import { expectDot } from './util/render-result.ts';
 
 describe('Viz', () => {
   describe('rendering graph objects', () => {
@@ -9,7 +9,7 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.render({});
 
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      expectDot(result).toMatchInlineSnapshot(`
         digraph {
         	graph [bb="0,0,0,0"];
         	node [label="\\N"];
@@ -36,7 +36,7 @@ describe('Viz', () => {
         },
       );
 
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      expectDot(result).toMatchInlineSnapshot(`
         digraph {
         	graph [bb="0,0,72,36",
         		testGraph=valueGraph
@@ -61,7 +61,7 @@ describe('Viz', () => {
         edges: [{ tail: 'a', head: 'b' }],
       });
 
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      expectDot(result).toMatchInlineSnapshot(`
         digraph {
         	graph [bb="0,0,54,108"];
         	node [label="\\N"];
@@ -83,7 +83,7 @@ describe('Viz', () => {
         edges: [{ tail: 'a', head: 'b' }],
       });
 
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      expectDot(result).toMatchInlineSnapshot(`
         graph {
         	graph [bb="0,0,54,108"];
         	node [label="\\N"];
@@ -109,7 +109,7 @@ describe('Viz', () => {
         ],
       });
 
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      expectDot(result).toMatchInlineSnapshot(`
         digraph {
         	graph [bb="0,0,54,36"];
         	a	[height=0.5,
@@ -150,7 +150,7 @@ describe('Viz', () => {
         ],
       });
 
-      expectSuccessResult(result).toMatchInlineSnapshot(`
+      expectDot(result).toMatchInlineSnapshot(`
         digraph {
         	graph [bb="0,0,297.04,84",
         		rankdir=LR
@@ -259,7 +259,7 @@ describe('Viz', () => {
         },
       ],
     });
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       digraph structs {
       	graph [bb="0,0,229.65,160.4"];
       	node [shape=plaintext];
@@ -307,7 +307,7 @@ describe('Viz', () => {
       nodes: [{ name: 'a', attributes: { color: 'red' } }, { name: 'b' }],
     });
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,126,36"];
       	node [color=blue,
@@ -336,7 +336,7 @@ describe('Viz', () => {
       ],
     });
 
-    expectSuccessResult(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,36"];
       	node [label="\\N"];
