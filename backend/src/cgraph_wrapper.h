@@ -6,7 +6,6 @@
 #include "types.h"
 
 Agraph_t *wrapped_agopen(const char *name, bool directed, bool strict);
-void wrapped_sym_set_print(Agsym_t* sym);
 
 void set_gvc_to_null(Agraph_t *g);
 

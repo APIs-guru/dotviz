@@ -131,7 +131,7 @@ fn setDefaultAttributes(
             },
         };
         if (graphviz.agroot(graph) == graph) {
-            graphviz.wrapped_sym_set_print(sym);
+            sym.*.print = 1;
         }
     }
 }
