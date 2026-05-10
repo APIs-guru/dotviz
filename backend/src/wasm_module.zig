@@ -87,7 +87,16 @@ fn edgePortToString(
     }
 }
 
-fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph_json: vizjs_types.Graph) void {
+fn readGraphJSON(allocator: std.mem.Allocator, graph_json: vizjs_types.Graph) ?*graphviz.Agraph_t {
+    const graph = graphviz.wrapped_agopen(
+        graph_json.name orelse null,
+        graph_json.directed,
+        graph_json.strict,
+    );
+    if (graph == null) {
+        return graph;
+    }
+
     setDefaultAttributes(allocator, graph, graph_json.graphAttributes, graphviz.AGRAPH);
     setDefaultAttributes(allocator, graph, graph_json.nodeAttributes, graphviz.AGNODE);
     setDefaultAttributes(allocator, graph, graph_json.edgeAttributes, graphviz.AGEDGE);
@@ -125,6 +134,8 @@ fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph
         const subgraph = agsubg(allocator, graph, subgraph_json.name);
         readSubgraphJSON(allocator, subgraph, subgraph_json, allNodes, allEdges);
     }
+
+    return graph;
 }
 
 fn agnode(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, name: [:0]const u8) ?*graphviz.Agnode_t {
@@ -310,12 +321,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     g_image_map = request.images;
 
-    const graph_json = request.graph;
-    const graph = graphviz.wrapped_agopen(
-        graph_json.name orelse null,
-        graph_json.directed,
-        graph_json.strict,
-    );
+    const graph = readGraphJSON(arena_allocator, request.graph);
     if (graph == null) {
         return stringifyResponseJSON(.{
             .status = .failure,
@@ -325,15 +331,11 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     }
     defer _ = graphviz.agclose(graph);
 
-    readGraphJSON(arena_allocator, graph, graph_json);
-
     Y_invert = request.yInvert;
     Reduce = request.reduce;
 
     const gvc = graphviz.gw_create_context();
-    defer {
-        _ = graphviz.gvFreeContext(gvc);
-    }
+    defer _ = graphviz.gvFreeContext(gvc);
 
     layoutRender(request.engine, gvc, graph);
     defer layoutCleanup(request.engine, graph);
