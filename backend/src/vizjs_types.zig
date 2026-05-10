@@ -3,6 +3,16 @@ const Allocator = std.mem.Allocator;
 const ParseOptions = std.json.ParseOptions;
 const json = std.json;
 
+pub const graphviz = @cImport({
+    @cInclude("geom.h");
+    @cInclude("cgraph_wrapper.h");
+    @cInclude("context_inline.h");
+    @cInclude("layout_inline.h");
+    @cInclude("gvusershape_size.h");
+    @cInclude("inline_render_dot/render_inline_dot.h");
+    @cInclude("inline_render_svg/render_svg.h");
+});
+
 pub const AttributeValue = union(enum) {
     text: [:0]const u8,
     html: [:0]const u8,
