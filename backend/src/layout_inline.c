@@ -122,10 +122,6 @@ static inline void *my_gv_calloc(size_t nmemb, size_t size) {
 void my_graph_init(GVC_t *gvc, Agraph_t *g, bool use_rankdir) {
   agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
   GD_gvc(g) = gvc;
-  if (g != agroot(g)) {
-    agbindrec(agroot(g), "Agraphinfo_t", sizeof(Agraphinfo_t), true);
-    GD_gvc(agroot(g)) = gvc;
-  }
 
   char *p;
   double xf;

@@ -96,7 +96,7 @@ fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph
         "cannot alloc for allNodes",
     );
     for (graph_json.allNodes, 0..) |node_json, i| {
-        const node_ptr = graphviz.agnode(graph, node_json.name, graphviz.true);
+        const node_ptr = agnode(allocator, graph, node_json.name);
         setAttributes(allocator, node_ptr, node_json.attributes);
         allNodes[i] = node_ptr;
     }
@@ -110,23 +110,49 @@ fn readGraphJSON(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, graph
 
         const tail_node = allNodes[tail.port.node];
         const head_node = allNodes[head.port.node];
-        const key: [*c]const u8 = edge_json.key orelse null;
-        const edge = graphviz.agedge(graph, tail_node, head_node, key, graphviz.true);
+        const edge = agedge(allocator, graph, tail_node, head_node, edge_json.key);
         if (edgePortToString(allocator, tail)) |tailport| {
-            _ = graphviz.agsafeset_text(edge, "tailport", tailport, "");
+            agsafeset_text(allocator, edge, "tailport", tailport);
         }
         if (edgePortToString(allocator, head)) |headport| {
-            _ = graphviz.agsafeset_text(edge, "headport", headport, "");
+            agsafeset_text(allocator, edge, "headport", headport);
         }
         setAttributes(allocator, edge, edge_json.attributes);
         allEdges[i] = edge;
     }
 
     for (graph_json.subgraphs) |subgraph_json| {
-        const name: [*c]const u8 = subgraph_json.name orelse null;
-        const subgraph = graphviz.agsubg(graph, name, graphviz.true);
+        const subgraph = agsubg(allocator, graph, subgraph_json.name);
         readSubgraphJSON(allocator, subgraph, subgraph_json, allNodes, allEdges);
     }
+}
+
+fn agnode(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, name: [:0]const u8) ?*graphviz.Agnode_t {
+    const c_name = allocator.dupeZ(u8, name) catch @panic(
+        "cannot alloc for node name",
+    );
+    return graphviz.agnode(graph, c_name, graphviz.true);
+}
+
+fn agedge(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, tail: ?*graphviz.Agnode_t, head: ?*graphviz.Agnode_t, maybeName: ?[:0]const u8) ?*graphviz.Agedge_t {
+    const c_name: [*c]u8 = if (maybeName) |name| allocator.dupeZ(u8, name) catch @panic(
+        "cannot alloc for edge key",
+    ) else null;
+    return graphviz.agedge(graph, tail, head, c_name, graphviz.true);
+}
+
+fn agsubg(allocator: std.mem.Allocator, graph: ?*graphviz.Agraph_t, maybeName: ?[:0]const u8) ?*graphviz.Agraph_t {
+    const c_name: [*c]u8 = if (maybeName) |name| allocator.dupeZ(u8, name) catch @panic(
+        "cannot alloc for subgraph name",
+    ) else null;
+    return graphviz.agsubg(graph, c_name, graphviz.true);
+}
+
+fn agsafeset_text(allocator: std.mem.Allocator, obj: ?*anyopaque, name: [:0]const u8, value: [*c]const u8) void {
+    const c_name = allocator.dupeZ(u8, name) catch @panic(
+        "cannot alloc for attribute name",
+    );
+    _ = graphviz.agsafeset_text(obj, c_name, value, "");
 }
 
 fn readSubgraphJSON(
@@ -149,8 +175,7 @@ fn readSubgraphJSON(
     }
 
     for (subgraph_json.subgraphs) |child_subgraph_json| {
-        const name: [*c]const u8 = child_subgraph_json.name orelse null;
-        const child_subgraph = graphviz.agsubg(subgraph, name, graphviz.true);
+        const child_subgraph = agsubg(allocator, subgraph, child_subgraph_json.name);
         readSubgraphJSON(allocator, child_subgraph, child_subgraph_json, allNodes, allEdges);
     }
 }
