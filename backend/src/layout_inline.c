@@ -113,32 +113,8 @@ static void setRatio(graph_t *g) {
   }
 }
 
-static inline void *my_gv_calloc(size_t nmemb, size_t size) {
-  void *p = calloc(nmemb, size);
-  assert(p != NULL);
-  return p;
-}
-
 void my_graph_init(GVC_t *gvc, Agraph_t *g, bool use_rankdir) {
-  agbindrec(g, "Agraphinfo_t", sizeof(Agraphinfo_t), true);
   GD_gvc(g) = gvc;
-
-  char *p;
-  double xf;
-  static char *rankname[] = {"local", "global", "none", NULL};
-  static int rankcode[] = {LOCAL, GLOBAL, NOCLUST, LOCAL};
-  static char *fontnamenames[] = {"gd", "ps", "svg", NULL};
-  static int fontnamecodes[] = {NATIVEFONTS, PSFONTS, SVGFONTS, -1};
-  int rankdir;
-  GD_drawing(g) = my_gv_calloc(1, sizeof(layout_t));
-
-  p = agget(g, "charset");
-  if (p != NULL) {
-    if (!strncmp(p, "utf-8", 5) && !strncmp(p, "utf8", 4)) {
-      agwarningf("Unsupported charset \"%s\" - assuming utf-8\n", p);
-    }
-  }
-  GD_charset(g) = CHAR_UTF8;
 
   Gvimagepath = agget(g, "imagepath");
   if (!Gvimagepath) {
@@ -155,7 +131,8 @@ void my_graph_init(GVC_t *gvc, Agraph_t *g, bool use_rankdir) {
    * Sometimes, the code really needs the graph's rankdir, e.g., neato -n
    * with record shapes, so we store the real rankdir in the next 2 bits.
    */
-  rankdir = RANKDIR_TB;
+  int rankdir = RANKDIR_TB;
+  char* p;
   if ((p = agget(g, "rankdir"))) {
     if (streq(p, "LR"))
       rankdir = RANKDIR_LR;
@@ -169,7 +146,7 @@ void my_graph_init(GVC_t *gvc, Agraph_t *g, bool use_rankdir) {
   else
     SET_RANKDIR(g, rankdir << 2);
 
-  xf = late_double(g, agfindgraphattr(g, "nodesep"), DEFAULT_NODESEP,
+  double xf = late_double(g, agfindgraphattr(g, "nodesep"), DEFAULT_NODESEP,
                    MIN_NODESEP);
   GD_nodesep(g) = POINTS(xf);
 
@@ -195,6 +172,8 @@ void my_graph_init(GVC_t *gvc, Agraph_t *g, bool use_rankdir) {
     GD_showboxes(g) = (unsigned char)showboxes;
   }
   p = late_string(g, agfindgraphattr(g, "fontnames"), NULL);
+  static char *fontnamenames[] = {"gd", "ps", "svg", NULL};
+  static int fontnamecodes[] = {NATIVEFONTS, PSFONTS, SVGFONTS, -1};
   GD_fontnames(g) = maptoken(p, fontnamenames, fontnamecodes);
 
   setRatio(g);
@@ -210,7 +189,10 @@ void my_graph_init(GVC_t *gvc, Agraph_t *g, bool use_rankdir) {
   else if ((p = agget(g, "landscape")))
     GD_drawing(g)->landscape = mapbool(p);
 
+  static char *rankname[] = {"local", "global", "none", NULL};
   p = agget(g, "clusterrank");
+
+  static int rankcode[] = {LOCAL, GLOBAL, NOCLUST, LOCAL};
   CL_type = maptoken(p, rankname, rankcode);
   p = agget(g, "concentrate");
   Concentrate = mapbool(p);

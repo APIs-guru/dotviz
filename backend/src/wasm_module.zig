@@ -138,6 +138,9 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 
     g_image_map = request.images;
 
+    Y_invert = request.yInvert;
+    Reduce = request.reduce;
+
     const graph = readGraphJSON(arena_allocator, request.graph);
     if (graph == null) {
         return stringifyResponseJSON(.{
@@ -147,9 +150,6 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         });
     }
     defer _ = graphviz.agclose(graph);
-
-    Y_invert = request.yInvert;
-    Reduce = request.reduce;
 
     const gvc = graphviz.gw_create_context();
     defer _ = graphviz.gvFreeContext(gvc);
