@@ -16,6 +16,8 @@ pub fn readGraphJSON(allocator: std.mem.Allocator, graph_json: vizjs_types.Graph
     setDefaultAttributes(allocator, graph, graph_json.nodeAttributes, graphviz.AGNODE);
     setDefaultAttributes(allocator, graph, graph_json.edgeAttributes, graphviz.AGEDGE);
 
+    graphviz.wrapped_init_graph(graph);
+
     const allNodes = allocator.alloc(?*graphviz.Agnode_t, graph_json.allNodes.len) catch @panic(
         "cannot alloc for allNodes",
     );

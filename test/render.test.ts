@@ -244,6 +244,15 @@ describe('Viz', () => {
       );
     });
 
+    it('returns error for non-utf8 charset', async () => {
+      const viz = await VizPackage.instance();
+      const result = viz.renderDot('graph a { charset=latin1 }');
+
+      expectFailureResult(result).toMatchInlineSnapshot(
+        `RenderingBackendError: Unsupported charset: "latin1". Only 'utf-8' and 'utf8' are supported.`,
+      );
+    });
+
     it('renders graphs with syntax warnings', async () => {
       const viz = await VizPackage.instance();
       const result = viz.renderDot('graph a { x=1.2.3=y } graph b { }');

@@ -189,7 +189,8 @@ export class Viz {
     graph: NormalizedGraph,
     options: RenderOptions,
   ): RenderResult {
-    const layout = graph.graphAttributes.layout;
+    const { layout, charset } = graph.graphAttributes;
+
     if (layout != undefined && !isLayoutEngine(layout)) {
       return failureResult([
         new RenderingBackendError(
@@ -206,6 +207,15 @@ export class Viz {
       return failureResult([
         new RenderingBackendError(
           `Engine mismatch: layout attribute in graph ("${layout}") conflicts with engine option ("${options.engine}"). Remove one or make them match.`,
+        ),
+      ]);
+    }
+
+    // eslint-disable-next-line unicorn/text-encoding-identifier-case
+    if (charset && charset !== 'utf-8' && charset !== 'utf8') {
+      return failureResult([
+        new RenderingBackendError(
+          `Unsupported charset: ${JSON.stringify(charset)}. Only 'utf-8' and 'utf8' are supported.`,
         ),
       ]);
     }
