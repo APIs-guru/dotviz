@@ -1,6 +1,7 @@
-import type { Attributes } from './graph.d.ts';
 import { type Location, printLocation } from './location.ts';
 import {
+  NormalizedAttributes,
+  type NormalizedAttributeValue,
   type NormalizedEdgeEndpoint,
   NormalizedGraph,
   NormalizedSubgraph,
@@ -479,7 +480,7 @@ function isNameContinue(code: number): boolean {
 }
 
 interface ParsedID {
-  readonly value: string | { html: string };
+  readonly value: NormalizedAttributeValue;
   readonly token: Token;
 }
 
@@ -728,14 +729,14 @@ class Parser {
 
   #expectedName(description: string): ParsedName {
     const { value, token } = this.#expectedValue(description);
-    if (typeof value === 'object') {
+    if (NormalizedAttributes.isHTML(value)) {
       const html = this.#extractText(token);
       this.#failWithError(
         `HTML string as ${description} is not supported. If you want to use it as an identifier, enclose it in quotes: "${html}".`,
         token,
       );
     }
-    return { value, token };
+    return { value: value.text, token };
   }
 
   #expectedValue(description: string): ParsedID {
@@ -751,9 +752,9 @@ class Parser {
     switch (token.kind) {
       case Kind.Name:
       case Kind.Number:
-        return { value: token.value, token };
+        return { value: { text: token.value }, token };
       case Kind.String:
-        return { value: this.#readConcatenatedString(token), token };
+        return { value: { text: this.#readConcatenatedString(token) }, token };
       case Kind.HTML:
         return { value: { html: token.value }, token };
     }
@@ -822,10 +823,12 @@ class Parser {
         strict,
         directed,
         name,
-        graphAttributes: {},
+        graphAttributes: new NormalizedAttributes(),
         // FIXME: check if it's viz.js hack or it also present in graphviz
-        nodeAttributes: { label: String.raw`\N` },
-        edgeAttributes: {},
+        nodeAttributes: new NormalizedAttributes([
+          ['label', { text: String.raw`\N` }],
+        ]),
+        edgeAttributes: new NormalizedAttributes(),
       },
       overrideAttributes,
     );
@@ -856,7 +859,7 @@ class Parser {
     if (this.#peekIs(ID)) {
       if (this.#peekAheadToken.kind === Kind['=']) {
         // ID '=' ID
-        const attributes: Attributes = {};
+        const attributes = new NormalizedAttributes();
         this.#parseAttr(attributes);
         owner.mergeGraphAttributes(attributes);
         return;
@@ -936,7 +939,7 @@ class Parser {
     return nodeIDs.map((nodeID) => {
       const node = owner.root.upsertNode(owner, {
         name: nodeID.node.value,
-        attributes: {},
+        attributes: new NormalizedAttributes(),
       });
       const compass = nodeID.compass?.value;
       if (nodeID.port === undefined) {
@@ -985,12 +988,14 @@ class Parser {
     return { node, port, compass };
   }
 
-  #optionalAttrListOrEmpty(): Readonly<Attributes> {
-    return this.#peekKind() === Kind['['] ? this.#parseAttrList() : {};
+  #optionalAttrListOrEmpty(): NormalizedAttributes {
+    return this.#peekKind() === Kind['[']
+      ? this.#parseAttrList()
+      : new NormalizedAttributes();
   }
 
-  #parseAttrList(): Readonly<Attributes> {
-    const attributes: Attributes = {};
+  #parseAttrList(): Readonly<NormalizedAttributes> {
+    const attributes = new NormalizedAttributes();
 
     // attr_list:	'[' [ a_list ] ']' [ attr_list ]
     do {
@@ -1009,10 +1014,17 @@ class Parser {
     return attributes;
   }
 
-  #parseAttr(attributes: Attributes): void {
+  #parseAttr(attributes: NormalizedAttributes): void {
     const name = this.#expectedName('attribute name').value;
     this.#expected(Kind['=']);
-    attributes[name] = this.#expectedValue('attribute value').value;
+    const value = this.#expectedValue('attribute value').value;
+    attributes.set(
+      name,
+      // In graphviz, empty strings are treated as default values
+      NormalizedAttributes.isText(value) && value.text === ''
+        ? undefined
+        : value,
+    );
   }
 
   #parseNamedSubgraph(
@@ -1029,9 +1041,9 @@ class Parser {
   ): NormalizedSubgraph {
     const subgraph = owner.upsertSubgraph({
       name,
-      graphAttributes: {},
-      nodeAttributes: {},
-      edgeAttributes: {},
+      graphAttributes: new NormalizedAttributes(),
+      nodeAttributes: new NormalizedAttributes(),
+      edgeAttributes: new NormalizedAttributes(),
     });
     this.#parseStatementList(subgraph);
     return subgraph;
