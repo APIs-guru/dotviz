@@ -177,7 +177,7 @@ describe('Viz', () => {
       });
 
       expectFailureResult(result).toMatchInlineSnapshot(
-        `RenderingBackendError: JSON error UnexpectedToken at 1:350: \`[]},"engine":"dot","yInvert":"bad value","reduce":false,"images":{},"renderDot":\``,
+        `RenderingBackendError: JSON error UnexpectedToken at 1:377: \`[]},"engine":"dot","yInvert":"bad value","reduce":false,"images":{},"renderDot":\``,
       );
     });
 
@@ -246,10 +246,16 @@ describe('Viz', () => {
 
     it('returns error for non-utf8 charset', async () => {
       const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { charset=latin1 }');
+      const resultLatin = viz.renderDot('graph a { charset=latin1 }');
 
-      expectFailureResult(result).toMatchInlineSnapshot(
+      expectFailureResult(resultLatin).toMatchInlineSnapshot(
         `RenderingBackendError: Unsupported charset: "latin1". Only 'utf-8' and 'utf8' are supported.`,
+      );
+
+      const resultHTML = viz.renderDot('graph a { charset=<utf8> }');
+
+      expectFailureResult(resultHTML).toMatchInlineSnapshot(
+        `RenderingBackendError: Unsupported charset: <utf8>. Only 'utf-8' and 'utf8' are supported.`,
       );
     });
 

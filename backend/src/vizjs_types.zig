@@ -16,41 +16,9 @@ pub const graphviz = @cImport({
 pub const AttributeValue = union(enum) {
     text: [:0]const u8,
     html: [:0]const u8,
-
-    const Self = @This();
-
-    pub fn jsonParse(allocator: Allocator, source: anytype, options: ParseOptions) !Self {
-        // FIXME: check. if needed
-        _ = options.max_value_len.?;
-
-        const next_type = try source.peekNextTokenType();
-
-        switch (next_type) {
-            .string => {
-                const s = try json.innerParse([:0]u8, allocator, source, options);
-                return Self{ .text = s };
-            },
-            .number => {
-                const f = try json.innerParse(f64, allocator, source, options);
-                const s = try std.fmt.allocPrintSentinel(allocator, "{d}", .{f}, 0);
-                return Self{ .text = s };
-            },
-            .true, .false => {
-                const b = try json.innerParse(bool, allocator, source, options);
-                return Self{ .text = if (b) "true" else "false" };
-            },
-            .object_begin => {
-                const h = try json.innerParse(struct {
-                    html: [:0]const u8,
-                }, allocator, source, options);
-                return Self{ .html = h.html };
-            },
-            else => return error.UnexpectedToken,
-        }
-    }
 };
 
-pub const Attributes = std.json.ArrayHashMap(AttributeValue);
+pub const Attributes = std.json.ArrayHashMap(?AttributeValue);
 
 pub const Node = struct {
     name: [:0]const u8,

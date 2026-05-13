@@ -197,6 +197,52 @@ describe('Viz', () => {
       `);
     });
   });
+
+  it('use `undefined` or `""` to explicitly disable global attributes', async () => {
+    const viz = await VizPackage.instance();
+    const result = viz.renderGraph({
+      nodeAttributes: { test: '1' },
+      nodes: [
+        { name: 'nodeWithTest1' },
+        { name: 'nodeWithUndefined', attributes: { test: undefined } },
+        { name: 'nodeWithEmptyString', attributes: { test: '' } },
+      ],
+      subgraphs: [
+        {
+          nodeAttributes: { test: 2 },
+          nodes: [
+            { name: 'nodeWithTest1' },
+            { name: 'nodeWithUndefined' },
+            { name: 'nodeWithEmptyString' },
+          ],
+        },
+      ],
+    });
+    expectDot(result).toMatchInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,553.05,36"];
+      	node [label="\\N",
+      		test=1
+      	];
+      	{
+      		node [test=2];
+      		nodeWithTest1	[height=0.5,
+      			pos="70.572,18",
+      			test=1,
+      			width=1.9603];
+      		nodeWithUndefined	[height=0.5,
+      			pos="248.57,18",
+      			test="",
+      			width=2.4966];
+      		nodeWithEmptyString	[height=0.5,
+      			pos="454.57,18",
+      			test="",
+      			width=2.7355];
+      	}
+      }
+    `);
+  });
+
   it('html attributes with ports', async () => {
     const viz = await VizPackage.instance();
     const result = viz.renderGraph({

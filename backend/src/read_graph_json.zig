@@ -124,14 +124,10 @@ fn setDefaultAttributes(
             _ = graphviz.agattr_text(graph, kind, name, "");
         }
 
-        const sym = brk: switch (attr.value_ptr.*) {
-            .text => |val| {
-                break :brk graphviz.agattr_text(graph, kind, name, @ptrCast(val.ptr));
-            },
-            .html => |val| {
-                break :brk graphviz.agattr_html(graph, kind, name, @ptrCast(val.ptr));
-            },
-        };
+        const sym = if (attr.value_ptr.*) |value| switch (value) {
+            .text => |val| graphviz.agattr_text(graph, kind, name, @ptrCast(val.ptr)),
+            .html => |val| graphviz.agattr_html(graph, kind, name, @ptrCast(val.ptr)),
+        } else graphviz.agattr_text(graph, kind, name, "");
         if (graphviz.agroot(graph) == graph) {
             sym.*.print = 1;
         }
@@ -148,14 +144,10 @@ fn setAttributes(
         const name = allocator.dupeZ(u8, attr.key_ptr.*) catch @panic(
             "cannot dupeZ in setAttributes",
         );
-        switch (attr.value_ptr.*) {
-            .text => |val| {
-                _ = graphviz.agsafeset_text(object, name, @ptrCast(val.ptr), "");
-            },
-            .html => |val| {
-                _ = graphviz.agsafeset_html(object, name, @ptrCast(val.ptr), "");
-            },
-        }
+        _ = if (attr.value_ptr.*) |value| switch (value) {
+            .text => |val| graphviz.agsafeset_text(object, name, @ptrCast(val.ptr), ""),
+            .html => |val| graphviz.agsafeset_html(object, name, @ptrCast(val.ptr), ""),
+        } else graphviz.agsafeset_text(object, name, "", "");
     }
 }
 

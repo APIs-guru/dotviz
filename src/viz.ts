@@ -1,6 +1,10 @@
 import type { Attributes, Graph } from './graph.d.ts';
 import type { Location } from './location.ts';
-import { NormalizedGraph, normalizeGraph } from './normalize-graph.ts';
+import {
+  NormalizedAttributes,
+  NormalizedGraph,
+  normalizeGraph,
+} from './normalize-graph.ts';
 import { parseDot } from './parser.ts';
 
 export interface OverrideAttributes {
@@ -112,10 +116,8 @@ export const layoutEngines = [
 ] as const;
 
 export type LayoutEngine = (typeof layoutEngines)[number];
-export function isLayoutEngine(value: unknown): value is LayoutEngine {
-  return (
-    typeof value === 'string' && layoutEngines.includes(value as LayoutEngine)
-  );
+export function isLayoutEngine(value: string): value is LayoutEngine {
+  return layoutEngines.includes(value as LayoutEngine);
 }
 
 /** The {@link Viz} class isn't exported, but it can be instantiated using the {@link instance} function. */
@@ -189,33 +191,40 @@ export class Viz {
     graph: NormalizedGraph,
     options: RenderOptions,
   ): RenderResult {
-    const { layout, charset } = graph.graphAttributes;
+    let { engine } = options;
 
-    if (layout != undefined && !isLayoutEngine(layout)) {
-      return failureResult([
-        new RenderingBackendError(
-          `Layout type: ${JSON.stringify(layout)} not recognized. Use one of: ${layoutEngines.join(' ')}`,
-        ),
-      ]);
+    const layout = graph.graphAttributes.get('layout');
+    if (layout !== undefined) {
+      if (NormalizedAttributes.isHTML(layout) || !isLayoutEngine(layout.text)) {
+        const value = NormalizedAttributes.valueToString(layout);
+        return failureResult([
+          new RenderingBackendError(
+            `Layout type: ${value} not recognized. Use one of: ${layoutEngines.join(' ')}`,
+          ),
+        ]);
+      }
+
+      if (engine !== undefined && engine !== layout.text) {
+        return failureResult([
+          new RenderingBackendError(
+            `Engine mismatch: layout attribute in graph ("${layout.text}") conflicts with engine option ("${engine}"). Remove one or make them match.`,
+          ),
+        ]);
+      }
+      engine = layout.text;
     }
 
+    const charset = graph.graphAttributes.get('charset');
     if (
-      layout != undefined &&
-      options.engine != undefined &&
-      layout !== options.engine
+      charset !== undefined &&
+      (!NormalizedAttributes.isText(charset) ||
+        // eslint-disable-next-line unicorn/text-encoding-identifier-case
+        !['utf8', 'utf-8'].includes(charset.text.toLowerCase()))
     ) {
+      const value = NormalizedAttributes.valueToString(charset);
       return failureResult([
         new RenderingBackendError(
-          `Engine mismatch: layout attribute in graph ("${layout}") conflicts with engine option ("${options.engine}"). Remove one or make them match.`,
-        ),
-      ]);
-    }
-
-    // eslint-disable-next-line unicorn/text-encoding-identifier-case
-    if (charset && charset !== 'utf-8' && charset !== 'utf8') {
-      return failureResult([
-        new RenderingBackendError(
-          `Unsupported charset: ${JSON.stringify(charset)}. Only 'utf-8' and 'utf8' are supported.`,
+          `Unsupported charset: ${value}. Only 'utf-8' and 'utf8' are supported.`,
         ),
       ]);
     }
@@ -223,7 +232,7 @@ export class Viz {
     const formats = options.formats ?? ['dot'];
     const request = {
       graph,
-      engine: options.engine ?? layout ?? 'dot',
+      engine: engine ?? 'dot',
       yInvert: options.yInvert ?? false,
       reduce: options.reduce ?? false,
       images: this._normalizeImages(options.images),
