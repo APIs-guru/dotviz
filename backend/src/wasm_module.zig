@@ -195,37 +195,39 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
 }
 
 fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graph: ?*graphviz.Agraph_t) void {
+    graphviz.graphInfo(graph).*.gvc = gvc;
+
     switch (engine) {
         .dot => {
-            graphviz.my_graph_init(gvc, graph, true);
+            graphviz.my_graph_init(graph, true);
             graphviz.dot_layout(graph);
         },
         .circo => {
-            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.my_graph_init(graph, false);
             graphviz.circo_layout(graph);
         },
         .neato => {
-            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.my_graph_init(graph, false);
             graphviz.neato_layout(graph);
         },
         .fdp => {
-            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.my_graph_init(graph, false);
             graphviz.fdp_layout(graph);
         },
         .twopi => {
-            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.my_graph_init(graph, false);
             graphviz.twopi_layout(graph);
         },
         .patchwork => {
-            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.my_graph_init(graph, false);
             graphviz.patchwork_layout(graph);
         },
         .osage => {
-            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.my_graph_init(graph, false);
             graphviz.osage_layout(graph);
         },
         .sfdp => {
-            graphviz.my_graph_init(gvc, graph, false);
+            graphviz.my_graph_init(graph, false);
             graphviz.sfdp_layout(graph);
         },
     }
