@@ -16,7 +16,14 @@ pub fn readGraphJSON(allocator: std.mem.Allocator, graph_json: vizjs_types.Graph
     setDefaultAttributes(allocator, graph, graph_json.nodeAttributes, graphviz.AGNODE);
     setDefaultAttributes(allocator, graph, graph_json.edgeAttributes, graphviz.AGEDGE);
 
-    graphviz.wrapped_init_graph(graph);
+    _ = graphviz.agbindrec(graph, "Agraphinfo_t", @sizeOf(graphviz.Agraphinfo_t), graphviz.true);
+    const info = graphviz.graphInfo(graph);
+
+    const drawing = std.heap.c_allocator.create(graphviz.layout_t) catch @panic("cannot alloc graphviz.layout_t");
+    drawing.* = std.mem.zeroes(graphviz.layout_t);
+    info.*.drawing = drawing;
+
+    info.*.charset = graphviz.CHAR_UTF8;
 
     const allNodes = allocator.alloc(?*graphviz.Agnode_t, graph_json.allNodes.len) catch @panic(
         "cannot alloc for allNodes",
