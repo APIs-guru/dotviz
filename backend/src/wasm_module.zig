@@ -149,7 +149,10 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
             .output = null,
         });
     }
-    defer _ = graphviz.agclose(graph);
+    defer {
+        graphviz.graph_cleanup(graph);
+        _ = graphviz.agclose(graph);
+    }
 
     const gvc = graphviz.gw_create_context();
     defer _ = graphviz.gvFreeContext(gvc);
@@ -233,7 +236,6 @@ fn layoutCleanup(engine: vizjs_types.Engine, graph: ?*graphviz.Agraph_t) void {
         .osage => graphviz.osage_cleanup(graph),
         .sfdp => graphviz.sfdp_cleanup(graph),
     }
-    graphviz.graph_cleanup(graph);
 }
 
 fn freeCString(string: ?[:0]const u8) void {
