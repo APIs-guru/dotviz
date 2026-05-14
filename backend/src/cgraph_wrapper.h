@@ -7,8 +7,7 @@
 
 Agraph_t *wrapped_agopen(const char *name, bool directed, bool strict);
 
-void set_gvc_to_null(Agraph_t *g);
-void wrapped_init_graph(Agraph_t *g);
+Agraphinfo_t* graphInfo(Agraph_t *g);
 
 void dot_layout(graph_t *g);
 void dot_cleanup(graph_t *g);

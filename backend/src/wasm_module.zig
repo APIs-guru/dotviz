@@ -217,8 +217,9 @@ fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graph: ?*grap
             graphviz.sfdp_layout(graph);
         },
     }
+
     // FIXME: IMPORTANT: check that we don't use GVC after this line
-    graphviz.set_gvc_to_null(graph);
+    graphviz.graphInfo(graph).*.gvc = null;
 }
 
 fn layoutCleanup(engine: vizjs_types.Engine, graph: ?*graphviz.Agraph_t) void {
