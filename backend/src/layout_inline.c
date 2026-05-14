@@ -113,9 +113,7 @@ static void setRatio(graph_t *g) {
   }
 }
 
-void my_graph_init(GVC_t *gvc, Agraph_t *g, bool use_rankdir) {
-  GD_gvc(g) = gvc;
-
+void my_graph_init(Agraph_t *g, bool use_rankdir) {
   Gvimagepath = agget(g, "imagepath");
   if (!Gvimagepath) {
     Gvimagepath = Gvfilepath;
