@@ -4,8 +4,10 @@ const ParseOptions = std.json.ParseOptions;
 const json = std.json;
 
 pub const graphviz = @cImport({
+    @cInclude("stdlib.h");
     @cInclude("const.h");
     @cInclude("geom.h");
+    @cInclude("xdot.h");
     @cInclude("cgraph_wrapper.h");
     @cInclude("context_inline.h");
     @cInclude("layout_inline.h");

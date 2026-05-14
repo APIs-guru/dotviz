@@ -1,5 +1,6 @@
 const std = @import("std");
 const wasm_allocator = std.heap.wasm_allocator;
+const c_allocator = std.heap.c_allocator;
 
 const vizjs_types = @import("vizjs_types.zig");
 const graphviz = vizjs_types.graphviz;
@@ -150,7 +151,15 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         });
     }
     defer {
-        graphviz.graph_cleanup(graph);
+        const info = graphviz.graphInfo(graph);
+        const drawing = info.*.drawing;
+        if (drawing.*.xdots != null) {
+            graphviz.freeXDot(@ptrCast(@alignCast(drawing.*.xdots.?)));
+        }
+        graphviz.free(drawing.*.id);
+        info.*.drawing = null;
+        graphviz.free_label(info.*.label.?);
+        _ = graphviz.agdelrec(graph, "Agraphinfo_t");
         _ = graphviz.agclose(graph);
     }
 
