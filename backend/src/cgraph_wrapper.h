@@ -9,6 +9,8 @@ Agraph_t *wrapped_agopen(const char *name, bool directed, bool strict);
 
 Agraphinfo_t* graphInfo(Agraph_t *g);
 
+void free_label(textlabel_t * p);
+
 void dot_layout(graph_t *g);
 void dot_cleanup(graph_t *g);
 
