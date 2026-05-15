@@ -230,14 +230,24 @@ export class Viz {
     }
 
     const formats = options.formats ?? ['dot'];
+    const renderDot = formats.includes('dot');
+    const renderSvg = formats.includes('svg');
+
+    const diagnostics: Diagnostic[] = [];
+    if (renderDot && graph.graphAttributes.get('layers') != undefined) {
+      diagnostics.push(
+        new RenderingBackendWarning('layers not supported in dot output'),
+      );
+    }
+
     const request = {
       graph,
       engine: engine ?? 'dot',
       yInvert: options.yInvert ?? false,
       reduce: options.reduce ?? false,
       images: this._normalizeImages(options.images),
-      renderDot: formats.includes('dot'),
-      renderSvg: formats.includes('svg'),
+      renderDot,
+      renderSvg,
     };
     const requestJSON = JSON.stringify(request);
     const cJson = this._utf8Encoder.encode(requestJSON);
@@ -258,11 +268,15 @@ export class Viz {
     try {
       const str: string = this._utf8Decoder.decode(outputJSONBuf);
       const response = JSON.parse(str) as RenderResult;
-      const diagnostics = response.diagnostics.map((error) =>
-        error.level === 'warning'
-          ? new RenderingBackendWarning(error.message)
-          : new RenderingBackendError(error.message),
-      );
+
+      for (const error of response.diagnostics) {
+        diagnostics.push(
+          error.level === 'warning'
+            ? new RenderingBackendWarning(error.message)
+            : new RenderingBackendError(error.message),
+        );
+      }
+
       if (response.status === 'failure') {
         return { status: 'failure', output: undefined, diagnostics };
       }
