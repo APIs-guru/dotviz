@@ -29,7 +29,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 static int Level;
-static int Max_outputline = 0;
+static unsigned int Max_outputline = 0;
 static Agsym_t *Tailport, *Headport;
 
 typedef struct {
@@ -100,7 +100,7 @@ static bool is_escape(const char *str) {
 static char *return_canonstr(char *arg, char *buf) {
   char *s, *p;
   char uc;
-  int cnt = 0, dotcnt = 0;
+  unsigned int cnt = 0, dotcnt = 0;
   bool needs_quotes = false;
   bool part_of_escape = false;
   bool maybe_num;
@@ -585,7 +585,7 @@ static void set_attrwf(Agraph_t *g, bool toplevel, bool value) {
 }
 
 /// Return 0 on success, EOF on failure
-output_string my_agwrite(Agraph_t *g, unsigned long max_output_linelength) {
+output_string my_agwrite(Agraph_t *g, unsigned int max_output_linelength) {
   /* page size on Linux, Mac OS X and Windows */
   const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
   output_string output;

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import * as VizPackage from '../src/index.ts';
+import { dedent } from './util/dedent.ts';
 import {
   expectDot,
   expectDotWithWarnings,
   expectFailureResult,
+  stringifyDiagnostics,
 } from './util/render-result.ts';
 
 describe('Viz', () => {
@@ -177,7 +179,7 @@ describe('Viz', () => {
       });
 
       expectFailureResult(result).toMatchInlineSnapshot(
-        `RenderingBackendError: JSON error UnexpectedToken at 1:377: \`[]},"engine":"dot","yInvert":"bad value","reduce":false,"images":{},"renderDot":\``,
+        `RenderingBackendError: JSON error UnexpectedToken at 1:377: \`[]},"engine":"dot","yInvert":"bad value","reduce":false,"images":{},"renderSvg":\``,
       );
     });
 
@@ -389,6 +391,44 @@ describe('Viz', () => {
         		width=4.4587];
         }
       `);
+    });
+
+    describe('split long lines based on `linelength` attribute', () => {
+      it.for([
+        ['0', 'a '.repeat(1000) + 'b', 'a '.repeat(1000) + 'b'],
+        ['60', 'a '.repeat(30) + 'b', 'a '.repeat(30) + '\\\nb'],
+        ['80', 'a '.repeat(40) + 'b', 'a '.repeat(40) + '\\\nb'],
+        ['128', 'a '.repeat(64) + 'b', 'a '.repeat(64) + '\\\nb'],
+        // "" resets to default (128)
+        ['""', 'a '.repeat(64) + 'b', 'a '.repeat(64) + '\\\nb'],
+      ])('linelength=$0', async ([linelength, input, output]) => {
+        const viz = await VizPackage.instance();
+        const result = viz.renderDot(
+          `graph { linelength=${linelength}; test="${input}"}`,
+        );
+        expectDot(result);
+        expect(result.output?.dot?.trimEnd()).toStrictEqual(dedent`
+          graph {
+          \tgraph [bb="0,0,0,0",
+          \t\tlinelength=${linelength},
+          \t\ttest="${output}"
+          \t];
+          \tnode [label="\\N"];
+          }
+        `);
+      });
+    });
+
+    describe('returns an error for invalid `linelength` values', () => {
+      it.for(['-1', '59', '129', '1.5', 'abc', '<0>'])('$0', async (value) => {
+        const viz = await VizPackage.instance();
+        const result = viz.renderDot(`graph { linelength=${value} }`);
+
+        expect(result.status).toBe('failure');
+        expect(stringifyDiagnostics(result.diagnostics)).toBe(
+          "RenderingBackendError: linelength must be '0' or an integer number in [60, 128] range",
+        );
+      });
     });
 
     it('accepts URLs for image names', async () => {

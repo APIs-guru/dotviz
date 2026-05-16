@@ -198,7 +198,7 @@ describe('Viz', () => {
     });
   });
 
-  it('use `undefined` or `""` to explicitly disable global attributes', async () => {
+  it('uses `undefined` or `""` to explicitly disable global attributes', async () => {
     const viz = await VizPackage.instance();
     const result = viz.renderGraph({
       nodeAttributes: { test: '1' },
