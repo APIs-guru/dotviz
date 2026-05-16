@@ -6,6 +6,7 @@ ignorePaths:
   - cspell.yml
   - test/graphviz
   - test/snapshots
+  - spec
   # FIXME
   - backend
 dictionaries:
