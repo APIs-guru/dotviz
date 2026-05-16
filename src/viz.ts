@@ -6,6 +6,7 @@ import {
   normalizeGraph,
 } from './normalize-graph.ts';
 import { parseDot } from './parser.ts';
+import { formatValueForDiagnostics } from './utils.ts';
 
 export interface OverrideAttributes {
   /** Sets the default graph attributes. This corresponds to the {@link https://www.graphviz.org/doc/info/command.html#-G | `-G`} Graphviz command-line option. */
@@ -217,9 +218,11 @@ export class Viz {
       }
 
       if (engine !== undefined && engine !== layout.text) {
+        const layoutValue = formatValueForDiagnostics(layout.text);
+        const engineValue = formatValueForDiagnostics(engine);
         return failureResult([
           new RenderingBackendError(
-            `Engine mismatch: layout attribute in graph ("${layout.text}") conflicts with engine option ("${engine}"). Remove one or make them match.`,
+            `Engine mismatch: layout attribute in graph ("${layoutValue}") conflicts with engine option ("${engineValue}"). Remove one or make them match.`,
           ),
         ]);
       }
@@ -261,7 +264,7 @@ export class Viz {
       if (!Number.isInteger(number) || !isMaxLineLength(number)) {
         return failureResult([
           new RenderingBackendError(
-            `linelength must be '0' or an integer number in [${MIN_dotOutputMaxLineLength.toString()}, ${MAX_dotOutputMaxLineLength.toString()}] range`,
+            `linelength must be '0' or an integer in the [${MIN_dotOutputMaxLineLength.toString()}, ${MAX_dotOutputMaxLineLength.toString()}] range`,
           ),
         ]);
       }

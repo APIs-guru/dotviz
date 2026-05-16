@@ -6,6 +6,7 @@ import {
   NormalizedGraph,
   NormalizedSubgraph,
 } from './normalize-graph.ts';
+import { formatValueForDiagnostics } from './utils.ts';
 import type { Diagnostic, OverrideAttributes } from './viz.ts';
 
 // To make parser internally consistent, all characters are read as UTF-16:
@@ -441,14 +442,6 @@ function literalOrKeywordLabel(kind: LiteralKind | KeywordKind): string {
   return `keyword '${keyword}'`;
 }
 
-function formatValueForMessage(value: string) {
-  const truncated = value.length > 20 ? value.slice(0, 17) + '...' : value;
-  return JSON.stringify(truncated)
-    .replaceAll(String.raw`\"`, '"')
-    .replaceAll(String.raw`\\`, '\\')
-    .slice(1, -1);
-}
-
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
@@ -622,39 +615,39 @@ class Parser {
       case Kind.EOF:
         return 'end of file';
       case Kind.Number: {
-        const value = formatValueForMessage(this.#extractText(token));
+        const value = formatValueForDiagnostics(this.#extractText(token));
         return `number '${value}'`;
       }
       case Kind.Name: {
-        const value = formatValueForMessage(this.#extractText(token));
+        const value = formatValueForDiagnostics(this.#extractText(token));
         return `identifier '${value}'`;
       }
       case Kind.String: {
-        const value = formatValueForMessage(
+        const value = formatValueForDiagnostics(
           this.#extractText(token).slice(1, -1),
         );
         return `string "${value}"`;
       }
       case Kind.HTML: {
-        const value = formatValueForMessage(
+        const value = formatValueForDiagnostics(
           this.#extractText(token).slice(1, -1),
         );
         return `HTML string <${value}>`;
       }
       case Kind.UnexpectedChar: {
-        const value = formatValueForMessage(this.#extractText(token));
+        const value = formatValueForDiagnostics(this.#extractText(token));
         return `character '${value}'`;
       }
       case Kind.UnterminatedString: {
-        const value = formatValueForMessage(this.#extractText(token));
+        const value = formatValueForDiagnostics(this.#extractText(token));
         return `unterminated string '${value}'`;
       }
       case Kind.UnterminatedHTML: {
-        const value = formatValueForMessage(this.#extractText(token));
+        const value = formatValueForDiagnostics(this.#extractText(token));
         return `unterminated HTML string '${value}'`;
       }
       case Kind.UnterminatedBlockComment: {
-        const value = formatValueForMessage(this.#extractText(token));
+        const value = formatValueForDiagnostics(this.#extractText(token));
         return `unterminated block comment '${value}'`;
       }
     }
@@ -688,7 +681,7 @@ class Parser {
     ) {
       const lastTokenText = this.#describeToken(lastToken);
       const nextTokenText = this.#describeToken(nextToken);
-      const ambiguousText: string = formatValueForMessage(
+      const ambiguousText: string = formatValueForDiagnostics(
         this.#extractText(lastToken) + this.#extractText(nextToken),
       );
       const message =
