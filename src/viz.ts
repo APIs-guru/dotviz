@@ -120,6 +120,18 @@ export function isLayoutEngine(value: string): value is LayoutEngine {
   return layoutEngines.includes(value as LayoutEngine);
 }
 
+const MIN_dotOutputMaxLineLength = 60;
+const MAX_dotOutputMaxLineLength = 128;
+function isMaxLineLength(value: number): boolean {
+  if (value === 0) {
+    return true;
+  }
+
+  return (
+    MIN_dotOutputMaxLineLength <= value && value <= MAX_dotOutputMaxLineLength
+  );
+}
+
 /** The {@link Viz} class isn't exported, but it can be instantiated using the {@link instance} function. */
 export class Viz {
   _stdoutBuf = '';
@@ -240,14 +252,31 @@ export class Viz {
       );
     }
 
+    let dotOutputMaxLineLength = MAX_dotOutputMaxLineLength;
+    const linelengthValue = graph.graphAttributes.get('linelength');
+    if (linelengthValue !== undefined) {
+      const number = NormalizedAttributes.isText(linelengthValue)
+        ? Number(linelengthValue.text)
+        : Number.NaN;
+      if (!Number.isInteger(number) || !isMaxLineLength(number)) {
+        return failureResult([
+          new RenderingBackendError(
+            `linelength must be '0' or an integer number in [${MIN_dotOutputMaxLineLength.toString()}, ${MAX_dotOutputMaxLineLength.toString()}] range`,
+          ),
+        ]);
+      }
+      dotOutputMaxLineLength = number;
+    }
+
     const request = {
       graph,
       engine: engine ?? 'dot',
       yInvert: options.yInvert ?? false,
       reduce: options.reduce ?? false,
       images: this._normalizeImages(options.images),
-      renderDot,
       renderSvg,
+      renderDot,
+      dotOutputMaxLineLength,
     };
     const requestJSON = JSON.stringify(request);
     const cJson = this._utf8Encoder.encode(requestJSON);

@@ -154,11 +154,12 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
         const info = graphviz.graphInfo(graph);
         const drawing = info.*.drawing;
         if (drawing.*.xdots != null) {
-            graphviz.freeXDot(@ptrCast(@alignCast(drawing.*.xdots.?)));
+            graphviz.freeXDot(@ptrCast(@alignCast(drawing.*.xdots)));
         }
         graphviz.free(drawing.*.id);
+        graphviz.free(drawing);
         info.*.drawing = null;
-        graphviz.free_label(info.*.label.?);
+        graphviz.free_label(info.*.label);
         _ = graphviz.agdelrec(graph, "Agraphinfo_t");
         _ = graphviz.agclose(graph);
     }
@@ -172,7 +173,7 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     var responseDot: ?[:0]const u8 = null;
     defer freeCString(responseDot);
     if (request.renderDot) {
-        const output = graphviz.render_dot(graph);
+        const output = graphviz.render_dot(graph, request.dotOutputMaxLineLength);
         responseDot = @ptrCast(output.data[0..output.data_position]);
     }
 

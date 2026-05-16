@@ -100,12 +100,13 @@ pub const Engine = enum {
 
 pub const RenderRequest = struct {
     graph: Graph,
-    renderDot: bool,
-    renderSvg: bool,
     engine: Engine,
     yInvert: bool,
     reduce: bool,
     images: ImageDimensionsMap,
+    renderSvg: bool,
+    renderDot: bool,
+    dotOutputMaxLineLength: usize,
 };
 
 const RenderStatus = enum {

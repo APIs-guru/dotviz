@@ -57,6 +57,7 @@ words:
   - Daines
   - Graphviz
   - Dagre
+  - linelength
   - rankdir
   - lheight
   - lwidth
