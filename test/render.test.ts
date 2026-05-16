@@ -426,7 +426,7 @@ describe('Viz', () => {
 
         expect(result.status).toBe('failure');
         expect(stringifyDiagnostics(result.diagnostics)).toBe(
-          "RenderingBackendError: linelength must be '0' or an integer number in [60, 128] range",
+          "RenderingBackendError: linelength must be '0' or an integer in the [60, 128] range",
         );
       });
     });
