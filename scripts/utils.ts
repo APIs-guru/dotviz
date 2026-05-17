@@ -200,7 +200,7 @@ export async function writeGeneratedFile(
   fs.mkdirSync(path.dirname(filepath), { recursive: true });
   const { errors, code } = await format(filepath, body, oxfmtConfig);
   if (errors.length > 0) {
-    throw new AggregateError(errors, `Oxlint formatting errors`);
+    throw new AggregateError(errors, `oxfmt formatting errors`);
   }
   fs.writeFileSync(filepath, code);
 }

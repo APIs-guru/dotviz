@@ -1,20 +1,34 @@
 {
-  "private": true,
   "name": "dotviz",
+  "version": "0.0.7",
+  "private": true,
   "description": "A modern, browser-native graph visualization library that reimagines Graphviz for the web",
   "keywords": [
+    "WebAssembly",
     "graphviz",
-    "wasm",
-    "WebAssembly"
+    "wasm"
   ],
-  "version": "0.0.7",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/APIs-guru/dotviz.git"
   },
-  "license": "MIT",
   "type": "module",
   "sideEffects": false,
+  "scripts": {
+    "preversion": "bash ./scripts/check-git.sh && npm ci --ignore-scripts",
+    "version": "npm test",
+    "build:npm": "node scripts/build-npm.ts",
+    "test": "npm run lint && npm run check && npm run testonly && npm run test:viz-js && npm run fmt:check && npm run check:spelling",
+    "lint": "eslint --cache --max-warnings 0 .",
+    "check": "tsc",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "check:spelling": "cspell --cache --no-progress \"**/*\"",
+    "testonly": "vitest run --coverage test/*.test.ts",
+    "test:viz-js": "USE_VIZ_JS=1 vitest run test/*.test.ts",
+    "docs": "typedoc types/index.d.ts"
+  },
   "devDependencies": {
     "@eslint/js": "9.36.0",
     "@eslint/json": "0.13.2",
@@ -40,19 +54,5 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.45.0",
     "vitest": "4.0.18"
-  },
-  "scripts": {
-    "preversion": "bash ./scripts/check-git.sh && npm ci --ignore-scripts",
-    "version": "npm test",
-    "build:npm": "node scripts/build-npm.ts",
-    "test": "npm run lint && npm run check && npm run testonly && npm run test:viz-js && npm run fmt:check && npm run check:spelling",
-    "lint": "eslint --cache --max-warnings 0 .",
-    "check": "tsc",
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
-    "check:spelling": "cspell --cache --no-progress \"**/*\"",
-    "testonly": "vitest run --coverage test/*.test.ts",
-    "test:viz-js": "USE_VIZ_JS=1 vitest run test/*.test.ts",
-    "docs": "typedoc types/index.d.ts"
   }
 }

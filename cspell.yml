@@ -51,6 +51,8 @@ overrides:
       - agseterrf
       - agreseterrors
 words:
+  - oxfmt
+  - oxfmtrc
   - poll_oneoff # WASI
   - testonly
   - dotviz
