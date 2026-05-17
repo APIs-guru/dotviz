@@ -89,7 +89,7 @@ complete. Never skip a step silently — if a step is not applicable, state why.
    directly (see above).
 3. Run `npx vitest run test/render.test.ts` (or the relevant file) after every
    change to confirm tests pass.
-4. After editing any file run `npx prettier --write <file>` to fix formatting.
+4. After editing any file run `npx oxfmt <file>` to fix formatting.
 5. When the user applies manual edits or corrections, inspect what changed,
    derive the generalised lesson behind each correction, and present them
    concisely. Then ask: "Should any of these be added to AGENTS.md?"
