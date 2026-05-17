@@ -4,9 +4,9 @@ import os from 'node:os';
 import path from 'node:path';
 import url from 'node:url';
 
-import { format } from 'prettier';
+import { format } from 'oxfmt';
 
-import prettierConfig from '../.prettierrc.json' with { type: 'json' };
+import oxfmtConfig from '../.oxfmtrc.json' with { type: 'json' };
 import packageJSON from '../package.json' with { type: 'json' };
 
 export { packageJSON };
@@ -198,9 +198,9 @@ export async function writeGeneratedFile(
   body: string,
 ): Promise<void> {
   fs.mkdirSync(path.dirname(filepath), { recursive: true });
-  const formatted = await format(body, {
-    filepath,
-    ...prettierConfig,
-  });
-  fs.writeFileSync(filepath, formatted);
+  const { errors, code } = await format(filepath, body, oxfmtConfig);
+  if (errors.length > 0) {
+    throw new AggregateError(errors, `Oxlint formatting errors`);
+  }
+  fs.writeFileSync(filepath, code);
 }
