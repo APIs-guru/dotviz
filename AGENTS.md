@@ -79,6 +79,10 @@ Keep these documents up to date when behaviour changes.
 
 ## Workflow
 
+**Every step in this workflow is mandatory. After completing any task, go through
+the full list and confirm each step has been done before considering the task
+complete. Never skip a step silently — if a step is not applicable, state why.**
+
 1. Before writing any code, search the codebase for similar patterns and match
    their style (see first section).
 2. Verify any assumption about Graphviz output by running the `dot` binary

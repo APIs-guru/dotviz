@@ -5,3 +5,8 @@ export function formatValueForDiagnostics(value: string) {
     .replaceAll(String.raw`\\`, '\\')
     .slice(1, -1);
 }
+
+const DOT_NUMBER_RE = /^-?\d+(\.\d+)?$/;
+export function parseDotNumber(value: string): number {
+  return DOT_NUMBER_RE.test(value) ? Number(value) : Number.NaN;
+}
