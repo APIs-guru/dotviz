@@ -9,9 +9,6 @@ import {
 import { formatValueForDiagnostics } from './utils.ts';
 import type { Diagnostic, OverrideAttributes } from './viz.ts';
 
-// To make parser internally consistent, all characters are read as UTF-16:
-/* eslint-disable unicorn/prefer-code-point */
-
 const Char = {
   '\t': 0x09,
   '\n': 0x0a,
@@ -163,10 +160,14 @@ class Lexer {
   }
 
   #readChar(): number {
+    // To make parser internally consistent, all characters are read as UTF-16:
+    /* eslint-disable unicorn/prefer-code-point */
     return this.#dotStr.charCodeAt(this.#nextIndex++);
   }
 
   #peekChar(): number {
+    // To make parser internally consistent, all characters are read as UTF-16:
+    /* eslint-disable unicorn/prefer-code-point */
     return this.#dotStr.charCodeAt(this.#nextIndex);
   }
 
@@ -1105,6 +1106,12 @@ class Parser {
       owner.root.upsertEdge(owner, { tail, head, key: undefined, attributes });
     }
   }
+}
+
+export function isNumberToken(str: string): boolean {
+  const lexer = new Lexer(str);
+  const token = lexer.nextToken();
+  return token.kind === Kind.Number && token.length === str.length;
 }
 
 export const parseDot = Parser.parseDot;

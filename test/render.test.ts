@@ -374,7 +374,9 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       const result = viz.renderDot(
         'graph { a[image="test.png"]; b[image="test.png"] }',
-        { images: { 'test.png': { width: 300, height: 200 } } },
+        {
+          images: { 'test.png': { width: 300, height: 200 } },
+        },
       );
 
       expectDot(result).toMatchInlineSnapshot(`
@@ -420,15 +422,18 @@ describe('Viz', () => {
     });
 
     describe('returns an error for invalid `linelength` values', () => {
-      it.for(['-1', '59', '129', '1.5', 'abc', '<0>'])('$0', async (value) => {
-        const viz = await VizPackage.instance();
-        const result = viz.renderDot(`graph { linelength=${value} }`);
+      it.for(['-1', '59', '129', '60.5', '"0x60"', '"60a"', 'abc', '<0>'])(
+        '$0',
+        async (value) => {
+          const viz = await VizPackage.instance();
+          const result = viz.renderDot(`graph { linelength=${value} }`);
 
-        expect(result.status).toBe('failure');
-        expect(stringifyDiagnostics(result.diagnostics)).toBe(
-          "RenderingBackendError: linelength must be '0' or an integer in the [60, 128] range",
-        );
-      });
+          expect(result.status).toBe('failure');
+          expect(stringifyDiagnostics(result.diagnostics)).toBe(
+            "RenderingBackendError: linelength must be '0' or an integer in the [60, 128] range",
+          );
+        },
+      );
     });
 
     it('accepts URLs for image names', async () => {
