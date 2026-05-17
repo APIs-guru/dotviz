@@ -6,7 +6,7 @@ import {
   normalizeGraph,
 } from './normalize-graph.ts';
 import { parseDot } from './parser.ts';
-import { formatValueForDiagnostics } from './utils.ts';
+import { formatValueForDiagnostics, parseDotNumber } from './utils.ts';
 
 export interface OverrideAttributes {
   /** Sets the default graph attributes. This corresponds to the {@link https://www.graphviz.org/doc/info/command.html#-G | `-G`} Graphviz command-line option. */
@@ -259,7 +259,7 @@ export class Viz {
     const linelengthValue = graph.graphAttributes.get('linelength');
     if (linelengthValue !== undefined) {
       const number = NormalizedAttributes.isText(linelengthValue)
-        ? Number(linelengthValue.text)
+        ? parseDotNumber(linelengthValue.text)
         : Number.NaN;
       if (!Number.isInteger(number) || !isMaxLineLength(number)) {
         return failureResult([
