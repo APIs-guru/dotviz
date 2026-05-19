@@ -148,9 +148,9 @@ export class Viz {
   /**
    * @internal
    */
-  constructor(instance: WebAssembly.Instance) {
+  constructor(moduleInstance: WebAssembly.Instance) {
     // @ts-expect-error not sure how to properly type it
-    this._wasm = instance.exports;
+    this._wasm = moduleInstance.exports;
   }
 
   /**
@@ -169,8 +169,8 @@ export class Viz {
    * This method does not throw an error if rendering failed, including for invalid DOT syntax, but it will throw for invalid types in input or unexpected runtime errors.
    */
   renderDot(input: string, options: RenderOptions = {}): RenderResult {
-    const graphList = parseDot(input, options.overrideAttributes ?? {});
-    if (graphList.length === 0) {
+    const graphParseResults = parseDot(input, options.overrideAttributes ?? {});
+    if (graphParseResults.length === 0) {
       return failureResult([
         new RenderingBackendError(
           "Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.",
@@ -178,10 +178,10 @@ export class Viz {
       ]);
     }
 
-    const diagnostics: Diagnostic[] = graphList.flatMap(
-      ({ diagnostics }) => diagnostics,
+    const diagnostics: Diagnostic[] = graphParseResults.flatMap(
+      (result) => result.diagnostics,
     );
-    if (graphList.length > 1) {
+    if (graphParseResults.length > 1) {
       diagnostics.push(
         new RenderingBackendWarning(
           'Multiple graphs found. Using the first one.',
@@ -189,7 +189,7 @@ export class Viz {
       );
     }
 
-    const { graph } = graphList[0];
+    const { graph } = graphParseResults[0];
     if (graph === undefined) {
       return failureResult(diagnostics);
     }

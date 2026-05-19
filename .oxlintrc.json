@@ -77,7 +77,6 @@
     "no-console": "off",
     "no-use-before-define": "off",
     "no-namespace": "off",
-    "no-shadow": "off",
     "no-underscore-dangle": "off",
     "no-unsafe-type-assertion": "off",
     "prefer-readonly-parameter-types": "off",
