@@ -1,0 +1,120 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "reports",
+    "npmDist/",
+    "lib/",
+    "backend/",
+    "test/types/",
+    "test/commonjs-require/",
+    "test/module-import/",
+    "test/manual/"
+  ],
+  "options": {
+    "typeAware": true,
+    "typeCheck": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true
+  },
+  "plugins": ["import", "promise", "jsdoc"],
+  "jsPlugins": ["eslint-plugin-simple-import-sort"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "style": "error",
+    "restriction": "error",
+    "nursery": "error"
+  },
+  "rules": {
+    "simple-import-sort/imports": "error",
+    "simple-import-sort/exports": "error",
+    "default-case": "off",
+    "no-bitwise": "off",
+    "no-undefined": "off",
+    "no-plusplus": "off",
+    "no-relative-parent-imports": "off",
+    "prefer-default-export": "off",
+    "group-exports": "off",
+    "exports-last": "off",
+    "no-named-export": "off",
+    "id-length": "off",
+    "capitalized-comments": "off",
+    "no-inline-comments": "off",
+    "no-warning-comments": "off",
+    "no-magic-numbers": "off",
+    "no-continue": "off",
+    "sort-keys": "off",
+    "sort-imports": "off",
+    "prefer-template": "off",
+    "no-ternary": "off",
+    "max-lines": "off",
+    "max-params": "off",
+    "max-statements": "off",
+    "max-classes-per-file": "off",
+    "max-lines-per-function": "off",
+    "number-literal-case": "off",
+    "require-await": "off", // validated by require-await
+    "consistent-return": "off", // validated by TS noImplicitReturns
+    "init-declarations": "off", // checked by TS
+    "func-style": ["error", "declaration"],
+    "prefer-destructuring": ["error", { "object": true, "array": false }],
+    "unbound-method": ["error", { "ignoreStatic": true }],
+    "no-useless-undefined": ["error", { "checkArguments": false }],
+    "switch-case-braces": ["error", "avoid"],
+    "prefer-arrow-callback": ["error", { "allowNamedFunctions": true }],
+    "consistent-type-specifier-style": ["error", "prefer-inline"],
+    "complexity": ["error", { "variant": "modified" }],
+    "jsdoc/require-param": "off",
+    "jsdoc/require-returns": "off",
+
+    // FIXME
+    "no-param-reassign": "off",
+    "no-console": "off",
+    "no-use-before-define": "off",
+    "no-namespace": "off",
+    "no-shadow": "off",
+    "no-underscore-dangle": "off",
+    "no-unsafe-type-assertion": "off",
+    "prefer-readonly-parameter-types": "off",
+    "switch-exhaustiveness-check": "off"
+  },
+  "overrides": [
+    {
+      "files": ["scripts/**"],
+      "env": { "node": true },
+      "rules": {
+        "import/no-nodejs-modules": "off"
+      }
+    },
+    {
+      "files": ["test/**"],
+      "env": { "node": true },
+      "plugins": ["vitest"],
+      "rules": {
+        "import/no-nodejs-modules": "off",
+        "vitest/require-test-timeout": "off",
+        "vitest/no-importing-vitest-globals": "off",
+        "vitest/no-disabled-tests": "off",
+        "vitest/prefer-expect-assertions": [
+          "error",
+          {
+            "onlyFunctionsWithExpectInLoop": true,
+            "onlyFunctionsWithExpectInCallback": true
+          }
+        ],
+
+        // FIXME
+        "vitest/valid-expect": "off",
+        "vitest/prefer-lowercase-title": "off",
+        "vitest/no-conditional-in-test": "off",
+        "vitest/no-conditional-expect": "off",
+        "vitest/no-commented-out-tests": "off"
+      }
+    }
+  ]
+}

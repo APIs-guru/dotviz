@@ -4,10 +4,10 @@ import {
   type NormalizedAttributeValue,
   type NormalizedEdgeEndpoint,
   NormalizedGraph,
-  NormalizedSubgraph,
+  type NormalizedSubgraph,
 } from './normalize-graph.ts';
 import { formatValueForDiagnostics } from './utils.ts';
-import type { Diagnostic, OverrideAttributes } from './viz.ts';
+import { type Diagnostic, type OverrideAttributes } from './viz.ts';
 
 const Char = {
   '\t': 0x09,
@@ -161,13 +161,11 @@ class Lexer {
 
   #readChar(): number {
     // To make parser internally consistent, all characters are read as UTF-16:
-    /* eslint-disable unicorn/prefer-code-point */
     return this.#dotStr.charCodeAt(this.#nextIndex++);
   }
 
   #peekChar(): number {
     // To make parser internally consistent, all characters are read as UTF-16:
-    /* eslint-disable unicorn/prefer-code-point */
     return this.#dotStr.charCodeAt(this.#nextIndex);
   }
 
@@ -597,7 +595,7 @@ class Parser {
   }
 
   #peekIs(mask: number): boolean {
-    return (this.#peekToken.kind & mask) != 0;
+    return (this.#peekToken.kind & mask) !== 0;
   }
 
   #peekKind(): Kind {
@@ -862,7 +860,7 @@ class Parser {
       // node_stmt: node_id [ attr_list ]
       const nodeIDs = this.#parseNodeIDList();
       if (this.#optionalEdgeOp(owner)) {
-        const tailNodes = this.#upsertEdgeEndpoints(owner, nodeIDs);
+        const tailNodes = upsertEdgeEndpoints(owner, nodeIDs);
         this.#parseEdges(owner, tailNodes);
         return;
       }
@@ -924,26 +922,6 @@ class Parser {
         );
       }
     }
-  }
-
-  #upsertEdgeEndpoints(
-    owner: NormalizedGraph | NormalizedSubgraph,
-    nodeIDs: NodeID[],
-  ): NormalizedEdgeEndpoint[] {
-    return nodeIDs.map((nodeID) => {
-      const node = owner.root.upsertNode(owner, {
-        name: nodeID.node.value,
-        attributes: new NormalizedAttributes(),
-      });
-      const compass = nodeID.compass?.value;
-      if (nodeID.port === undefined) {
-        return nodeID.compass
-          ? { port: node.defaultPort, compass }
-          : node.defaultEndpoint;
-      }
-      const port = node.upsertPort(nodeID.port.value);
-      return { port, compass };
-    });
   }
 
   #parseNodeIDList(): NodeID[] {
@@ -1011,7 +989,7 @@ class Parser {
   #parseAttr(attributes: NormalizedAttributes): void {
     const name = this.#expectedName('attribute name').value;
     this.#expected(Kind['=']);
-    const value = this.#expectedValue('attribute value').value;
+    const { value } = this.#expectedValue('attribute value');
     attributes.set(
       name,
       // In graphviz, empty strings are treated as default values
@@ -1088,7 +1066,7 @@ class Parser {
             .map((node) => node.defaultEndpoint);
           break;
         default:
-          headNodes = this.#upsertEdgeEndpoints(owner, this.#parseNodeIDList());
+          headNodes = upsertEdgeEndpoints(owner, this.#parseNodeIDList());
       }
 
       for (const tail of tailNodes) {
@@ -1108,10 +1086,36 @@ class Parser {
   }
 }
 
-export function isNumberToken(str: string): boolean {
+function upsertEdgeEndpoints(
+  owner: NormalizedGraph | NormalizedSubgraph,
+  nodeIDs: NodeID[],
+): NormalizedEdgeEndpoint[] {
+  return nodeIDs.map((nodeID) => {
+    const node = owner.root.upsertNode(owner, {
+      name: nodeID.node.value,
+      attributes: new NormalizedAttributes(),
+    });
+    const compass = nodeID.compass?.value;
+    if (nodeID.port === undefined) {
+      return nodeID.compass
+        ? { port: node.defaultPort, compass }
+        : node.defaultEndpoint;
+    }
+    const port = node.upsertPort(nodeID.port.value);
+    return { port, compass };
+  });
+}
+
+function isNumberToken(str: string): boolean {
   const lexer = new Lexer(str);
   const token = lexer.nextToken();
   return token.kind === Kind.Number && token.length === str.length;
 }
 
-export const parseDot = Parser.parseDot;
+export function parseDotNumber(value: NormalizedAttributeValue): number {
+  return NormalizedAttributes.isText(value) && isNumberToken(value.text)
+    ? Number.parseFloat(value.text)
+    : Number.NaN;
+}
+
+export const { parseDot } = Parser;

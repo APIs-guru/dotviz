@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
+// oxlint-disable-next-line import/no-default-export
 export default defineConfig({
   test: {
     snapshotSerializers: ['test/util/raw-string-serializer.ts'],

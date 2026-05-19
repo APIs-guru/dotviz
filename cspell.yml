@@ -52,7 +52,9 @@ overrides:
       - agreseterrors
 words:
   - oxfmt
+  - oxlint
   - oxfmtrc
+  - tsgolint
   - poll_oneoff # WASI
   - testonly
   - dotviz

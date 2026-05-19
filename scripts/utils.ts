@@ -2,7 +2,6 @@ import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import url from 'node:url';
 
 import { format } from 'oxfmt';
 
@@ -12,7 +11,7 @@ import packageJSON from '../package.json' with { type: 'json' };
 export { packageJSON };
 
 export function localRepoPath(...paths: readonly string[]): string {
-  const resourcesDir = path.dirname(url.fileURLToPath(import.meta.url));
+  const resourcesDir = import.meta.dirname;
   const repoDir = path.join(resourcesDir, '..');
   return path.join(repoDir, ...paths);
 }

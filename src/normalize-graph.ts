@@ -1,6 +1,5 @@
-/* eslint-disable unicorn/no-null */
 import type { Attributes, Graph, Subgraph } from './graph.d.ts';
-import type { OverrideAttributes } from './viz.ts';
+import { type OverrideAttributes } from './viz.ts';
 
 interface NormalizedGraphConfig {
   readonly name: string | undefined;
@@ -317,7 +316,9 @@ export class NormalizedNode {
 
   upsertPort(name: string): NormalizedPort {
     const port = this.ports.get(name);
-    if (port) return port;
+    if (port) {
+      return port;
+    }
 
     const newPort = new NormalizedPort(this.ports.size, { node: this, name });
     this.ports.set(name, newPort);
@@ -544,7 +545,9 @@ export class NormalizedAttributes extends Map<
 function normalizeAttributes(
   attributes: Attributes | undefined,
 ): NormalizedAttributes {
-  if (attributes === undefined) return new NormalizedAttributes();
+  if (attributes === undefined) {
+    return new NormalizedAttributes();
+  }
 
   return new NormalizedAttributes(
     Object.entries(attributes).map(([name, value]) => {
@@ -586,7 +589,7 @@ function applyDefinitions(
   owner: NormalizedGraph | NormalizedSubgraph,
   config: Graph | Subgraph,
 ) {
-  const root = owner.root;
+  const { root } = owner;
   const { nodes, edges, subgraphs } = config;
   if (nodes) {
     for (const { name, attributes } of nodes) {

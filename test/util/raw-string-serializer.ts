@@ -20,6 +20,7 @@ export function expectString(str: string | undefined) {
   return expect(new RawString(str));
 }
 
+// oxlint-disable-next-line import/no-default-export
 export default {
   test: RawString.isRawString,
   serialize(val: RawString) {

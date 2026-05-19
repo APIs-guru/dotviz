@@ -41,11 +41,11 @@ describe('Viz', () => {
       const viz = await VizPackage.instance();
       expect(
         viz.renderDot('graph a { } graph b { } graph c { }').output?.dot,
-      ).toMatch(/graph a {/);
+      ).toMatch(/graph a \{/u);
       expect(viz.renderDot('graph d { } graph e { }').output?.dot).toMatch(
-        /graph d {/,
+        /graph d \{/u,
       );
-      expect(viz.renderDot('graph f { }').output?.dot).toMatch(/graph f {/);
+      expect(viz.renderDot('graph f { }').output?.dot).toMatch(/graph f \{/u);
     });
 
     it('accepts the format option, defaulting to dot', async () => {
@@ -55,7 +55,7 @@ describe('Viz', () => {
         status: 'success',
         diagnostics: [],
         output: {
-          dot: expect.stringMatching(/pos="/) as unknown,
+          dot: expect.stringMatching(/pos="/u) as unknown,
           svg: undefined,
         },
       });
@@ -66,7 +66,7 @@ describe('Viz', () => {
         status: 'success',
         diagnostics: [],
         output: {
-          dot: expect.stringMatching(/pos="/) as unknown,
+          dot: expect.stringMatching(/pos="/u) as unknown,
           svg: undefined,
         },
       });
@@ -78,7 +78,7 @@ describe('Viz', () => {
         diagnostics: [],
         output: {
           dot: undefined,
-          svg: expect.stringMatching(/<svg/) as unknown,
+          svg: expect.stringMatching(/<svg/u) as unknown,
         },
       });
     });
