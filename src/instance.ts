@@ -40,6 +40,7 @@ export async function instance(
         nwritten_ptr: number,
       ): number {
         if (vizInstance) {
+          // oxlint-disable-next-line no-underscore-dangle
           return vizInstance._wasi_fd_write(
             fd,
             iovs_ptr,

@@ -11,9 +11,8 @@ import {
   expectSvg,
 } from './util/render-result.ts';
 
-const __dirname = import.meta.dirname;
 function readSnapshot(filepath: string): string {
-  return fs.readFileSync(path.join(__dirname, filepath), 'utf8');
+  return fs.readFileSync(path.join(import.meta.dirname, filepath), 'utf8');
 }
 
 describe('Viz', () => {
