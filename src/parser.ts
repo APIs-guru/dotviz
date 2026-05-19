@@ -1049,8 +1049,9 @@ class Parser {
 
   #parseEdges(
     owner: NormalizedGraph | NormalizedSubgraph,
-    tailNodes: NormalizedEdgeEndpoint[],
+    initialTailNodes: NormalizedEdgeEndpoint[],
   ) {
+    let tailNodes = initialTailNodes;
     const newEdges: [NormalizedEdgeEndpoint, NormalizedEdgeEndpoint][] = [];
     do {
       let headNodes: NormalizedEdgeEndpoint[];
