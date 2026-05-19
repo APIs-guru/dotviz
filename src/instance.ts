@@ -20,7 +20,7 @@ export async function instance(
   // oxlint-disable-next-line prefer-const
   let vizInstance: Viz | undefined;
   const moduleObject = precompiledModule ?? (await compile());
-  const instance = await WebAssembly.instantiate(moduleObject, {
+  const moduleInstance = await WebAssembly.instantiate(moduleObject, {
     env: {
       __indirect_function_table: new WebAssembly.Table({
         initial: 0,
@@ -88,7 +88,7 @@ export async function instance(
     },
   });
 
-  vizInstance = new Viz(instance);
+  vizInstance = new Viz(moduleInstance);
   return vizInstance;
 }
 
