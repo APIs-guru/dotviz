@@ -2,13 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import * as VizPackage from '@viz-js/viz';
 import { assert, describe, expect, it, type TestContext } from 'vitest';
 
-import * as DotVizPackage from '../src/index.ts';
+import { dotvizInstance } from '../src/index.ts';
 import { isLayoutEngine, type OverrideAttributes } from '../src/viz.ts';
 import { expectString } from './util/raw-string-serializer.ts';
-import { USE_VIZ_JS } from './util/use-viz-js.ts';
+import { useVizJSInstance } from './util/use-viz-js.ts';
 
 // FIXME: many files are modified with replaced fonts and removed unicode symbols
 // update after we fully support native fonts
@@ -72,7 +71,7 @@ describe('GraphViz Gallery', () => {
   describe('twopi', () => {
     it('twopi: gallery/twopi/happiness.gv', snapshotGvFile);
     // FIXME: no images in gv
-    // it('twopi: gallery/twopi/networkmap_twopi.gv', snapshotGvFile);
+    it.skip('twopi: gallery/twopi/networkmap_twopi.gv', snapshotGvFile);
     it('twopi: gallery/twopi/twopi2.gv', snapshotGvFile);
   });
   describe('patchwork', () => {
@@ -120,7 +119,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/b.gv', snapshotGvFile);
   it('dot: graphs/b3.gv', snapshotGvFile);
   it('dot: graphs/b7.gv', snapshotGvFile);
-  // it('dot: graphs/b15.gv', snapshotGvFile);
+  it.skip('dot: graphs/b15.gv', snapshotGvFile);
   it('dot: graphs/b22.gv', snapshotGvFile);
   it('dot: graphs/b29.gv', snapshotGvFile);
   it('dot: graphs/b33.gv', snapshotGvFile);
@@ -156,7 +155,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/b124.gv', snapshotGvFile);
   it('dot: graphs/b135.gv', snapshotGvFile);
   it('dot: graphs/b143.gv', snapshotGvFile);
-  // it('dot: graphs/b145.gv', snapshotGvFile);
+  it.skip('dot: graphs/b145.gv', snapshotGvFile);
   it('dot: graphs/b146.gv', snapshotGvFile);
   it('dot: graphs/b155.gv', snapshotGvFile);
   it('dot: graphs/b491.gv', snapshotGvFile);
@@ -169,7 +168,7 @@ describe('miscellaneous', () => {
   it('dot: graphs/biglabel.gv', snapshotGvFile);
   it('dot: graphs/center.gv', snapshotGvFile);
   it('dot: graphs/clover.gv', snapshotGvFile);
-  // it.only('dot: graphs/clust.gv', snapshotGvFile);
+  it.skip('dot: graphs/clust.gv', snapshotGvFile);
   it('dot: graphs/clust1.gv', snapshotGvFile);
   it('dot: graphs/clust2.gv', snapshotGvFile);
   it('dot: graphs/clust3.gv', snapshotGvFile);
@@ -290,10 +289,10 @@ describe('miscellaneous', () => {
   it('dot: graphs/labelroot-ntl.gv', snapshotGvFile);
   it('dot: graphs/labelroot-ntr.gv', snapshotGvFile);
 
-  // it('dot: graphs/Latin1.gv', snapshotGvFile);
-  // it('dot: graphs/layer.gv', snapshotGvFile);
-  // it('dot: graphs/layer2.gv', snapshotGvFile);
-  // it('dot: graphs/layers.gv', snapshotGvFile);
+  it.skip('dot: graphs/Latin1.gv', snapshotGvFile);
+  it.skip('dot: graphs/layer.gv', snapshotGvFile);
+  it.skip('dot: graphs/layer2.gv', snapshotGvFile);
+  it.skip('dot: graphs/layers.gv', snapshotGvFile);
   it('dot: graphs/ldbxtried.gv', snapshotGvFile);
   it('dot: graphs/longflat.gv', snapshotGvFile);
 
@@ -303,7 +302,7 @@ describe('miscellaneous', () => {
 
   // check mode=hier
   it('neato: graphs/mode.gv', snapshotGvFile);
-  // it('neato: graphs/mode.gv -Gmode=KK', snapshotGvFile);
+  it.skip('neato: graphs/mode.gv -Gmode=KK', snapshotGvFile);
   it.skip('neato: graphs/mode.gv -Gmode=hier', snapshotGvFile);
   it.skip('neato: graphs/mode.gv -Gmode=hier -Glevelsgap=1', snapshotGvFile);
   it('neato: graphs/mode.gv -Gmodel=circuit', snapshotGvFile);
@@ -419,7 +418,7 @@ describe('miscellaneous', () => {
   // FIXME: it('dot: graphs/url.gv', snapshotGvFile);
   // Case("url", Path("url.gv"), "dot", "svg", ["-Gstylesheet=stylesheet"]),
 
-  // it('dot: graphs/user_shapes.gv', snapshotGvFile); use 'dot: graphs/jcr.gif'
+  it.skip('dot: graphs/user_shapes.gv', snapshotGvFile); // use 'dot: graphs/jcr.gif'
   // Case("user_shapes", Path("user_shapes.gv"), "dot", "ps", []),
 
   it('dot: graphs/viewfile.gv', snapshotGvFile);
@@ -487,17 +486,17 @@ describe('miscellaneous', () => {
   // #during the test should correspond to the expected result message that appears
   // #below it.
 
-  // it('dot: graphs/val_inv.gv', snapshotGvFile);
-  // it('dot: graphs/val_nul.gv', snapshotGvFile);
-  // it('dot: graphs/val_val.gv', snapshotGvFile);
+  it.skip('dot: graphs/val_inv.gv', snapshotGvFile);
+  it.skip('dot: graphs/val_nul.gv', snapshotGvFile);
+  it.skip('dot: graphs/val_val.gv', snapshotGvFile);
 
-  // it('dot: graphs/inv_inv.gv', snapshotGvFile);
-  // it('dot: graphs/inv_nul.gv', snapshotGvFile);
-  // it('dot: graphs/inv_val.gv', snapshotGvFile);
+  it.skip('dot: graphs/inv_inv.gv', snapshotGvFile);
+  it.skip('dot: graphs/inv_nul.gv', snapshotGvFile);
+  it.skip('dot: graphs/inv_val.gv', snapshotGvFile);
 
-  // it('dot: graphs/nul_inv.gv', snapshotGvFile);
-  // it('dot: graphs/nul_nul.gv', snapshotGvFile);
-  // it('dot: graphs/nul_val.gv', snapshotGvFile);
+  it.skip('dot: graphs/nul_inv.gv', snapshotGvFile);
+  it.skip('dot: graphs/nul_nul.gv', snapshotGvFile);
+  it.skip('dot: graphs/nul_val.gv', snapshotGvFile);
   /* spell-checker: enable */
 });
 
@@ -558,9 +557,9 @@ async function snapshotGvFile({ task }: TestContext) {
   const dotSnapshotPath = basePath + '.dot';
   const svgSnapshotPath = basePath + '.svg';
 
-  if (USE_VIZ_JS) {
-    const instance = await VizPackage.instance();
-    const result = instance.renderFormats(gvString, ['dot', 'svg'], {
+  const instanceVizJS = await useVizJSInstance();
+  if (instanceVizJS) {
+    const result = instanceVizJS.renderFormats(gvString, ['dot', 'svg'], {
       ...overrideAttributes,
       engine,
     });
@@ -576,7 +575,7 @@ async function snapshotGvFile({ task }: TestContext) {
     );
     await expectString(svg).toMatchFileSnapshot(svgSnapshotPath);
   } else {
-    const instance = await DotVizPackage.instance();
+    const instance = await dotvizInstance();
     const result = instance.renderDot(gvString, {
       formats: ['dot', 'svg'],
       engine,
