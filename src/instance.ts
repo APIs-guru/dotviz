@@ -14,7 +14,7 @@ export async function compile(): Promise<WebAssembly.Module> {
 /**
  * Returns a promise that resolves to an instance of the {@link Viz} class.
  */
-export async function instance(
+export async function dotvizInstance(
   precompiledModule?: WebAssembly.Module,
 ): Promise<Viz> {
   // oxlint-disable-next-line prefer-const

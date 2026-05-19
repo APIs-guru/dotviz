@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import * as VizPackage from '../src/index.ts';
+import { dotvizInstance } from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
 import {
   expectDot,
@@ -8,11 +8,13 @@ import {
   expectSvg,
 } from './util/render-result.ts';
 
+const dotviz = await dotvizInstance();
 describe('Viz', () => {
   describe('renderFormats', () => {
     it('renders multiple output formats', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { }', { formats: ['dot', 'svg'] });
+      const result = dotviz.renderDot('graph a { }', {
+        formats: ['dot', 'svg'],
+      });
 
       expectDot(result).toMatchInlineSnapshot(`
         graph a {
@@ -38,8 +40,9 @@ describe('Viz', () => {
     });
 
     it('renders with the same format twice', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { }', { formats: ['dot', 'dot'] });
+      const result = dotviz.renderDot('graph a { }', {
+        formats: ['dot', 'dot'],
+      });
 
       expect(result).toStrictEqual({
         status: 'success',
@@ -58,8 +61,7 @@ describe('Viz', () => {
     });
 
     it('renders with an empty array of formats', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { }', { formats: [] });
+      const result = dotviz.renderDot('graph a { }', { formats: [] });
 
       expect(result).toStrictEqual({
         status: 'success',
@@ -72,8 +74,7 @@ describe('Viz', () => {
     });
 
     it('returns error messages for invalid input', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('invalid', { formats: ['dot', 'svg'] });
+      const result = dotviz.renderDot('invalid', { formats: ['dot', 'svg'] });
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
@@ -84,8 +85,7 @@ describe('Viz', () => {
     });
 
     it('returns error messages for invalid input and an empty array of formats', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('invalid', { formats: [] });
+      const result = dotviz.renderDot('invalid', { formats: [] });
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.

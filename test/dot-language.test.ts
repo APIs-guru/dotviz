@@ -1,7 +1,6 @@
-import * as VizJSPackage from '@viz-js/viz';
 import { describe, expect, it } from 'vitest';
 
-import * as DotVizPackage from '../src/index.ts';
+import { dotvizInstance, type RenderResult } from '../src/index.ts';
 import { dedent } from './util/dedent.ts';
 import {
   expectDiagnostics,
@@ -10,12 +9,12 @@ import {
   expectFailureResult,
   stringifyDiagnostics,
 } from './util/render-result.ts';
-import { USE_VIZ_JS } from './util/use-viz-js.ts';
+import { useVizJSInstance } from './util/use-viz-js.ts';
 
-const vizJS = USE_VIZ_JS ? await VizJSPackage.instance() : undefined;
-const dotviz = await DotVizPackage.instance();
+const vizJS = await useVizJSInstance();
+const dotviz = await dotvizInstance();
 
-function renderString(dot: string): DotVizPackage.RenderResult {
+function renderDotAndCompareWithVizJS(dot: string): RenderResult {
   const dotvizResult = dotviz.renderDot(dot);
   /* v8 ignore start -- run as separate step */
   if (vizJS) {
@@ -35,7 +34,7 @@ function renderString(dot: string): DotVizPackage.RenderResult {
 
 describe('Dot language support', () => {
   it('empty graph', () => {
-    const result = renderString('graph {}');
+    const result = renderDotAndCompareWithVizJS('graph {}');
     expectDot(result).toMatchInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
@@ -43,7 +42,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    const directedResult = renderString('digraph {}');
+    const directedResult = renderDotAndCompareWithVizJS('digraph {}');
     expectDot(directedResult).toMatchInlineSnapshot(`
       digraph {
       	graph [bb="0,0,0,0"];
@@ -53,7 +52,7 @@ describe('Dot language support', () => {
   });
 
   it('strict empty graph', () => {
-    const result = renderString('strict graph {}');
+    const result = renderDotAndCompareWithVizJS('strict graph {}');
     expectDot(result).toMatchInlineSnapshot(`
       strict graph {
       	graph [bb="0,0,0,0"];
@@ -63,7 +62,7 @@ describe('Dot language support', () => {
   });
 
   it('named graph', () => {
-    const result = renderString('graph test {}');
+    const result = renderDotAndCompareWithVizJS('graph test {}');
     expectDot(result).toMatchInlineSnapshot(`
       graph test {
       	graph [bb="0,0,0,0"];
@@ -71,10 +70,10 @@ describe('Dot language support', () => {
       }
     `);
 
-    const stringResult = renderString('graph "test" {}');
+    const stringResult = renderDotAndCompareWithVizJS('graph "test" {}');
     expect(stringResult).toStrictEqual(result);
 
-    const keywordResult = renderString('graph "graph" {}');
+    const keywordResult = renderDotAndCompareWithVizJS('graph "graph" {}');
     expectDot(keywordResult).toMatchInlineSnapshot(`
       graph "graph" {
       	graph [bb="0,0,0,0"];
@@ -84,7 +83,7 @@ describe('Dot language support', () => {
   });
 
   it('ignores whitespace and comments', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph
       \n\r\t\uFEFF
       # comment with # in the middle
@@ -103,7 +102,7 @@ describe('Dot language support', () => {
   });
 
   it('empty attributes', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         graph []
         node []
@@ -117,7 +116,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    const multipleResult = renderString(`
+    const multipleResult = renderDotAndCompareWithVizJS(`
       graph {
         graph [][]
         node [][]
@@ -128,7 +127,7 @@ describe('Dot language support', () => {
   });
 
   it('global attributes', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         graph [a=valueA]
         node [b=valueB]
@@ -148,7 +147,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    const mergeResult = renderString(`
+    const mergeResult = renderDotAndCompareWithVizJS(`
       graph {
         graph [a=badA a=valueA]
         node [b=badB b=valueB]
@@ -156,7 +155,7 @@ describe('Dot language support', () => {
       }
     `);
     expect(mergeResult).toStrictEqual(result);
-    const mergeListsResult = renderString(`
+    const mergeListsResult = renderDotAndCompareWithVizJS(`
       graph {
         graph [a=badA][a=valueA]
         node [b=badB][b=valueB]
@@ -167,7 +166,7 @@ describe('Dot language support', () => {
   });
 
   it('empty strings as global attributes', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         graph [a=""]
         node [b=""]
@@ -214,7 +213,9 @@ describe('Dot language support', () => {
     ] satisfies ([string, string] | [string])[])(
       'value $0',
       ([input, output]) => {
-        const result = renderString(`graph { test = ${input} } `);
+        const result = renderDotAndCompareWithVizJS(
+          `graph { test = ${input} } `,
+        );
         expect(result.output?.dot?.trimEnd()).toStrictEqual(dedent`
           graph {
           	graph [bb="0,0,0,0",
@@ -252,7 +253,7 @@ describe('Dot language support', () => {
   });
 
   it('global graph attributes shorthand', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         a=valueA
       }
@@ -267,7 +268,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    const mergeResult = renderString(`
+    const mergeResult = renderDotAndCompareWithVizJS(`
       graph {
         a=badA
         a=valueA
@@ -277,7 +278,7 @@ describe('Dot language support', () => {
   });
 
   it('apply default attributes values', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       digraph {
         a
         a -> a
@@ -373,7 +374,7 @@ describe('Dot language support', () => {
   });
 
   it('single edge', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         b -- a
       }
@@ -393,7 +394,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    const directedResult = renderString(`
+    const directedResult = renderDotAndCompareWithVizJS(`
       digraph {
         b -> a
       }
@@ -415,7 +416,7 @@ describe('Dot language support', () => {
   });
 
   it('two edges', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         b -- a
         a -- b
@@ -437,7 +438,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    const directedResult = renderString(`
+    const directedResult = renderDotAndCompareWithVizJS(`
       digraph {
         b -> a
         a -> b
@@ -461,7 +462,7 @@ describe('Dot language support', () => {
   });
 
   it('chain of edges', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         c -- b -- a [valueA=a]
       }
@@ -487,7 +488,7 @@ describe('Dot language support', () => {
       }
     `);
 
-    const directedResult = renderString(`
+    const directedResult = renderDotAndCompareWithVizJS(`
       digraph {
         c -> b -> a [valueA=a]
       }
@@ -515,7 +516,7 @@ describe('Dot language support', () => {
   });
 
   it('chain of edges with node lists', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         a,b -- c,d -- e,f [valueA=a]
       }
@@ -564,7 +565,7 @@ describe('Dot language support', () => {
   });
 
   it('empty strings as subgraph attributes', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
         graph {
          	node [a=""];
          	{ node [a=""] }
@@ -583,7 +584,7 @@ describe('Dot language support', () => {
   });
 
   it('merge top-level subgraphs with the same name', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         subgraph a { a1 }
         subgraph b { b1 }
@@ -613,7 +614,7 @@ describe('Dot language support', () => {
   });
 
   it('merge nested subgraphs with the same name', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         {
           subgraph a { a1 }
@@ -647,7 +648,7 @@ describe('Dot language support', () => {
   });
 
   it('change edge attributes inside subgraph', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
         digraph {
           {
             a->b
@@ -677,7 +678,7 @@ describe('Dot language support', () => {
   });
 
   it('connect nodes in subgraphs with edges', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       digraph {
         subgraph tails { a b } -> subgraph heads { c d }
       }
@@ -711,7 +712,7 @@ describe('Dot language support', () => {
   });
 
   it('strict graph deduplication keeps ports from first edge declaration', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       strict digraph {
         a -> a:n
         a -> a
@@ -730,7 +731,7 @@ describe('Dot language support', () => {
   });
 
   it('deduplicate edges with the same key', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       graph {
         {
           edge [test=<no_key>]
@@ -771,7 +772,7 @@ describe('Dot language support', () => {
   });
 
   it('deduplicate edges with the same key in directed graph', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       digraph {
         {
           edge [test=<no_key>]
@@ -817,7 +818,7 @@ describe('Dot language support', () => {
   });
 
   it('deduplicate edges in strict graph', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       strict graph {
         {
           edge [test=1]
@@ -849,7 +850,7 @@ describe('Dot language support', () => {
   });
 
   it('deduplicate edges in strict directed graph', () => {
-    const result = renderString(`
+    const result = renderDotAndCompareWithVizJS(`
       strict digraph {
         {
           edge [test=1]
@@ -1266,7 +1267,7 @@ describe('Dot language support', () => {
 
   describe('non-BMP (astral) Unicode character handling', () => {
     it('correctly handles astral Unicode characters in node names', () => {
-      const result = renderString('graph { 😀 }');
+      const result = renderDotAndCompareWithVizJS('graph { 😀 }');
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Warning: no value for width of non-ASCII character 240. Falling back to width of space character
 
@@ -1281,7 +1282,7 @@ describe('Dot language support', () => {
     });
 
     it('correctly handles astral Unicode characters in string attributes', () => {
-      const result = renderString('graph { label="😀" }');
+      const result = renderDotAndCompareWithVizJS('graph { label="😀" }');
       expectDot(result).toMatchInlineSnapshot(`
         graph {
         	graph [bb="0,0,30,24.8",

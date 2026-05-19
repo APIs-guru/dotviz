@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import * as VizPackage from '../src/index.ts';
+import { dotvizInstance } from '../src/index.ts';
 import { dedent } from './util/dedent.ts';
 import {
   expectDot,
@@ -9,11 +9,11 @@ import {
   stringifyDiagnostics,
 } from './util/render-result.ts';
 
+const dotviz = await dotvizInstance();
 describe('Viz', () => {
   describe('render', () => {
     it('renders valid input with a single graph', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { }');
+      const result = dotviz.renderDot('graph a { }');
 
       expectDot(result).toMatchInlineSnapshot(`
         graph a {
@@ -24,8 +24,7 @@ describe('Viz', () => {
     });
 
     it('renders valid input with multiple graphs', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { } graph b { }');
+      const result = dotviz.renderDot('graph a { } graph b { }');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Multiple graphs found. Using the first one.
@@ -38,20 +37,19 @@ describe('Viz', () => {
     });
 
     it('each call renders the first graph in input', async () => {
-      const viz = await VizPackage.instance();
       expect(
-        viz.renderDot('graph a { } graph b { } graph c { }').output?.dot,
+        dotviz.renderDot('graph a { } graph b { } graph c { }').output?.dot,
       ).toMatch(/graph a \{/u);
-      expect(viz.renderDot('graph d { } graph e { }').output?.dot).toMatch(
+      expect(dotviz.renderDot('graph d { } graph e { }').output?.dot).toMatch(
         /graph d \{/u,
       );
-      expect(viz.renderDot('graph f { }').output?.dot).toMatch(/graph f \{/u);
+      expect(dotviz.renderDot('graph f { }').output?.dot).toMatch(
+        /graph f \{/u,
+      );
     });
 
     it('accepts the format option, defaulting to dot', async () => {
-      const viz = await VizPackage.instance();
-
-      expect(viz.renderDot('digraph { a -> b }')).toStrictEqual({
+      expect(dotviz.renderDot('digraph { a -> b }')).toStrictEqual({
         status: 'success',
         diagnostics: [],
         output: {
@@ -61,7 +59,7 @@ describe('Viz', () => {
       });
 
       expect(
-        viz.renderDot('digraph { a -> b }', { formats: ['dot'] }),
+        dotviz.renderDot('digraph { a -> b }', { formats: ['dot'] }),
       ).toStrictEqual({
         status: 'success',
         diagnostics: [],
@@ -72,7 +70,7 @@ describe('Viz', () => {
       });
 
       expect(
-        viz.renderDot('digraph { a -> b }', { formats: ['svg'] }),
+        dotviz.renderDot('digraph { a -> b }', { formats: ['svg'] }),
       ).toStrictEqual({
         status: 'success',
         diagnostics: [],
@@ -84,9 +82,8 @@ describe('Viz', () => {
     });
 
     it('accepts yInvert option', async () => {
-      const viz = await VizPackage.instance();
-      const result1 = viz.renderDot('graph { a }', { yInvert: false });
-      const result2 = viz.renderDot('graph { a }', { yInvert: true });
+      const result1 = dotviz.renderDot('graph { a }', { yInvert: false });
+      const result2 = dotviz.renderDot('graph { a }', { yInvert: true });
 
       expectDot(result1).toMatchInlineSnapshot(`
         graph {
@@ -110,8 +107,7 @@ describe('Viz', () => {
     });
 
     it('accepts default attributes', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph {}', {
+      const result = dotviz.renderDot('graph {}', {
         overrideAttributes: {
           graphAttributes: { a: 123 },
           nodeAttributes: { b: false },
@@ -133,8 +129,7 @@ describe('Viz', () => {
     });
 
     it('default attribute values can be html strings', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph {}', {
+      const result = dotviz.renderDot('graph {}', {
         overrideAttributes: {
           nodeAttributes: {
             label: { html: '<b>test</b>' },
@@ -151,8 +146,7 @@ describe('Viz', () => {
     });
 
     it('returns an error for empty input', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('');
+      const result = dotviz.renderDot('');
 
       expectFailureResult(result).toMatchInlineSnapshot(
         `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
@@ -160,8 +154,7 @@ describe('Viz', () => {
     });
 
     it('returns error messages for invalid input', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('invalid');
+      const result = dotviz.renderDot('invalid');
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
@@ -172,8 +165,7 @@ describe('Viz', () => {
     });
 
     it('returns error messages for invalid options', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('digraph {a -> b}', {
+      const result = dotviz.renderDot('digraph {a -> b}', {
         // @ts-expect-error invalid value for test
         yInvert: 'bad value',
       });
@@ -184,9 +176,8 @@ describe('Viz', () => {
     });
 
     it('returns only the error messages emitted for the current call', async () => {
-      const viz = await VizPackage.instance();
-      const result1 = viz.renderDot('invalid1');
-      const result2 = viz.renderDot('invalid2');
+      const result1 = dotviz.renderDot('invalid1');
+      const result2 = dotviz.renderDot('invalid2');
 
       expectFailureResult(result1).toMatchInlineSnapshot(`
         ParserError: Unexpected identifier 'invalid1', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
@@ -204,8 +195,7 @@ describe('Viz', () => {
     });
 
     it('renders valid input and includes error messages when followed by a graph with a syntax error', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { } graph {');
+      const result = dotviz.renderDot('graph a { } graph {');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         ParserError: Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph.
@@ -223,8 +213,7 @@ describe('Viz', () => {
     });
 
     it('returns error messages for layout errors', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot(
+      const result = dotviz.renderDot(
         'graph a { layout=invalid } graph b { layout=dot }',
       );
 
@@ -236,8 +225,7 @@ describe('Viz', () => {
     });
 
     it('returns error message for conflicting layout', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { layout=dot }', {
+      const result = dotviz.renderDot('graph a { layout=dot }', {
         engine: 'circo',
       });
 
@@ -247,14 +235,13 @@ describe('Viz', () => {
     });
 
     it('returns error for non-utf8 charset', async () => {
-      const viz = await VizPackage.instance();
-      const resultLatin = viz.renderDot('graph a { charset=latin1 }');
+      const resultLatin = dotviz.renderDot('graph a { charset=latin1 }');
 
       expectFailureResult(resultLatin).toMatchInlineSnapshot(
         `RenderingBackendError: Unsupported charset: "latin1". Only 'utf-8' and 'utf8' are supported.`,
       );
 
-      const resultHTML = viz.renderDot('graph a { charset=<utf8> }');
+      const resultHTML = dotviz.renderDot('graph a { charset=<utf8> }');
 
       expectFailureResult(resultHTML).toMatchInlineSnapshot(
         `RenderingBackendError: Unsupported charset: <utf8>. Only 'utf-8' and 'utf8' are supported.`,
@@ -262,8 +249,7 @@ describe('Viz', () => {
     });
 
     it('renders graphs with syntax warnings', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph a { x=1.2.3=y } graph b { }');
+      const result = dotviz.renderDot('graph a { x=1.2.3=y } graph b { }');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         ParserWarning: Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
@@ -284,8 +270,7 @@ describe('Viz', () => {
     });
 
     it('returns both warnings and errors', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph { layout=invalid; x=1.2.3=y }');
+      const result = dotviz.renderDot('graph { layout=invalid; x=1.2.3=y }');
 
       expectFailureResult(result).toMatchInlineSnapshot(`
         ParserWarning: Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
@@ -298,8 +283,7 @@ describe('Viz', () => {
     });
 
     it('returns error messages printed to stderr', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph { a [label=図] }');
+      const result = dotviz.renderDot('graph { a [label=図] }');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Warning: no value for width of non-ASCII character 229. Falling back to width of space character
@@ -316,8 +300,7 @@ describe('Viz', () => {
     });
 
     it('returns an error that uses AGPREV with the correct level', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph { _background=123 }');
+      const result = dotviz.renderDot('graph { _background=123 }');
 
       expectDotWithWarnings(result).toMatchInlineSnapshot(`
         RenderingBackendWarning: Could not parse "_background" attribute in graph %1
@@ -334,8 +317,7 @@ describe('Viz', () => {
     });
 
     it('the graph is read with the default node label set', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph { a; b[label=test] }');
+      const result = dotviz.renderDot('graph { a; b[label=test] }');
 
       expectDot(result).toMatchInlineSnapshot(`
         graph {
@@ -353,8 +335,7 @@ describe('Viz', () => {
     });
 
     it('accepts an images option', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot('graph { a[image="test.png"] }', {
+      const result = dotviz.renderDot('graph { a[image="test.png"] }', {
         images: { 'test.png': { width: 300, height: 200 } },
       });
 
@@ -371,8 +352,7 @@ describe('Viz', () => {
     });
 
     it('the same image can be used twice', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot(
+      const result = dotviz.renderDot(
         'graph { a[image="test.png"]; b[image="test.png"] }',
         {
           images: { 'test.png': { width: 300, height: 200 } },
@@ -404,8 +384,7 @@ describe('Viz', () => {
         // "" resets to default (128)
         ['""', 'a '.repeat(64) + 'b', 'a '.repeat(64) + '\\\nb'],
       ])('linelength=$0', async ([linelength, input, output]) => {
-        const viz = await VizPackage.instance();
-        const result = viz.renderDot(
+        const result = dotviz.renderDot(
           `graph { linelength=${linelength}; test="${input}"}`,
         );
         expectDot(result);
@@ -425,8 +404,7 @@ describe('Viz', () => {
       it.for(['-1', '59', '129', '60.5', '"0x60"', '"60a"', 'abc', '<0>'])(
         '$0',
         async (value) => {
-          const viz = await VizPackage.instance();
-          const result = viz.renderDot(`graph { linelength=${value} }`);
+          const result = dotviz.renderDot(`graph { linelength=${value} }`);
 
           expect(result.status).toBe('failure');
           expect(stringifyDiagnostics(result.diagnostics)).toBe(
@@ -437,8 +415,7 @@ describe('Viz', () => {
     });
 
     it('accepts URLs for image names', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot(
+      const result = dotviz.renderDot(
         'graph { a[image="http://example.com/test.png"] }',
         {
           images: {

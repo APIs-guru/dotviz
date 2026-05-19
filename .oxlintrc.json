@@ -75,7 +75,6 @@
     // FIXME
     "no-console": "off",
     "no-use-before-define": "off",
-    "no-namespace": "off",
     "no-unsafe-type-assertion": "off",
     "switch-exhaustiveness-check": "off"
   },
@@ -108,8 +107,7 @@
         "vitest/valid-expect": "off",
         "vitest/prefer-lowercase-title": "off",
         "vitest/no-conditional-in-test": "off",
-        "vitest/no-conditional-expect": "off",
-        "vitest/no-commented-out-tests": "off"
+        "vitest/no-conditional-expect": "off"
       }
     }
   ]

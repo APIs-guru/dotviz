@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import * as VizPackage from '../src/index.ts';
+import { dotvizInstance } from '../src/index.ts';
 import { expectString } from './util/raw-string-serializer.ts';
 import {
   expectDiagnostics,
@@ -15,11 +15,11 @@ function readSnapshot(filepath: string): string {
   return fs.readFileSync(path.join(import.meta.dirname, filepath), 'utf8');
 }
 
+const dotviz = await dotvizInstance();
 describe('Viz', () => {
   describe('render', () => {
     it('comment attribute', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot(
+      const result = dotviz.renderDot(
         `digraph {
           comment = "I am a graph"
           A[comment = "I am node A"]
@@ -34,8 +34,7 @@ describe('Viz', () => {
       );
     });
     it('layers support', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot(
+      const result = dotviz.renderDot(
         `digraph G {
          	layers="local:pvt:test:new:ofc";
 
@@ -94,8 +93,7 @@ describe('Viz', () => {
       );
     });
     it('_background attribute', async () => {
-      const viz = await VizPackage.instance();
-      const result = viz.renderDot(
+      const result = dotviz.renderDot(
         `digraph G {
           _background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36";
           a -> b
@@ -124,8 +122,7 @@ describe('Viz', () => {
     });
   });
   it('multiple pages in ps, one in svg', async () => {
-    const viz = await VizPackage.instance();
-    const result = viz.renderDot(
+    const result = dotviz.renderDot(
       readSnapshot('./snapshots/multiple_pages.gv'),
       {
         formats: ['svg'],
@@ -137,8 +134,7 @@ describe('Viz', () => {
     );
   });
   it('circo layout', async () => {
-    const viz = await VizPackage.instance();
-    const result = viz.renderDot(readSnapshot('./snapshots/circo.gv'), {
+    const result = dotviz.renderDot(readSnapshot('./snapshots/circo.gv'), {
       formats: ['dot', 'svg'],
       engine: 'circo',
     });

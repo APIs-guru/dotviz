@@ -1,5 +1,5 @@
 import type { Graph } from './graph.d.ts';
-import { instance } from './index.ts';
+import { dotvizInstance } from './index.ts';
 import { type RenderOptions, type RenderResult } from './viz.ts';
 
 export interface RenderRequest {
@@ -14,7 +14,7 @@ export interface RenderResponse {
 }
 
 /* v8 ignore start -- FIXME: write tests */
-const viz = await instance();
+const viz = await dotvizInstance();
 
 addEventListener(
   'message',

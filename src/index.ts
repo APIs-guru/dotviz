@@ -7,7 +7,7 @@ export type {
   Node,
   Subgraph,
 } from './graph.d.ts';
-export { instance } from './instance.ts';
+export { dotvizInstance } from './instance.ts';
 export {
   type Diagnostic,
   type FailureResult,
