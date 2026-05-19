@@ -1,6 +1,6 @@
 import type { Graph } from './graph.d.ts';
 import { instance } from './index.ts';
-import type { RenderOptions, RenderResult } from './viz.ts';
+import { type RenderOptions, type RenderResult } from './viz.ts';
 
 export interface RenderRequest {
   id: number;

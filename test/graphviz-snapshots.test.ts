@@ -503,9 +503,9 @@ describe('miscellaneous', () => {
 
 const graphvizSnapshotDir = fileURLToPath(import.meta.resolve('./graphviz'));
 const fontWarningRegExp =
-  /Warning: no hard-coded metrics for '[^']+'. {2}Falling back to 'Times' metrics$/;
+  /Warning: no hard-coded metrics for '[^']+'. {2}Falling back to 'Times' metrics$/u;
 const asciiWarningRegExp =
-  /Warning: no value for width of non-ASCII character [0-9]+. Falling back to width of space character$/;
+  /Warning: no value for width of non-ASCII character [0-9]+. Falling back to width of space character$/u;
 function filterErrors<T extends { message: string }>(errors: T[]): T[] {
   return errors.filter(
     ({ message }) =>
@@ -550,7 +550,7 @@ async function snapshotGvFile({ task }: TestContext) {
   const gvPath = path.join(graphvizSnapshotDir, gvFile);
   const gvString = fs.readFileSync(gvPath, 'utf8');
 
-  let basePath = gvPath.replace(/\.gv$/, `-snapshots/${engine}_engine`);
+  let basePath = gvPath.replace(/\.gv$/u, `-snapshots/${engine}_engine`);
   if (cliArgs.length > 0) {
     basePath += `_${cliArgs.join('_')}`;
   }

@@ -15,6 +15,8 @@
 
     // Interop Constraints
     "erasableSyntaxOnly": true,
+    // "isolatedDeclarations": true,
+    // "declaration": true,
 
     // For nodejs:
     // "lib": ["esnext"],
@@ -29,11 +31,11 @@
     "exactOptionalPropertyTypes": true,
 
     // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
     // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
     // "noPropertyAccessFromIndexSignature": true,
 
     // Recommended Options

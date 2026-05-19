@@ -25,8 +25,8 @@ export function dedent(
 
 function dedentString(string: string): string {
   const trimmedStr = string
-    .replace(/^\n*/m, '') //  remove leading newline
-    .replace(/[ \t\n]*$/, ''); // remove trailing spaces and tabs
+    .replace(/^\n*/mu, '') //  remove leading newline
+    .replace(/[ \t\n]*$/u, ''); // remove trailing spaces and tabs
 
   // fixes indentation by removing leading spaces and tabs from each line
   let indent = '';
@@ -37,5 +37,5 @@ function dedentString(string: string): string {
     indent += char;
   }
 
-  return trimmedStr.replaceAll(new RegExp('^' + indent, 'mg'), ''); // remove indent
+  return trimmedStr.replaceAll(new RegExp('^' + indent, 'mgu'), ''); // remove indent
 }

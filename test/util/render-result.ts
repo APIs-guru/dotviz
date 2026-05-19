@@ -1,11 +1,11 @@
 import { assert, expect } from 'vitest';
 
-import type { Diagnostic, RenderResult } from '../../src/index.ts';
+import { type Diagnostic, type RenderResult } from '../../src/index.ts';
 import { RawString } from './raw-string-serializer.ts';
 
 export function expectDot(result: RenderResult) {
   const { output, diagnostics } = result;
-  expect(stringifyDiagnostics(diagnostics)).toStrictEqual('');
+  expect(stringifyDiagnostics(diagnostics)).toBe('');
   expect(result).toStrictEqual({ status: 'success', output, diagnostics });
   assert.exists(output?.dot);
   return expect(new RawString(output.dot));
@@ -13,7 +13,7 @@ export function expectDot(result: RenderResult) {
 
 export function expectSvg(result: RenderResult) {
   const { output, diagnostics } = result;
-  expect(stringifyDiagnostics(diagnostics)).toStrictEqual('');
+  expect(stringifyDiagnostics(diagnostics)).toBe('');
   expect(result).toStrictEqual({ status: 'success', output, diagnostics });
   assert.exists(output?.svg);
   return expect(new RawString(output.svg));
@@ -32,7 +32,7 @@ export function expectFailureResult(result: RenderResult) {
   expect(result).toStrictEqual({
     status: 'failure',
     output: undefined,
-    diagnostics: expect.any(Array) as unknown[],
+    diagnostics: expect.any(Array) as unknown,
   });
   return expectDiagnostics(result);
 }

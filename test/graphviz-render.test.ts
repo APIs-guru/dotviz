@@ -55,7 +55,7 @@ describe('Viz', () => {
           dot: expect.any(String) as unknown,
           svg: expect.any(String) as unknown,
         },
-        diagnostics: expect.any(Array) as unknown[],
+        diagnostics: expect.any(Array) as unknown,
       });
 
       expectDiagnostics(result).toMatchInlineSnapshot(

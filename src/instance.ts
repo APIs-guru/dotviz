@@ -4,11 +4,7 @@ import { Viz } from './viz.ts';
 let cachedModule: Promise<WebAssembly.Module> | undefined;
 export async function compile(): Promise<WebAssembly.Module> {
   if (cachedModule === undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const bytes: Uint8Array<ArrayBuffer> =
-      // @ts-expect-error FIXME: definition for Uint8Array.fromBase64 should be added in TS6.0
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      Uint8Array.fromBase64(WASM_BASE64);
+    const bytes: Uint8Array<ArrayBuffer> = Uint8Array.fromBase64(WASM_BASE64);
     cachedModule = WebAssembly.compile(bytes);
   }
 
@@ -21,7 +17,7 @@ export async function compile(): Promise<WebAssembly.Module> {
 export async function instance(
   precompiledModule?: WebAssembly.Module,
 ): Promise<Viz> {
-  // eslint-disable-next-line prefer-const
+  // oxlint-disable-next-line prefer-const
   let vizInstance: Viz | undefined;
   const moduleObject = precompiledModule ?? (await compile());
   const instance = await WebAssembly.instantiate(moduleObject, {
@@ -43,13 +39,14 @@ export async function instance(
         iovs_len: number,
         nwritten_ptr: number,
       ): number {
-        if (vizInstance)
+        if (vizInstance) {
           return vizInstance._wasi_fd_write(
             fd,
             iovs_ptr,
             iovs_len,
             nwritten_ptr,
           );
+        }
         return 52; // WASI_ERRNO_NOTSUP
       },
       environ_sizes_get: wasiErrnoNoSys,

@@ -19,7 +19,7 @@ const tsOptions = {
   declaration: false,
 };
 
-export default [
+const config = [
   {
     input: 'src/index.ts',
     output: {
@@ -51,3 +51,6 @@ export default [
     plugins: [dts()],
   },
 ];
+
+// oxlint-disable-next-line import/no-default-export
+export default config;

@@ -34,7 +34,7 @@ spawn('rollup', ['-c']);
 
 const worker = fs
   .readFileSync('./npmDist/dotviz-worker.js', 'utf8')
-  .replaceAll('\\', '\\\\')
+  .replaceAll('\\', String.raw`\\`)
   .replaceAll('`', '\\`')
   .replaceAll('${', '\\${');
 

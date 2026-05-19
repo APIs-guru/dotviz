@@ -1,12 +1,12 @@
 import type { Attributes, Graph } from './graph.d.ts';
-import type { Location } from './location.ts';
+import { type Location } from './location.ts';
 import {
   NormalizedAttributes,
-  NormalizedGraph,
+  type NormalizedGraph,
   normalizeGraph,
 } from './normalize-graph.ts';
-import { parseDot } from './parser.ts';
-import { formatValueForDiagnostics, parseDotNumber } from './utils.ts';
+import { parseDot, parseDotNumber } from './parser.ts';
+import { formatValueForDiagnostics } from './utils.ts';
 
 export interface OverrideAttributes {
   /** Sets the default graph attributes. This corresponds to the {@link https://www.graphviz.org/doc/info/command.html#-G | `-G`} Graphviz command-line option. */
@@ -138,7 +138,7 @@ export class Viz {
   _stdoutBuf = '';
   _stderrBuf = '';
   _utf8Encoder: TextEncoder = new TextEncoder();
-  _utf8Decoder: TextDecoder = new TextDecoder('utf8');
+  _utf8Decoder: TextDecoder = new TextDecoder('utf-8');
   _wasm: {
     memory: Uint8Array;
     wasm_alloc(length: number): number;
@@ -189,7 +189,7 @@ export class Viz {
       );
     }
 
-    const graph = graphList[0].graph;
+    const { graph } = graphList[0];
     if (graph === undefined) {
       return failureResult(diagnostics);
     }
@@ -200,6 +200,7 @@ export class Viz {
     };
   }
 
+  // oxlint-disable-next-line complexity
   #renderNormalizedGraph(
     graph: NormalizedGraph,
     options: RenderOptions,
@@ -233,7 +234,6 @@ export class Viz {
     if (
       charset !== undefined &&
       (!NormalizedAttributes.isText(charset) ||
-        // eslint-disable-next-line unicorn/text-encoding-identifier-case
         !['utf8', 'utf-8'].includes(charset.text.toLowerCase()))
     ) {
       const value = NormalizedAttributes.valueToString(charset);
@@ -249,7 +249,7 @@ export class Viz {
     const renderSvg = formats.includes('svg');
 
     const diagnostics: Diagnostic[] = [];
-    if (renderDot && graph.graphAttributes.get('layers') != undefined) {
+    if (renderDot && graph.graphAttributes.get('layers') !== undefined) {
       diagnostics.push(
         new RenderingBackendWarning('layers not supported in dot output'),
       );
@@ -274,7 +274,7 @@ export class Viz {
       engine: engine ?? 'dot',
       yInvert: options.yInvert ?? false,
       reduce: options.reduce ?? false,
-      images: this._normalizeImages(options.images),
+      images: normalizeImages(options.images),
       renderSvg,
       renderDot,
       dotOutputMaxLineLength,
@@ -319,17 +319,6 @@ export class Viz {
     } finally {
       this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
     }
-  }
-
-  _normalizeImages(
-    images: Record<string, ImageSize> = {},
-  ): Record<string, ImageSize> {
-    return Object.fromEntries(
-      Object.entries(images).map(([name, { height, width }]) => [
-        name,
-        { height: height.toString(), width: width.toString() },
-      ]),
-    );
   }
 
   /* v8 ignore next -- used only for debugging */
@@ -415,4 +404,15 @@ class RenderingBackendWarning implements Diagnostic {
   toString() {
     return 'RenderingBackendWarning: ' + this.message;
   }
+}
+
+function normalizeImages(
+  images: Record<string, ImageSize> = {},
+): Record<string, ImageSize> {
+  return Object.fromEntries(
+    Object.entries(images).map(([name, { height, width }]) => [
+      name,
+      { height: height.toString(), width: width.toString() },
+    ]),
+  );
 }
