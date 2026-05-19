@@ -135,11 +135,11 @@ function isMaxLineLength(value: number): boolean {
 
 /** The {@link Viz} class isn't exported, but it can be instantiated using the {@link instance} function. */
 export class Viz {
-  _stdoutBuf = '';
-  _stderrBuf = '';
-  _utf8Encoder: TextEncoder = new TextEncoder();
-  _utf8Decoder: TextDecoder = new TextDecoder('utf-8');
-  _wasm: {
+  #stdoutBuf = '';
+  #stderrBuf = '';
+  #utf8Encoder: TextEncoder = new TextEncoder();
+  #utf8Decoder: TextDecoder = new TextDecoder('utf-8');
+  #wasm: {
     memory: Uint8Array;
     wasm_alloc(length: number): number;
     wasm_free(ptr: number, length: number): void;
@@ -150,7 +150,7 @@ export class Viz {
    */
   constructor(moduleInstance: WebAssembly.Instance) {
     // @ts-expect-error not sure how to properly type it
-    this._wasm = moduleInstance.exports;
+    this.#wasm = moduleInstance.exports;
   }
 
   /**
@@ -280,23 +280,23 @@ export class Viz {
       dotOutputMaxLineLength,
     };
     const requestJSON = JSON.stringify(request);
-    const cJson = this._utf8Encoder.encode(requestJSON);
-    const jsonPtr = this._wasm.wasm_alloc(cJson.length);
+    const cJson = this.#utf8Encoder.encode(requestJSON);
+    const jsonPtr = this.#wasm.wasm_alloc(cJson.length);
     const inputJSONBuf = new Uint8Array(
-      this._wasm.memory.buffer,
+      this.#wasm.memory.buffer,
       jsonPtr,
       cJson.length,
     );
     inputJSONBuf.set(cJson);
-    const sliceU64 = this._wasm.render(
+    const sliceU64 = this.#wasm.render(
       inputJSONBuf.byteOffset,
       inputJSONBuf.length,
     );
     const ptr = Number(BigInt.asUintN(32, sliceU64));
     const len = Number(BigInt.asUintN(32, sliceU64 >> 32n));
-    const outputJSONBuf = new Uint8Array(this._wasm.memory.buffer, ptr, len);
+    const outputJSONBuf = new Uint8Array(this.#wasm.memory.buffer, ptr, len);
     try {
-      const str: string = this._utf8Decoder.decode(outputJSONBuf);
+      const str: string = this.#utf8Decoder.decode(outputJSONBuf);
       const response = JSON.parse(str) as RenderResult;
 
       for (const error of response.diagnostics) {
@@ -317,7 +317,7 @@ export class Viz {
       };
       return { status: 'success', output, diagnostics };
     } finally {
-      this._wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
+      this.#wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
     }
   }
 
@@ -328,8 +328,8 @@ export class Viz {
     iovs_len: number,
     nwritten_ptr: number,
   ): number {
-    const mem = new Uint8Array(this._wasm.memory.buffer);
-    const view = new DataView(this._wasm.memory.buffer);
+    const mem = new Uint8Array(this.#wasm.memory.buffer);
+    const view = new DataView(this.#wasm.memory.buffer);
 
     let totalWritten = 0;
 
@@ -338,23 +338,23 @@ export class Viz {
       const base = view.getUint32(iovs_ptr + i * 8, true);
       const len = view.getUint32(iovs_ptr + i * 8 + 4, true);
       const chunk = mem.subarray(base, base + len);
-      bufferStr += this._utf8Decoder.decode(chunk);
+      bufferStr += this.#utf8Decoder.decode(chunk);
 
       totalWritten += len;
     }
 
     switch (fd) {
       case 1: {
-        const lines = (this._stdoutBuf + bufferStr).split('\n');
-        this._stdoutBuf = lines.pop() ?? '';
+        const lines = (this.#stdoutBuf + bufferStr).split('\n');
+        this.#stdoutBuf = lines.pop() ?? '';
         for (const line of lines) {
           console.log(line);
         }
         break;
       }
       case 2: {
-        const lines = (this._stderrBuf + bufferStr).split('\n');
-        this._stderrBuf = lines.pop() ?? '';
+        const lines = (this.#stderrBuf + bufferStr).split('\n');
+        this.#stderrBuf = lines.pop() ?? '';
         for (const line of lines) {
           console.error(line);
         }
