@@ -44,7 +44,7 @@ function checkAttributeValue(
   return { inputDot, expectedDot };
 }
 
-describe('Dot language support', () => {
+describe('dot language support', () => {
   it('empty graph', () => {
     const result = renderDotAndCompareWithVizJS('graph {}');
     expectDot(result).toMatchInlineSnapshot(`
@@ -236,7 +236,7 @@ describe('Dot language support', () => {
     });
   });
 
-  describe('Handle Windows-style line endings in quoted strings (dotviz only)', () => {
+  describe('handle Windows-style line endings in quoted strings (dotviz only)', () => {
     it.for([
       `"a\\\rb"`, // `\<CR>` alone (no LF) → verbatim `\`+CR pair, not a continuation
       `"a\\\r"`, // `\<CR>` alone before closing quote → verbatim `\`+CR, quote still closes string

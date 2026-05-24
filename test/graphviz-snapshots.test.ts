@@ -16,7 +16,7 @@ import { useVizJSInstance } from './util/use-viz-js.ts';
 
 // FIXME: many files are modified with replaced fonts and removed unicode symbols
 // update after we fully support native fonts
-describe('GraphViz Gallery', () => {
+describe('tests from GraphViz Gallery', () => {
   /* spell-checker: disable */
   describe('directed', () => {
     it('dot: gallery/directed/bazel.gv', snapshotGvFile);
