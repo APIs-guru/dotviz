@@ -51,6 +51,7 @@ overrides:
       - agseterrf
       - agreseterrors
 words:
+  - vizjs
   - oxfmt
   - oxlint
   - oxfmtrc
