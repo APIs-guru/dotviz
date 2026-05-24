@@ -10,6 +10,44 @@ import packageJSON from '../package.json' with { type: 'json' };
 
 export { packageJSON };
 
+interface SpawnOptions {
+  cwd?: string;
+  env?: typeof process.env;
+}
+
+export function spawn(
+  command: string,
+  args: readonly string[],
+  options?: SpawnOptions,
+): void {
+  const result = childProcess.spawnSync(command, args, {
+    stdio: 'inherit',
+    ...options,
+  });
+  if (result.status !== 0) {
+    throw new Error(`Command failed: ${command} ${args.join(' ')}`);
+  }
+}
+
+function spawnOutput(
+  command: string,
+  args: readonly string[],
+  options?: SpawnOptions,
+): string {
+  const result = childProcess.spawnSync(command, args, {
+    maxBuffer: 10 * 1024 * 1024, // 10MB
+    stdio: ['inherit', 'pipe', 'inherit'],
+    encoding: 'utf8',
+    ...options,
+  });
+
+  if (result.status !== 0) {
+    throw new Error(`Command failed: ${command} ${args.join(' ')}`);
+  }
+
+  return result.stdout.trimEnd();
+}
+
 export function localRepoPath(...paths: readonly string[]): string {
   const resourcesDir = import.meta.dirname;
   const repoDir = path.join(resourcesDir, '..');
@@ -87,44 +125,6 @@ export function git(options?: GITOptions) {
       return spawnOutput('git', ['log', ...cmdOptions, ...args], options);
     },
   };
-}
-
-interface SpawnOptions {
-  cwd?: string;
-  env?: typeof process.env;
-}
-
-function spawnOutput(
-  command: string,
-  args: readonly string[],
-  options?: SpawnOptions,
-): string {
-  const result = childProcess.spawnSync(command, args, {
-    maxBuffer: 10 * 1024 * 1024, // 10MB
-    stdio: ['inherit', 'pipe', 'inherit'],
-    encoding: 'utf8',
-    ...options,
-  });
-
-  if (result.status !== 0) {
-    throw new Error(`Command failed: ${command} ${args.join(' ')}`);
-  }
-
-  return result.stdout.trimEnd();
-}
-
-export function spawn(
-  command: string,
-  args: readonly string[],
-  options?: SpawnOptions,
-): void {
-  const result = childProcess.spawnSync(command, args, {
-    stdio: 'inherit',
-    ...options,
-  });
-  if (result.status !== 0) {
-    throw new Error(`Command failed: ${command} ${args.join(' ')}`);
-  }
 }
 
 function* readdirRecursive(dirPath: string): Generator<{
