@@ -104,8 +104,7 @@
         ],
 
         // FIXME
-        "vitest/valid-expect": "off",
-        "vitest/prefer-lowercase-title": "off"
+        "vitest/valid-expect": "off"
       }
     }
   ]
