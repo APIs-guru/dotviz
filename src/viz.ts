@@ -348,7 +348,7 @@ export class Viz {
         const lines = (this.#stdoutBuf + bufferStr).split('\n');
         this.#stdoutBuf = lines.pop() ?? '';
         for (const line of lines) {
-          console.log(line);
+          console.info(line);
         }
         break;
       }
@@ -361,7 +361,7 @@ export class Viz {
         break;
       }
       default:
-        console.trace(`fd_write: unknown fd ${fd.toString()}`);
+        console.error(`fd_write: unknown fd ${fd.toString()}`);
         return 52; // WASI_ERRNO_NOTSUP
     }
 

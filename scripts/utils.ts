@@ -180,14 +180,14 @@ export function showDirStats(dirPath: string): void {
   const typeMaxLength = Math.max(...prettyStats.map((x) => x[0].length));
   const sizeMaxLength = Math.max(...prettyStats.map((x) => x[1].length));
   for (const [type, size] of prettyStats) {
-    console.log(
+    console.info(
       type.padStart(typeMaxLength) + ' | ' + size.padStart(sizeMaxLength),
     );
   }
 
-  console.log('-'.repeat(typeMaxLength + 3 + sizeMaxLength));
+  console.info('-'.repeat(typeMaxLength + 3 + sizeMaxLength));
   const totalMB = (totalSize / 1024 / 1024).toFixed(2) + ' MB';
-  console.log(
+  console.info(
     'Total'.padStart(typeMaxLength) + ' | ' + totalMB.padStart(sizeMaxLength),
   );
 }
