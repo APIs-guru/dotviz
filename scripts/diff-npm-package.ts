@@ -21,21 +21,21 @@ if (args.length < 2) {
   );
 }
 
-console.log(`📦 Building NPM package for ${fromRevision}...`);
+console.info(`📦 Building NPM package for ${fromRevision}...`);
 const fromPackage = prepareNPMPackage(fromRevision);
 
-console.log(`📦 Building NPM package for ${toRevision}...`);
+console.info(`📦 Building NPM package for ${toRevision}...`);
 const toPackage = prepareNPMPackage(toRevision);
 
-console.log('➖➕ Generating diff...');
+console.info('➖➕ Generating diff...');
 const diff = npm().diff('--diff', fromPackage, '--diff', toPackage);
 
 if (diff === '') {
-  console.log('No changes found!');
+  console.info('No changes found!');
 } else {
   const reportPath = localRepoPath('reports', 'npm-dist-diff.html');
   await writeGeneratedFile(reportPath, generateReport(diff));
-  console.log(`Report saved to: file://${reportPath}`);
+  console.info(`Report saved to: file://${reportPath}`);
 }
 
 function generateReport(diffString: string): string {
