@@ -65,6 +65,7 @@
     "prefer-destructuring": ["error", { "object": true, "array": false }],
     "unbound-method": ["error", { "ignoreStatic": true }],
     "no-useless-undefined": ["error", { "checkArguments": false }],
+    "no-use-before-define": ["error", { "classes": false, "functions": false }],
     "switch-case-braces": ["error", "avoid"],
     "prefer-arrow-callback": ["error", { "allowNamedFunctions": true }],
     "consistent-type-specifier-style": ["error", "prefer-inline"],
@@ -73,10 +74,7 @@
     "jsdoc/require-returns": "off",
 
     // FIXME
-    "no-console": "off",
-    "no-use-before-define": "off",
-    "no-unsafe-type-assertion": "off",
-    "switch-exhaustiveness-check": "off"
+    "no-console": "off"
   },
   "overrides": [
     {
