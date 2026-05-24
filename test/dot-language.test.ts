@@ -16,20 +16,32 @@ const dotviz = await dotvizInstance();
 
 function renderDotAndCompareWithVizJS(dot: string): RenderResult {
   const dotvizResult = dotviz.renderDot(dot);
-  /* v8 ignore start -- run as separate step */
-  if (vizJS) {
-    const vizJSResult = vizJS.render(dot);
-    expect({
-      status: dotvizResult.status,
-      output: dotvizResult.output?.dot,
-      errors: dotvizResult.diagnostics.map((err) => ({
-        level: err.level,
-        message: err.message,
-      })),
-    }).toStrictEqual(vizJSResult);
-  }
-  /* v8 ignore end */
+  const vizJSResult = vizJS.render(dot);
+  expect({
+    status: dotvizResult.status,
+    output: dotvizResult.output?.dot,
+    errors: dotvizResult.diagnostics.map((err) => ({
+      level: err.level,
+      message: err.message,
+    })),
+  }).toStrictEqual(vizJSResult);
   return dotvizResult;
+}
+
+function checkAttributeValue(
+  input: string,
+  expected: string,
+): { inputDot: string; expectedDot: string } {
+  const inputDot = `graph { test = ${input} } `;
+  const expectedDot = dedent`
+    graph {
+    	graph [bb="0,0,0,0",
+    		test=${expected}
+    	];
+    	node [label="\\N"];
+    }
+  `;
+  return { inputDot, expectedDot };
 }
 
 describe('Dot language support', () => {
@@ -188,68 +200,62 @@ describe('Dot language support', () => {
 
   describe('various values as attributes', () => {
     it.for([
-      [`<>`],
-      [`<<>>`],
-      [`<ab>`],
-      [`a`],
-      [`0`],
-      [`-0`],
-      [`.0`],
-      [`""`],
-      [`"a"`, `a`],
-      [`"\n"`],
-      [`"a" + /* empty string */ "" + "b"`, `ab`],
+      `<>`,
+      `<<>>`,
+      `<ab>`,
+      `a`,
+      `0`,
+      `-0`,
+      `.0`,
+      `""`,
+      `"\n"`,
       // `\` + `"` → `"` (backslash consumed)
-      [String.raw`"\""`],
-      [String.raw`"\"a"`],
-      [String.raw`"\\\""`],
-      [String.raw`"\\a\\"`],
-      [String.raw`"\\\\"`], // `\\` → both backslashes kept (not reduced to one)
-      [String.raw`"\n\t\r"`], // `\` + letter → both stored verbatim (not C-style escapes)
+      String.raw`"\""`,
+      String.raw`"\"a"`,
+      String.raw`"\\\""`,
+      String.raw`"\\a\\"`,
+      String.raw`"\\\\"`, // `\\` → both backslashes kept (not reduced to one)
+      String.raw`"\n\t\r"`, // `\` + letter → both stored verbatim (not C-style escapes)
+      `"\\\\\na"`, // `\\<LF>` → `\\` + literal LF (NOT a continuation)
+      `"\\\\\\\\\na"`, // `\\\\<LF>` → all four backslashes + literal LF
+    ])('value $0 stays that same', (input) => {
+      const { inputDot, expectedDot } = checkAttributeValue(input, input);
+      const result = renderDotAndCompareWithVizJS(inputDot);
+      expect(result.output?.dot?.trimEnd()).toStrictEqual(expectedDot);
+    });
+
+    it.for([
+      [`"a"`, `a`],
+      [`"a" + /* empty string */ "" + "b"`, `ab`],
       [`"\\\n"`, `""`], // `\<LF>` → nothing (line continuation)
-      [`"\\\\\na"`], // `\\<LF>` → `\\` + literal LF (NOT a continuation)
       [`"\\\\\\\na"`, String.raw`"\\a"`], // `\\\<LF>` → `\\` stored, continuation on 3rd backslash
-      [`"\\\\\\\\\na"`], // `\\\\<LF>` → all four backslashes + literal LF
-    ] satisfies ([string, string] | [string])[])(
-      'value $0',
-      ([input, output]) => {
-        const result = renderDotAndCompareWithVizJS(
-          `graph { test = ${input} } `,
-        );
-        expect(result.output?.dot?.trimEnd()).toStrictEqual(dedent`
-          graph {
-          	graph [bb="0,0,0,0",
-          		test=${output ?? input}
-          	];
-          	node [label="\\N"];
-          }
-        `);
-      },
-    );
+    ])('value $0 is correctly transformed into $1', ([input, expected]) => {
+      const { inputDot, expectedDot } = checkAttributeValue(input, expected);
+      const result = renderDotAndCompareWithVizJS(inputDot);
+      expect(result.output?.dot?.trimEnd()).toStrictEqual(expectedDot);
+    });
   });
 
   describe('Handle Windows-style line endings in quoted strings (dotviz only)', () => {
+    it.for([
+      `"a\\\rb"`, // `\<CR>` alone (no LF) → verbatim `\`+CR pair, not a continuation
+      `"a\\\r"`, // `\<CR>` alone before closing quote → verbatim `\`+CR, quote still closes string
+    ])('value $0 stays that same', (input) => {
+      const { inputDot, expectedDot } = checkAttributeValue(input, input);
+      const result = dotviz.renderDot(inputDot);
+      expect(result.output?.dot?.trimEnd()).toStrictEqual(expectedDot);
+    });
+
     it.for([
       [`"\\\r\n"`, `""`], // `\<CR><LF>` → continuation (same as `\<LF>`)
       [`"a\\\r\nb"`, `ab`], // `\<CR><LF>` → continuation, text on both sides kept
       [`"\\\\\\\r\n"`, String.raw`"\\"`], // `\\\<CR><LF>` → `\\` stored, continuation on 3rd backslash
       [`"\\\\\\\r\na"`, String.raw`"\\a"`], // `\\\<CR><LF>` with trailing content → same as above
-      [`"a\\\rb"`], // `\<CR>` alone (no LF) → verbatim `\`+CR pair, not a continuation
-      [`"a\\\r"`], // `\<CR>` alone before closing quote → verbatim `\`+CR, quote still closes string
-    ] satisfies ([string, string] | [string])[])(
-      'value $0',
-      ([input, output]) => {
-        const result = dotviz.renderDot(`graph { test = ${input} } `);
-        expect(result.output?.dot?.trimEnd()).toStrictEqual(dedent`
-          graph {
-          	graph [bb="0,0,0,0",
-          		test=${output ?? input}
-          	];
-          	node [label="\\N"];
-          }
-        `);
-      },
-    );
+    ])('value $0 is correctly transformed into $1', ([input, expected]) => {
+      const { inputDot, expectedDot } = checkAttributeValue(input, expected);
+      const result = dotviz.renderDot(inputDot);
+      expect(result.output?.dot?.trimEnd()).toStrictEqual(expectedDot);
+    });
   });
 
   it('global graph attributes shorthand', () => {

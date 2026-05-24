@@ -19,14 +19,13 @@
     "preversion": "bash ./scripts/check-git.sh && npm ci --ignore-scripts",
     "version": "npm test",
     "build:npm": "node scripts/build-npm.ts",
-    "test": "npm run lint && npm run testonly && npm run test:viz-js && npm run fmt:check && npm run check:spelling",
+    "test": "npm run lint && npm run testonly && npm run fmt:check && npm run check:spelling",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "check:spelling": "cspell --cache --no-progress \"**/*\"",
     "testonly": "vitest run --coverage test/*.test.ts",
-    "test:viz-js": "USE_VIZ_JS=1 vitest run test/*.test.ts",
     "docs": "typedoc types/index.d.ts"
   },
   "devDependencies": {
