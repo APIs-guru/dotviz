@@ -11,7 +11,6 @@ import {
   type OverrideAttributes,
   type RenderResult as DotvizResult,
 } from '../src/viz.ts';
-import { expectString } from './util/raw-string-serializer.ts';
 import { useVizJSInstance } from './util/use-viz-js.ts';
 
 // FIXME: many files are modified with replaced fonts and removed unicode symbols
@@ -597,10 +596,6 @@ async function snapshotGvFile({ task }: TestContext) {
   });
   compareWithVizJS(dotvizResult, vizjsResult);
 
-  await expectString(dotvizResult.output?.dot).toMatchFileSnapshot(
-    basePath + '.dot',
-  );
-  await expectString(dotvizResult.output?.svg).toMatchFileSnapshot(
-    basePath + '.svg',
-  );
+  await expect(dotvizResult.output?.dot).toMatchFileSnapshot(basePath + '.dot');
+  await expect(dotvizResult.output?.svg).toMatchFileSnapshot(basePath + '.svg');
 }

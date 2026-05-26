@@ -6,7 +6,6 @@ import {
   expectDot,
   expectDotWithWarnings,
   expectFailureResult,
-  stringifyDiagnostics,
 } from './util/render-result.ts';
 
 const dotviz = await dotvizInstance();
@@ -14,7 +13,7 @@ describe('render', () => {
   it('renders valid input with a single graph', async () => {
     const result = dotviz.renderDot('graph a { }');
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph a {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -25,7 +24,7 @@ describe('render', () => {
   it('renders valid input with multiple graphs', async () => {
     const result = dotviz.renderDot('graph a { } graph b { }');
 
-    expectDotWithWarnings(result).toMatchInlineSnapshot(`
+    expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
       RenderingBackendWarning: Multiple graphs found. Using the first one.
 
       graph a {
@@ -82,7 +81,7 @@ describe('render', () => {
     const result1 = dotviz.renderDot('graph { a }', { yInvert: false });
     const result2 = dotviz.renderDot('graph { a }', { yInvert: true });
 
-    expectDot(result1).toMatchInlineSnapshot(`
+    expectDot(result1).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,36"];
       	node [label="\\N"];
@@ -92,7 +91,7 @@ describe('render', () => {
       }
     `);
 
-    expectDot(result2).toMatchInlineSnapshot(`
+    expectDot(result2).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,36,54,0"];
       	node [label="\\N"];
@@ -112,7 +111,7 @@ describe('render', () => {
       },
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [a=123,
       		bb="0,0,0,0"
@@ -134,7 +133,7 @@ describe('render', () => {
       },
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label=<<b>test</b>>];
@@ -145,7 +144,7 @@ describe('render', () => {
   it('returns an error for empty input', async () => {
     const result = dotviz.renderDot('');
 
-    expectFailureResult(result).toMatchInlineSnapshot(
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(
       `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
     );
   });
@@ -153,7 +152,7 @@ describe('render', () => {
   it('returns error messages for invalid input', async () => {
     const result = dotviz.renderDot('invalid');
 
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
 
       1 | invalid
@@ -167,7 +166,7 @@ describe('render', () => {
       yInvert: 'bad value',
     });
 
-    expectFailureResult(result).toMatchInlineSnapshot(
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(
       `RenderingBackendError: JSON error UnexpectedToken at 1:377: \`[]},"engine":"dot","yInvert":"bad value","reduce":false,"images":{},"renderSvg":\``,
     );
   });
@@ -176,14 +175,14 @@ describe('render', () => {
     const result1 = dotviz.renderDot('invalid1');
     const result2 = dotviz.renderDot('invalid2');
 
-    expectFailureResult(result1).toMatchInlineSnapshot(`
+    expectFailureResult(result1).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected identifier 'invalid1', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
 
       1 | invalid1
         | ^
     `);
 
-    expectFailureResult(result2).toMatchInlineSnapshot(`
+    expectFailureResult(result2).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected identifier 'invalid2', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
 
       1 | invalid2
@@ -194,7 +193,7 @@ describe('render', () => {
   it('renders valid input and includes error messages when followed by a graph with a syntax error', async () => {
     const result = dotviz.renderDot('graph a { } graph {');
 
-    expectDotWithWarnings(result).toMatchInlineSnapshot(`
+    expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected end of file. Add a closing '}' to match the opening '{' of the graph or subgraph.
 
       1 | graph a { } graph {
@@ -214,7 +213,7 @@ describe('render', () => {
       'graph a { layout=invalid } graph b { layout=dot }',
     );
 
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       RenderingBackendWarning: Multiple graphs found. Using the first one.
 
       RenderingBackendError: Layout type: "invalid" not recognized. Use one of: dot circo neato fdp twopi patchwork osage sfdp
@@ -226,7 +225,7 @@ describe('render', () => {
       engine: 'circo',
     });
 
-    expectFailureResult(result).toMatchInlineSnapshot(
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(
       `RenderingBackendError: Engine mismatch: layout attribute in graph ("dot") conflicts with engine option ("circo"). Remove one or make them match.`,
     );
   });
@@ -234,13 +233,13 @@ describe('render', () => {
   it('returns error for non-utf8 charset', async () => {
     const resultLatin = dotviz.renderDot('graph a { charset=latin1 }');
 
-    expectFailureResult(resultLatin).toMatchInlineSnapshot(
+    expectFailureResult(resultLatin).toMatchRawStringInlineSnapshot(
       `RenderingBackendError: Unsupported charset: "latin1". Only 'utf-8' and 'utf8' are supported.`,
     );
 
     const resultHTML = dotviz.renderDot('graph a { charset=<utf8> }');
 
-    expectFailureResult(resultHTML).toMatchInlineSnapshot(
+    expectFailureResult(resultHTML).toMatchRawStringInlineSnapshot(
       `RenderingBackendError: Unsupported charset: <utf8>. Only 'utf-8' and 'utf8' are supported.`,
     );
   });
@@ -248,7 +247,7 @@ describe('render', () => {
   it('renders graphs with syntax warnings', async () => {
     const result = dotviz.renderDot('graph a { x=1.2.3=y } graph b { }');
 
-    expectDotWithWarnings(result).toMatchInlineSnapshot(`
+    expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
       ParserWarning: Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
 
       1 | graph a { x=1.2.3=y } graph b { }
@@ -269,7 +268,7 @@ describe('render', () => {
   it('returns both warnings and errors', async () => {
     const result = dotviz.renderDot('graph { layout=invalid; x=1.2.3=y }');
 
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserWarning: Ambiguous token sequence: '1.2.3' will be split into number '1.2' and number '.3'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
 
       1 | graph { layout=invalid; x=1.2.3=y }
@@ -282,7 +281,7 @@ describe('render', () => {
   it('returns error messages printed to stderr', async () => {
     const result = dotviz.renderDot('graph { a [label=図] }');
 
-    expectDotWithWarnings(result).toMatchInlineSnapshot(`
+    expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
       RenderingBackendWarning: Warning: no value for width of non-ASCII character 229. Falling back to width of space character
 
       graph {
@@ -299,7 +298,7 @@ describe('render', () => {
   it('returns an error that uses AGPREV with the correct level', async () => {
     const result = dotviz.renderDot('graph { _background=123 }');
 
-    expectDotWithWarnings(result).toMatchInlineSnapshot(`
+    expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
       RenderingBackendWarning: Could not parse "_background" attribute in graph %1
 
       RenderingBackendWarning:   "123"
@@ -316,7 +315,7 @@ describe('render', () => {
   it('the graph is read with the default node label set', async () => {
     const result = dotviz.renderDot('graph { a; b[label=test] }');
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,126,36"];
       	node [label="\\N"];
@@ -336,7 +335,7 @@ describe('render', () => {
       images: { 'test.png': { width: 300, height: 200 } },
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,321.03,214.96"];
       	node [label="\\N"];
@@ -354,7 +353,7 @@ describe('render', () => {
       { images: { 'test.png': { width: 300, height: 200 } } },
     );
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,660.03,214.96"];
       	node [label="\\N"];
@@ -401,8 +400,7 @@ describe('render', () => {
       async (value) => {
         const result = dotviz.renderDot(`graph { linelength=${value} }`);
 
-        expect(result.status).toBe('failure');
-        expect(stringifyDiagnostics(result.diagnostics)).toBe(
+        expectFailureResult(result).toBe(
           "RenderingBackendError: linelength must be '0' or an integer in the [60, 128] range",
         );
       },
@@ -419,7 +417,7 @@ describe('render', () => {
       },
     );
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,321.03,214.96"];
       	node [label="\\N"];

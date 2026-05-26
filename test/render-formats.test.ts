@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { dotvizInstance } from '../src/index.ts';
-import { expectString } from './util/raw-string-serializer.ts';
 import {
   expectDot,
   expectFailureResult,
@@ -15,13 +14,13 @@ describe('renderFormats', () => {
       formats: ['dot', 'svg'],
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph a {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
       }
     `);
-    expectSvg(result).toMatchInlineSnapshot(`
+    expectSvg(result).toMatchRawStringInlineSnapshot(`
       <?xml version="1.0" encoding="UTF-8" standalone="no"?>
       <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
        "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -49,7 +48,7 @@ describe('renderFormats', () => {
       },
       diagnostics: [],
     });
-    expectString(result.output?.dot).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph a {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -73,7 +72,7 @@ describe('renderFormats', () => {
   it('returns error messages for invalid input', async () => {
     const result = dotviz.renderDot('invalid', { formats: ['dot', 'svg'] });
 
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
 
       1 | invalid
@@ -84,7 +83,7 @@ describe('renderFormats', () => {
   it('returns error messages for invalid input and an empty array of formats', async () => {
     const result = dotviz.renderDot('invalid', { formats: [] });
 
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected identifier 'invalid', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
 
       1 | invalid
