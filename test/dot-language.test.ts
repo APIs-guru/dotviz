@@ -3,11 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { dotvizInstance, type RenderResult } from '../src/index.ts';
 import { dedent } from './util/dedent.ts';
 import {
-  expectDiagnostics,
   expectDot,
   expectDotWithWarnings,
   expectFailureResult,
-  stringifyDiagnostics,
 } from './util/render-result.ts';
 import { useVizJSInstance } from './util/use-viz-js.ts';
 
@@ -47,7 +45,7 @@ function checkAttributeValue(
 describe('dot language support', () => {
   it('empty graph', () => {
     const result = renderDotAndCompareWithVizJS('graph {}');
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -55,7 +53,7 @@ describe('dot language support', () => {
     `);
 
     const directedResult = renderDotAndCompareWithVizJS('digraph {}');
-    expectDot(directedResult).toMatchInlineSnapshot(`
+    expectDot(directedResult).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -65,7 +63,7 @@ describe('dot language support', () => {
 
   it('strict empty graph', () => {
     const result = renderDotAndCompareWithVizJS('strict graph {}');
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       strict graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -75,7 +73,7 @@ describe('dot language support', () => {
 
   it('named graph', () => {
     const result = renderDotAndCompareWithVizJS('graph test {}');
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph test {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -86,7 +84,7 @@ describe('dot language support', () => {
     expect(stringResult).toStrictEqual(result);
 
     const keywordResult = renderDotAndCompareWithVizJS('graph "graph" {}');
-    expectDot(keywordResult).toMatchInlineSnapshot(`
+    expectDot(keywordResult).toMatchRawStringInlineSnapshot(`
       graph "graph" {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -105,7 +103,7 @@ describe('dot language support', () => {
          end comment */
       {}
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -121,7 +119,7 @@ describe('dot language support', () => {
         edge []
       }
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -147,7 +145,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [a=valueA,
       		bb="0,0,0,0"
@@ -185,7 +183,7 @@ describe('dot language support', () => {
         edge [c=""]
       }
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [a="",
       		bb="0,0,0,0"
@@ -265,7 +263,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [a=valueA,
       		bb="0,0,0,0"
@@ -302,7 +300,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,162,36",
       		graphAttr2=2
@@ -359,7 +357,7 @@ describe('dot language support', () => {
     };
     const result = dotviz.renderDot(dot, { overrideAttributes });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,72,36",
       		testGraph=valueGraph
@@ -386,7 +384,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -406,7 +404,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(directedResult).toMatchInlineSnapshot(`
+    expectDot(directedResult).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -429,7 +427,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -451,7 +449,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(directedResult).toMatchInlineSnapshot(`
+    expectDot(directedResult).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -474,7 +472,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,180"];
       	node [label="\\N"];
@@ -500,7 +498,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(directedResult).toMatchInlineSnapshot(`
+    expectDot(directedResult).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,180"];
       	node [label="\\N"];
@@ -528,7 +526,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,126,180"];
       	node [label="\\N"];
@@ -577,7 +575,7 @@ describe('dot language support', () => {
          	{ node [a=""] }
         }
       `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
         graph {
         	graph [bb="0,0,0,0"];
         	node [a="",
@@ -598,7 +596,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,198,36"];
       	node [label="\\N"];
@@ -630,7 +628,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,198,36"];
       	node [label="\\N"];
@@ -663,7 +661,7 @@ describe('dot language support', () => {
           }
         }
       `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -689,7 +687,7 @@ describe('dot language support', () => {
         subgraph tails { a b } -> subgraph heads { c d }
       }
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,126,108"];
       	node [label="\\N"];
@@ -724,7 +722,7 @@ describe('dot language support', () => {
         a -> a
       }
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       strict digraph {
       	graph [bb="0,0,72,42.271"];
       	node [label="\\N"];
@@ -753,7 +751,7 @@ describe('dot language support', () => {
         }
       }
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -796,7 +794,7 @@ describe('dot language support', () => {
         }
       }
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -836,7 +834,7 @@ describe('dot language support', () => {
         }
       }
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       strict graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -868,7 +866,7 @@ describe('dot language support', () => {
         }
       }
     `);
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       strict digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -894,7 +892,7 @@ describe('dot language support', () => {
       'value $0',
       (dot) => {
         const result = dotviz.renderDot(dot);
-        expectFailureResult(result).toMatchInlineSnapshot(
+        expectFailureResult(result).toMatchRawStringInlineSnapshot(
           `RenderingBackendError: Missing graph definition. Start your file with 'graph {}' or 'digraph {}'.`,
         );
       },
@@ -903,7 +901,7 @@ describe('dot language support', () => {
 
   it('error on missing graph at the beginning of file', () => {
     const result = dotviz.renderDot('test');
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected identifier 'test', expected keyword 'strict', 'graph' or 'digraph' at the beginning of the file.
 
       1 | test
@@ -913,7 +911,7 @@ describe('dot language support', () => {
 
   it('error on graph without statements', () => {
     const result = dotviz.renderDot('graph // missing body');
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected end of file, expected '{'.
 
       1 | graph // missing body
@@ -923,7 +921,7 @@ describe('dot language support', () => {
 
   it('error on using square brackets for graph definition', () => {
     const result = dotviz.renderDot('graph []');
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected '[', expected '{'.
 
       1 | graph []
@@ -938,7 +936,8 @@ describe('dot language support', () => {
         hex_number=0x5f
       }
     `);
-    expectDiagnostics(result).toMatchInlineSnapshot(`
+
+    expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
       ParserWarning: Ambiguous token sequence: 'digraph-1' will be split into keyword 'digraph' and number '-1'. If you want it interpreted as a single value, use quotes: "...". Otherwise, use whitespace or other delimiters to separate tokens.
 
       1 | digraph-1 {
@@ -958,12 +957,26 @@ describe('dot language support', () => {
       3 |   hex_number=0x5f
         |              ^
       4 | }
+
+      digraph -1 {
+      	graph [bb="0,0,126,36",
+      		hex_number=0,
+      		version=2.0
+      	];
+      	node [label="\\N"];
+      	.0	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	x5f	[height=0.5,
+      		pos="99,18",
+      		width=0.75];
+      }
     `);
   });
 
   it('error on using keyword as graph name', () => {
     const result = dotviz.renderDot('graph subgraph {}');
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected reserved keyword 'subgraph' where graph name was expected. If you want to use it as an identifier, enclose it in quotes: "subgraph".
 
       1 | graph subgraph {}
@@ -973,7 +986,7 @@ describe('dot language support', () => {
 
   it('error on using HTML string as a graph name', () => {
     const result = dotviz.renderDot('graph <SomeHTML> {}');
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: HTML string as graph name is not supported. If you want to use it as an identifier, enclose it in quotes: "<SomeHTML>".
 
       1 | graph <SomeHTML> {}
@@ -1011,7 +1024,7 @@ describe('dot language support', () => {
       ],
     ])('token $0', ([token, tokenDebugMessage]) => {
       const result = dotviz.renderDot('graph name ' + token);
-      expect(stringifyDiagnostics(result.diagnostics)).toStrictEqual(dedent`
+      expectFailureResult(result).toStrictEqual(dedent`
         ParserError: Unexpected ${tokenDebugMessage}, expected '{'.
 
         1 | graph name ${token}
@@ -1022,7 +1035,7 @@ describe('dot language support', () => {
 
   it('error on invalid syntax in graph statement list', () => {
     const result = dotviz.renderDot('graph { -- }');
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected '--', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
       1 | graph { -- }
@@ -1036,7 +1049,7 @@ describe('dot language support', () => {
         node {}
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected '{', expected '['.
 
       1 | graph {
@@ -1052,7 +1065,7 @@ describe('dot language support', () => {
         node [ -> ]
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected '->', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
       1 | graph {
@@ -1068,7 +1081,7 @@ describe('dot language support', () => {
         test=/* never finishes
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected unterminated block comment '/* never finishes\\n}', add a closing '*/' to the comment.
 
       1 | graph {
@@ -1084,7 +1097,7 @@ describe('dot language support', () => {
         test="never finishes
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unterminated string '"never finishes\\n}', add a closing '"' to the string.
 
       1 | graph {
@@ -1100,7 +1113,7 @@ describe('dot language support', () => {
         test=<never finishes
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unterminated HTML string '<never finishes\\n}', add a closing '>' to the HTML string.
 
       1 | graph {
@@ -1117,7 +1130,7 @@ describe('dot language support', () => {
       }
     `);
 
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected identifier 'id', expected a string literal.
 
       1 | graph {
@@ -1133,7 +1146,7 @@ describe('dot language support', () => {
         a:bad_port
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected 'bad_port' port in node statement
 
       1 | graph {
@@ -1149,7 +1162,7 @@ describe('dot language support', () => {
         a:port:bad_point
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Invalid compass point identifier 'bad_point'. Allowed values: n, ne, e, se, s, sw, w, nw, c, _.
 
       1 | graph {
@@ -1165,7 +1178,7 @@ describe('dot language support', () => {
         a -> a
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected '->' in an undirected graph. Use '--' for undirected edges in a 'graph'.
 
       1 | graph {
@@ -1181,7 +1194,7 @@ describe('dot language support', () => {
         a -- a
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected '--' in a directed graph. Use '->' for directed edges in a 'digraph'.
 
       1 | digraph {
@@ -1198,7 +1211,7 @@ describe('dot language support', () => {
           { ${badChar} }
         }
       `);
-      expect(stringifyDiagnostics(result.diagnostics)).toStrictEqual(dedent`
+      expectFailureResult(result).toStrictEqual(dedent`
         ParserError: Unexpected character '${badChar}', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
         1 | digraph {
@@ -1215,7 +1228,7 @@ describe('dot language support', () => {
         subgraph name <bad>
       }
     `);
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected HTML string <bad>, expected '{'.
 
       2 |       graph {
@@ -1230,7 +1243,7 @@ describe('dot language support', () => {
     const result = dotviz.renderDot(
       'digraph { node my_template = [shape=box] }',
     );
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected identifier 'my_template', expected '['.
 
       1 | digraph { node my_template = [shape=box] }
@@ -1241,7 +1254,7 @@ describe('dot language support', () => {
   describe('error on HTML string as names', () => {
     it('node name', () => {
       const result = dotviz.renderDot('digraph { <foo> [x=1] }');
-      expectFailureResult(result).toMatchInlineSnapshot(`
+      expectFailureResult(result).toMatchRawStringInlineSnapshot(`
         ParserError: HTML string as node name is not supported. If you want to use it as an identifier, enclose it in quotes: "<foo>".
 
         1 | digraph { <foo> [x=1] }
@@ -1251,7 +1264,7 @@ describe('dot language support', () => {
 
     it('attribute name', () => {
       const result = dotviz.renderDot('digraph { a [<color>=red] }');
-      expectFailureResult(result).toMatchInlineSnapshot(`
+      expectFailureResult(result).toMatchRawStringInlineSnapshot(`
         ParserError: HTML string as attribute name is not supported. If you want to use it as an identifier, enclose it in quotes: "<color>".
 
         1 | digraph { a [<color>=red] }
@@ -1263,7 +1276,7 @@ describe('dot language support', () => {
   it('error on HTML + HTML string concatenation', () => {
     // `dot` silently loses HTML tagging on concatenation: <a>+<b> → plain "ab". We simply reject it.
     const result = dotviz.renderDot('digraph { label = <a> + <b> }');
-    expectFailureResult(result).toMatchInlineSnapshot(`
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(`
       ParserError: Unexpected '+', expected node, edge, subgraph or attribute statement. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
       1 | digraph { label = <a> + <b> }
@@ -1274,7 +1287,7 @@ describe('dot language support', () => {
   describe('non-BMP (astral) Unicode character handling', () => {
     it('correctly handles astral Unicode characters in node names', () => {
       const result = renderDotAndCompareWithVizJS('graph { 😀 }');
-      expectDotWithWarnings(result).toMatchInlineSnapshot(`
+      expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
         RenderingBackendWarning: Warning: no value for width of non-ASCII character 240. Falling back to width of space character
 
         graph {
@@ -1289,7 +1302,7 @@ describe('dot language support', () => {
 
     it('correctly handles astral Unicode characters in string attributes', () => {
       const result = renderDotAndCompareWithVizJS('graph { label="😀" }');
-      expectDot(result).toMatchInlineSnapshot(`
+      expectDot(result).toMatchRawStringInlineSnapshot(`
         graph {
         	graph [bb="0,0,30,24.8",
         		label=😀,
@@ -1304,7 +1317,7 @@ describe('dot language support', () => {
 
     it('correctly report error positions if dot contains unicode', () => {
       const result = dotviz.renderDot('graph { \u{1F600} [= }');
-      expectFailureResult(result).toMatchInlineSnapshot(`
+      expectFailureResult(result).toMatchRawStringInlineSnapshot(`
         ParserError: Unexpected '=', expected attribute name. If this is meant to be part of a label or name, enclose it in quotes ("...").
 
         1 | graph { 😀 [= }

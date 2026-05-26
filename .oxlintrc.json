@@ -97,10 +97,7 @@
             "onlyFunctionsWithExpectInLoop": true,
             "onlyFunctionsWithExpectInCallback": true
           }
-        ],
-
-        // FIXME
-        "vitest/valid-expect": "off"
+        ]
       }
     }
   ]

@@ -8,7 +8,7 @@ describe('rendering graph objects', () => {
   it('empty graph', async () => {
     const dotviz = await dotvizInstance();
     const result = dotviz.renderGraph({});
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,0,0"];
       	node [label="\\N"];
@@ -37,7 +37,7 @@ describe('rendering graph objects', () => {
       },
     );
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,72,36",
       		testGraph=valueGraph
@@ -62,7 +62,7 @@ describe('rendering graph objects', () => {
       edges: [{ tail: 'a', head: 'b' }],
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -84,7 +84,7 @@ describe('rendering graph objects', () => {
       edges: [{ tail: 'a', head: 'b' }],
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       graph {
       	graph [bb="0,0,54,108"];
       	node [label="\\N"];
@@ -110,7 +110,7 @@ describe('rendering graph objects', () => {
       ],
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,36"];
       	a	[height=0.5,
@@ -151,7 +151,7 @@ describe('rendering graph objects', () => {
       ],
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,297.04,84",
       		rankdir=LR
@@ -216,7 +216,7 @@ describe('rendering graph objects', () => {
         },
       ],
     });
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,553.05,36"];
       	node [label="\\N",
@@ -308,7 +308,7 @@ describe('rendering graph objects', () => {
         },
       ],
     });
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph structs {
       	graph [bb="0,0,229.65,160.4"];
       	node [shape=plaintext];
@@ -353,7 +353,7 @@ describe('rendering graph objects', () => {
       nodes: [{ name: 'a', attributes: { color: 'red' } }, { name: 'b' }],
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,126,36"];
       	node [color=blue,
@@ -382,7 +382,7 @@ describe('rendering graph objects', () => {
       ],
     });
 
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,36"];
       	node [label="\\N"];

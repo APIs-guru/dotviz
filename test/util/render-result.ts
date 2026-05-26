@@ -1,14 +1,14 @@
 import { assert, expect } from 'vitest';
 
 import { type Diagnostic, type RenderResult } from '../../src/index.ts';
-import { RawString } from './raw-string-serializer.ts';
 
 export function expectDot(result: RenderResult) {
   const { output, diagnostics } = result;
   expect(stringifyDiagnostics(diagnostics)).toBe('');
   expect(result).toStrictEqual({ status: 'success', output, diagnostics });
   assert.exists(output?.dot);
-  return expect(new RawString(output.dot));
+  // oxlint-disable-next-line vitest/valid-expect
+  return expect(output.dot);
 }
 
 export function expectSvg(result: RenderResult) {
@@ -16,16 +16,16 @@ export function expectSvg(result: RenderResult) {
   expect(stringifyDiagnostics(diagnostics)).toBe('');
   expect(result).toStrictEqual({ status: 'success', output, diagnostics });
   assert.exists(output?.svg);
-  return expect(new RawString(output.svg));
+  // oxlint-disable-next-line vitest/valid-expect
+  return expect(output.svg);
 }
 
 export function expectDotWithWarnings(result: RenderResult) {
   const { output, diagnostics } = result;
   expect(result).toStrictEqual({ status: 'success', output, diagnostics });
   assert.exists(output?.dot);
-  return expect(
-    new RawString(stringifyDiagnostics(diagnostics) + '\n\n' + output.dot),
-  );
+  // oxlint-disable-next-line vitest/valid-expect
+  return expect(stringifyDiagnostics(diagnostics) + '\n\n' + output.dot);
 }
 
 export function expectFailureResult(result: RenderResult) {
@@ -34,14 +34,11 @@ export function expectFailureResult(result: RenderResult) {
     output: undefined,
     diagnostics: expect.any(Array) as unknown,
   });
-  return expectDiagnostics(result);
-}
-
-export function expectDiagnostics(result: RenderResult) {
   assert.isArray(result.diagnostics);
-  return expect(new RawString(stringifyDiagnostics(result.diagnostics)));
+  // oxlint-disable-next-line vitest/valid-expect
+  return expect(stringifyDiagnostics(result.diagnostics));
 }
 
-export function stringifyDiagnostics(diagnostics: Diagnostic[]): string {
+function stringifyDiagnostics(diagnostics: Diagnostic[]): string {
   return diagnostics.map((e) => e.toString()).join('\n\n');
 }

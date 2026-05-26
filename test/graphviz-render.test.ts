@@ -4,10 +4,9 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { dotvizInstance } from '../src/index.ts';
-import { expectString } from './util/raw-string-serializer.ts';
 import {
-  expectDiagnostics,
   expectDot,
+  expectDotWithWarnings,
   expectSvg,
 } from './util/render-result.ts';
 
@@ -54,11 +53,9 @@ describe('render', () => {
       diagnostics: expect.any(Array) as unknown,
     });
 
-    expectDiagnostics(result).toMatchInlineSnapshot(
-      `RenderingBackendWarning: layers not supported in dot output`,
-    );
+    expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
+      RenderingBackendWarning: layers not supported in dot output
 
-    expectString(result.output?.dot).toMatchInlineSnapshot(`
       digraph G {
       	graph [bb="0,0,199.27,108",
       		layers="local:pvt:test:new:ofc"
@@ -86,7 +83,7 @@ describe('render', () => {
       }
     `);
 
-    await expectString(result.output?.svg).toMatchFileSnapshot(
+    await expect(result.output?.svg).toMatchFileSnapshot(
       './snapshots/layers_support.svg',
     );
   });
@@ -98,7 +95,7 @@ describe('render', () => {
       }
     `;
     const result = dotviz.renderDot(dot, { formats: ['dot', 'svg'] });
-    expectDot(result).toMatchInlineSnapshot(`
+    expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph G {
       	graph [_background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36",
       		bb="0,0,54,108"

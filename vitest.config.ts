@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 // oxlint-disable-next-line import/no-default-export
 export default defineConfig({
   test: {
-    snapshotSerializers: ['test/util/raw-string-serializer.ts'],
+    setupFiles: 'test/setup/extend-expect.ts',
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts', 'test/**/*.ts'],
