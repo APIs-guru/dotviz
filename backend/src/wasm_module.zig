@@ -2,9 +2,10 @@ const std = @import("std");
 const wasm_allocator = std.heap.wasm_allocator;
 const c_allocator = std.heap.c_allocator;
 
-const vizjs_types = @import("vizjs_types.zig");
-const graphviz = vizjs_types.graphviz;
 const readGraphJSON = @import("read_graph_json.zig").readGraphJSON;
+const vizjs_types = @import("vizjs_types.zig");
+const renderDot = @import("render_dot.zig").renderDot;
+const graphviz = vizjs_types.graphviz;
 
 extern var Y_invert: bool;
 extern var Reduce: bool;
@@ -170,12 +171,11 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     layoutRender(request.engine, gvc, graph);
     defer layoutCleanup(request.engine, graph);
 
-    var responseDot: ?[:0]const u8 = null;
+    const responseDot = if (request.renderDot)
+        renderDot(graph, request)
+    else
+        null;
     defer freeCString(responseDot);
-    if (request.renderDot) {
-        const output = graphviz.render_dot(graph, request.dotOutputMaxLineLength);
-        responseDot = @ptrCast(output.data[0..output.data_position]);
-    }
 
     var responseSvg: ?[:0]const u8 = null;
     defer freeCString(responseSvg);
