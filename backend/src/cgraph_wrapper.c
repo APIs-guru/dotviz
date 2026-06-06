@@ -10,3 +10,7 @@ Agraph_t *wrapped_agopen(const char *name, bool directed, bool strict) {
 Agraphinfo_t* graphInfo(Agraph_t *g) {
   return (Agraphinfo_t *)g->base.data;
 }
+
+Agnodeinfo_t* nodeInfoPtr(Agnode_t *n) {
+  return (Agnodeinfo_t *)n->base.data;
+}

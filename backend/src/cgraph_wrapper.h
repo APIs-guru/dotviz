@@ -8,6 +8,7 @@
 Agraph_t *wrapped_agopen(const char *name, bool directed, bool strict);
 
 Agraphinfo_t* graphInfo(Agraph_t *g);
+Agnodeinfo_t* nodeInfoPtr(Agnode_t *n);
 
 void free_label(textlabel_t * p);
 

@@ -77,7 +77,6 @@ pub fn build(b: *std.Build) void {
             "src/inline_render_svg/shapes.c",
             "src/inline_render_svg/arrows.c",
             "src/inline_render_svg/labels.c",
-            "src/inline_render_dot/render_inline_dot.c",
             "src/inline_render_dot/output_dot.c",
             "src/inline_render_dot/write_c_inline.c",
             "src/gvusershape_size.c",
