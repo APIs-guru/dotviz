@@ -98,24 +98,20 @@ static bool is_escape(const char *str) {
  * Assumes buf is large enough to hold output.
  */
 static char *return_canonstr(char *arg, char *buf) {
-  char *s, *p;
-  char uc;
+  if (EMPTY(arg))
+    return "\"\"";
+
+  static const char *tokenlist[] /* must agree with scan.l */
+      = {"node", "edge", "strict", "graph", "digraph", "subgraph", NULL};
   unsigned int cnt = 0, dotcnt = 0;
   bool needs_quotes = false;
   bool part_of_escape = false;
-  bool maybe_num;
   bool backslash_pending = false;
-  static const char *tokenlist[] /* must agree with scan.l */
-      = {"node", "edge", "strict", "graph", "digraph", "subgraph", NULL};
-  const char **tok;
-
-  if (EMPTY(arg))
-    return "\"\"";
-  s = arg;
-  p = buf;
+  char *s = arg;
+  char *p = buf;
   *p++ = '\"';
-  uc = *s++;
-  maybe_num = gv_isdigit(uc) || uc == '.' || uc == '-';
+  char uc = *s++;
+  bool maybe_num = gv_isdigit(uc) || uc == '.' || uc == '-';
   while (uc) {
     if (uc == '\"' && !part_of_escape) {
       *p++ = '\\';
@@ -179,7 +175,7 @@ static char *return_canonstr(char *arg, char *buf) {
 
   /* Use quotes to protect tokens (example, a node named "node") */
   /* It would be great if it were easier to use flex here. */
-  for (tok = tokenlist; *tok; tok++)
+  for (const char **tok = tokenlist; *tok; tok++)
     if (!strcasecmp(*tok, arg))
       return buf;
   return arg;
@@ -217,18 +213,17 @@ static void write_dict(output_string *output, char *name, Dict_t *dict,
                        bool top) {
   int cnt = 0;
   Dict_t *view;
-  Agsym_t *sym, *psym;
 
   if (!top)
     view = dtview(dict, NULL);
   else
     view = 0;
-  for (sym = dtfirst(dict); sym; sym = dtnext(dict, sym)) {
+  for (Agsym_t *sym = dtfirst(dict); sym; sym = dtnext(dict, sym)) {
     if (EMPTY(sym->defval) &&
         !sym->print) { /* try to skip empty str (default) */
       if (view == NULL)
         continue; /* no parent */
-      psym = dtsearch(view, sym);
+      Agsym_t *psym = dtsearch(view, sym);
       assert(psym);
       if (EMPTY(psym->defval) && psym->print)
         continue; /* also empty in parent */
@@ -259,8 +254,8 @@ static void write_dict(output_string *output, char *name, Dict_t *dict,
 }
 
 static void write_dicts(Agraph_t *g, output_string *output, bool top) {
-  Agdatadict_t *def;
-  if ((def = agdatadict(g, false))) {
+  Agdatadict_t *def = agdatadict(g, false);
+  if (def) {
     write_dict(output, "graph", def->dict.g, top);
     write_dict(output, "node", def->dict.n, top);
     write_dict(output, "edge", def->dict.e, top);
@@ -268,11 +263,9 @@ static void write_dicts(Agraph_t *g, output_string *output, bool top) {
 }
 
 static void write_hdr(Agraph_t *g, output_string *output, bool top) {
-  char *name, *sep, *kind, *strict;
   bool root = false;
-  bool hasName = true;
-
-  strict = "";
+  char* strict = "";
+  char* kind;
   if (!top && agparent(g))
     kind = "sub";
   else {
@@ -286,8 +279,10 @@ static void write_hdr(Agraph_t *g, output_string *output, bool top) {
     Tailport = agattr_text(g, AGEDGE, TAILPORT_ID, NULL);
     Headport = agattr_text(g, AGEDGE, HEADPORT_ID, NULL);
   }
-  name = agnameof(g);
-  sep = " ";
+
+  char* name = agnameof(g);
+  char* sep = " ";
+  bool hasName = true;
   if (!name || name[0] == LOCALNAMEPREFIX) {
     sep = name = "";
     hasName = false;
@@ -337,21 +332,21 @@ static bool is_anonymous(Agraph_t *g) {
 }
 
 static bool irrelevant_subgraph(Agraph_t *g) {
-  int i, n;
-  Agattr_t *sdata, *pdata, *rdata;
-  Agdatadict_t *dd;
-
   if (!is_anonymous(g))
     return false;
-  if ((sdata = agattrrec(g)) && (pdata = agattrrec(agparent(g)))) {
-    rdata = agattrrec(agroot(g));
-    n = dtsize(rdata->dict);
-    for (i = 0; i < n; i++)
+
+  Agattr_t *sdata = agattrrec(g);
+  Agattr_t *pdata = agattrrec(agparent(g));
+  if (sdata && pdata) {
+    Agattr_t *rdata = agattrrec(agroot(g));
+    int n = dtsize(rdata->dict);
+    for (int i = 0; i < n; i++)
       if (sdata->str[i] && pdata->str[i] &&
           strcmp(sdata->str[i], pdata->str[i]))
         return false;
   }
-  dd = agdatadict(g, false);
+
+  Agdatadict_t *dd = agdatadict(g, false);
   if (!dd)
     return true;
   if (dtsize(dd->dict.n) > 0 || dtsize(dd->dict.e) > 0)
@@ -364,11 +359,9 @@ static bool has_no_edges(Agraph_t *g, Agnode_t *n) {
 }
 
 static bool not_default_attrs(Agnode_t *n) {
-  Agattr_t *data;
-  Agsym_t *sym;
-
-  if ((data = agattrrec(n))) {
-    for (sym = dtfirst(data->dict); sym; sym = dtnext(data->dict, sym)) {
+  Agattr_t *data = agattrrec(n);
+  if (data) {
+    for (Agsym_t *sym = dtfirst(data->dict); sym; sym = dtnext(data->dict, sym)) {
       if (data->str[sym->id] != sym->defval)
         return true;
     }
@@ -378,9 +371,7 @@ static bool not_default_attrs(Agnode_t *n) {
 
 static void write_subgs(Agraph_t *g, output_string *output,
                         write_info_t *wr_info) {
-  Agraph_t *subg;
-
-  for (subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
+  for (Agraph_t *subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
     if (irrelevant_subgraph(subg)) {
       write_subgs(subg, output, wr_info);
     } else {
@@ -408,19 +399,16 @@ static int write_edge_name(Agedge_t *e, output_string *output, bool terminate) {
 
 static void write_nondefault_attrs(void *obj, output_string *output,
                                    Dict_t *defdict) {
-  Agattr_t *data;
-  Agsym_t *sym;
   int cnt = 0;
-  int rv;
-
   if (AGTYPE(obj) == AGINEDGE || AGTYPE(obj) == AGOUTEDGE) {
-    rv = write_edge_name(obj, output, false);
+    int rv = write_edge_name(obj, output, false);
     if (rv)
       cnt++;
   }
-  data = agattrrec(obj);
+
+  Agattr_t *data = agattrrec(obj);
   if (data)
-    for (sym = dtfirst(defdict); sym; sym = dtnext(defdict, sym)) {
+    for (Agsym_t *sym = dtfirst(defdict); sym; sym = dtnext(defdict, sym)) {
       if (AGTYPE(obj) == AGINEDGE || AGTYPE(obj) == AGOUTEDGE) {
         if (Tailport && sym->id == Tailport->id)
           continue;
@@ -448,9 +436,7 @@ static void write_nondefault_attrs(void *obj, output_string *output,
 }
 
 static void write_nodename(Agnode_t *n, output_string *output) {
-  char *name;
-
-  name = agnameof(n);
+  char *name = agnameof(n);
   if (name) {
     write_canonstr_str(output, name);
   } else {
@@ -489,11 +475,10 @@ static bool write_node_test(Agraph_t *g, Agnode_t *n, write_info_t *wr_info) {
 }
 
 static void write_port(Agedge_t *e, output_string *output, Agsym_t *port) {
-  char *val;
-
   if (!port)
     return;
-  val = agxget(e, port);
+
+  char *val = agxget(e, port);
   if (val[0] == '\0')
     return;
 
@@ -523,10 +508,8 @@ static bool write_edge_test(Agraph_t *g, Agedge_t *e, write_info_t *wr_info) {
 
 static void write_edge(Agraph_t *subg, Agedge_t *e, output_string *output,
                        Dict_t *d, write_info_t *wr_info) {
-  Agnode_t *t, *h;
-
-  t = AGTAIL(e);
-  h = AGHEAD(e);
+  Agnode_t *t = AGTAIL(e);
+  Agnode_t *h = AGHEAD(e);
   indent(output);
   write_nodename(t, output);
   write_port(e, output, Tailport);
@@ -544,17 +527,15 @@ static void write_edge(Agraph_t *subg, Agedge_t *e, output_string *output,
 
 static void write_body(Agraph_t *g, output_string *output,
                        write_info_t *wr_info) {
-  Agnode_t *n, *prev;
-  Agedge_t *e;
-  Agdatadict_t *dd;
 
   write_subgs(g, output, wr_info);
-  dd = agdatadict(g, false);
-  for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
+  Agdatadict_t *dd = agdatadict(g, false);
+  for (Agnode_t *n = agfstnode(g); n; n = agnxtnode(g, n)) {
     if (write_node_test(g, n, wr_info))
       write_node(g, n, output, dd ? dd->dict.n : 0, wr_info);
-    prev = n;
-    for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
+
+    Agnode_t *prev = n;
+    for (Agedge_t *e = agfstout(g, n); e; e = agnxtout(g, e)) {
       if (prev != aghead(e) && write_node_test(g, aghead(e), wr_info)) {
         write_node(g, aghead(e), output, dd ? dd->dict.n : 0, wr_info);
         prev = aghead(e);
@@ -566,19 +547,14 @@ static void write_body(Agraph_t *g, output_string *output,
 }
 
 static void set_attrwf(Agraph_t *g, bool toplevel, bool value) {
-  // +
-  Agraph_t *subg;
-  Agnode_t *n;
-  Agedge_t *e;
-
   AGATTRWF(g) = value;
-  for (subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
+  for (Agraph_t *subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
     set_attrwf(subg, false, value);
   }
   if (toplevel) {
-    for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
+    for (Agnode_t *n = agfstnode(g); n; n = agnxtnode(g, n)) {
       AGATTRWF(n) = value;
-      for (e = agfstout(g, n); e; e = agnxtout(g, e))
+      for (Agedge_t *e = agfstout(g, n); e; e = agnxtout(g, e))
         AGATTRWF(e) = value;
     }
   }
@@ -608,19 +584,15 @@ output_string my_agwrite(Agraph_t *g, unsigned int max_output_linelength) {
 }
 
 static uint64_t subgdfs(Agraph_t *g, uint64_t ix, write_info_t *wr_info) {
-  // +
   uint64_t ix0 = ix;
-  Agraph_t *subg;
-
   wr_info->preorder_number[AGSEQ(g)] = ix0;
-  for (subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
+  for (Agraph_t *subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
     ix0 = subgdfs(subg, ix0, wr_info);
   }
   return ix0 + 1;
 }
 
 static write_info_t before_write(Agraph_t *g) {
-  // +
   write_info_t wr_info = {0};
   set_attrwf(g, true, false);
 
@@ -635,7 +607,6 @@ static write_info_t before_write(Agraph_t *g) {
 }
 
 static void after_write(write_info_t wr_info) {
-  // +
   free(wr_info.preorder_number);
   free(wr_info.node_last_written);
   free(wr_info.edge_last_written);
