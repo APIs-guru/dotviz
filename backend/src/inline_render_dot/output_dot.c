@@ -74,29 +74,24 @@ static offsets_t setYInvert(graph_t *g) {
 }
 
 static void set_record_rects(node_t *n, field_t *f, agxbuf *xb, double yOff) {
-  int i;
-
   if (f->n_flds == 0) {
     agxbprint(xb, "%.5g,%.5g,%.5g,%.5g ", f->b.LL.x + ND_coord(n).x,
               yDir(f->b.LL.y + ND_coord(n).y, yOff), f->b.UR.x + ND_coord(n).x,
               yDir(f->b.UR.y + ND_coord(n).y, yOff));
   }
-  for (i = 0; i < f->n_flds; i++)
+  for (int i = 0; i < f->n_flds; i++)
     set_record_rects(n, f->fld[i], xb, yOff);
 }
 
 static void rec_attach_bb(graph_t *g, Agsym_t *bbsym, Agsym_t *lpsym,
                           Agsym_t *lwsym, Agsym_t *lhsym, double yOff) {
-  int c;
   agxbuf buf = {0};
-  pointf pt;
-
   agxbprint(&buf, "%.5g,%.5g,%.5g,%.5g", GD_bb(g).LL.x,
             yDir(GD_bb(g).LL.y, yOff), GD_bb(g).UR.x,
             yDir(GD_bb(g).UR.y, yOff));
   agxset(g, bbsym, agxbuse(&buf));
   if (GD_label(g) && GD_label(g)->text[0]) {
-    pt = GD_label(g)->pos;
+    pointf pt = GD_label(g)->pos;
     agxbprint(&buf, "%.5g,%.5g", pt.x, yDir(pt.y, yOff));
     agxset(g, lpsym, agxbuse(&buf));
     pt = GD_label(g)->dimen;
@@ -105,7 +100,7 @@ static void rec_attach_bb(graph_t *g, Agsym_t *bbsym, Agsym_t *lpsym,
     agxbprint(&buf, "%.2f", PS2INCH(pt.y));
     agxset(g, lhsym, agxbuse(&buf));
   }
-  for (c = 1; c <= GD_n_cluster(g); c++)
+  for (int c = 1; c <= GD_n_cluster(g); c++)
     rec_attach_bb(GD_clust(g)[c], bbsym, lpsym, lwsym, lhsym, yOff);
   agxbfree(&buf);
 }
@@ -117,24 +112,13 @@ static void rec_attach_bb(graph_t *g, Agsym_t *bbsym, Agsym_t *lpsym,
 static attrsym_t *safe_dcl(graph_t *g, int obj_kind, char *name,
                            char *defaultValue) {
   attrsym_t *a = agattr_text(g, obj_kind, name, NULL);
-  if (!a) /* attribute does not exist */
-    a = agattr_text(g, obj_kind, name, defaultValue);
-  return a;
+  if (a != NULL)
+    return a;
+  return agattr_text(g, obj_kind, name, defaultValue);
 }
 
 extern void undoClusterEdges(graph_t *g);
 void my_attach_attrs_and_arrows(graph_t *g) {
-  node_t *n;
-  edge_t *e;
-  pointf ptf;
-  int dim3 = (GD_odim(g) >= 3);
-  Agsym_t *bbsym = NULL;
-  Agsym_t *lpsym = NULL;
-  Agsym_t *lwsym = NULL;
-  Agsym_t *lhsym = NULL;
-
-  const offsets_t offsets = setYInvert(g);
-  agxbuf xb = {0};
   safe_dcl(g, AGNODE, "pos", "");
   safe_dcl(g, AGNODE, "rects", "");
   N_width = safe_dcl(g, AGNODE, "width", "");
@@ -150,19 +134,25 @@ void my_attach_attrs_and_arrows(graph_t *g) {
     safe_dcl(g, AGEDGE, "head_lp", "");
   if (GD_has_labels(g) & TAIL_LABEL)
     safe_dcl(g, AGEDGE, "tail_lp", "");
+
+  Agsym_t *lpsym = NULL;
+  Agsym_t *lwsym = NULL;
+  Agsym_t *lhsym = NULL;
   if (GD_has_labels(g) & GRAPH_LABEL) {
     lpsym = safe_dcl(g, AGRAPH, "lp", "");
     lwsym = safe_dcl(g, AGRAPH, "lwidth", "");
     lhsym = safe_dcl(g, AGRAPH, "lheight", "");
   }
-  bbsym = safe_dcl(g, AGRAPH, "bb", "");
-  for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-    if (dim3) {
-      int k;
+  Agsym_t *bbsym = safe_dcl(g, AGRAPH, "bb", "");
 
+  int dim3 = (GD_odim(g) >= 3);
+  const offsets_t offsets = setYInvert(g);
+  agxbuf xb = {0};
+  for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n)) {
+    if (dim3) {
       agxbprint(&xb, "%.5g,%.5g,%.5g", ND_coord(n).x,
                 yDir(ND_coord(n).y, offsets.Y), POINTS_PER_INCH * ND_pos(n)[2]);
-      for (k = 3; k < GD_odim(g); k++) {
+      for (int k = 3; k < GD_odim(g); k++) {
         agxbprint(&xb, ",%.5g", POINTS_PER_INCH * (ND_pos(n)[k]));
       }
       agset(n, "pos", agxbuse(&xb));
@@ -175,8 +165,9 @@ void my_attach_attrs_and_arrows(graph_t *g) {
     agxset(n, N_height, agxbuse(&xb));
     agxbprint(&xb, "%.5g", PS2INCH(ND_lw(n) + ND_rw(n)));
     agxset(n, N_width, agxbuse(&xb));
+
     if (ND_xlabel(n) && ND_xlabel(n)->set) {
-      ptf = ND_xlabel(n)->pos;
+      pointf ptf = ND_xlabel(n)->pos;
       agxbprint(&xb, "%.5g,%.5g", ptf.x, yDir(ptf.y, offsets.Y));
       agset(n, "xlp", agxbuse(&xb));
     }
@@ -216,7 +207,7 @@ void my_attach_attrs_and_arrows(graph_t *g) {
       }
     }
     if (State >= GVSPLINES) {
-      for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
+      for (edge_t *e = agfstout(g, n); e; e = agnxtout(g, e)) {
         if (ED_edge_type(e) == IGNORED)
           continue;
         if (ED_spl(e) == NULL)
@@ -235,28 +226,28 @@ void my_attach_attrs_and_arrows(graph_t *g) {
           for (size_t j = 0; j < ED_spl(e)->list[i].size; j++) {
             if (j > 0)
               agxbputc(&xb, ' ');
-            ptf = ED_spl(e)->list[i].list[j];
+            pointf ptf = ED_spl(e)->list[i].list[j];
             agxbprint(&xb, "%.5g,%.5g", ptf.x, yDir(ptf.y, offsets.Y));
           }
         }
         agset(e, "pos", agxbuse(&xb));
         if (ED_label(e)) {
-          ptf = ED_label(e)->pos;
+          pointf ptf = ED_label(e)->pos;
           agxbprint(&xb, "%.5g,%.5g", ptf.x, yDir(ptf.y, offsets.Y));
           agset(e, "lp", agxbuse(&xb));
         }
         if (ED_xlabel(e) && ED_xlabel(e)->set) {
-          ptf = ED_xlabel(e)->pos;
+          pointf ptf = ED_xlabel(e)->pos;
           agxbprint(&xb, "%.5g,%.5g", ptf.x, yDir(ptf.y, offsets.Y));
           agset(e, "xlp", agxbuse(&xb));
         }
         if (ED_head_label(e)) {
-          ptf = ED_head_label(e)->pos;
+          pointf ptf = ED_head_label(e)->pos;
           agxbprint(&xb, "%.5g,%.5g", ptf.x, yDir(ptf.y, offsets.Y));
           agset(e, "head_lp", agxbuse(&xb));
         }
         if (ED_tail_label(e)) {
-          ptf = ED_tail_label(e)->pos;
+          pointf ptf = ED_tail_label(e)->pos;
           agxbprint(&xb, "%.5g,%.5g", ptf.x, yDir(ptf.y, offsets.Y));
           agset(e, "tail_lp", agxbuse(&xb));
         }
