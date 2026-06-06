@@ -29,18 +29,8 @@ extern Agsym_t *N_height, *N_width, *N_vertices;
 #define NODE_XLABEL (1 << 4)
 #define EDGE_XLABEL (1 << 5)
 /* drawing phases */
-#define GVBEGIN 0
 #define GVSPLINES 1
 /*	node,edge types */
-#ifdef NORMAL
-#undef NORMAL
-#endif
-#define NORMAL 0       /* an original input node */
-#define VIRTUAL 1      /* virtual nodes in long edge chains */
-#define SLACKNODE 2    /* encode edges in node position phase */
-#define REVERSED 3     /* reverse of an original edge */
-#define FLATORDER 4    /* for ordered edges */
-#define CLUSTER_EDGE 5 /* for ranking clusters */
 #define IGNORED 6      /* concentrated multi-edges */
 
 #define CL_EDGE_TAG "cl_edge_info"
@@ -134,16 +124,6 @@ void my_attach_attrs_and_arrows(graph_t *g) {
     safe_dcl(g, AGEDGE, "head_lp", "");
   if (GD_has_labels(g) & TAIL_LABEL)
     safe_dcl(g, AGEDGE, "tail_lp", "");
-
-  Agsym_t *lpsym = NULL;
-  Agsym_t *lwsym = NULL;
-  Agsym_t *lhsym = NULL;
-  if (GD_has_labels(g) & GRAPH_LABEL) {
-    lpsym = safe_dcl(g, AGRAPH, "lp", "");
-    lwsym = safe_dcl(g, AGRAPH, "lwidth", "");
-    lhsym = safe_dcl(g, AGRAPH, "lheight", "");
-  }
-  Agsym_t *bbsym = safe_dcl(g, AGRAPH, "bb", "");
 
   int dim3 = (GD_odim(g) >= 3);
   const offsets_t offsets = setYInvert(g);
@@ -254,8 +234,18 @@ void my_attach_attrs_and_arrows(graph_t *g) {
       }
     }
   }
-  rec_attach_bb(g, bbsym, lpsym, lwsym, lhsym, offsets.Y);
   agxbfree(&xb);
+
+  Agsym_t *lpsym = NULL;
+  Agsym_t *lwsym = NULL;
+  Agsym_t *lhsym = NULL;
+  if (GD_has_labels(g) & GRAPH_LABEL) {
+    lpsym = safe_dcl(g, AGRAPH, "lp", "");
+    lwsym = safe_dcl(g, AGRAPH, "lwidth", "");
+    lhsym = safe_dcl(g, AGRAPH, "lheight", "");
+  }
+  Agsym_t *bbsym = safe_dcl(g, AGRAPH, "bb", "");
+  rec_attach_bb(g, bbsym, lpsym, lwsym, lhsym, offsets.Y);
 
   if (HAS_CLUST_EDGE(g))
     undoClusterEdges(g);
