@@ -235,6 +235,17 @@ fn layoutRender(engine: vizjs_types.Engine, gvc: ?*graphviz.GVC_t, graph: ?*grap
 
     // FIXME: IMPORTANT: check that we don't use GVC after this line
     graphviz.graphInfo(graph).*.gvc = null;
+
+    // set bb attribute for basic layout.
+    // doesn't yet include margins, scaling or page sizes because those depend on the renderer being used.
+    var buf: [256]u8 = undefined;
+    const bb = graphviz.graphInfo(graph).*.bb;
+    const bbArgs: struct { i32, i32, i32, i32 } = if (graphviz.graphInfo(graph).*.drawing.*.landscape)
+        .{ @round(bb.LL.y), @round(bb.LL.x), @round(bb.UR.y), @round(bb.UR.x) }
+    else
+        .{ @round(bb.LL.x), @round(bb.LL.y), @round(bb.UR.x), @round(bb.UR.y) };
+    const bbStr = std.fmt.bufPrintSentinel(&buf, "{} {} {} {}", bbArgs, 0) catch @panic("cannot bufPrintSentinel in layoutRender");
+    _ = graphviz.agsafeset(graph, @constCast("bb"), bbStr, "");
 }
 
 fn layoutCleanup(engine: vizjs_types.Engine, graph: ?*graphviz.Agraph_t) void {
