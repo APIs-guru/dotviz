@@ -61,36 +61,22 @@ static bool is_id_char(char c) {
 // https://graphviz.org/docs/attr-types/escString/
 static bool is_escape(const char *str) {
   assert(str != NULL);
-
-  if (*str != '\\')
-    return false;
-
-  if (str[1] == 'E')
-    return true;
-  if (str[1] == 'G')
-    return true;
-  if (str[1] == 'H')
-    return true;
-  if (str[1] == 'L')
-    return true;
-  if (str[1] == 'N')
-    return true;
-  if (str[1] == 'T')
-    return true;
-
-  if (str[1] == 'l')
-    return true;
-  if (str[1] == 'n')
-    return true;
-  if (str[1] == 'r')
-    return true;
-
-  if (str[1] == '\\')
-    return true;
-
-  if (str[1] == '"')
-    return true;
-
+  if (str[0] == '\\') {
+    switch (str[1]) {
+    case 'E':
+    case 'G':
+    case 'H':
+    case 'L':
+    case 'N':
+    case 'T':
+    case 'l':
+    case 'n':
+    case 'r':
+    case '\\':
+    case '"':
+      return true;
+    }
+  }
   return false;
 }
 
@@ -382,8 +368,7 @@ static void write_subgs(Agraph_t *g, write_info_t *wr_info) {
   }
 }
 
-static int write_edge_name(Agedge_t *e, write_info_t *wr_info,
-                           bool terminate) {
+static int write_edge_name(Agedge_t *e, write_info_t *wr_info, bool terminate) {
   char *p = agnameof(e);
   if (!EMPTY(p)) {
     if (!terminate) {
