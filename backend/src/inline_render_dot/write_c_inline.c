@@ -93,16 +93,16 @@ static char *return_canonstr(char *arg, char *buf) {
   bool needs_quotes = false;
   bool part_of_escape = false;
   bool backslash_pending = false;
-  char *s = arg;
-  char *p = buf;
-  *p++ = '\"';
-  char uc = *s++;
+  char *src = arg;
+  char *dst = buf;
+  *dst++ = '\"';
+  char uc = *src++;
   bool maybe_num = gv_isdigit(uc) || uc == '.' || uc == '-';
   while (uc) {
     if (uc == '\"' && !part_of_escape) {
-      *p++ = '\\';
+      *dst++ = '\\';
       needs_quotes = true;
-    } else if (!part_of_escape && is_escape(&s[-1])) {
+    } else if (!part_of_escape && is_escape(&src[-1])) {
       needs_quotes = true;
       part_of_escape = true;
     } else if (maybe_num) {
@@ -127,25 +127,25 @@ static char *return_canonstr(char *arg, char *buf) {
     } else {
       part_of_escape = false;
     }
-    *p++ = uc;
-    uc = *s++;
+    *dst++ = uc;
+    uc = *src++;
     cnt++;
 
     /* If breaking long strings into multiple lines, only allow breaks after a
      * non-id char, not a backslash, where the next char is an id char.
      */
     if (Max_outputline) {
-      if (uc && backslash_pending && !(is_id_char(p[-1]) || p[-1] == '\\') &&
+      if (uc && backslash_pending && !(is_id_char(dst[-1]) || dst[-1] == '\\') &&
           is_id_char(uc)) {
-        *p++ = '\\';
-        *p++ = '\n';
+        *dst++ = '\\';
+        *dst++ = '\n';
         needs_quotes = true;
         backslash_pending = false;
         cnt = 0;
       } else if (uc && (cnt >= Max_outputline)) {
-        if (!(is_id_char(p[-1]) || p[-1] == '\\') && is_id_char(uc)) {
-          *p++ = '\\';
-          *p++ = '\n';
+        if (!(is_id_char(dst[-1]) || dst[-1] == '\\') && is_id_char(uc)) {
+          *dst++ = '\\';
+          *dst++ = '\n';
           needs_quotes = true;
           cnt = 0;
         } else {
@@ -154,8 +154,8 @@ static char *return_canonstr(char *arg, char *buf) {
       }
     }
   }
-  *p++ = '\"';
-  *p = '\0';
+  *dst++ = '\"';
+  *dst = '\0';
   if (needs_quotes || (cnt == 1 && (*arg == '.' || *arg == '-')))
     return buf;
 
