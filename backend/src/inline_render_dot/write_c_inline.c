@@ -41,7 +41,8 @@ typedef struct {
       *edge_last_written; // postorder number of subg when edge was last written
 } write_info_t;
 
-static size_t write_body(Agraph_t *g, write_info_t *wr_info, size_t g_visit_number);
+static size_t write_body(Agraph_t *g, write_info_t *wr_info,
+                         size_t g_visit_number);
 static write_info_t before_write(Agraph_t *);
 static void after_write(write_info_t);
 
@@ -187,11 +188,11 @@ static void write_canonstr_refstr(write_info_t *wr_info, char *str) {
 }
 
 static void write_dict(write_info_t *wr_info, char *name, Dict_t *dict,
-                       bool top) {
+                       bool isRoot) {
   int cnt = 0;
   Dict_t *view;
 
-  if (!top)
+  if (!isRoot)
     view = dtview(dict, NULL);
   else
     view = 0;
@@ -226,65 +227,19 @@ static void write_dict(write_info_t *wr_info, char *name, Dict_t *dict,
     }
     out_puts(&wr_info->output, "];\n");
   }
-  if (!top)
+  if (!isRoot)
     dtview(dict, view); /* restore previous view */
 }
 
-static void write_dicts(Agraph_t *g, write_info_t *wr_info, bool top) {
+static void write_dicts(Agraph_t *g, write_info_t *wr_info) {
+  bool isRoot = agparent(g) == NULL;
+
   Agdatadict_t *def = agdatadict(g, false);
   if (def) {
-    write_dict(wr_info, "graph", def->dict.g, top);
-    write_dict(wr_info, "node", def->dict.n, top);
-    write_dict(wr_info, "edge", def->dict.e, top);
+    write_dict(wr_info, "graph", def->dict.g, isRoot);
+    write_dict(wr_info, "node", def->dict.n, isRoot);
+    write_dict(wr_info, "edge", def->dict.e, isRoot);
   }
-}
-
-static void write_hdr(Agraph_t *g, write_info_t *wr_info, bool top) {
-  bool root = false;
-  char *strict = "";
-  char *kind;
-  if (!top && agparent(g))
-    kind = "sub";
-  else {
-    root = true;
-    if (g->desc.directed)
-      kind = "di";
-    else
-      kind = "";
-    if (agisstrict(g))
-      strict = "strict ";
-    Tailport = agattr_text(g, AGEDGE, TAILPORT_ID, NULL);
-    Headport = agattr_text(g, AGEDGE, HEADPORT_ID, NULL);
-  }
-
-  char *name = agnameof(g);
-  char *sep = " ";
-  bool hasName = true;
-  if (!name || name[0] == LOCALNAMEPREFIX) {
-    sep = name = "";
-    hasName = false;
-  }
-  indent(wr_info);
-  out_puts(&wr_info->output, strict);
-
-  /* output "<kind>graph" only for root graphs or graphs with names */
-  if (root || hasName) {
-    out_puts(&wr_info->output, kind);
-    out_puts(&wr_info->output, "graph ");
-  }
-  if (hasName)
-    write_canonstr_str(wr_info, name);
-  out_puts(&wr_info->output, sep);
-  out_puts(&wr_info->output, "{\n");
-  wr_info->level++;
-  write_dicts(g, wr_info, top);
-  AGATTRWF(g) = true;
-}
-
-static void write_trl(write_info_t *wr_info) {
-  wr_info->level--;
-  indent(wr_info);
-  out_puts(&wr_info->output, "}\n");
 }
 
 /// is this graph unnamed?
@@ -347,16 +302,23 @@ static bool not_default_attrs(Agnode_t *n) {
   return false;
 }
 
-static size_t write_subgs(Agraph_t *g, write_info_t *wr_info, size_t g_visit_number) {
+static size_t write_subgs(Agraph_t *g, write_info_t *wr_info,
+                          size_t g_visit_number) {
   size_t subg_visit_number = g_visit_number;
   for (Agraph_t *subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
     ++subg_visit_number;
     if (irrelevant_subgraph(subg)) {
       subg_visit_number = write_subgs(subg, wr_info, subg_visit_number);
     } else {
-      write_hdr(subg, wr_info, false);
+      indent(wr_info);
+      char *name = agnameof(subg);
+      if (name != NULL && name[0] != LOCALNAMEPREFIX) {
+        // output "subgraph" only subgraphs with names
+        out_puts(&wr_info->output, "subgraph ");
+        write_canonstr_str(wr_info, name);
+        out_puts(&wr_info->output, " ");
+      }
       subg_visit_number = write_body(subg, wr_info, subg_visit_number);
-      write_trl(wr_info);
     }
   }
   return subg_visit_number;
@@ -412,7 +374,6 @@ static void write_nondefault_attrs(void *obj, write_info_t *wr_info,
     out_puts(&wr_info->output, "]");
     wr_info->level--;
   }
-  AGATTRWF(obj) = true;
 }
 
 static void write_nodename(Agnode_t *n, write_info_t *wr_info) {
@@ -477,8 +438,8 @@ static void write_port(Agedge_t *e, write_info_t *wr_info, Agsym_t *port) {
   }
 }
 
-static void write_edge(Agedge_t *e, write_info_t *wr_info,
-                       Dict_t *d, size_t subg_visit_number) {
+static void write_edge(Agedge_t *e, write_info_t *wr_info, Dict_t *d,
+                       size_t subg_visit_number) {
   size_t last_written = wr_info->edge_last_written[AGSEQ(e)];
   if (last_written >= subg_visit_number) {
     return;
@@ -501,8 +462,14 @@ static void write_edge(Agedge_t *e, write_info_t *wr_info,
   wr_info->edge_last_written[AGSEQ(e)] = subg_visit_number;
 }
 
-static size_t write_body(Agraph_t *g, write_info_t *wr_info, size_t g_visit_number) {
+static size_t write_body(Agraph_t *g, write_info_t *wr_info,
+                         size_t g_visit_number) {
+  out_puts(&wr_info->output, "{\n");
+  wr_info->level++;
+  write_dicts(g, wr_info);
+
   size_t next_visit_number = write_subgs(g, wr_info, g_visit_number);
+
   Agdatadict_t *dd = agdatadict(g, false);
   for (Agnode_t *n = agfstnode(g); n; n = agnxtnode(g, n)) {
     write_node(g, n, wr_info, dd ? dd->dict.n : 0, g_visit_number);
@@ -516,18 +483,37 @@ static size_t write_body(Agraph_t *g, write_info_t *wr_info, size_t g_visit_numb
       write_edge(e, wr_info, dd ? dd->dict.e : 0, g_visit_number);
     }
   }
+
+  wr_info->level--;
+  indent(wr_info);
+  out_puts(&wr_info->output, "}\n");
   return next_visit_number;
 }
 
-/// Return 0 on success, EOF on failure
 output_string my_agwrite(Agraph_t *g, unsigned int max_output_linelength) {
   Max_outputline = max_output_linelength;
-  write_info_t wr_info = before_write(g);
-  write_hdr(g, &wr_info, true);
-  write_body(g, &wr_info, 1);
-  write_trl(&wr_info);
-  after_write(wr_info);
+  Tailport = agattr_text(g, AGEDGE, TAILPORT_ID, NULL);
+  Headport = agattr_text(g, AGEDGE, HEADPORT_ID, NULL);
 
+  write_info_t wr_info = before_write(g);
+
+  indent(&wr_info);
+  if (agisstrict(g)) {
+    out_puts(&wr_info.output, "strict ");
+  }
+  if (g->desc.directed)
+    out_puts(&wr_info.output, "digraph ");
+  else
+    out_puts(&wr_info.output, "graph ");
+
+  char *name = agnameof(g);
+  if (name != NULL && name[0] != LOCALNAMEPREFIX) {
+    write_canonstr_str(&wr_info, name);
+    out_puts(&wr_info.output, " ");
+  }
+
+  write_body(g, &wr_info, 1);
+  after_write(wr_info);
   return wr_info.output;
 }
 
