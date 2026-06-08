@@ -34,10 +34,10 @@ static Agsym_t *Tailport, *Headport;
 typedef struct {
   size_t level;
   output_string output;
-  uint64_t *preorder_number; // of a graph or subgraph
-  uint64_t
+  size_t *preorder_number; // of a graph or subgraph
+  size_t
       *node_last_written; // postorder number of subg when node was last written
-  uint64_t
+  size_t
       *edge_last_written; // postorder number of subg when edge was last written
 } write_info_t;
 
@@ -427,7 +427,7 @@ static void write_nodename(Agnode_t *n, write_info_t *wr_info) {
 
 static void write_node(Agraph_t *subg, Agnode_t *n, write_info_t *wr_info,
                        Dict_t *d) {
-  uint64_t last_written = wr_info->node_last_written[AGSEQ(n)];
+  size_t last_written = wr_info->node_last_written[AGSEQ(n)];
   /* test if node was already written in g or a subgraph of g */
   if (last_written >= wr_info->preorder_number[AGSEQ(subg)]) {
     return;
@@ -446,8 +446,8 @@ static void write_node(Agraph_t *subg, Agnode_t *n, write_info_t *wr_info,
   if (last_written == 0) {
     write_nondefault_attrs(n, wr_info, d);
   }
-  wr_info->node_last_written[AGSEQ(n)] = wr_info->preorder_number[AGSEQ(subg)];
   out_puts(&wr_info->output, ";\n");
+  wr_info->node_last_written[AGSEQ(n)] = wr_info->preorder_number[AGSEQ(subg)];
 }
 
 static void write_port(Agedge_t *e, write_info_t *wr_info, Agsym_t *port) {
@@ -477,7 +477,7 @@ static void write_port(Agedge_t *e, write_info_t *wr_info, Agsym_t *port) {
 
 static void write_edge(Agraph_t *subg, Agedge_t *e, write_info_t *wr_info,
                        Dict_t *d) {
-  uint64_t last_written = wr_info->edge_last_written[AGSEQ(e)];
+  size_t last_written = wr_info->edge_last_written[AGSEQ(e)];
   if (last_written >= wr_info->preorder_number[AGSEQ(subg)]) {
     return;
   }
@@ -495,8 +495,8 @@ static void write_edge(Agraph_t *subg, Agedge_t *e, write_info_t *wr_info,
   } else {
     write_edge_name(e, wr_info, true);
   }
-  wr_info->edge_last_written[AGSEQ(e)] = wr_info->preorder_number[AGSEQ(subg)];
   out_puts(&wr_info->output, ";\n");
+  wr_info->edge_last_written[AGSEQ(e)] = wr_info->preorder_number[AGSEQ(subg)];
 }
 
 static void write_body(Agraph_t *g, write_info_t *wr_info) {
@@ -528,8 +528,8 @@ output_string my_agwrite(Agraph_t *g, unsigned int max_output_linelength) {
   return wr_info.output;
 }
 
-static uint64_t subgdfs(Agraph_t *g, uint64_t ix, write_info_t *wr_info) {
-  uint64_t ix0 = ix;
+static size_t subgdfs(Agraph_t *g, size_t ix, write_info_t *wr_info) {
+  size_t ix0 = ix;
   wr_info->preorder_number[AGSEQ(g)] = ix0;
   for (Agraph_t *subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
     ix0 = subgdfs(subg, ix0, wr_info);
@@ -541,12 +541,11 @@ static write_info_t before_write(Agraph_t *g) {
   write_info_t wr_info = {0};
 
   wr_info.level = 0;
-  wr_info.preorder_number =
-      gv_calloc(g->clos->seq[AGRAPH] + 1, sizeof(uint64_t));
+  wr_info.preorder_number = gv_calloc(g->clos->seq[AGRAPH] + 1, sizeof(size_t));
   wr_info.node_last_written =
-      gv_calloc(g->clos->seq[AGNODE] + 1, sizeof(uint64_t));
+      gv_calloc(g->clos->seq[AGNODE] + 1, sizeof(size_t));
   wr_info.edge_last_written =
-      gv_calloc(g->clos->seq[AGEDGE] + 1, sizeof(uint64_t));
+      gv_calloc(g->clos->seq[AGEDGE] + 1, sizeof(size_t));
   subgdfs(g, 1, &wr_info);
 
   /* page size on Linux, Mac OS X and Windows */
