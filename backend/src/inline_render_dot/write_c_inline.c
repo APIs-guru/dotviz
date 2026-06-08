@@ -43,8 +43,6 @@ typedef struct {
 
 static size_t write_body(Agraph_t *g, write_info_t *wr_info,
                          size_t g_visit_number);
-static write_info_t before_write(Agraph_t *);
-static void after_write(write_info_t);
 
 static void indent(write_info_t *wr_info) {
   for (int i = wr_info->level; i > 0; i--) {
@@ -490,12 +488,31 @@ static size_t write_body(Agraph_t *g, write_info_t *wr_info,
   return next_visit_number;
 }
 
+static output_string init_output_string() {
+  /* page size on Linux, Mac OS X and Windows */
+  const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
+  output_string output;
+  if (!(output.data = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
+    agerrorf("failure malloc'ing for result string");
+    exit(-1);
+  }
+  output.data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
+  output.data_position = 0;
+  return output;
+}
+
 output_string my_agwrite(Agraph_t *g, unsigned int max_output_linelength) {
   Max_outputline = max_output_linelength;
   Tailport = agattr_text(g, AGEDGE, TAILPORT_ID, NULL);
   Headport = agattr_text(g, AGEDGE, HEADPORT_ID, NULL);
 
-  write_info_t wr_info = before_write(g);
+  write_info_t wr_info = {0};
+  wr_info.output = init_output_string();
+  wr_info.level = 0;
+  wr_info.node_last_written =
+      gv_calloc(g->clos->seq[AGNODE] + 1, sizeof(size_t));
+  wr_info.edge_last_written =
+      gv_calloc(g->clos->seq[AGEDGE] + 1, sizeof(size_t));
 
   if (agisstrict(g)) {
     out_puts(&wr_info.output, "strict ");
@@ -512,34 +529,8 @@ output_string my_agwrite(Agraph_t *g, unsigned int max_output_linelength) {
   }
 
   write_body(g, &wr_info, 1);
-  after_write(wr_info);
-  return wr_info.output;
-}
 
-static write_info_t before_write(Agraph_t *g) {
-  write_info_t wr_info = {0};
-
-  wr_info.level = 0;
-  wr_info.node_last_written =
-      gv_calloc(g->clos->seq[AGNODE] + 1, sizeof(size_t));
-  wr_info.edge_last_written =
-      gv_calloc(g->clos->seq[AGEDGE] + 1, sizeof(size_t));
-
-  /* page size on Linux, Mac OS X and Windows */
-  const int OUTPUT_DATA_INITIAL_ALLOCATION = 4096;
-  output_string output;
-  if (!(output.data = malloc(OUTPUT_DATA_INITIAL_ALLOCATION))) {
-    agerrorf("failure malloc'ing for result string");
-    exit(-1);
-  }
-  output.data_allocated = OUTPUT_DATA_INITIAL_ALLOCATION;
-  output.data_position = 0;
-  wr_info.output = output;
-
-  return wr_info;
-}
-
-static void after_write(write_info_t wr_info) {
   free(wr_info.node_last_written);
   free(wr_info.edge_last_written);
+  return wr_info.output;
 }
