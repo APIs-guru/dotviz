@@ -28,7 +28,7 @@
 #define EMPTY(s) (((s) == 0) || (s)[0] == '\0')
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-static unsigned int Max_outputline = 0;
+static long Max_outputline = 0;
 static Agsym_t *Tailport, *Headport;
 
 typedef struct {
@@ -83,106 +83,98 @@ static bool is_escape(const char *str) {
 /* Canonicalize ordinary strings.
  * Assumes buf is large enough to hold output.
  */
-static char *return_canonstr(char *arg, char *buf) {
-  if (EMPTY(arg))
-    return "\"\"";
+static void write_canonstr_str(write_info_t *wr_info, char *str) {
+  if (EMPTY(str)) {
+    out_puts(&wr_info->output, "\"\"");
+    return;
+  }
 
   static const char *tokenlist[] /* must agree with scan.l */
       = {"node", "edge", "strict", "graph", "digraph", "subgraph", NULL};
-  unsigned int cnt = 0, dotcnt = 0;
-  bool needs_quotes = false;
-  bool part_of_escape = false;
-  bool backslash_pending = false;
-  char *src = arg;
-  char *dst = buf;
-  *dst++ = '\"';
-  char uc = *src++;
-  bool maybe_num = gv_isdigit(uc) || uc == '.' || uc == '-';
-  while (uc) {
-    if (uc == '\"' && !part_of_escape) {
-      *dst++ = '\\';
-      needs_quotes = true;
-    } else if (!part_of_escape && is_escape(&src[-1])) {
-      needs_quotes = true;
-      part_of_escape = true;
-    } else if (maybe_num) {
-      if (uc == '-') {
-        if (cnt) {
-          maybe_num = false;
-          needs_quotes = true;
+  char *src = str;
+  char uc = *src;
+  bool start_with_dot = uc == '.';
+  bool start_with_minus = uc == '-';
+  bool start_with_digit = gv_isdigit(uc);
+  if (start_with_digit || start_with_dot || start_with_minus) {
+    // maybe number?
+    bool seen_dot = start_with_dot;
+    bool seen_digit = start_with_digit;
+
+    while (true) {
+      uc = *(++src);
+      if (uc == 0) {
+        if (!seen_digit) {
+          out_putc(&wr_info->output, '\"');
+          out_puts(&wr_info->output, str);
+          out_putc(&wr_info->output, '\"');
+          return;
+        } else {
+          // arg is number
+          out_puts(&wr_info->output, str);
+          return;
         }
       } else if (uc == '.') {
-        if (dotcnt++) {
-          maybe_num = false;
-          needs_quotes = true;
+        if (seen_dot) {
+          break;
         }
-      } else if (!gv_isdigit(uc)) {
-        maybe_num = false;
-        needs_quotes = true;
+        seen_dot = true;
+      } else if (gv_isdigit(uc)) {
+        seen_digit = true;
+      } else {
+        break;
       }
-      part_of_escape = false;
-    } else if (!(gv_isalnum(uc) || uc == '_' || !isascii(uc))) {
-      needs_quotes = true;
-      part_of_escape = false;
+    }
+  } else {
+    // maybe id?
+    while (gv_isalnum(uc) || uc == '_' || !isascii(uc)) {
+      uc = *(++src);
+      if (uc == 0) {
+        /* Use quotes to protect tokens (example, a node named "node") */
+        /* It would be great if it were easier to use flex here. */
+        for (const char **tok = tokenlist; *tok; tok++) {
+          if (!strcasecmp(*tok, str)) {
+            out_putc(&wr_info->output, '\"');
+            out_puts(&wr_info->output, str);
+            out_putc(&wr_info->output, '\"');
+            return;
+          }
+        }
+        out_puts(&wr_info->output, str);
+        return;
+      }
+    }
+  }
+
+  out_putc(&wr_info->output, '\"');
+  out_put(&wr_info->output, str, src - str);
+  char *checkpoint = src;
+  char *linestart = str;
+  while (uc != 0) {
+    if (uc == '\"') {
+      out_put(&wr_info->output, checkpoint, src - checkpoint);
+      out_puts(&wr_info->output, "\\\"");
+      uc = *(++src);
+      checkpoint = src;
+    } else if (is_escape(src)) {
+      uc = *(src += 2);
     } else {
-      part_of_escape = false;
+      uc = *(++src);
     }
-    *dst++ = uc;
-    uc = *src++;
-    cnt++;
 
-    /* If breaking long strings into multiple lines, only allow breaks after a
-     * non-id char, not a backslash, where the next char is an id char.
-     */
-    if (Max_outputline) {
-      if (uc && backslash_pending && !(is_id_char(dst[-1]) || dst[-1] == '\\') &&
-          is_id_char(uc)) {
-        *dst++ = '\\';
-        *dst++ = '\n';
-        needs_quotes = true;
-        backslash_pending = false;
-        cnt = 0;
-      } else if (uc && (cnt >= Max_outputline)) {
-        if (!(is_id_char(dst[-1]) || dst[-1] == '\\') && is_id_char(uc)) {
-          *dst++ = '\\';
-          *dst++ = '\n';
-          needs_quotes = true;
-          cnt = 0;
-        } else {
-          backslash_pending = true;
-        }
-      }
+    char prev = src[-1];
+    if (Max_outputline != 0 && (src - linestart) >= Max_outputline &&
+        !is_id_char(prev) && prev != '\\' && is_id_char(uc)) {
+      /* If breaking long strings into multiple lines, only allow breaks after a
+       * non-id char, not a backslash, where the next char is an id char.
+       */
+      out_put(&wr_info->output, checkpoint, src - checkpoint);
+      out_puts(&wr_info->output, "\\\n");
+      linestart = checkpoint = src;
     }
   }
-  *dst++ = '\"';
-  *dst = '\0';
-  if (needs_quotes || (cnt == 1 && (*arg == '.' || *arg == '-')))
-    return buf;
-
-  /* Use quotes to protect tokens (example, a node named "node") */
-  /* It would be great if it were easier to use flex here. */
-  for (const char **tok = tokenlist; *tok; tok++)
-    if (!strcasecmp(*tok, arg))
-      return buf;
-  return arg;
-}
-
-static void write_canonstr_str(write_info_t *wr_info, char *str) {
-
-  // maximum bytes required for canonicalized string
-  const size_t required = 2 * strlen(str) + 2;
-
-  // allocate space to stage the canonicalized string
-  char *const scratch = malloc(required);
-  if (scratch == NULL) {
-    agerrorf("memory allocation failure\n");
-    exit(1);
-  }
-
-  char *canonicalized = return_canonstr(str, scratch);
-  out_puts(&wr_info->output, canonicalized);
-
-  free(scratch);
+  out_put(&wr_info->output, checkpoint, src - checkpoint);
+  out_putc(&wr_info->output, '\"');
 }
 
 static void write_canonstr_refstr(write_info_t *wr_info, char *str) {
