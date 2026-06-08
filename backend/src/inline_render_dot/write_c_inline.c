@@ -497,7 +497,6 @@ output_string my_agwrite(Agraph_t *g, unsigned int max_output_linelength) {
 
   write_info_t wr_info = before_write(g);
 
-  indent(&wr_info);
   if (agisstrict(g)) {
     out_puts(&wr_info.output, "strict ");
   }
