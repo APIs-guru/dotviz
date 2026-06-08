@@ -425,31 +425,29 @@ static void write_nodename(Agnode_t *n, write_info_t *wr_info) {
   }
 }
 
-static int attrs_written(void *obj) { return AGATTRWF(obj); }
-
 static void write_node(Agraph_t *subg, Agnode_t *n, write_info_t *wr_info,
                        Dict_t *d) {
+  uint64_t last_written = wr_info->node_last_written[AGSEQ(n)];
+  /* test if node was already written in g or a subgraph of g */
+  if (last_written >= wr_info->preorder_number[AGSEQ(subg)]) {
+    return;
+  }
+
+  /* node must be written if it wasn't already emitted because of
+   * a subgraph or one of its predecessors, and if it is a singleton
+   * or has non-default attributes.
+   */
+  if (!has_no_edges(subg, n) && !not_default_attrs(n)) {
+    return;
+  }
+
   indent(wr_info);
   write_nodename(n, wr_info);
-  if (!attrs_written(n))
+  if (last_written == 0) {
     write_nondefault_attrs(n, wr_info, d);
+  }
   wr_info->node_last_written[AGSEQ(n)] = wr_info->preorder_number[AGSEQ(subg)];
   out_puts(&wr_info->output, ";\n");
-}
-
-/* node must be written if it wasn't already emitted because of
- * a subgraph or one of its predecessors, and if it is a singleton
- * or has non-default attributes.
- */
-static bool write_node_test(Agraph_t *g, Agnode_t *n, write_info_t *wr_info) {
-  /* test if node was already written in g or a subgraph of g */
-  if (wr_info->node_last_written[AGSEQ(n)] >=
-      wr_info->preorder_number[AGSEQ(g)])
-    return false;
-
-  if (has_no_edges(g, n) || not_default_attrs(n))
-    return true;
-  return false;
 }
 
 static void write_port(Agedge_t *e, write_info_t *wr_info, Agsym_t *port) {
@@ -477,15 +475,13 @@ static void write_port(Agedge_t *e, write_info_t *wr_info, Agsym_t *port) {
   }
 }
 
-static bool write_edge_test(Agraph_t *g, Agedge_t *e, write_info_t *wr_info) {
-  if (wr_info->edge_last_written[AGSEQ(e)] >=
-      wr_info->preorder_number[AGSEQ(g)])
-    return false;
-  return true;
-}
-
 static void write_edge(Agraph_t *subg, Agedge_t *e, write_info_t *wr_info,
                        Dict_t *d) {
+  uint64_t last_written = wr_info->edge_last_written[AGSEQ(e)];
+  if (last_written >= wr_info->preorder_number[AGSEQ(subg)]) {
+    return;
+  }
+
   Agnode_t *t = AGTAIL(e);
   Agnode_t *h = AGHEAD(e);
   indent(wr_info);
@@ -494,7 +490,7 @@ static void write_edge(Agraph_t *subg, Agedge_t *e, write_info_t *wr_info,
   out_puts(&wr_info->output, (agisdirected(agraphof(t)) ? " -> " : " -- "));
   write_nodename(h, wr_info);
   write_port(e, wr_info, Headport);
-  if (!attrs_written(e)) {
+  if (last_written == 0) {
     write_nondefault_attrs(e, wr_info, d);
   } else {
     write_edge_name(e, wr_info, true);
@@ -507,31 +503,15 @@ static void write_body(Agraph_t *g, write_info_t *wr_info) {
   write_subgs(g, wr_info);
   Agdatadict_t *dd = agdatadict(g, false);
   for (Agnode_t *n = agfstnode(g); n; n = agnxtnode(g, n)) {
-    if (write_node_test(g, n, wr_info))
-      write_node(g, n, wr_info, dd ? dd->dict.n : 0);
+    write_node(g, n, wr_info, dd ? dd->dict.n : 0);
 
     Agnode_t *prev = n;
     for (Agedge_t *e = agfstout(g, n); e; e = agnxtout(g, e)) {
-      if (prev != aghead(e) && write_node_test(g, aghead(e), wr_info)) {
+      if (prev != aghead(e)) {
         write_node(g, aghead(e), wr_info, dd ? dd->dict.n : 0);
         prev = aghead(e);
       }
-      if (write_edge_test(g, e, wr_info))
-        write_edge(g, e, wr_info, dd ? dd->dict.e : 0);
-    }
-  }
-}
-
-static void set_attrwf(Agraph_t *g, bool toplevel, bool value) {
-  AGATTRWF(g) = value;
-  for (Agraph_t *subg = agfstsubg(g); subg; subg = agnxtsubg(subg)) {
-    set_attrwf(subg, false, value);
-  }
-  if (toplevel) {
-    for (Agnode_t *n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      AGATTRWF(n) = value;
-      for (Agedge_t *e = agfstout(g, n); e; e = agnxtout(g, e))
-        AGATTRWF(e) = value;
+      write_edge(g, e, wr_info, dd ? dd->dict.e : 0);
     }
   }
 }
@@ -559,7 +539,6 @@ static uint64_t subgdfs(Agraph_t *g, uint64_t ix, write_info_t *wr_info) {
 
 static write_info_t before_write(Agraph_t *g) {
   write_info_t wr_info = {0};
-  set_attrwf(g, true, false);
 
   wr_info.level = 0;
   wr_info.preorder_number =
