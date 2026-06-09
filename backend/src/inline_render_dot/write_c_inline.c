@@ -376,14 +376,8 @@ static void write_nondefault_attrs(void *obj, write_info_t *wr_info,
 
 static void write_nodename(Agnode_t *n, write_info_t *wr_info) {
   char *name = agnameof(n);
-  if (name) {
-    write_canonstr_str(wr_info, name);
-  } else {
-    char buf[sizeof("__SUSPECT") + 20];
-    snprintf(buf, sizeof(buf), "_%" PRIu64 "_SUSPECT",
-             AGID(n)); /* could be deadly wrong */
-    out_puts(&wr_info->output, buf);
-  }
+  assert(name != NULL);
+  write_canonstr_str(wr_info, name);
 }
 
 static void write_node(Agraph_t *subg, Agnode_t *n, write_info_t *wr_info,
@@ -411,29 +405,27 @@ static void write_node(Agraph_t *subg, Agnode_t *n, write_info_t *wr_info,
   wr_info->node_last_written[AGSEQ(n)] = subg_visit_number;
 }
 
-static void write_port(Agedge_t *e, write_info_t *wr_info, Agsym_t *port) {
-  if (!port)
-    return;
-
-  char *val = agxget(e, port);
+static void write_port(char *val, write_info_t *wr_info) {
   if (val[0] == '\0')
     return;
 
   out_puts(&wr_info->output, ":");
   if (aghtmlstr(val)) {
     write_canonstr_refstr(wr_info, val);
-  } else {
-    char *s = strchr(val, ':');
-    if (s) {
-      *s = '\0';
-      write_canonstr_str(wr_info, val);
-      out_puts(&wr_info->output, ":");
-      write_canonstr_str(wr_info, s + 1);
-      *s = ':';
-    } else {
-      write_canonstr_str(wr_info, val);
-    }
+    return;
   }
+
+  char *s = strchr(val, ':');
+  if (s == NULL) {
+    write_canonstr_str(wr_info, val);
+    return;
+  }
+
+  *s = '\0';
+  write_canonstr_str(wr_info, val);
+  *s = ':';
+  out_puts(&wr_info->output, ":");
+  write_canonstr_str(wr_info, s + 1);
 }
 
 static void write_edge(Agedge_t *e, write_info_t *wr_info, Dict_t *d,
@@ -447,10 +439,12 @@ static void write_edge(Agedge_t *e, write_info_t *wr_info, Dict_t *d,
   Agnode_t *h = AGHEAD(e);
   indent(wr_info);
   write_nodename(t, wr_info);
-  write_port(e, wr_info, Tailport);
+  if (Tailport != NULL)
+    write_port(agxget(e, Tailport), wr_info);
   out_puts(&wr_info->output, (agisdirected(agraphof(t)) ? " -> " : " -- "));
   write_nodename(h, wr_info);
-  write_port(e, wr_info, Headport);
+  if (Headport != NULL)
+    write_port(agxget(e, Headport), wr_info);
   if (last_written == 0) {
     write_nondefault_attrs(e, wr_info, d);
   } else {
