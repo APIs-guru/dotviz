@@ -22,6 +22,7 @@
 #include "../gv_char_classes.h"
 
 // graphviz headers
+#include "cdt.h"
 #include "cghdr.h"
 #include "cgraph.h"
 // clang-format on
@@ -227,17 +228,6 @@ static void write_dict(write_info_t *wr_info, char *name, Dict_t *dict,
   }
   if (!isRoot)
     dtview(dict, view); /* restore previous view */
-}
-
-static void write_dicts(Agraph_t *g, write_info_t *wr_info) {
-  bool isRoot = agparent(g) == NULL;
-
-  Agdatadict_t *def = agdatadict(g, false);
-  if (def) {
-    write_dict(wr_info, "graph", def->dict.g, isRoot);
-    write_dict(wr_info, "node", def->dict.n, isRoot);
-    write_dict(wr_info, "edge", def->dict.e, isRoot);
-  }
 }
 
 /// is this graph unnamed?
@@ -461,21 +451,31 @@ static size_t write_body(Agraph_t *g, write_info_t *wr_info,
                          size_t g_visit_number) {
   out_puts(&wr_info->output, "{\n");
   wr_info->level++;
-  write_dicts(g, wr_info);
+
+  Agdatadict_t *def = agdatadict(g, false);
+  Dict_t *n_dict = NULL;
+  Dict_t *e_dict = NULL;
+  if (def != NULL) {
+    bool isRoot = agparent(g) == NULL;
+
+    n_dict = def->dict.n;
+    e_dict = def->dict.e;
+    write_dict(wr_info, "graph", def->dict.g, isRoot);
+    write_dict(wr_info, "node", n_dict, isRoot);
+    write_dict(wr_info, "edge", e_dict, isRoot);
+  }
 
   size_t next_visit_number = write_subgs(g, wr_info, g_visit_number);
-
-  Agdatadict_t *dd = agdatadict(g, false);
   for (Agnode_t *n = agfstnode(g); n; n = agnxtnode(g, n)) {
-    write_node(g, n, wr_info, dd ? dd->dict.n : 0, g_visit_number);
+    write_node(g, n, wr_info, n_dict, g_visit_number);
 
     Agnode_t *prev = n;
     for (Agedge_t *e = agfstout(g, n); e; e = agnxtout(g, e)) {
       if (prev != aghead(e)) {
-        write_node(g, aghead(e), wr_info, dd ? dd->dict.n : 0, g_visit_number);
+        write_node(g, aghead(e), wr_info, n_dict, g_visit_number);
         prev = aghead(e);
       }
-      write_edge(e, wr_info, dd ? dd->dict.e : 0, g_visit_number);
+      write_edge(e, wr_info, e_dict, g_visit_number);
     }
   }
 
