@@ -382,11 +382,13 @@ static void write_nodename(Agnode_t *n, write_info_t *wr_info) {
 
 static void write_node(Agraph_t *subg, Agnode_t *n, write_info_t *wr_info,
                        Dict_t *d, size_t subg_visit_number) {
+  // test if node was already written in g or a subgraph of g
   size_t last_written = wr_info->node_last_written[AGSEQ(n)];
-  /* test if node was already written in g or a subgraph of g */
   if (last_written >= subg_visit_number) {
     return;
   }
+  bool isCreated = last_written == 0;
+  wr_info->node_last_written[AGSEQ(n)] = subg_visit_number;
 
   /* node must be written if it wasn't already emitted because of
    * a subgraph or one of its predecessors, and if it is a singleton
@@ -398,11 +400,10 @@ static void write_node(Agraph_t *subg, Agnode_t *n, write_info_t *wr_info,
 
   indent(wr_info);
   write_nodename(n, wr_info);
-  if (last_written == 0) {
+  if (isCreated) {
     write_nondefault_attrs(n, wr_info, d);
   }
   out_puts(&wr_info->output, ";\n");
-  wr_info->node_last_written[AGSEQ(n)] = subg_visit_number;
 }
 
 static void write_port(char *val, write_info_t *wr_info) {
@@ -430,10 +431,13 @@ static void write_port(char *val, write_info_t *wr_info) {
 
 static void write_edge(Agedge_t *e, write_info_t *wr_info, Dict_t *d,
                        size_t subg_visit_number) {
+  // test if edge was already written in g or a subgraph of g
   size_t last_written = wr_info->edge_last_written[AGSEQ(e)];
   if (last_written >= subg_visit_number) {
     return;
   }
+  wr_info->edge_last_written[AGSEQ(e)] = subg_visit_number;
+  bool isCreated = last_written == 0;
 
   Agnode_t *t = AGTAIL(e);
   Agnode_t *h = AGHEAD(e);
@@ -445,13 +449,12 @@ static void write_edge(Agedge_t *e, write_info_t *wr_info, Dict_t *d,
   write_nodename(h, wr_info);
   if (Headport != NULL)
     write_port(agxget(e, Headport), wr_info);
-  if (last_written == 0) {
+  if (isCreated) {
     write_nondefault_attrs(e, wr_info, d);
   } else {
     write_edge_name(e, wr_info, true);
   }
   out_puts(&wr_info->output, ";\n");
-  wr_info->edge_last_written[AGSEQ(e)] = subg_visit_number;
 }
 
 static size_t write_body(Agraph_t *g, write_info_t *wr_info,
