@@ -469,12 +469,8 @@ static size_t write_body(Agraph_t *g, write_info_t *wr_info,
   for (Agnode_t *n = agfstnode(g); n; n = agnxtnode(g, n)) {
     write_node(g, n, wr_info, n_dict, g_visit_number);
 
-    Agnode_t *prev = n;
     for (Agedge_t *e = agfstout(g, n); e; e = agnxtout(g, e)) {
-      if (prev != aghead(e)) {
-        write_node(g, aghead(e), wr_info, n_dict, g_visit_number);
-        prev = aghead(e);
-      }
+      write_node(g, aghead(e), wr_info, n_dict, g_visit_number);
       write_edge(e, wr_info, e_dict, g_visit_number);
     }
   }
