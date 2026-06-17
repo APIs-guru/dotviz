@@ -873,7 +873,10 @@ class Parser {
             port.token,
           );
         }
-        owner.root.upsertNode(owner, { name: node.value, attributes });
+        owner.upsertNode(
+          { name: node.value, attributes },
+          owner.resolvedNodeDefaults,
+        );
       }
       return;
     }
@@ -1082,7 +1085,10 @@ class Parser {
 
     const attributes = this.#optionalAttrListOrEmpty();
     for (const [tail, head] of newEdges) {
-      owner.root.upsertEdge(owner, { tail, head, key: undefined, attributes });
+      owner.upsertEdge(
+        { tail, head, key: undefined, attributes },
+        owner.resolvedEdgeDefaults,
+      );
     }
   }
 }
@@ -1092,10 +1098,13 @@ function upsertEdgeEndpoints(
   nodeIDs: NodeID[],
 ): NormalizedEdgeEndpoint[] {
   return nodeIDs.map((nodeID) => {
-    const node = owner.root.upsertNode(owner, {
-      name: nodeID.node.value,
-      attributes: new NormalizedAttributes(),
-    });
+    const node = owner.upsertNode(
+      {
+        name: nodeID.node.value,
+        attributes: new NormalizedAttributes(),
+      },
+      owner.resolvedNodeDefaults,
+    );
     const compass = nodeID.compass?.value;
     if (nodeID.port === undefined) {
       return nodeID.compass
