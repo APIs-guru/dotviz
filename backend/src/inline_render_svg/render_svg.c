@@ -18,6 +18,7 @@
 #include "streq.h"
 #include "types.h"
 #include "util/list.h"
+#include "util/alloc.h"
 
 static bool is_natural_number(const char *sstr) {
   const char *str = sstr;
