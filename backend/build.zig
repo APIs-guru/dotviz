@@ -527,7 +527,7 @@ const src_neatogen = [_][]const u8{
     "neatoinit.c",   "adjust.c",     "neatosplines.c", "constraint.c",
     "geometry.c",    "poly.c",       "voronoi.c",      "edges.c",
     "info.c",        "hedges.c",     "heap.c",         "site.c",
-    "memory.c",      "legal.c",      "stuff.c",        "solve.c",
+                     "legal.c",      "stuff.c",        "solve.c",
     "stress.c",      "matrix_ops.c", "circuit.c",      "matinv.c",
     "lu.c",          "dijkstra.c",   "bfs.c",          "kkutils.c",
     "embed_graph.c", "pca.c",        "closest.c",      "conjgrad.c",
