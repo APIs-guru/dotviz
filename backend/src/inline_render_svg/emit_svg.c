@@ -691,8 +691,6 @@ static bool selectedlayer(SafeLayer *safe_layer, char *spec) {
                        safe_layer->safe_job->numLayers, spec);
 }
 
-DEFINE_LIST(layer_names, char *)
-
 static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   pointf *pts = gv_calloc(numpts, sizeof(pointf));
   for (size_t i = 0; i < numpts; i++) {
