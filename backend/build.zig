@@ -511,7 +511,7 @@ const src_common = [_][]const u8{
 
 const src_util = [_][]const u8{
     //"xml.c",
-    "gv_fopen.c", "gv_find_me.c", "random.c", "base64.c",
+    "gv_fopen.c", "gv_find_me.c", "random.c", "base64.c", "list.c", "arena.c",
 };
 
 const src_pathplan = [_][]const u8{
