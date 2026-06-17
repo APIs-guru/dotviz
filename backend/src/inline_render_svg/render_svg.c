@@ -44,7 +44,8 @@ static int layer_index(int numLayers, char **layerIDs, char *str, int all) {
 }
 
 static bool selectedLayer(int layerNum, int numLayers, char *layerDelims,
-                          char *layerListDelims, char **layerIDs, char *spec) {
+                          char *layerListDelims, char **layerIDs,
+                          const char *spec) {
   int n0, n1;
   char *w0, *w1;
   char *buf_part_p = NULL, *buf_p = NULL, *cur, *part_in_p;
@@ -94,8 +95,6 @@ static int chkOrder(graph_t *g) {
   return 0;
 }
 
-DEFINE_LIST(layer_names, char *)
-
 /* Parse the graph's layerselect attribute, which determines
  * which layers are emitted. The specification is the same used
  * by the layer attribute.
@@ -112,7 +111,8 @@ DEFINE_LIST(layer_names, char *)
  * using huge numbers of layers, it should be adequate.
  */
 static int *parse_layerselect(int numLayers, char *layerDelims,
-                              char *layerListDelims, char **layerIDs, char *p) {
+                              char *layerListDelims, char **layerIDs,
+                              const char *p) {
   int *laylist = gv_calloc(numLayers + 2, sizeof(int));
   int i, cnt = 0;
   for (i = 1; i <= numLayers; i++) {
@@ -140,29 +140,30 @@ static int *parse_layerselect(int numLayers, char *layerDelims,
  * Note that there is no mechanism
  * to free the memory before exit.
  */
-static int parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
+static int parse_layers(char ***out_layerIDs, char *layerDelims,
+                        const char *p) {
   char *tok;
 
   char *layers = gv_strdup(p);
-  layer_names_t layerIDs = {0};
+  LIST(char *) layerIDs = {0};
 
   // inferred entry for the first (unnamed) layer
-  layer_names_append(&layerIDs, NULL);
+  LIST_APPEND(&layerIDs, NULL);
 
   for (tok = strtok(layers, layerDelims); tok;
        tok = strtok(NULL, layerDelims)) {
-    layer_names_append(&layerIDs, tok);
+    LIST_APPEND(&layerIDs, tok);
   }
 
-  assert(layer_names_size(&layerIDs) - 1 <= INT_MAX);
-  int ntok = (int)(layer_names_size(&layerIDs) - 1);
+  assert(LIST_SIZE(&layerIDs) - 1 <= INT_MAX);
+  int ntok = (int)(LIST_SIZE(&layerIDs) - 1);
 
   // if we found layers, save them for later reference
-  if (layer_names_size(&layerIDs) > 1) {
-    layer_names_append(&layerIDs, NULL); // add a terminating entry
-    *out_layerIDs = layer_names_detach(&layerIDs);
+  if (LIST_SIZE(&layerIDs) > 1) {
+    LIST_APPEND(&layerIDs, NULL); // add a terminating entry
+    LIST_DETACH(&layerIDs, out_layerIDs, NULL);
   }
-  layer_names_free(&layerIDs);
+  LIST_FREE(&layerIDs);
 
   return ntok;
 }
