@@ -86,8 +86,8 @@ void free_textspan(textspan_t *tl, size_t);
 void *init_xdot(Agraph_t *g);
 bool initMapData(obj_state_t *, char *, char *, char *, char *, char *, void *);
 bool isPolygon(node_t *);
-textlabel_t *make_label(void *obj, char *str, int kind, double fontsize,
-                        char *fontname, char *fontcolor);
+textlabel_t *make_label(void *obj, char *str, bool is_html, bool is_record,
+                        double fontsize, char *fontname, char *fontcolor);
 char **parse_style(char *s);
 obj_state_t child_obj_state(obj_state_t *parent);
 void free_child_obj(obj_state_t *child);
