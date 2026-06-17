@@ -28,7 +28,7 @@ export class NormalizedGraph {
   readonly subgraphs: NormalizedSubgraph[] = [];
   readonly namedNodes = new Map<string, NormalizedNode>();
   readonly namedSubgraphs = new Map<string, NormalizedSubgraph>();
-  readonly #allEdgesMap = new Map<string, NormalizedEdge>();
+  readonly deduplicatedEdgesMap = new Map<string, NormalizedEdge>();
 
   constructor(
     config: NormalizedGraphConfig,
@@ -152,22 +152,23 @@ export class NormalizedGraph {
       }),
     );
 
-    const deduplicateKey = this.#edgeDeduplicateKey(newEdge);
+    const deduplicateKey = this.edgeDeduplicateKey(newEdge);
     if (deduplicateKey !== undefined) {
-      const edge = this.#allEdgesMap.get(deduplicateKey);
+      const edge = this.deduplicatedEdgesMap.get(deduplicateKey);
       if (edge !== undefined) {
         edge.mergeAttributes(applyAttributesToEdgeConfig(config).attributes);
         return edge;
       }
-      this.#allEdgesMap.set(deduplicateKey, newEdge);
+      this.deduplicatedEdgesMap.set(deduplicateKey, newEdge);
     }
 
     this.allEdges.push(newEdge);
     return newEdge;
   }
 
-  #edgeDeduplicateKey(edge: NormalizedEdge): string | undefined {
+  edgeDeduplicateKey(edge: NormalizedEdge): string | undefined {
     const { key } = edge;
+
     if (key === undefined && !this.strict) {
       return undefined;
     }
