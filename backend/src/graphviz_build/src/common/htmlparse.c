@@ -73,7 +73,7 @@
 #define yynerrs         htmlnerrs
 
 /* First part of user prologue.  */
-#line 90 "../../lib/common/htmlparse.y"
+#line 84 "../../lib/common/htmlparse.y"
 
 
 #include <common/render.h>
@@ -87,14 +87,14 @@ static void cleanCell(htmlcell_t *cp);
 
 /// Clean up table if error in parsing.
 static void cleanTbl(htmltbl_t *tp) {
-  rows_t *rows = &tp->u.p.rows;
-  for (size_t r = 0; r < rows_size(rows); ++r) {
-    row_t *rp = rows_get(rows, r);
-    for (size_t c = 0; c < cells_size(&rp->rp); ++c) {
-      cleanCell(cells_get(&rp->rp, c));
+  rows_t *rows = &tp->rows;
+  for (size_t r = 0; r < LIST_SIZE(rows); ++r) {
+    row_t *rp = LIST_GET(rows, r);
+    for (size_t c = 0; c < LIST_SIZE(&rp->rp); ++c) {
+      cleanCell(LIST_GET(&rp->rp, c));
     }
   }
-  rows_free(rows);
+  LIST_FREE(rows);
   free_html_data(&tp->data);
   free(tp);
 }
@@ -145,7 +145,7 @@ static htmllabel_t *mkLabel(void *obj, label_type_t kind) {
  */
 static void cleanup (htmlparserstate_t *html_state);
 
-/// Return 1 if s contains a non-space character.
+/// Return true if s contains a non-space character.
 static bool nonSpace(const char *s) {
   char   c;
 
@@ -660,13 +660,13 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   212,   212,   213,   214,   217,   220,   221,   224,   225,
-     226,   227,   228,   229,   230,   231,   232,   233,   236,   239,
-     242,   245,   248,   251,   254,   257,   260,   263,   266,   269,
-     272,   275,   278,   281,   284,   285,   288,   289,   292,   292,
-     313,   314,   315,   316,   317,   318,   321,   322,   325,   326,
-     327,   330,   330,   333,   334,   335,   338,   338,   339,   339,
-     340,   340,   341,   341,   344,   345,   348,   349,   352,   353
+       0,   206,   206,   207,   208,   211,   214,   215,   218,   219,
+     220,   221,   222,   223,   224,   225,   226,   227,   230,   233,
+     236,   239,   242,   245,   248,   251,   254,   257,   260,   263,
+     266,   269,   272,   275,   278,   279,   282,   283,   286,   286,
+     307,   308,   309,   310,   311,   312,   315,   316,   319,   320,
+     321,   324,   324,   327,   328,   329,   332,   332,   333,   333,
+     334,   334,   335,   335,   338,   339,   342,   343,   346,   347
 };
 #endif
 
@@ -1347,318 +1347,318 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* html: T_html fonttext T_end_html  */
-#line 212 "../../lib/common/htmlparse.y"
+#line 206 "../../lib/common/htmlparse.y"
                                    { scanner->parser.lbl = mkLabel((yyvsp[-1].txt),HTML_TEXT); }
 #line 1353 "htmlparse.c"
     break;
 
   case 3: /* html: T_html fonttable T_end_html  */
-#line 213 "../../lib/common/htmlparse.y"
+#line 207 "../../lib/common/htmlparse.y"
                                     { scanner->parser.lbl = mkLabel((yyvsp[-1].tbl),HTML_TBL); }
 #line 1359 "htmlparse.c"
     break;
 
   case 4: /* html: error  */
-#line 214 "../../lib/common/htmlparse.y"
+#line 208 "../../lib/common/htmlparse.y"
               { cleanup(&scanner->parser); YYABORT; }
 #line 1365 "htmlparse.c"
     break;
 
   case 5: /* fonttext: text  */
-#line 217 "../../lib/common/htmlparse.y"
+#line 211 "../../lib/common/htmlparse.y"
                 { (yyval.txt) = mkText(&scanner->parser); }
 #line 1371 "htmlparse.c"
     break;
 
   case 8: /* textitem: string  */
-#line 224 "../../lib/common/htmlparse.y"
+#line 218 "../../lib/common/htmlparse.y"
                   { appendFItemList(&scanner->parser,scanner->parser.str);}
 #line 1377 "htmlparse.c"
     break;
 
   case 9: /* textitem: br  */
-#line 225 "../../lib/common/htmlparse.y"
+#line 219 "../../lib/common/htmlparse.y"
               {appendFLineList(&scanner->parser,(yyvsp[0].i));}
 #line 1383 "htmlparse.c"
     break;
 
   case 18: /* font: T_font  */
-#line 236 "../../lib/common/htmlparse.y"
+#line 230 "../../lib/common/htmlparse.y"
               { pushFont (&scanner->parser,(yyvsp[0].font)); }
 #line 1389 "htmlparse.c"
     break;
 
   case 19: /* n_font: T_end_font  */
-#line 239 "../../lib/common/htmlparse.y"
+#line 233 "../../lib/common/htmlparse.y"
                     { popFont (&scanner->parser); }
 #line 1395 "htmlparse.c"
     break;
 
   case 20: /* italic: T_italic  */
-#line 242 "../../lib/common/htmlparse.y"
+#line 236 "../../lib/common/htmlparse.y"
                   {pushFont(&scanner->parser,(yyvsp[0].font));}
 #line 1401 "htmlparse.c"
     break;
 
   case 21: /* n_italic: T_n_italic  */
-#line 245 "../../lib/common/htmlparse.y"
+#line 239 "../../lib/common/htmlparse.y"
                       {popFont(&scanner->parser);}
 #line 1407 "htmlparse.c"
     break;
 
   case 22: /* bold: T_bold  */
-#line 248 "../../lib/common/htmlparse.y"
+#line 242 "../../lib/common/htmlparse.y"
               {pushFont(&scanner->parser,(yyvsp[0].font));}
 #line 1413 "htmlparse.c"
     break;
 
   case 23: /* n_bold: T_n_bold  */
-#line 251 "../../lib/common/htmlparse.y"
+#line 245 "../../lib/common/htmlparse.y"
                   {popFont(&scanner->parser);}
 #line 1419 "htmlparse.c"
     break;
 
   case 24: /* strike: T_s  */
-#line 254 "../../lib/common/htmlparse.y"
+#line 248 "../../lib/common/htmlparse.y"
              {pushFont(&scanner->parser,(yyvsp[0].font));}
 #line 1425 "htmlparse.c"
     break;
 
   case 25: /* n_strike: T_n_s  */
-#line 257 "../../lib/common/htmlparse.y"
+#line 251 "../../lib/common/htmlparse.y"
                  {popFont(&scanner->parser);}
 #line 1431 "htmlparse.c"
     break;
 
   case 26: /* underline: T_underline  */
-#line 260 "../../lib/common/htmlparse.y"
+#line 254 "../../lib/common/htmlparse.y"
                         {pushFont(&scanner->parser,(yyvsp[0].font));}
 #line 1437 "htmlparse.c"
     break;
 
   case 27: /* n_underline: T_n_underline  */
-#line 263 "../../lib/common/htmlparse.y"
+#line 257 "../../lib/common/htmlparse.y"
                             {popFont(&scanner->parser);}
 #line 1443 "htmlparse.c"
     break;
 
   case 28: /* overline: T_overline  */
-#line 266 "../../lib/common/htmlparse.y"
+#line 260 "../../lib/common/htmlparse.y"
                       {pushFont(&scanner->parser,(yyvsp[0].font));}
 #line 1449 "htmlparse.c"
     break;
 
   case 29: /* n_overline: T_n_overline  */
-#line 269 "../../lib/common/htmlparse.y"
+#line 263 "../../lib/common/htmlparse.y"
                           {popFont(&scanner->parser);}
 #line 1455 "htmlparse.c"
     break;
 
   case 30: /* sup: T_sup  */
-#line 272 "../../lib/common/htmlparse.y"
+#line 266 "../../lib/common/htmlparse.y"
             {pushFont(&scanner->parser,(yyvsp[0].font));}
 #line 1461 "htmlparse.c"
     break;
 
   case 31: /* n_sup: T_n_sup  */
-#line 275 "../../lib/common/htmlparse.y"
+#line 269 "../../lib/common/htmlparse.y"
                 {popFont(&scanner->parser);}
 #line 1467 "htmlparse.c"
     break;
 
   case 32: /* sub: T_sub  */
-#line 278 "../../lib/common/htmlparse.y"
+#line 272 "../../lib/common/htmlparse.y"
             {pushFont(&scanner->parser,(yyvsp[0].font));}
 #line 1473 "htmlparse.c"
     break;
 
   case 33: /* n_sub: T_n_sub  */
-#line 281 "../../lib/common/htmlparse.y"
+#line 275 "../../lib/common/htmlparse.y"
                 {popFont(&scanner->parser);}
 #line 1479 "htmlparse.c"
     break;
 
   case 34: /* br: T_br T_end_br  */
-#line 284 "../../lib/common/htmlparse.y"
+#line 278 "../../lib/common/htmlparse.y"
                        { (yyval.i) = (yyvsp[-1].i); }
 #line 1485 "htmlparse.c"
     break;
 
   case 35: /* br: T_BR  */
-#line 285 "../../lib/common/htmlparse.y"
+#line 279 "../../lib/common/htmlparse.y"
               { (yyval.i) = (yyvsp[0].i); }
 #line 1491 "htmlparse.c"
     break;
 
   case 38: /* @1: %empty  */
-#line 292 "../../lib/common/htmlparse.y"
+#line 286 "../../lib/common/htmlparse.y"
                           {
           if (nonSpace(agxbuse(scanner->parser.str))) {
             htmlerror (scanner,"Syntax error: non-space string used before <TABLE>");
             cleanup(&scanner->parser); YYABORT;
           }
-          (yyvsp[0].tbl)->u.p.prev = scanner->parser.tblstack;
-          (yyvsp[0].tbl)->u.p.rows = (rows_t){0};
+          (yyvsp[0].tbl)->prev = scanner->parser.tblstack;
+          (yyvsp[0].tbl)->rows = (rows_t){.dtor = free_ritem};
           scanner->parser.tblstack = (yyvsp[0].tbl);
-          (yyvsp[0].tbl)->font = *sfont_back(&scanner->parser.fontstack);
+          (yyvsp[0].tbl)->font = *LIST_BACK(&scanner->parser.fontstack);
           (yyval.tbl) = (yyvsp[0].tbl);
         }
 #line 1507 "htmlparse.c"
     break;
 
   case 39: /* table: opt_space T_table @1 rows T_end_table opt_space  */
-#line 303 "../../lib/common/htmlparse.y"
+#line 297 "../../lib/common/htmlparse.y"
                                    {
           if (nonSpace(agxbuse(scanner->parser.str))) {
             htmlerror (scanner,"Syntax error: non-space string used after </TABLE>");
             cleanup(&scanner->parser); YYABORT;
           }
           (yyval.tbl) = scanner->parser.tblstack;
-          scanner->parser.tblstack = scanner->parser.tblstack->u.p.prev;
+          scanner->parser.tblstack = scanner->parser.tblstack->prev;
         }
 #line 1520 "htmlparse.c"
     break;
 
   case 40: /* fonttable: table  */
-#line 313 "../../lib/common/htmlparse.y"
+#line 307 "../../lib/common/htmlparse.y"
                   { (yyval.tbl) = (yyvsp[0].tbl); }
 #line 1526 "htmlparse.c"
     break;
 
   case 41: /* fonttable: font table n_font  */
-#line 314 "../../lib/common/htmlparse.y"
+#line 308 "../../lib/common/htmlparse.y"
                               { (yyval.tbl)=(yyvsp[-1].tbl); }
 #line 1532 "htmlparse.c"
     break;
 
   case 42: /* fonttable: italic table n_italic  */
-#line 315 "../../lib/common/htmlparse.y"
+#line 309 "../../lib/common/htmlparse.y"
                                   { (yyval.tbl)=(yyvsp[-1].tbl); }
 #line 1538 "htmlparse.c"
     break;
 
   case 43: /* fonttable: underline table n_underline  */
-#line 316 "../../lib/common/htmlparse.y"
+#line 310 "../../lib/common/htmlparse.y"
                                         { (yyval.tbl)=(yyvsp[-1].tbl); }
 #line 1544 "htmlparse.c"
     break;
 
   case 44: /* fonttable: overline table n_overline  */
-#line 317 "../../lib/common/htmlparse.y"
+#line 311 "../../lib/common/htmlparse.y"
                                       { (yyval.tbl)=(yyvsp[-1].tbl); }
 #line 1550 "htmlparse.c"
     break;
 
   case 45: /* fonttable: bold table n_bold  */
-#line 318 "../../lib/common/htmlparse.y"
+#line 312 "../../lib/common/htmlparse.y"
                               { (yyval.tbl)=(yyvsp[-1].tbl); }
 #line 1556 "htmlparse.c"
     break;
 
   case 48: /* rows: row  */
-#line 325 "../../lib/common/htmlparse.y"
+#line 319 "../../lib/common/htmlparse.y"
            { (yyval.p) = (yyvsp[0].p); }
 #line 1562 "htmlparse.c"
     break;
 
   case 49: /* rows: rows row  */
-#line 326 "../../lib/common/htmlparse.y"
+#line 320 "../../lib/common/htmlparse.y"
                 { (yyval.p) = (yyvsp[0].p); }
 #line 1568 "htmlparse.c"
     break;
 
   case 50: /* rows: rows HR row  */
-#line 327 "../../lib/common/htmlparse.y"
+#line 321 "../../lib/common/htmlparse.y"
                    { (yyvsp[-2].p)->ruled = true; (yyval.p) = (yyvsp[0].p); }
 #line 1574 "htmlparse.c"
     break;
 
   case 51: /* $@2: %empty  */
-#line 330 "../../lib/common/htmlparse.y"
+#line 324 "../../lib/common/htmlparse.y"
             { addRow (&scanner->parser); }
 #line 1580 "htmlparse.c"
     break;
 
   case 52: /* row: T_row $@2 cells T_end_row  */
-#line 330 "../../lib/common/htmlparse.y"
+#line 324 "../../lib/common/htmlparse.y"
                                                            { (yyval.p) = lastRow(&scanner->parser); }
 #line 1586 "htmlparse.c"
     break;
 
   case 53: /* cells: cell  */
-#line 333 "../../lib/common/htmlparse.y"
+#line 327 "../../lib/common/htmlparse.y"
              { (yyval.cell) = (yyvsp[0].cell); }
 #line 1592 "htmlparse.c"
     break;
 
   case 54: /* cells: cells cell  */
-#line 334 "../../lib/common/htmlparse.y"
+#line 328 "../../lib/common/htmlparse.y"
                    { (yyval.cell) = (yyvsp[0].cell); }
 #line 1598 "htmlparse.c"
     break;
 
   case 55: /* cells: cells VR cell  */
-#line 335 "../../lib/common/htmlparse.y"
+#line 329 "../../lib/common/htmlparse.y"
                       { (yyvsp[-2].cell)->vruled = true; (yyval.cell) = (yyvsp[0].cell); }
 #line 1604 "htmlparse.c"
     break;
 
   case 56: /* $@3: %empty  */
-#line 338 "../../lib/common/htmlparse.y"
+#line 332 "../../lib/common/htmlparse.y"
                         { setCell(&scanner->parser,(yyvsp[-1].cell),(yyvsp[0].tbl),HTML_TBL); }
 #line 1610 "htmlparse.c"
     break;
 
   case 57: /* cell: T_cell fonttable $@3 T_end_cell  */
-#line 338 "../../lib/common/htmlparse.y"
+#line 332 "../../lib/common/htmlparse.y"
                                                                                  { (yyval.cell) = (yyvsp[-3].cell); }
 #line 1616 "htmlparse.c"
     break;
 
   case 58: /* $@4: %empty  */
-#line 339 "../../lib/common/htmlparse.y"
+#line 333 "../../lib/common/htmlparse.y"
                        { setCell(&scanner->parser,(yyvsp[-1].cell),(yyvsp[0].txt),HTML_TEXT); }
 #line 1622 "htmlparse.c"
     break;
 
   case 59: /* cell: T_cell fonttext $@4 T_end_cell  */
-#line 339 "../../lib/common/htmlparse.y"
+#line 333 "../../lib/common/htmlparse.y"
                                                                                  { (yyval.cell) = (yyvsp[-3].cell); }
 #line 1628 "htmlparse.c"
     break;
 
   case 60: /* $@5: %empty  */
-#line 340 "../../lib/common/htmlparse.y"
+#line 334 "../../lib/common/htmlparse.y"
                     { setCell(&scanner->parser,(yyvsp[-1].cell),(yyvsp[0].img),HTML_IMAGE); }
 #line 1634 "htmlparse.c"
     break;
 
   case 61: /* cell: T_cell image $@5 T_end_cell  */
-#line 340 "../../lib/common/htmlparse.y"
+#line 334 "../../lib/common/htmlparse.y"
                                                                                { (yyval.cell) = (yyvsp[-3].cell); }
 #line 1640 "htmlparse.c"
     break;
 
   case 62: /* $@6: %empty  */
-#line 341 "../../lib/common/htmlparse.y"
+#line 335 "../../lib/common/htmlparse.y"
               { setCell(&scanner->parser,(yyvsp[0].cell),mkText(&scanner->parser),HTML_TEXT); }
 #line 1646 "htmlparse.c"
     break;
 
   case 63: /* cell: T_cell $@6 T_end_cell  */
-#line 341 "../../lib/common/htmlparse.y"
+#line 335 "../../lib/common/htmlparse.y"
                                                                                               { (yyval.cell) = (yyvsp[-2].cell); }
 #line 1652 "htmlparse.c"
     break;
 
   case 64: /* image: T_img T_end_img  */
-#line 344 "../../lib/common/htmlparse.y"
+#line 338 "../../lib/common/htmlparse.y"
                          { (yyval.img) = (yyvsp[-1].img); }
 #line 1658 "htmlparse.c"
     break;
 
   case 65: /* image: T_IMG  */
-#line 345 "../../lib/common/htmlparse.y"
+#line 339 "../../lib/common/htmlparse.y"
                { (yyval.img) = (yyvsp[0].img); }
 #line 1664 "htmlparse.c"
     break;
@@ -1857,32 +1857,31 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 357 "../../lib/common/htmlparse.y"
+#line 351 "../../lib/common/htmlparse.y"
 
 
 static void
 appendFItemList (htmlparserstate_t *html_state, agxbuf *ag)
 {
     const textspan_t ti = {.str = agxbdisown(ag),
-                           .font = *sfont_back(&html_state->fontstack)};
-    textspans_append(&html_state->fitemList, ti);
+                           .font = *LIST_BACK(&html_state->fontstack)};
+    LIST_APPEND(&html_state->fitemList, ti);
 }
 
 static void
 appendFLineList (htmlparserstate_t *html_state, int v)
 {
     htextspan_t lp = {0};
-    textspans_t *ilist = &html_state->fitemList;
 
-    size_t cnt = textspans_size(ilist);
+    size_t cnt = LIST_SIZE(&html_state->fitemList);
     lp.just = v;
     if (cnt) {
 	lp.nitems = cnt;
 	lp.items = gv_calloc(cnt, sizeof(textspan_t));
 
-	for (size_t i = 0; i < textspans_size(ilist); ++i) {
+	for (size_t i = 0; i < LIST_SIZE(&html_state->fitemList); ++i) {
 	    // move this text span into the new list
-	    textspan_t *ti = textspans_at(ilist, i);
+	    textspan_t *ti = LIST_AT(&html_state->fitemList, i);
 	    lp.items[i] = *ti;
 	    *ti = (textspan_t){0};
 	}
@@ -1891,42 +1890,41 @@ appendFLineList (htmlparserstate_t *html_state, int v)
 	lp.items = gv_alloc(sizeof(textspan_t));
 	lp.nitems = 1;
 	lp.items[0].str = gv_strdup("");
-	lp.items[0].font = *sfont_back(&html_state->fontstack);
+	lp.items[0].font = *LIST_BACK(&html_state->fontstack);
     }
 
-    textspans_clear(ilist);
+    LIST_CLEAR(&html_state->fitemList);
 
-    htextspans_append(&html_state->fspanList, lp);
+    LIST_APPEND(&html_state->fspanList, lp);
 }
 
 static htmltxt_t*
 mkText(htmlparserstate_t *html_state)
 {
-    htextspans_t *ispan = &html_state->fspanList;
     htmltxt_t *hft = gv_alloc(sizeof(htmltxt_t));
 
-    if (!textspans_is_empty(&html_state->fitemList))
+    if (!LIST_IS_EMPTY(&html_state->fitemList))
 	appendFLineList (html_state, UNSET_ALIGN);
 
-    size_t cnt = htextspans_size(ispan);
+    size_t cnt = LIST_SIZE(&html_state->fspanList);
     hft->nspans = cnt;
 
     hft->spans = gv_calloc(cnt, sizeof(htextspan_t));
-    for (size_t i = 0; i < htextspans_size(ispan); ++i) {
+    for (size_t i = 0; i < LIST_SIZE(&html_state->fspanList); ++i) {
     	// move this HTML text span into the new list
-    	htextspan_t *hi = htextspans_at(ispan, i);
+    	htextspan_t *hi = LIST_AT(&html_state->fspanList, i);
     	hft->spans[i] = *hi;
     	*hi = (htextspan_t){0};
     }
 
-    htextspans_clear(ispan);
+    LIST_CLEAR(&html_state->fspanList);
 
     return hft;
 }
 
 static row_t *lastRow(htmlparserstate_t *html_state) {
   htmltbl_t* tbl = html_state->tblstack;
-  row_t *sp = *rows_back(&tbl->u.p.rows);
+  row_t *sp = *LIST_BACK(&tbl->rows);
   return sp;
 }
 
@@ -1935,14 +1933,13 @@ static void addRow(htmlparserstate_t *html_state) {
   row_t *sp = gv_alloc(sizeof(row_t));
   if (tbl->hrule)
     sp->ruled = true;
-  rows_append(&tbl->u.p.rows, sp);
+  LIST_APPEND(&tbl->rows, sp);
 }
 
 static void setCell(htmlparserstate_t *html_state, htmlcell_t *cp, void *obj, label_type_t kind) {
   htmltbl_t* tbl = html_state->tblstack;
-  row_t *rp = *rows_back(&tbl->u.p.rows);
-  cells_t *row = &rp->rp;
-  cells_append(row, cp);
+  row_t *rp = *LIST_BACK(&tbl->rows);
+  LIST_APPEND(&rp->rp, cp);
   cp->child.kind = kind;
   if (tbl->vrule) {
     cp->vruled = true;
@@ -1967,21 +1964,21 @@ static void cleanup (htmlparserstate_t *html_state)
     html_state->lbl = NULL;
   }
   while (tp) {
-    next = tp->u.p.prev;
+    next = tp->prev;
     cleanTbl (tp);
     tp = next;
   }
 
-  textspans_clear(&html_state->fitemList);
-  htextspans_clear(&html_state->fspanList);
+  LIST_CLEAR(&html_state->fitemList);
+  LIST_CLEAR(&html_state->fspanList);
 
-  sfont_free(&html_state->fontstack);
+  LIST_FREE(&html_state->fontstack);
 }
 
 static void
 pushFont (htmlparserstate_t *html_state, textfont_t *fp)
 {
-    textfont_t* curfont = *sfont_back(&html_state->fontstack);
+    textfont_t* curfont = *LIST_BACK(&html_state->fontstack);
     textfont_t  f = *fp;
 
     if (curfont) {
@@ -1996,13 +1993,13 @@ pushFont (htmlparserstate_t *html_state, textfont_t *fp)
     }
 
     textfont_t *const ft = dtinsert(html_state->gvc->textfont_dt, &f);
-    sfont_push_back(&html_state->fontstack, ft);
+    LIST_PUSH_BACK(&html_state->fontstack, ft);
 }
 
 static void
 popFont (htmlparserstate_t *html_state)
 {
-    (void)sfont_pop_back(&html_state->fontstack);
+    LIST_DROP_BACK(&html_state->fontstack);
 }
 
 /* Return parsed label or NULL if failure.
@@ -2016,7 +2013,9 @@ parseHTML (char* txt, int* warn, htmlenv_t *env)
   htmllabel_t*  l = NULL;
   htmlscan_t    scanner = {0};
 
-  sfont_push_back(&scanner.parser.fontstack, NULL);
+  LIST_PUSH_BACK(&scanner.parser.fontstack, NULL);
+  scanner.parser.fitemList.dtor = free_ti;
+  scanner.parser.fspanList.dtor = free_hi;
   scanner.parser.gvc = GD_gvc(env->g);
   scanner.parser.str = &str;
 
@@ -2029,10 +2028,10 @@ parseHTML (char* txt, int* warn, htmlenv_t *env)
     l = scanner.parser.lbl;
   }
 
-  textspans_free(&scanner.parser.fitemList);
-  htextspans_free(&scanner.parser.fspanList);
+  LIST_FREE(&scanner.parser.fitemList);
+  LIST_FREE(&scanner.parser.fspanList);
 
-  sfont_free(&scanner.parser.fontstack);
+  LIST_FREE(&scanner.parser.fontstack);
 
   agxbfree (&str);
 
