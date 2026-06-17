@@ -39,6 +39,12 @@ pub fn build(b: *std.Build) void {
     );
     lib.root_module.linkLibrary(graphviz_build);
 
+    const graphviz_dep = b.dependency("graphviz", .{
+        .target = target,
+        .optimize = graphviz_build_mode,
+    });
+    lib.root_module.addIncludePath(graphviz_dep.path("lib"));
+    lib.root_module.addIncludePath(graphviz_dep.path("lib/common"));
     lib.root_module.addIncludePath(b.path("src"));
     lib.root_module.addCSourceFiles(.{
         .files = &.{
@@ -429,7 +435,9 @@ pub fn buildGraphviz(
 
     const h = std.Build.Step.Compile.HeaderInstallation.Directory.Options{ .include_extensions = &.{".h"} };
     lib.installHeadersDirectory(graphviz_dep.path("lib"), "lib", h);
-    lib.installHeadersDirectory(graphviz_dep.path("lib/common"), "", h);
+    // lib/common headers exposed via addIncludePath in main build() to avoid
+    // double-inclusion (installed copy vs original) when both "geom.h" and
+    // <common/geom.h> are used in the same translation unit (15.0.0 change)
     lib.installHeadersDirectory(graphviz_dep.path("lib/pathplan"), "", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/gvc"), "", h);
     lib.installHeadersDirectory(graphviz_dep.path("lib/cdt"), "", h);
