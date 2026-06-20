@@ -566,6 +566,12 @@ export function normalizeGraph(
     },
     overrideAttributes,
   );
+  graph.mergeNodeAttributes(
+    // FIXME: check if it's viz.js hack or it also present in graphviz
+    new NormalizedAttributes([
+      ['label', { text: String.raw`\N`, html: undefined }],
+    ]),
+  );
   applyDefinitions(graph, config);
   return graph;
 }

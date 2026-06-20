@@ -113,6 +113,7 @@ describe('rendering graph objects', () => {
     expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph {
       	graph [bb="0,0,54,36"];
+      	node [label="\\N"];
       	a	[height=0.5,
       		label=<<b>A</b>>,
       		pos="27,18",
@@ -156,7 +157,9 @@ describe('rendering graph objects', () => {
       	graph [bb="0,0,297.04,84",
       		rankdir=LR
       	];
-      	node [shape=circle];
+      	node [label="\\N",
+      		shape=circle
+      	];
       	subgraph cluster_1 {
       		graph [bb="150.02,8,289.04,76"];
       		subgraph cluster_2 {
@@ -311,7 +314,9 @@ describe('rendering graph objects', () => {
     expectDot(result).toMatchRawStringInlineSnapshot(`
       digraph structs {
       	graph [bb="0,0,229.65,160.4"];
-      	node [shape=plaintext];
+      	node [label="\\N",
+      		shape=plaintext
+      	];
       	struct1	[height=0.5,
       		label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
       <TR><TD>left</TD><TD PORT="f1">mid dle</TD><TD PORT="f2">right</TD></TR>
