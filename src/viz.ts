@@ -209,7 +209,7 @@ export class Viz {
 
     const layout = graph.graphAttributes.get('layout');
     if (layout !== undefined) {
-      if (NormalizedAttributes.isHTML(layout) || !isLayoutEngine(layout.text)) {
+      if (layout.html !== undefined || !isLayoutEngine(layout.text)) {
         const value = NormalizedAttributes.valueToString(layout);
         return failureResult([
           new RenderingBackendError(
@@ -233,7 +233,7 @@ export class Viz {
     const charset = graph.graphAttributes.get('charset');
     if (
       charset !== undefined &&
-      (!NormalizedAttributes.isText(charset) ||
+      (charset.text === undefined ||
         !['utf8', 'utf-8'].includes(charset.text.toLowerCase()))
     ) {
       const value = NormalizedAttributes.valueToString(charset);

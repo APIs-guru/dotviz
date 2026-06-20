@@ -721,7 +721,7 @@ class Parser {
 
   #expectedName(description: string): ParsedName {
     const { value, token } = this.#expectedValue(description);
-    if (NormalizedAttributes.isHTML(value)) {
+    if (value.html !== undefined) {
       const html = this.#extractText(token);
       this.#failWithError(
         `HTML string as ${description} is not supported. If you want to use it as an identifier, enclose it in quotes: "${html}".`,
@@ -744,11 +744,14 @@ class Parser {
     switch (token.kind) {
       case Kind.Name:
       case Kind.Number:
-        return { value: { text: token.value }, token };
+        return { value: { text: token.value, html: undefined }, token };
       case Kind.String:
-        return { value: { text: this.#readConcatenatedString(token) }, token };
+        return {
+          value: { text: this.#readConcatenatedString(token), html: undefined },
+          token,
+        };
       case Kind.HTML:
-        return { value: { html: token.value }, token };
+        return { value: { text: undefined, html: token.value }, token };
     }
 
     const tokenDesc = this.#describeToken(token);
@@ -818,7 +821,7 @@ class Parser {
         graphAttributes: new NormalizedAttributes(),
         // FIXME: check if it's viz.js hack or it also present in graphviz
         nodeAttributes: new NormalizedAttributes([
-          ['label', { text: String.raw`\N` }],
+          ['label', { text: String.raw`\N`, html: undefined }],
         ]),
         edgeAttributes: new NormalizedAttributes(),
       },
@@ -993,13 +996,8 @@ class Parser {
     const name = this.#expectedName('attribute name').value;
     this.#expected(Kind['=']);
     const { value } = this.#expectedValue('attribute value');
-    attributes.set(
-      name,
-      // In graphviz, empty strings are treated as default values
-      NormalizedAttributes.isText(value) && value.text === ''
-        ? undefined
-        : value,
-    );
+    // In graphviz, empty strings are treated as default values
+    attributes.set(name, value?.text === '' ? undefined : value);
   }
 
   #parseNamedSubgraph(
@@ -1123,7 +1121,7 @@ function isNumberToken(str: string): boolean {
 }
 
 export function parseDotNumber(value: NormalizedAttributeValue): number {
-  return NormalizedAttributes.isText(value) && isNumberToken(value.text)
+  return value?.text !== undefined && isNumberToken(value.text)
     ? Number.parseFloat(value.text)
     : Number.NaN;
 }

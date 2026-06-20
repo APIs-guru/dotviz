@@ -505,11 +505,13 @@ export class NormalizedSubgraph {
   }
 }
 
-export type NormalizedAttributeValue = { html: string } | { text: string };
+export type NormalizedAttributeValue =
+  | { text: undefined; html: string }
+  | { text: string; html: undefined };
 
 export class NormalizedAttributes extends Map<
   string,
-  { html: string } | { text: string } | undefined
+  NormalizedAttributeValue | undefined
 > {
   toJSON(): Record<string, NormalizedAttributeValue | null> {
     return Object.fromEntries(
@@ -517,16 +519,8 @@ export class NormalizedAttributes extends Map<
     );
   }
 
-  static isHTML(value: NormalizedAttributeValue): value is { html: string } {
-    return 'html' in value;
-  }
-
-  static isText(value: NormalizedAttributeValue): value is { text: string } {
-    return 'text' in value;
-  }
-
   static valueToString(value: NormalizedAttributeValue): string {
-    return this.isHTML(value) ? `<${value.html}>` : `"${value.text}"`;
+    return value.text === undefined ? `<${value.html}>` : `"${value.text}"`;
   }
 }
 
@@ -544,11 +538,14 @@ function normalizeAttributes(
           return [name, undefined];
         case 'string':
           // In graphviz, empty strings are treated as default values
-          return [name, value === '' ? undefined : { text: value }];
+          return [
+            name,
+            value === '' ? undefined : { text: value, html: undefined },
+          ];
         case 'object':
-          return [name, { html: value.html }];
+          return [name, { text: undefined, html: value.html }];
         default:
-          return [name, { text: value.toString() }];
+          return [name, { text: value.toString(), html: undefined }];
       }
     }),
   );
@@ -636,7 +633,7 @@ function applyAttributesToEdgeConfig(
     switch (name) {
       case 'key':
         /* v8 ignore start */
-        if (value !== undefined && NormalizedAttributes.isHTML(value)) {
+        if (value?.html !== undefined) {
           throw new TypeError(`HTML as edge 'key' is not supported`);
         }
         /* v8 ignore stop */
@@ -644,7 +641,7 @@ function applyAttributesToEdgeConfig(
         break;
       case 'tailport':
         /* v8 ignore start */
-        if (value !== undefined && NormalizedAttributes.isHTML(value)) {
+        if (value?.html !== undefined) {
           throw new TypeError(`HTML as 'tailport' is not supported`);
         }
         /* v8 ignore stop */
@@ -652,7 +649,7 @@ function applyAttributesToEdgeConfig(
         break;
       case 'headport':
         /* v8 ignore start */
-        if (value !== undefined && NormalizedAttributes.isHTML(value)) {
+        if (value?.html !== undefined) {
           throw new TypeError(`HTML as 'headport' is not supported`);
         }
         /* v8 ignore stop */
