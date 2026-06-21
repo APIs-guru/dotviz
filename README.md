@@ -9,6 +9,8 @@ It's work in progress, and not intended to be used outside of [graphql-voyager](
 ```bash
 git submodule update --init
 npm run build:npm
+# to generate compile_commands.json in backend/
+zig build cdb
 ```
 
 ## Credits
