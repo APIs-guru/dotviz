@@ -5,7 +5,6 @@
     "npmDist/",
     "lib/",
     "backend/",
-    "depends",
     "test/types/",
     "test/commonjs-require/",
     "test/module-import/",

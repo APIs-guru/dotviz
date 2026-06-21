@@ -1,4 +1,4 @@
-[submodule "depends/graphiz-fork"]
-	path = depends/graphiz-fork
+[submodule "backend/graphviz-fork"]
+	path = backend/graphviz-fork
 	url = https://github.com/dotviz/graphviz-fork
 	branch = develop
