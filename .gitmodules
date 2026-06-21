@@ -1,0 +1,4 @@
+[submodule "backend/graphviz-fork"]
+	path = backend/graphviz-fork
+	url = https://github.com/dotviz/graphviz-fork
+	branch = develop
