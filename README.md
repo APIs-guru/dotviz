@@ -10,7 +10,7 @@ It's work in progress, and not intended to be used outside of [graphql-voyager](
 git submodule update --init
 npm run build:npm
 # to generate compile_commands.json in backend/
-zig build cdb
+cd backend && zig build cdb
 ```
 
 ## Credits
