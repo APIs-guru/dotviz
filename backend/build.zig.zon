@@ -45,6 +45,10 @@
             .url = "git+https://github.com/allyourcodebase/libexpat.git?ref=2.7.1-3#662b7d1cb5f347598d4619d125be317cc2c52b62",
             .hash = "libexpat-2.7.1-3-y_akI_s7AABtuMADtwTTJGOxx8iY5ZC9T8EON6cjvbNw",
         },
+        .compile_commands = .{
+            .url = "https://github.com/the-argus/zig-compile-commands/archive/9400cd1963ea6bb58fe47ba7d9700075b808cdd2.tar.gz",
+            .hash = "zig_compile_commands-0.0.1-OZg5-e_JAAAGg1WHAePtq4l4Uvjs34BexnFFCZk63EaG",
+        },
     },
     .paths = .{
         "build.zig",

@@ -1,8 +1,11 @@
 const std = @import("std");
+const zcc = @import("compile_commands");
 
 const flags = [_][]const u8{ "-Wall", "-Werror", "-Wextra" };
 
 pub fn build(b: *std.Build) void {
+    var targets: std.ArrayList(*std.Build.Step.Compile) = .empty;
+
     const target = b.standardTargetOptions(.{
         .default_target = .{
             .cpu_arch = .wasm32,
@@ -80,6 +83,11 @@ pub fn build(b: *std.Build) void {
     applyWasiEmulation(exe);
     lib.stack_size = 16 * 1024 * 1024;
     exe.stack_size = 16 * 1024 * 1024;
+
+    targets.append(b.allocator, lib) catch @panic("OOM");
+    targets.append(b.allocator, exe) catch @panic("OOM");
+
+    _ = zcc.createStep(b, "cdb", targets.toOwnedSlice(b.allocator) catch @panic("OOM"));
 
     b.installArtifact(exe);
 
