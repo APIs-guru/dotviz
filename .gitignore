@@ -12,6 +12,8 @@ npmDist/
 docs/
 reports/
 
+compile_commands.json
+.cache
 .zig-cache
 zig-out
 zig-pkg
