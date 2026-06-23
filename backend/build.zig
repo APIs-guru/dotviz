@@ -16,34 +16,27 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const graphviz_build_mode = optimize;
 
-    const lib_mod = b.createModule(.{
+    const root_module = b.createModule(.{
         .root_source_file = b.path("src/wasm_module.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const exe_mod = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    exe_mod.addImport("dotviz_lib", lib_mod);
-
-    var lib = b.addLibrary(.{
+    var exe = b.addExecutable(.{
         .name = "dotviz",
-        .root_module = lib_mod,
-        .linkage = .static,
+        .root_module = root_module,
     });
+    exe.lto = .full;
 
     const graphviz_build = try buildGraphviz(
         b,
         target,
         graphviz_build_mode,
     );
-    lib.root_module.linkLibrary(graphviz_build);
+    exe.root_module.linkLibrary(graphviz_build);
 
-    lib.root_module.addIncludePath(b.path("src"));
-    lib.root_module.addCSourceFiles(.{
+    exe.root_module.addIncludePath(b.path("src"));
+    exe.root_module.addCSourceFiles(.{
         .files = &.{
             "src/cgraph_wrapper.c",
             "src/layout_inline.c",
@@ -67,36 +60,18 @@ pub fn build(b: *std.Build) void {
         .flags = &flags,
     });
 
-    lib.root_module.export_symbol_names = &.{
+    exe.root_module.export_symbol_names = &.{
         "wasm_alloc",
         "wasm_free",
         "render",
     };
-    applyWasiEmulation(lib);
-
-    const exe = b.addExecutable(.{
-        .name = "dotviz",
-        .root_module = exe_mod,
-    });
-    exe.root_module.addIncludePath(b.path("src"));
-    exe.lto = .full;
     applyWasiEmulation(exe);
-    lib.stack_size = 16 * 1024 * 1024;
+
     exe.stack_size = 16 * 1024 * 1024;
 
-    targets.append(b.allocator, lib) catch @panic("OOM");
-    targets.append(b.allocator, exe) catch @panic("OOM");
-
-    _ = zcc.createStep(b, "cdb", targets.toOwnedSlice(b.allocator) catch @panic("OOM"));
-
     b.installArtifact(exe);
-
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| run_cmd.addArgs(args);
-
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    targets.append(b.allocator, exe) catch @panic("OOM");
+    _ = zcc.createStep(b, "cdb", targets.toOwnedSlice(b.allocator) catch @panic("OOM"));
 }
 
 pub fn buildGraphviz(
