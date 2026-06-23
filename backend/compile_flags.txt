@@ -1,2 +1,0 @@
--I../graphviz-fork/lib/common/
--I../graphviz-fork/lib/gvc/
