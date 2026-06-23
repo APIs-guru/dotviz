@@ -53,7 +53,7 @@
 #include <util/unreachable.h>
 #include <util/unused.h>
 #include "utils.h"
-#include "xdot.h"
+#include "xdot/xdot.h"
 #include "internal_render_svg.h"
 #include "core_svg.h"
 // clang-format on
