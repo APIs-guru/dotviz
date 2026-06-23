@@ -36,11 +36,6 @@
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
     .dependencies = .{
-        .graphviz = .{
-            // .url = "https://gitlab.com/graphviz/graphviz/-/archive/13.1.0/graphviz-13.1.0.tar.gz",
-            // .hash = "N-V-__8AAD8krQVqFN-VjR9FyDR0N4PYXiwwAvtf_CTD03jK",
-            .path = "./graphviz-fork",
-        },
         .libexpat = .{
             .url = "git+https://github.com/allyourcodebase/libexpat.git?ref=2.7.1-3#662b7d1cb5f347598d4619d125be317cc2c52b62",
             .hash = "libexpat-2.7.1-3-y_akI_s7AABtuMADtwTTJGOxx8iY5ZC9T8EON6cjvbNw",
