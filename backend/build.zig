@@ -44,28 +44,6 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const config_h = b.addConfigHeader(.{
-        .style = .blank,
-        .include_path = "config.h",
-    }, .{
-        .HAVE_TCL = 0,
-        .DEFAULT_DPI = 96,
-        .HAVE_EXPAT = 1,
-        .HAVE_SYS_MMAN_H = 1,
-        .HAVE_DRAND48 = 1,
-        .HAVE_SRAND48 = 1,
-    });
-    root_module.addConfigHeader(config_h);
-
-    const builddate_h = b.addConfigHeader(.{
-        .style = .blank,
-        .include_path = "builddate.h",
-    }, .{
-        .PACKAGE_VERSION = "a",
-        .BUILDDATE = "a",
-    });
-    root_module.addConfigHeader(builddate_h);
-
     root_module.addIncludePath(b.path("src/graphviz_build/inc/"));
     root_module.addCSourceFiles(.{
         .files = &.{
