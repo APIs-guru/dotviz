@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
         "render",
     };
 
-    if (root_module.resolved_target.?.result.os.tag == .wasi) {
+    if (target.result.os.tag == .wasi) {
         root_module.addCMacro("_WASI_EMULATED_SIGNAL", "");
         root_module.linkSystemLibrary("wasi-emulated-signal", .{});
         root_module.addCMacro("_WASI_EMULATED_PROCESS_CLOCKS", "");
@@ -37,12 +37,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     root_module.linkLibrary(expat_dep.artifact("expat"));
-    root_module.addIncludePath(.{
-        .dependency = .{
-            .dependency = expat_dep,
-            .sub_path = "lib",
-        },
-    });
+    root_module.addIncludePath(expat_dep.path("lib"));
 
     root_module.addIncludePath(b.path("src/graphviz_build/"));
     root_module.addCSourceFiles(.{
@@ -95,6 +90,7 @@ pub fn build(b: *std.Build) void {
         .name = "dotviz",
         .root_module = root_module,
     });
+    exe.entry = .disabled;
     exe.lto = .full;
     exe.stack_size = 16 * 1024 * 1024;
     b.installArtifact(exe);
