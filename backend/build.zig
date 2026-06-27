@@ -44,13 +44,12 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    root_module.addIncludePath(b.path("src/graphviz_build/inc/"));
+    root_module.addIncludePath(b.path("src/graphviz_build/"));
     root_module.addCSourceFiles(.{
         .files = &.{
-            "src/graphviz_build/src/dummy.c",
-            "src/graphviz_build/src/drand48.c",
-            "src/graphviz_build/src/qsort.c",
-            "src/graphviz_build/src/common/htmlparse.c",
+            "src/graphviz_build/drand48.c",
+            "src/graphviz_build/qsort.c",
+            "src/graphviz_build/common/htmlparse.c",
         },
     });
 
