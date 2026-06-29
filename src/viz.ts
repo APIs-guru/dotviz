@@ -2,7 +2,9 @@ import type { Attributes, Graph } from './graph.d.ts';
 import { type Location } from './location.ts';
 import {
   NormalizedAttributes,
+  type NormalizedEdgeEndpoint,
   type NormalizedGraph,
+  NormalizedSubgraph,
   normalizeGraph,
 } from './normalize-graph.ts';
 import { parseDot, parseDotNumber } from './parser.ts';
@@ -270,7 +272,7 @@ export class Viz {
     }
 
     const request = {
-      graph,
+      graph: serializeGraph(graph),
       engine: engine ?? 'dot',
       yInvert: options.yInvert ?? false,
       reduce: options.reduce ?? false,
@@ -414,5 +416,53 @@ function normalizeImages(
       name,
       { height: height.toString(), width: width.toString() },
     ]),
+  );
+}
+
+function serializeGraph(graph: NormalizedGraph): unknown {
+  return {
+    name: graph.name,
+    strict: graph.strict,
+    directed: graph.directed,
+    graphAttributes: serializeAttributes(graph.graphAttributes),
+    nodeAttributes: serializeAttributes(graph.nodeAttributes),
+    edgeAttributes: serializeAttributes(graph.edgeAttributes),
+    allNodes: graph.allNodes.map((node) => ({
+      name: node.name,
+      attributes: serializeAttributes(node.attributes),
+    })),
+    allEdges: graph.allEdges.map((edge) => ({
+      tail: serializeEdgeEndpoint(edge.tail),
+      head: serializeEdgeEndpoint(edge.head),
+      key: edge.key,
+      attributes: serializeAttributes(edge.attributes),
+    })),
+    subgraphs: graph.subgraphs.map(serializeSubgraph),
+  };
+}
+
+function serializeSubgraph(subgraph: NormalizedSubgraph): unknown {
+  return {
+    name: subgraph.name,
+    graphAttributes: serializeAttributes(subgraph.graphAttributes),
+    nodeAttributes: serializeAttributes(subgraph.nodeAttributes),
+    edgeAttributes: serializeAttributes(subgraph.edgeAttributes),
+    memberNodes: subgraph.sortedMemberNodes().map((node) => node.index),
+    memberEdges: subgraph.sortedMemberEdges().map((edge) => edge.index),
+    subgraphs: subgraph.subgraphs.map(serializeSubgraph),
+  };
+}
+
+function serializeEdgeEndpoint(endpoint: NormalizedEdgeEndpoint): unknown {
+  const { port, compass } = endpoint;
+  return {
+    port: { node: port.node.index, name: port.name },
+    compass,
+  };
+}
+
+function serializeAttributes(attributes: NormalizedAttributes): unknown {
+  return Object.fromEntries(
+    attributes.entries().map(([name, value]) => [name, value ?? null]),
   );
 }
