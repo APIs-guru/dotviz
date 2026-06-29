@@ -218,20 +218,6 @@ export class NormalizedGraph {
   get resolvedEdgeDefaults(): NormalizedAttributes {
     return this.edgeAttributes;
   }
-
-  toJSON() {
-    return {
-      name: this.name,
-      strict: this.strict,
-      directed: this.directed,
-      graphAttributes: this.graphAttributes,
-      nodeAttributes: this.nodeAttributes,
-      edgeAttributes: this.edgeAttributes,
-      allNodes: this.allNodes,
-      allEdges: this.allEdges,
-      subgraphs: this.subgraphs,
-    };
-  }
 }
 
 export interface NormalizedPortConfig {
@@ -239,20 +225,10 @@ export interface NormalizedPortConfig {
   readonly name: string | undefined;
 }
 
-export class NormalizedPort {
+export interface NormalizedPort {
   readonly index: number;
   readonly node: NormalizedNode;
   readonly name: string | undefined;
-
-  constructor(index: number, config: NormalizedPortConfig) {
-    this.index = index;
-    this.node = config.node;
-    this.name = config.name;
-  }
-
-  toJSON() {
-    return { node: this.node.index, name: this.name };
-  }
 }
 
 export interface NormalizedNodeConfig {
@@ -263,7 +239,7 @@ export interface NormalizedNodeConfig {
 export class NormalizedNode {
   readonly index: number;
   readonly name: string;
-  readonly defaultPort = new NormalizedPort(0, { node: this, name: undefined });
+  readonly defaultPort = { index: 0, node: this, name: undefined };
   readonly defaultEndpoint: NormalizedEdgeEndpoint = {
     port: this.defaultPort,
     compass: undefined,
@@ -299,16 +275,9 @@ export class NormalizedNode {
       return port;
     }
 
-    const newPort = new NormalizedPort(this.ports.size, { node: this, name });
+    const newPort = { index: this.ports.size, node: this, name };
     this.ports.set(name, newPort);
     return newPort;
-  }
-
-  toJSON() {
-    return {
-      name: this.name,
-      attributes: this.attributes,
-    };
   }
 }
 
@@ -351,15 +320,6 @@ export class NormalizedEdge {
       ...defaults,
       ...this.attributes,
     ]);
-  }
-
-  toJSON() {
-    return {
-      tail: this.tail,
-      head: this.head,
-      key: this.key,
-      attributes: this.attributes,
-    };
   }
 }
 
@@ -491,18 +451,6 @@ export class NormalizedSubgraph {
   sortedMemberEdges(): NormalizedEdge[] {
     return [...this.memberEdges].sort((a, b) => a.index - b.index);
   }
-
-  toJSON() {
-    return {
-      name: this.name,
-      graphAttributes: this.graphAttributes,
-      nodeAttributes: this.nodeAttributes,
-      edgeAttributes: this.edgeAttributes,
-      memberNodes: this.sortedMemberNodes().map((node) => node.index),
-      memberEdges: this.sortedMemberEdges().map((edge) => edge.index),
-      subgraphs: this.subgraphs,
-    };
-  }
 }
 
 export type NormalizedAttributeValue =
@@ -513,12 +461,6 @@ export class NormalizedAttributes extends Map<
   string,
   NormalizedAttributeValue | undefined
 > {
-  toJSON(): Record<string, NormalizedAttributeValue | null> {
-    return Object.fromEntries(
-      this.entries().map(([name, value]) => [name, value ?? null]),
-    );
-  }
-
   static valueToString(value: NormalizedAttributeValue): string {
     return value.text === undefined ? `<${value.html}>` : `"${value.text}"`;
   }
