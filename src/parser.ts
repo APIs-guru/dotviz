@@ -495,8 +495,8 @@ const COMPASS_POINTS = new Set([
 ]);
 
 interface NodeID {
-  readonly node: ParsedName;
-  readonly port: ParsedName | undefined;
+  readonly nodeName: ParsedName;
+  readonly portName: ParsedName | undefined;
   readonly compass: ParsedName | undefined;
 }
 
@@ -868,18 +868,17 @@ class Parser {
         return;
       }
 
+      const nodeDefaults = owner.resolvedNodeDefaults();
       const attributes = this.#optionalAttrListOrEmpty();
-      for (const { node, port } of nodeIDs) {
-        if (port !== undefined) {
+      for (const { nodeName, portName } of nodeIDs) {
+        if (portName !== undefined) {
           this.#failWithError(
-            `Unexpected '${port.value}' port in node statement`,
-            port.token,
+            `Unexpected '${portName.value}' port in node statement`,
+            portName.token,
           );
         }
-        owner.upsertNode(
-          { name: node.value, attributes },
-          owner.resolvedNodeDefaults,
-        );
+        const node = owner.upsertNode(nodeName.value, nodeDefaults);
+        node.mergeAttributes(attributes);
       }
       return;
     }
@@ -940,16 +939,16 @@ class Parser {
 
   #parseNodeID(): NodeID {
     // node_id:	ID [ port ]
-    const node = this.#expectedName('node name');
+    const nodeName = this.#expectedName('node name');
 
     // port: ':' ID [ ':' compass_pt ]
     if (!this.#optional(Kind[':'])) {
-      return { node, port: undefined, compass: undefined };
+      return { nodeName, portName: undefined, compass: undefined };
     }
 
-    const port = this.#expectedName('port name');
+    const portName = this.#expectedName('port name');
     if (!this.#optional(Kind[':'])) {
-      return { node, port, compass: undefined };
+      return { nodeName, portName, compass: undefined };
     }
 
     // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
@@ -963,7 +962,7 @@ class Parser {
         compass.token,
       );
     }
-    return { node, port, compass };
+    return { nodeName, portName, compass };
   }
 
   #optionalAttrListOrEmpty(): NormalizedAttributes {
@@ -1081,11 +1080,12 @@ class Parser {
       tailNodes = headNodes;
     } while (this.#optionalEdgeOp(owner));
 
+    const edgeDefaults = owner.resolvedEdgeDefaults();
     const attributes = this.#optionalAttrListOrEmpty();
     for (const [tail, head] of newEdges) {
       owner.upsertEdge(
         { tail, head, key: undefined, attributes },
-        owner.resolvedEdgeDefaults,
+        edgeDefaults,
       );
     }
   }
@@ -1095,21 +1095,16 @@ function upsertEdgeEndpoints(
   owner: NormalizedGraph | NormalizedSubgraph,
   nodeIDs: NodeID[],
 ): NormalizedEdgeEndpoint[] {
+  const nodeDefaults = owner.resolvedNodeDefaults();
   return nodeIDs.map((nodeID) => {
-    const node = owner.upsertNode(
-      {
-        name: nodeID.node.value,
-        attributes: new NormalizedAttributes(),
-      },
-      owner.resolvedNodeDefaults,
-    );
+    const node = owner.upsertNode(nodeID.nodeName.value, nodeDefaults);
     const compass = nodeID.compass?.value;
-    if (nodeID.port === undefined) {
+    if (nodeID.portName === undefined) {
       return nodeID.compass
         ? { port: node.defaultPort, compass }
         : node.defaultEndpoint;
     }
-    const port = node.upsertPort(nodeID.port.value);
+    const port = node.upsertPort(nodeID.portName.value);
     return { port, compass };
   });
 }
