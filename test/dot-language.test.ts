@@ -715,6 +715,24 @@ describe('dot language support', () => {
     `);
   });
 
+  it('empty headport and tailport attributes clear edge endpoint ports', () => {
+    const result = renderDotAndCompareWithVizJS(`
+      digraph {
+        a:tail_port -> a:head_port [headport="" tailport=""]
+      }
+    `);
+    expectDot(result).toMatchRawStringInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,72,36"];
+      	node [label="\\N"];
+      	a	[height=0.5,
+      		pos="27,18",
+      		width=0.75];
+      	a -> a	[pos="e,52.443,11.309 52.443,24.691 63.028,25.152 72,22.922 72,18 72,15.001 68.668,13.001 63.67,12.001"];
+      }
+    `);
+  })
+
   it('strict graph deduplication keeps ports from first edge declaration', () => {
     const result = renderDotAndCompareWithVizJS(`
       strict digraph {
