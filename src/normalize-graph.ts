@@ -562,9 +562,7 @@ function applyDefinitions(
 function applyAttributesToEdgeConfig(
   config: NormalizedEdgeConfig,
 ): NormalizedEdgeConfig {
-  let key: string | undefined;
-  let tailport: string | undefined;
-  let headport: string | undefined;
+  let { key, tail, head } = config;
   const attributes = new NormalizedAttributes();
 
   for (const [name, value] of config.attributes.entries()) {
@@ -583,7 +581,7 @@ function applyAttributesToEdgeConfig(
           throw new TypeError(`HTML as 'tailport' is not supported`);
         }
         /* v8 ignore stop */
-        tailport = value?.text;
+        tail = applyPortString(tail, value?.text);
         break;
       case 'headport':
         /* v8 ignore start */
@@ -591,19 +589,13 @@ function applyAttributesToEdgeConfig(
           throw new TypeError(`HTML as 'headport' is not supported`);
         }
         /* v8 ignore stop */
-        headport = value?.text;
+        head = applyPortString(head, value?.text);
         break;
       default:
         attributes.set(name, value);
     }
   }
-
-  return {
-    key: config.key ?? key?.toString() ?? undefined,
-    tail: applyPortString(config.tail, tailport?.toString()),
-    head: applyPortString(config.head, headport?.toString()),
-    attributes,
-  };
+  return { key, tail, head, attributes };
 }
 
 function applyPortString(
@@ -611,7 +603,7 @@ function applyPortString(
   str: string | undefined,
 ): NormalizedEdgeEndpoint {
   if (str === undefined) {
-    return endpoint;
+    return endpoint.port.node.defaultEndpoint;
   }
   const [port, compass] = str.split(':') as [string, string | undefined];
   // FIXME: missing validation of compass
