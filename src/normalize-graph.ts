@@ -119,10 +119,7 @@ export class NormalizedGraph {
     ]);
   }
 
-  upsertNode(
-    name: string,
-    defaultAttributes: NormalizedAttributes,
-  ): NormalizedNode {
+  upsertNode(name: string, nodeDefaults: NormalizedAttributes): NormalizedNode {
     const node = this.namedNodes.get(name);
     if (node !== undefined) {
       return node;
@@ -130,7 +127,7 @@ export class NormalizedGraph {
 
     const newNode = new NormalizedNode(this.allNodes.length, {
       name,
-      attributes: defaultAttributes,
+      attributes: nodeDefaults,
     });
     this.namedNodes.set(name, newNode);
     this.allNodes.push(newNode);
@@ -139,41 +136,42 @@ export class NormalizedGraph {
 
   upsertEdge(
     config: NormalizedEdgeConfig,
-    defaultAttributes: NormalizedAttributes,
+    edgeDefaults: NormalizedAttributes,
   ): NormalizedEdge {
-    const newEdge = new NormalizedEdge(
-      this.allEdges.length,
-      applyAttributesToEdgeConfig({
-        ...config,
-        attributes: new NormalizedAttributes([
-          ...defaultAttributes,
-          ...config.attributes,
-        ]),
-      }),
-    );
-
-    const deduplicateKey = this.edgeDeduplicateKey(newEdge);
-    if (deduplicateKey !== undefined) {
-      const edge = this.deduplicatedEdgesMap.get(deduplicateKey);
-      if (edge !== undefined) {
-        edge.mergeAttributes(applyAttributesToEdgeConfig(config).attributes);
-        return edge;
-      }
-      this.deduplicatedEdgesMap.set(deduplicateKey, newEdge);
+    const deduplicateKey = this.edgeDeduplicateKey(config);
+    if (deduplicateKey === undefined) {
+      const newEdge = new NormalizedEdge(
+        this.allEdges.length,
+        config,
+        edgeDefaults,
+      );
+      this.allEdges.push(newEdge);
+      return newEdge;
     }
 
+    const edge = this.deduplicatedEdgesMap.get(deduplicateKey);
+    if (edge !== undefined) {
+      return edge;
+    }
+
+    const newEdge = new NormalizedEdge(
+      this.allEdges.length,
+      config,
+      edgeDefaults,
+    );
+    this.deduplicatedEdgesMap.set(deduplicateKey, newEdge);
     this.allEdges.push(newEdge);
     return newEdge;
   }
 
-  edgeDeduplicateKey(edge: NormalizedEdge): string | undefined {
-    const { key } = edge;
+  edgeDeduplicateKey(config: NormalizedEdgeConfig): string | undefined {
+    const { key } = config;
 
     if (key === undefined && !this.strict) {
       return undefined;
     }
 
-    let { tail, head } = edge;
+    let { tail, head } = config;
     if (!this.directed) {
       const shouldSwap =
         head.port.node.index > tail.port.node.index ||
@@ -269,15 +267,28 @@ export class NormalizedNode {
     ]);
   }
 
-  upsertPort(name: string): NormalizedPort {
-    const port = this.ports.get(name);
+  upsertPort(portName: string): NormalizedPort {
+    const port = this.ports.get(portName);
     if (port) {
       return port;
     }
 
-    const newPort = { index: this.ports.size, node: this, name };
-    this.ports.set(name, newPort);
+    const newPort = { index: this.ports.size, node: this, name: portName };
+    this.ports.set(portName, newPort);
     return newPort;
+  }
+
+  upsertEdgeEndpoint(
+    portName: string | undefined,
+    compass: string | undefined,
+  ): NormalizedEdgeEndpoint {
+    if (portName === undefined) {
+      if (compass === undefined) {
+        return this.defaultEndpoint;
+      }
+      return { port: this.defaultPort, compass };
+    }
+    return { port: this.upsertPort(portName), compass };
   }
 }
 
@@ -290,7 +301,6 @@ interface NormalizedEdgeConfig {
   readonly tail: NormalizedEdgeEndpoint;
   readonly head: NormalizedEdgeEndpoint;
   readonly key: string | undefined;
-  readonly attributes: NormalizedAttributes;
 }
 
 export class NormalizedEdge {
@@ -300,12 +310,16 @@ export class NormalizedEdge {
   readonly key: string | undefined;
   attributes: NormalizedAttributes;
 
-  constructor(index: number, config: NormalizedEdgeConfig) {
+  constructor(
+    index: number,
+    config: NormalizedEdgeConfig,
+    attributes: NormalizedAttributes,
+  ) {
     this.index = index;
     this.tail = config.tail;
     this.head = config.head;
     this.key = config.key;
-    this.attributes = config.attributes;
+    this.attributes = attributes;
   }
 
   mergeAttributes(newAttributes: NormalizedAttributes) {
@@ -523,8 +537,6 @@ function applyDefinitions(
   config: Subgraph,
 ): void {
   const nodeDefaults = owner.resolvedNodeDefaults();
-  const edgeDefaults = owner.resolvedEdgeDefaults();
-
   if (config.nodes) {
     for (const { name, attributes } of config.nodes) {
       const node = owner.upsertNode(name, nodeDefaults);
@@ -533,16 +545,30 @@ function applyDefinitions(
   }
 
   if (config.edges) {
+    const edgeDefaults = owner.resolvedEdgeDefaults();
+    const edgeDefaultConfigAttributes =
+      extractEdgeConfigAttributes(edgeDefaults);
+
     for (const edgeConfig of config.edges) {
-      owner.upsertEdge(
+      const attributes = normalizeAttributes(edgeConfig.attributes);
+      const { key, headport, tailport } = {
+        ...edgeDefaultConfigAttributes,
+        ...extractEdgeConfigAttributes(attributes),
+      };
+
+      const edge = owner.upsertEdge(
         {
-          tail: owner.upsertNode(edgeConfig.tail, nodeDefaults).defaultEndpoint,
-          head: owner.upsertNode(edgeConfig.head, nodeDefaults).defaultEndpoint,
-          key: undefined,
-          attributes: normalizeAttributes(edgeConfig.attributes),
+          tail: owner
+            .upsertNode(edgeConfig.tail, nodeDefaults)
+            .upsertEdgeEndpoint(tailport?.[0], tailport?.[1]),
+          head: owner
+            .upsertNode(edgeConfig.head, nodeDefaults)
+            .upsertEdgeEndpoint(headport?.[0], headport?.[1]),
+          key,
         },
         edgeDefaults,
       );
+      edge.mergeAttributes(attributes);
     }
   }
 
@@ -559,53 +585,60 @@ function applyDefinitions(
   }
 }
 
-function applyAttributesToEdgeConfig(
-  config: NormalizedEdgeConfig,
-): NormalizedEdgeConfig {
-  let { key, tail, head } = config;
-  const attributes = new NormalizedAttributes();
-
-  for (const [name, value] of config.attributes.entries()) {
-    switch (name) {
-      case 'key':
-        /* v8 ignore start */
-        if (value?.html !== undefined) {
-          throw new TypeError(`HTML as edge 'key' is not supported`);
-        }
-        /* v8 ignore stop */
-        key = value?.text;
-        break;
-      case 'tailport':
-        /* v8 ignore start */
-        if (value?.html !== undefined) {
-          throw new TypeError(`HTML as 'tailport' is not supported`);
-        }
-        /* v8 ignore stop */
-        tail = applyPortString(tail, value?.text);
-        break;
-      case 'headport':
-        /* v8 ignore start */
-        if (value?.html !== undefined) {
-          throw new TypeError(`HTML as 'headport' is not supported`);
-        }
-        /* v8 ignore stop */
-        head = applyPortString(head, value?.text);
-        break;
-      default:
-        attributes.set(name, value);
-    }
-  }
-  return { key, tail, head, attributes };
+interface EdgeConfigAttributes {
+  key?: string | undefined;
+  tailport?: [string | undefined, string | undefined];
+  headport?: [string | undefined, string | undefined];
 }
 
-function applyPortString(
-  endpoint: NormalizedEdgeEndpoint,
-  str: string | undefined,
-): NormalizedEdgeEndpoint {
-  if (str === undefined) {
-    return endpoint.port.node.defaultEndpoint;
+export function extractEdgeConfigAttributes(
+  attributes: NormalizedAttributes,
+): EdgeConfigAttributes {
+  const result: EdgeConfigAttributes = {};
+
+  if (attributes.has('key')) {
+    const value = attributes.get('key');
+    /* v8 ignore start */
+    if (value?.html !== undefined) {
+      throw new TypeError(`HTML as edge 'key' is not supported`);
+    }
+    /* v8 ignore stop */
+    result.key = value?.text;
+    attributes.delete('key');
   }
-  const [port, compass] = str.split(':') as [string, string | undefined];
+
+  if (attributes.has('tailport')) {
+    const value = attributes.get('tailport');
+    /* v8 ignore start */
+    if (value?.html !== undefined) {
+      throw new TypeError(`HTML as 'tailport' is not supported`);
+    }
+    /* v8 ignore stop */
+    result.tailport = splitPortString(value?.text);
+    attributes.delete('tailport');
+  }
+
+  if (attributes.has('headport')) {
+    const value = attributes.get('headport');
+    /* v8 ignore start */
+    if (value?.html !== undefined) {
+      throw new TypeError(`HTML as 'headport' is not supported`);
+    }
+    /* v8 ignore stop */
+    result.headport = splitPortString(value?.text);
+    attributes.delete('headport');
+  }
+
+  return result;
+}
+
+function splitPortString(
+  str: string | undefined,
+): [string | undefined, string | undefined] {
+  if (str === undefined) {
+    return [undefined, undefined];
+  }
   // FIXME: missing validation of compass
-  return { port: endpoint.port.node.upsertPort(port), compass };
+  const [port, compass] = str.split(':') as [string, string | undefined];
+  return [port === '' ? undefined : port, compass === '' ? undefined : compass];
 }
