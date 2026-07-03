@@ -870,7 +870,7 @@ class Parser {
       // node_stmt: node_id [ attr_list ]
       const nodeIDs = this.#parseNodeIDList();
       if (this.#optionalEdgeOp(owner)) {
-        const tailNodes = upsertEdgeEndpoints(owner, nodeIDs);
+        const tailNodes = buildEdgeEndpoints(owner, nodeIDs);
         this.#parseEdges(owner, tailNodes);
         return;
       }
@@ -1074,7 +1074,7 @@ class Parser {
             .map((node) => ({ node, portName: undefined, compass: undefined }));
           break;
         default:
-          headNodes = upsertEdgeEndpoints(owner, this.#parseNodeIDList());
+          headNodes = buildEdgeEndpoints(owner, this.#parseNodeIDList());
       }
 
       for (const tail of tailNodes) {
@@ -1120,7 +1120,7 @@ class Parser {
   }
 }
 
-function upsertEdgeEndpoints(
+function buildEdgeEndpoints(
   owner: NormalizedGraph | NormalizedSubgraph,
   nodeIDs: NodeID[],
 ): EdgeEndpoint[] {
