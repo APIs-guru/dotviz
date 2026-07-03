@@ -876,7 +876,7 @@ class Parser {
       }
 
       const nodeDefaults = owner.resolvedNodeDefaults();
-      const attributes = this.#optionalAttrListOrEmpty();
+      const attributes = this.#optionalAttrList();
       for (const { nodeName, portName } of nodeIDs) {
         if (portName !== undefined) {
           this.#failWithError(
@@ -885,7 +885,9 @@ class Parser {
           );
         }
         const node = owner.upsertNode(nodeName.value, nodeDefaults);
-        node.mergeAttributes(attributes);
+        if (attributes) {
+          node.mergeAttributes(attributes);
+        }
       }
       return;
     }
@@ -972,10 +974,8 @@ class Parser {
     return { nodeName, portName, compass };
   }
 
-  #optionalAttrListOrEmpty(): NormalizedAttributes {
-    return this.#peekKind() === Kind['[']
-      ? this.#parseAttrList()
-      : new NormalizedAttributes();
+  #optionalAttrList(): NormalizedAttributes | undefined {
+    return this.#peekKind() === Kind['['] ? this.#parseAttrList() : undefined;
   }
 
   #parseAttrList(): Readonly<NormalizedAttributes> {
@@ -1090,15 +1090,21 @@ class Parser {
     const edgeDefaults = new Map(owner.resolvedEdgeDefaults());
     const edgeDefaultConfigAttributes =
       extractEdgeConfigAttributes(edgeDefaults);
-    const attributes = this.#optionalAttrListOrEmpty();
+    const attributes = this.#optionalAttrList();
     for (const [tail, head] of newEdges) {
-      const { key, headport, tailport } = {
+      let configAttributes = {
         headport: [head.portName, head.compass],
         tailport: [tail.portName, tail.compass],
         ...edgeDefaultConfigAttributes,
-        ...extractEdgeConfigAttributes(attributes),
       };
+      if (attributes) {
+        configAttributes = {
+          ...configAttributes,
+          ...extractEdgeConfigAttributes(attributes),
+        };
+      }
 
+      const { key, tailport, headport } = configAttributes;
       const edge = owner.upsertEdge(
         {
           tail: tail.node.upsertEdgeEndpoint(tailport?.[0], tailport?.[1]),
@@ -1107,7 +1113,9 @@ class Parser {
         },
         edgeDefaults,
       );
-      edge.mergeAttributes(attributes);
+      if (attributes) {
+        edge.mergeAttributes(attributes);
+      }
     }
   }
 }

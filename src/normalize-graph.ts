@@ -34,15 +34,16 @@ export class NormalizedGraph {
     config: NormalizedGraphConfig,
     overrideAttributes: OverrideAttributes,
   ) {
-    this.#overrideGraphAttributes = normalizeAttributes(
-      overrideAttributes.graphAttributes,
-    );
-    this.#overrideNodeAttributes = normalizeAttributes(
-      overrideAttributes.nodeAttributes,
-    );
-    this.#overrideEdgeAttributes = normalizeAttributes(
-      overrideAttributes.edgeAttributes,
-    );
+    this.#overrideGraphAttributes = overrideAttributes.graphAttributes
+      ? normalizeAttributes(overrideAttributes.graphAttributes)
+      : new NormalizedAttributes();
+    this.#overrideNodeAttributes = overrideAttributes.nodeAttributes
+      ? normalizeAttributes(overrideAttributes.nodeAttributes)
+      : new NormalizedAttributes();
+    this.#overrideEdgeAttributes = overrideAttributes.edgeAttributes
+      ? normalizeAttributes(overrideAttributes.edgeAttributes)
+      : new NormalizedAttributes();
+
     this.graphAttributes = new NormalizedAttributes([
       ...config.graphAttributes,
       ...this.#overrideGraphAttributes,
@@ -480,13 +481,7 @@ export class NormalizedAttributes extends Map<
   }
 }
 
-function normalizeAttributes(
-  attributes: Attributes | undefined,
-): NormalizedAttributes {
-  if (attributes === undefined) {
-    return new NormalizedAttributes();
-  }
-
+function normalizeAttributes(attributes: Attributes): NormalizedAttributes {
   return new NormalizedAttributes(
     Object.entries(attributes).map(([name, value]) => {
       switch (typeof value) {
@@ -516,9 +511,15 @@ export function normalizeGraph(
       name: config.name,
       strict: config.strict ?? false,
       directed: config.directed ?? true,
-      graphAttributes: normalizeAttributes(config.graphAttributes),
-      nodeAttributes: normalizeAttributes(config.nodeAttributes),
-      edgeAttributes: normalizeAttributes(config.edgeAttributes),
+      graphAttributes: config.graphAttributes
+        ? normalizeAttributes(config.graphAttributes)
+        : new NormalizedAttributes(),
+      nodeAttributes: config.nodeAttributes
+        ? normalizeAttributes(config.nodeAttributes)
+        : new NormalizedAttributes(),
+      edgeAttributes: config.edgeAttributes
+        ? normalizeAttributes(config.edgeAttributes)
+        : new NormalizedAttributes(),
     },
     overrideAttributes,
   );
@@ -540,7 +541,9 @@ function applyDefinitions(
   if (config.nodes) {
     for (const { name, attributes } of config.nodes) {
       const node = owner.upsertNode(name, nodeDefaults);
-      node.mergeAttributes(normalizeAttributes(attributes));
+      if (attributes) {
+        node.mergeAttributes(normalizeAttributes(attributes));
+      }
     }
   }
 
@@ -550,12 +553,17 @@ function applyDefinitions(
       extractEdgeConfigAttributes(edgeDefaults);
 
     for (const edgeConfig of config.edges) {
-      const attributes = normalizeAttributes(edgeConfig.attributes);
-      const { key, headport, tailport } = {
-        ...edgeDefaultConfigAttributes,
-        ...extractEdgeConfigAttributes(attributes),
-      };
+      let attributes;
+      let configAttributes = edgeDefaultConfigAttributes;
+      if (edgeConfig.attributes) {
+        attributes = normalizeAttributes(edgeConfig.attributes);
+        configAttributes = {
+          ...configAttributes,
+          ...extractEdgeConfigAttributes(attributes),
+        };
+      }
 
+      const { key, tailport, headport } = configAttributes;
       const edge = owner.upsertEdge(
         {
           tail: owner
@@ -568,7 +576,9 @@ function applyDefinitions(
         },
         edgeDefaults,
       );
-      edge.mergeAttributes(attributes);
+      if (attributes) {
+        edge.mergeAttributes(attributes);
+      }
     }
   }
 
@@ -576,9 +586,15 @@ function applyDefinitions(
     for (const subgraphConfig of config.subgraphs) {
       const subgraph = owner.upsertSubgraph({
         name: subgraphConfig.name,
-        graphAttributes: normalizeAttributes(subgraphConfig.graphAttributes),
-        nodeAttributes: normalizeAttributes(subgraphConfig.nodeAttributes),
-        edgeAttributes: normalizeAttributes(subgraphConfig.edgeAttributes),
+        graphAttributes: subgraphConfig.graphAttributes
+          ? normalizeAttributes(subgraphConfig.graphAttributes)
+          : new NormalizedAttributes(),
+        nodeAttributes: subgraphConfig.nodeAttributes
+          ? normalizeAttributes(subgraphConfig.nodeAttributes)
+          : new NormalizedAttributes(),
+        edgeAttributes: subgraphConfig.edgeAttributes
+          ? normalizeAttributes(subgraphConfig.edgeAttributes)
+          : new NormalizedAttributes(),
       });
       applyDefinitions(subgraph, subgraphConfig);
     }
