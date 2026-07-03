@@ -163,15 +163,10 @@ fn edgePortToString(
 ) ?[:0]const u8 {
     const maybePort = endpoint_json.port.name;
     const maybeCompass = endpoint_json.compass;
-    if (maybePort) |port| {
-        if (maybeCompass) |compass| {
-            return std.fmt.allocPrintSentinel(allocator, "{s}:{s}", .{ port, compass }, 0) catch @panic(
-                "cannot allocPrintSentinel in edgePortToString",
-            );
-        } else {
-            return port;
-        }
-    } else {
-        return maybeCompass orelse null;
+    if (maybeCompass) |compass| {
+        return std.fmt.allocPrintSentinel(allocator, "{s}:{s}", .{ maybePort orelse "", compass }, 0) catch @panic(
+            "cannot allocPrintSentinel in edgePortToString",
+        );
     }
+    return maybePort;
 }

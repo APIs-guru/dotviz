@@ -1,9 +1,10 @@
 import { type Location, printLocation } from './location.ts';
 import {
+  extractEdgeConfigAttributes,
   NormalizedAttributes,
   type NormalizedAttributeValue,
-  type NormalizedEdgeEndpoint,
   NormalizedGraph,
+  NormalizedNode,
   type NormalizedSubgraph,
 } from './normalize-graph.ts';
 import { formatValueForDiagnostics } from './utils.ts';
@@ -500,6 +501,12 @@ interface NodeID {
   readonly compass: ParsedName | undefined;
 }
 
+interface EdgeEndpoint {
+  readonly node: NormalizedNode;
+  readonly portName: string | undefined;
+  readonly compass: string | undefined;
+}
+
 class ParserError implements Diagnostic {
   readonly level = 'error' as const;
   readonly message: string;
@@ -889,7 +896,7 @@ class Parser {
         if (this.#optionalEdgeOp(owner)) {
           const tailNodes = subgraph
             .sortedMemberNodes()
-            .map((node) => node.defaultEndpoint);
+            .map((node) => ({ node, portName: undefined, compass: undefined }));
           this.#parseEdges(owner, tailNodes);
         }
         break;
@@ -899,7 +906,7 @@ class Parser {
         if (this.#optionalEdgeOp(owner)) {
           const tailNodes = subgraph
             .sortedMemberNodes()
-            .map((node) => node.defaultEndpoint);
+            .map((node) => ({ node, portName: undefined, compass: undefined }));
           this.#parseEdges(owner, tailNodes);
         }
         break;
@@ -954,7 +961,7 @@ class Parser {
     // compass_pt: n | ne | e | se | s | sw | w | nw | c | _
     const compass = this.#expectedName('compass point value');
 
-    if (!COMPASS_POINTS.has(compass.value)) {
+    if (compass.value !== '' && !COMPASS_POINTS.has(compass.value)) {
       const tokenDesc = this.#describeToken(compass.token);
       const allowedValues = [...COMPASS_POINTS.values()].join(', ');
       this.#failWithError(
@@ -1049,22 +1056,22 @@ class Parser {
 
   #parseEdges(
     owner: NormalizedGraph | NormalizedSubgraph,
-    initialTailNodes: NormalizedEdgeEndpoint[],
+    initialTailNodes: EdgeEndpoint[],
   ) {
     let tailNodes = initialTailNodes;
-    const newEdges: [NormalizedEdgeEndpoint, NormalizedEdgeEndpoint][] = [];
+    const newEdges: [EdgeEndpoint, EdgeEndpoint][] = [];
     do {
-      let headNodes: NormalizedEdgeEndpoint[];
+      let headNodes: EdgeEndpoint[];
       switch (this.#peekKind()) {
         case Kind['{']:
           headNodes = this.#parseSubgraph(owner, undefined)
             .sortedMemberNodes()
-            .map((node) => node.defaultEndpoint);
+            .map((node) => ({ node, portName: undefined, compass: undefined }));
           break;
         case Kind.subgraph:
           headNodes = this.#parseNamedSubgraph(owner)
             .sortedMemberNodes()
-            .map((node) => node.defaultEndpoint);
+            .map((node) => ({ node, portName: undefined, compass: undefined }));
           break;
         default:
           headNodes = upsertEdgeEndpoints(owner, this.#parseNodeIDList());
@@ -1080,13 +1087,27 @@ class Parser {
       tailNodes = headNodes;
     } while (this.#optionalEdgeOp(owner));
 
-    const edgeDefaults = owner.resolvedEdgeDefaults();
+    const edgeDefaults = new Map(owner.resolvedEdgeDefaults());
+    const edgeDefaultConfigAttributes =
+      extractEdgeConfigAttributes(edgeDefaults);
     const attributes = this.#optionalAttrListOrEmpty();
     for (const [tail, head] of newEdges) {
-      owner.upsertEdge(
-        { tail, head, key: undefined, attributes },
+      const { key, headport, tailport } = {
+        headport: [head.portName, head.compass],
+        tailport: [tail.portName, tail.compass],
+        ...edgeDefaultConfigAttributes,
+        ...extractEdgeConfigAttributes(attributes),
+      };
+
+      const edge = owner.upsertEdge(
+        {
+          tail: tail.node.upsertEdgeEndpoint(tailport?.[0], tailport?.[1]),
+          head: head.node.upsertEdgeEndpoint(headport?.[0], headport?.[1]),
+          key,
+        },
         edgeDefaults,
       );
+      edge.mergeAttributes(attributes);
     }
   }
 }
@@ -1094,18 +1115,17 @@ class Parser {
 function upsertEdgeEndpoints(
   owner: NormalizedGraph | NormalizedSubgraph,
   nodeIDs: NodeID[],
-): NormalizedEdgeEndpoint[] {
+): EdgeEndpoint[] {
   const nodeDefaults = owner.resolvedNodeDefaults();
   return nodeIDs.map((nodeID) => {
-    const node = owner.upsertNode(nodeID.nodeName.value, nodeDefaults);
+    const nodeName = nodeID.nodeName.value;
+    const portName = nodeID.portName?.value;
     const compass = nodeID.compass?.value;
-    if (nodeID.portName === undefined) {
-      return nodeID.compass
-        ? { port: node.defaultPort, compass }
-        : node.defaultEndpoint;
-    }
-    const port = node.upsertPort(nodeID.portName.value);
-    return { port, compass };
+    return {
+      node: owner.upsertNode(nodeName, nodeDefaults),
+      portName: portName === '' ? undefined : portName,
+      compass: compass === '' ? undefined : compass,
+    };
   });
 }
 

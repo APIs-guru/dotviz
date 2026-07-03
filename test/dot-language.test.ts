@@ -715,10 +715,102 @@ describe('dot language support', () => {
     `);
   });
 
+  it('edges with different combinations of port names and compass values', () => {
+    const result = renderDotAndCompareWithVizJS(`
+      digraph {
+        a[shape=record label="<p1>|<p2>"]
+
+        a:"" -> a:""       [key=1]
+        a:"":_ -> a:"":_   [key=2]
+        a:"":w -> a:"":s   [key=3]
+        a:p1 -> a:p2       [key=4]
+        a:p1:w -> a:p2:s   [key=5]
+        a:p1:_ -> a:p2:_   [key=6]
+      }
+    `);
+
+    const resultWithAttributes = renderDotAndCompareWithVizJS(`
+      digraph {
+        a[shape=record label="<p1>|<p2>"]
+
+        a -> a [key=1 tailport="", headport=""]
+        a -> a [key=2 tailport=":_", headport=":_"]
+        a -> a [key=3 tailport=":w", headport=":s"]
+        a -> a [key=4 tailport="p1", headport="p2"]
+        a -> a [key=5 tailport="p1:w", headport="p2:s"]
+        a -> a [key=6 tailport="p1:_", headport="p2:_"]
+      }
+    `);
+
+    expectDot(result).toMatchRawStringInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,126,79.711"];
+      	node [label="\\N"];
+      	a	[height=0.51389,
+      		label="<p1>|<p2>",
+      		pos="45,24.211",
+      		rects="18,6.211,44.5,42.211 44.5,6.211,72,42.211",
+      		shape=record,
+      		width=0.75];
+      	a -> a	[key=1,
+      		pos="e,72.241,21.901 72.241,26.521 82.024,26.571 90,25.801 90,24.211 90,23.317 87.476,22.682 83.527,22.306"];
+      	a:"":_ -> a:"":_	[key=2,
+      		pos="e,72.198,19.994 72.198,28.428 90.34,29.615 108,28.21 108,24.211 108,21.056 97.005,19.515 83.453,19.589"];
+      	a:"":w -> a:"":s	[key=3,
+      		pos="e,72.386,18.601 72.386,29.821 98.104,32.729 126,30.859 126,24.211 126,18.523 105.58,16.333 83.583,17.64"];
+      	a:p1 -> a:p2	[key=4,
+      		pos="e,60.632,42.487 28.868,42.487 29.608,52.285 33.922,61.211 44.75,61.211 51.179,61.211 55.312,58.064 57.764,53.456"];
+      	a:p1:w -> a:p2:s	[key=5,
+      		pos="e,58.25,6.211 18,24.211 12,33.461 0,33.461 0,15.211 0,0.31158 28.827,-2.4239 47.574,2.1073"];
+      	a:p1:_ -> a:p2:_	[key=6,
+      		pos="e,63.373,42.689 26.127,42.689 23.981,60.388 28.49,79.711 44.75,79.711 57.58,79.711 63.094,67.68 63.795,53.909"];
+      }
+    `);
+    expect(result).toStrictEqual(resultWithAttributes);
+  });
+
+  it('normalize empty string as missing compass point', () => {
+    const result = dotviz.renderDot(`
+      digraph {
+        a[shape=record label="<p1>|<p2>"]
+
+        a:"":"" -> a:"":"" [key=1]
+        a:p1:"" -> a:p2:"" [key=2]
+      }
+    `);
+
+    const resultWithAttributes = dotviz.renderDot(`
+      digraph {
+        a[shape=record label="<p1>|<p2>"]
+
+        a -> a [key=1 tailport=":", headport=":"]
+        a -> a [key=2 tailport="p1:", headport="p2:"]
+      }
+    `);
+
+    expectDot(result).toMatchRawStringInlineSnapshot(`
+      digraph {
+      	graph [bb="0,0,72,55.5"];
+      	node [label="\\N"];
+      	a	[height=0.51389,
+      		label="<p1>|<p2>",
+      		pos="27,18.5",
+      		rects="0,0.5,26.5,36.5 26.5,0.5,54,36.5",
+      		shape=record,
+      		width=0.75];
+      	a -> a	[key=1,
+      		pos="e,54.241,11.569 54.241,25.431 64.024,25.58 72,23.27 72,18.5 72,15.817 69.476,13.912 65.527,12.786"];
+      	a:p1 -> a:p2	[key=2,
+      		pos="e,45.868,36.776 7.6324,36.776 7.8219,46.574 13.215,55.5 26.75,55.5 34.786,55.5 39.953,52.353 42.863,47.745"];
+      }
+    `);
+    expect(result).toStrictEqual(resultWithAttributes);
+  });
+
   it('empty headport and tailport attributes clear edge endpoint ports', () => {
     const result = renderDotAndCompareWithVizJS(`
       digraph {
-        a:tail_port -> a:head_port [headport="" tailport=""]
+        a:tail_port -> a:head_port [tailport="", headport=""]
       }
     `);
     expectDot(result).toMatchRawStringInlineSnapshot(`
@@ -731,7 +823,7 @@ describe('dot language support', () => {
       	a -> a	[pos="e,52.443,11.309 52.443,24.691 63.028,25.152 72,22.922 72,18 72,15.001 68.668,13.001 63.67,12.001"];
       }
     `);
-  })
+  });
 
   it('strict graph deduplication keeps ports from first edge declaration', () => {
     const result = renderDotAndCompareWithVizJS(`
