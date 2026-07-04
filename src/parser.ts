@@ -896,9 +896,7 @@ class Parser {
       case Kind['{']: {
         const subgraph = this.#parseSubgraph(owner, undefined);
         if (this.#optionalEdgeOp(owner)) {
-          const tailNodes = subgraph
-            .sortedMemberNodes()
-            .map((node) => ({ node, portName: undefined, compass: undefined }));
+          const tailNodes = buildEdgeEndpointsFromSubgraph(subgraph);
           this.#parseEdges(owner, tailNodes);
         }
         break;
@@ -906,9 +904,7 @@ class Parser {
       case Kind.subgraph: {
         const subgraph = this.#parseNamedSubgraph(owner);
         if (this.#optionalEdgeOp(owner)) {
-          const tailNodes = subgraph
-            .sortedMemberNodes()
-            .map((node) => ({ node, portName: undefined, compass: undefined }));
+          const tailNodes = buildEdgeEndpointsFromSubgraph(subgraph);
           this.#parseEdges(owner, tailNodes);
         }
         break;
@@ -1064,14 +1060,14 @@ class Parser {
       let headNodes: EdgeEndpoint[];
       switch (this.#peekKind()) {
         case Kind['{']:
-          headNodes = this.#parseSubgraph(owner, undefined)
-            .sortedMemberNodes()
-            .map((node) => ({ node, portName: undefined, compass: undefined }));
+          headNodes = buildEdgeEndpointsFromSubgraph(
+            this.#parseSubgraph(owner, undefined),
+          );
           break;
         case Kind.subgraph:
-          headNodes = this.#parseNamedSubgraph(owner)
-            .sortedMemberNodes()
-            .map((node) => ({ node, portName: undefined, compass: undefined }));
+          headNodes = buildEdgeEndpointsFromSubgraph(
+            this.#parseNamedSubgraph(owner),
+          );
           break;
         default:
           headNodes = buildEdgeEndpoints(owner, this.#parseNodeIDList());
@@ -1135,6 +1131,14 @@ function buildEdgeEndpoints(
       compass: compass === '' ? undefined : compass,
     };
   });
+}
+
+function buildEdgeEndpointsFromSubgraph(
+  subgraph: NormalizedSubgraph,
+): EdgeEndpoint[] {
+  return subgraph
+    .sortedMemberNodes()
+    .map((node) => ({ node, portName: undefined, compass: undefined }));
 }
 
 function isNumberToken(str: string): boolean {
