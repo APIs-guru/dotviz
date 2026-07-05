@@ -53,9 +53,8 @@ pub fn readGraphJSON(allocator: std.mem.Allocator, graph_json: vizjs_types.Graph
         allEdges[i] = edge;
     }
 
-    for (graph_json.subgraphs) |subgraph_json| {
-        const subgraph = agsubg(allocator, graph, subgraph_json.name);
-        readSubgraphJSON(allocator, subgraph, subgraph_json, allNodes, allEdges);
+    for (graph_json.subgraphs) |subgraphIndex| {
+        readSubgraphJSON(allocator, graph, graph_json, subgraphIndex, allNodes, allEdges);
     }
 
     return graph;
@@ -91,11 +90,14 @@ fn agsafeset_text(allocator: std.mem.Allocator, obj: ?*anyopaque, name: [:0]cons
 
 fn readSubgraphJSON(
     allocator: std.mem.Allocator,
-    subgraph: anytype,
-    subgraph_json: vizjs_types.Subgraph,
+    owner: ?*graphviz.Agraph_t,
+    graph_json: vizjs_types.Graph,
+    subgraphIndex: usize,
     allNodes: []?*graphviz.Agnode_t,
     allEdges: []?*graphviz.Agedge_t,
 ) void {
+    const subgraph_json = graph_json.allSubgraphs[subgraphIndex];
+    const subgraph = agsubg(allocator, owner, subgraph_json.name);
     setDefaultAttributes(allocator, subgraph, subgraph_json.graphAttributes, graphviz.AGRAPH);
     setDefaultAttributes(allocator, subgraph, subgraph_json.nodeAttributes, graphviz.AGNODE);
     setDefaultAttributes(allocator, subgraph, subgraph_json.edgeAttributes, graphviz.AGEDGE);
@@ -108,9 +110,8 @@ fn readSubgraphJSON(
         _ = graphviz.agsubedge(subgraph, allEdges[edge], graphviz.true);
     }
 
-    for (subgraph_json.subgraphs) |child_subgraph_json| {
-        const child_subgraph = agsubg(allocator, subgraph, child_subgraph_json.name);
-        readSubgraphJSON(allocator, child_subgraph, child_subgraph_json, allNodes, allEdges);
+    for (subgraph_json.subgraphs) |childSubgraphIndex| {
+        readSubgraphJSON(allocator, subgraph, graph_json, childSubgraphIndex, allNodes, allEdges);
     }
 }
 

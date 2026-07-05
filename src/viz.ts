@@ -3,7 +3,6 @@ import { type Location } from './location.ts';
 import {
   NormalizedAttributes,
   type NormalizedGraph,
-  NormalizedSubgraph,
   normalizeGraph,
 } from './normalize-graph.ts';
 import { parseDot, parseDotNumber } from './parser.ts';
@@ -437,19 +436,16 @@ function serializeGraph(graph: NormalizedGraph): unknown {
       key: edge.key,
       attributes: serializeAttributes(edge.attributes),
     })),
-    subgraphs: graph.subgraphs.map(serializeSubgraph),
-  };
-}
-
-function serializeSubgraph(subgraph: NormalizedSubgraph): unknown {
-  return {
-    name: subgraph.name,
-    graphAttributes: serializeAttributes(subgraph.graphAttributes),
-    nodeAttributes: serializeAttributes(subgraph.nodeAttributes),
-    edgeAttributes: serializeAttributes(subgraph.edgeAttributes),
-    memberNodes: subgraph.sortedMemberNodeIndexes(),
-    memberEdges: subgraph.sortedMemberEdgeIndexes(),
-    subgraphs: subgraph.subgraphs.map(serializeSubgraph),
+    allSubgraphs: graph.allSubgraphs.map((subgraph) => ({
+      name: subgraph.name,
+      graphAttributes: serializeAttributes(subgraph.graphAttributes),
+      nodeAttributes: serializeAttributes(subgraph.nodeAttributes),
+      edgeAttributes: serializeAttributes(subgraph.edgeAttributes),
+      memberNodes: subgraph.sortedMemberNodeIndexes(),
+      memberEdges: subgraph.sortedMemberEdgeIndexes(),
+      subgraphs: subgraph.subgraphs,
+    })),
+    subgraphs: graph.subgraphs,
   };
 }
 

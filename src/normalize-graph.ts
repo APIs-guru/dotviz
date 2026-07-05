@@ -5,7 +5,7 @@ import { type OverrideAttributes } from './viz.ts';
 export declare const enum AllNodesIndex {}
 export declare const enum PortsIndex {}
 export declare const enum AllEdgesIndex {}
-// declare const enum SubgraphsIndex {}
+declare const enum AllSubgraphsIndex {}
 
 interface AllNodesArray {
   length: AllNodesIndex;
@@ -21,6 +21,14 @@ interface AllEdgesArray {
   push(node: NormalizedEdge): void;
   [Symbol.iterator](): ArrayIterator<NormalizedEdge>;
   [n: AllEdgesIndex & number]: NormalizedEdge;
+}
+
+interface AllSubgraphsArray {
+  length: AllSubgraphsIndex;
+  map<T>(fn: (node: NormalizedSubgraph) => T): T[];
+  push(node: NormalizedSubgraph): void;
+  [Symbol.iterator](): ArrayIterator<NormalizedSubgraph>;
+  [n: AllSubgraphsIndex & number]: NormalizedSubgraph;
 }
 
 interface PortsArray {
@@ -55,9 +63,10 @@ export class NormalizedGraph {
   edgeAttributes: Readonly<NormalizedAttributes>;
   readonly allNodes: AllNodesArray = [];
   readonly allEdges: AllEdgesArray = [];
-  readonly subgraphs: NormalizedSubgraph[] = [];
+  readonly allSubgraphs: AllSubgraphsArray = [];
+  readonly subgraphs: AllSubgraphsIndex[] = [];
   readonly namedNodes = new Map<string, AllNodesIndex>();
-  readonly namedSubgraphs = new Map<string, NormalizedSubgraph>();
+  readonly namedSubgraphs = new Map<string, AllSubgraphsIndex>();
   readonly deduplicatedEdgesMap = new Map<string, AllEdgesIndex>();
 
   constructor(
@@ -100,8 +109,12 @@ export class NormalizedGraph {
         defaultAttributes.set(key, this.graphAttributes.get(key));
       }
     }
-    for (const subgraph of this.subgraphs) {
-      subgraph.applyDefaultGraphAttributes(defaultAttributes);
+
+    const { allSubgraphs } = this;
+    for (const subgraphIndex of this.subgraphs) {
+      allSubgraphs[subgraphIndex].applyDefaultGraphAttributes(
+        defaultAttributes,
+      );
     }
 
     this.graphAttributes = new NormalizedAttributes([
@@ -237,19 +250,25 @@ export class NormalizedGraph {
 
   upsertSubgraph(config: NormalizedSubgraphConfig): NormalizedSubgraph {
     const { name } = config;
+    const { allSubgraphs, subgraphs, namedSubgraphs } = this;
+    const newIndex = allSubgraphs.length;
+
     if (name === undefined) {
-      const newSubgraph = new NormalizedSubgraph(this, config);
-      this.subgraphs.push(newSubgraph);
+      subgraphs.push(newIndex);
+      const newSubgraph = new NormalizedSubgraph(newIndex, this, config);
+      allSubgraphs.push(newSubgraph);
       return newSubgraph;
     }
 
-    const subgraph = this.namedSubgraphs.get(name);
-    if (subgraph) {
-      return subgraph;
+    const existingIndex = namedSubgraphs.get(name);
+    if (existingIndex !== undefined) {
+      return allSubgraphs[existingIndex];
     }
-    const newSubgraph = new NormalizedSubgraph(this, config);
-    this.namedSubgraphs.set(name, newSubgraph);
-    this.subgraphs.push(newSubgraph);
+
+    subgraphs.push(newIndex);
+    namedSubgraphs.set(name, newIndex);
+    const newSubgraph = new NormalizedSubgraph(newIndex, this, config);
+    allSubgraphs.push(newSubgraph);
     return newSubgraph;
   }
 
@@ -378,21 +397,24 @@ export class NormalizedSubgraph {
   readonly root: NormalizedGraph;
   readonly owner: NormalizedGraph | NormalizedSubgraph;
 
+  readonly index: AllSubgraphsIndex;
   readonly name: string | undefined;
   graphAttributes: NormalizedAttributes;
   nodeAttributes: NormalizedAttributes;
   edgeAttributes: NormalizedAttributes;
   readonly memberNodes = new Set<AllNodesIndex>();
   readonly memberEdges = new Set<AllEdgesIndex>();
-  readonly subgraphs: NormalizedSubgraph[] = [];
-  readonly namedSubgraphs = new Map<string, NormalizedSubgraph>();
+  readonly subgraphs: AllSubgraphsIndex[] = [];
+  readonly namedSubgraphs = new Map<string, AllSubgraphsIndex>();
 
   constructor(
+    index: AllSubgraphsIndex,
     owner: NormalizedGraph | NormalizedSubgraph,
     config: NormalizedSubgraphConfig,
   ) {
     this.root = owner.root;
     this.owner = owner;
+    this.index = index;
     this.name = config.name;
     this.graphAttributes = config.graphAttributes;
     this.nodeAttributes = config.nodeAttributes;
@@ -404,8 +426,11 @@ export class NormalizedSubgraph {
     for (const key of newAttributes.keys()) {
       defaultAttributes.set(key, this.graphAttributes.get(key));
     }
-    for (const subgraph of this.subgraphs) {
-      subgraph.applyDefaultGraphAttributes(defaultAttributes);
+    const { allSubgraphs } = this.root;
+    for (const subgraphIndex of this.subgraphs) {
+      allSubgraphs[subgraphIndex].applyDefaultGraphAttributes(
+        defaultAttributes,
+      );
     }
 
     this.graphAttributes = new NormalizedAttributes([
@@ -456,21 +481,26 @@ export class NormalizedSubgraph {
   upsertSubgraph(
     config: Readonly<NormalizedSubgraphConfig>,
   ): NormalizedSubgraph {
+    const { subgraphs, namedSubgraphs } = this;
+    const { allSubgraphs } = this.root;
+    const newIndex = allSubgraphs.length;
     const { name } = config;
     if (name === undefined) {
-      const newSubgraph = new NormalizedSubgraph(this, config);
-      this.subgraphs.push(newSubgraph);
+      subgraphs.push(newIndex);
+      const newSubgraph = new NormalizedSubgraph(newIndex, this, config);
+      allSubgraphs.push(newSubgraph);
       return newSubgraph;
     }
 
-    const subgraph = this.namedSubgraphs.get(name);
-    if (subgraph) {
-      return subgraph;
+    const subgraphIndex = namedSubgraphs.get(name);
+    if (subgraphIndex !== undefined) {
+      return allSubgraphs[subgraphIndex];
     }
 
-    const newSubgraph = new NormalizedSubgraph(this, config);
-    this.namedSubgraphs.set(name, newSubgraph);
-    this.subgraphs.push(newSubgraph);
+    this.subgraphs.push(newIndex);
+    this.namedSubgraphs.set(name, newIndex);
+    const newSubgraph = new NormalizedSubgraph(newIndex, this, config);
+    allSubgraphs.push(newSubgraph);
     return newSubgraph;
   }
 
