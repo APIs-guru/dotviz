@@ -49,7 +49,7 @@ pub const Subgraph = struct {
     edgeAttributes: Attributes,
     memberNodes: []usize,
     memberEdges: []usize,
-    subgraphs: []Subgraph,
+    subgraphs: []usize,
 };
 
 pub const Graph = struct {
@@ -61,7 +61,8 @@ pub const Graph = struct {
     edgeAttributes: Attributes,
     allNodes: []Node,
     allEdges: []Edge,
-    subgraphs: []Subgraph,
+    allSubgraphs: []Subgraph,
+    subgraphs: []usize,
 
     pub fn initFromJson(
         allocator: std.mem.Allocator,
