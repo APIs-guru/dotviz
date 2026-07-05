@@ -167,7 +167,7 @@ describe('render', () => {
     });
 
     expectFailureResult(result).toMatchRawStringInlineSnapshot(
-      `RenderingBackendError: JSON error UnexpectedToken at 1:377: \`[]},"engine":"dot","yInvert":"bad value","reduce":false,"images":{},"renderSvg":\``,
+      `RenderingBackendError: JSON error UnexpectedToken at 1:407: \`[]},"engine":"dot","yInvert":"bad value","reduce":false,"images":{},"renderSvg":\``,
     );
   });
 
