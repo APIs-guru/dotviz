@@ -826,7 +826,7 @@ describe('dot language support', () => {
   });
 
   it('strict graph deduplication keeps ports from first edge declaration', () => {
-    const result = renderDotAndCompareWithVizJS(`
+    const result = dotviz.renderDot(`
       strict digraph {
         a -> a:n
         a -> a
@@ -834,12 +834,13 @@ describe('dot language support', () => {
     `);
     expectDot(result).toMatchRawStringInlineSnapshot(`
       strict digraph {
-      	graph [bb="0,0,72,42.271"];
+      	graph [bb="0,0,90,36"];
       	node [label="\\N"];
       	a	[height=0.5,
       		pos="27,18",
       		width=0.75];
-      	a -> a:n	[pos="e,27,36.321 52.896,12.188 63.282,12.858 72,17.371 72,27.16 72,41.632 52.95,44.571 37.62,40.614"];
+      	a -> a:n	[pos="e,27,18 52.885,24.023 71.479,25.984 90,23.977 90,18 90,10.371 59.822,9.2089 37.837,14.513"];
+      	a -> a	[pos="e,53.795,14.632 53.795,21.368 63.78,21.478 72,20.355 72,18 72,16.638 69.253,15.689 65.005,15.151"];
       }
     `);
   });

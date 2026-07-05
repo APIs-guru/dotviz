@@ -311,11 +311,12 @@ export class Viz {
         return { status: 'failure', output: undefined, diagnostics };
       }
 
-      const output = {
-        dot: response.output.dot ?? undefined,
-        svg: response.output.svg ?? undefined,
-      };
-      return { status: 'success', output, diagnostics };
+      const svg = response.output.svg ?? undefined;
+      let dot = response.output.dot ?? undefined;
+      if (dot !== undefined && graph.strict) {
+        dot = 'strict ' + dot;
+      }
+      return { status: 'success', diagnostics, output: { dot, svg } };
     } finally {
       this.#wasm.wasm_free(outputJSONBuf.byteOffset, outputJSONBuf.length);
     }
@@ -420,7 +421,6 @@ function normalizeImages(
 function serializeGraph(graph: NormalizedGraph): unknown {
   return {
     name: graph.name,
-    strict: graph.strict,
     directed: graph.directed,
     graphAttributes: serializeAttributes(graph.graphAttributes),
     nodeAttributes: serializeAttributes(graph.nodeAttributes),
