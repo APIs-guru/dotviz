@@ -448,7 +448,7 @@ function serializeSubgraph(subgraph: NormalizedSubgraph): unknown {
     nodeAttributes: serializeAttributes(subgraph.nodeAttributes),
     edgeAttributes: serializeAttributes(subgraph.edgeAttributes),
     memberNodes: subgraph.sortedMemberNodeIndexes(),
-    memberEdges: subgraph.sortedMemberEdges().map((edge) => edge.index),
+    memberEdges: subgraph.sortedMemberEdgeIndexes(),
     subgraphs: subgraph.subgraphs.map(serializeSubgraph),
   };
 }
