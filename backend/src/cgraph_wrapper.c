@@ -2,8 +2,8 @@
 #include "types.h"
 #include <stdlib.h>
 
-Agraph_t *wrapped_agopen(const char *name, bool directed, bool strict) {
-  Agdesc_t desc = {.directed = directed, .strict = strict};
+Agraph_t *wrapped_agopen(const char *name, bool directed) {
+  Agdesc_t desc = {.directed = directed, .strict = false};
   return agopen((char *)name, desc, NULL);
 }
 

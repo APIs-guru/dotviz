@@ -55,7 +55,6 @@ pub const Subgraph = struct {
 pub const Graph = struct {
     name: ?[:0]const u8 = null,
     directed: bool,
-    strict: bool,
     graphAttributes: Attributes,
     nodeAttributes: Attributes,
     edgeAttributes: Attributes,

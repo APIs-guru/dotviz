@@ -6,7 +6,6 @@ pub fn readGraphJSON(allocator: std.mem.Allocator, graph_json: vizjs_types.Graph
     const graph = graphviz.wrapped_agopen(
         graph_json.name orelse null,
         graph_json.directed,
-        graph_json.strict,
     );
     if (graph == null) {
         return graph;
