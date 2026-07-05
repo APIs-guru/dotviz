@@ -3,8 +3,8 @@ import {
   extractEdgeConfigAttributes,
   NormalizedAttributes,
   type NormalizedAttributeValue,
+  type NormalizedEdgeEndpointConfig,
   NormalizedGraph,
-  NormalizedNode,
   type NormalizedSubgraph,
 } from './normalize-graph.ts';
 import { formatValueForDiagnostics } from './utils.ts';
@@ -499,12 +499,6 @@ interface NodeID {
   readonly nodeName: ParsedName;
   readonly portName: ParsedName | undefined;
   readonly compass: ParsedName | undefined;
-}
-
-interface EdgeEndpoint {
-  readonly node: NormalizedNode;
-  readonly portName: string | undefined;
-  readonly compass: string | undefined;
 }
 
 class ParserError implements Diagnostic {
@@ -1052,12 +1046,15 @@ class Parser {
 
   #parseEdges(
     owner: NormalizedGraph | NormalizedSubgraph,
-    initialTailNodes: EdgeEndpoint[],
+    initialTailNodes: NormalizedEdgeEndpointConfig[],
   ) {
     let tailNodes = initialTailNodes;
-    const newEdges: [EdgeEndpoint, EdgeEndpoint][] = [];
+    const newEdges: [
+      NormalizedEdgeEndpointConfig,
+      NormalizedEdgeEndpointConfig,
+    ][] = [];
     do {
-      let headNodes: EdgeEndpoint[];
+      let headNodes: NormalizedEdgeEndpointConfig[];
       switch (this.#peekKind()) {
         case Kind['{']:
           headNodes = buildEdgeEndpointsFromSubgraph(
@@ -1103,8 +1100,16 @@ class Parser {
       const { key, tailport, headport } = configAttributes;
       const edge = owner.upsertEdge(
         {
-          tail: tail.node.upsertEdgeEndpoint(tailport?.[0], tailport?.[1]),
-          head: head.node.upsertEdgeEndpoint(headport?.[0], headport?.[1]),
+          tail: owner.root.upsertEdgeEndpoint({
+            node: tail.node,
+            portName: tailport?.[0],
+            compass: tailport?.[1],
+          }),
+          head: owner.root.upsertEdgeEndpoint({
+            node: head.node,
+            portName: headport?.[0],
+            compass: headport?.[1],
+          }),
           key,
         },
         edgeDefaults,
@@ -1119,14 +1124,14 @@ class Parser {
 function buildEdgeEndpoints(
   owner: NormalizedGraph | NormalizedSubgraph,
   nodeIDs: NodeID[],
-): EdgeEndpoint[] {
+): NormalizedEdgeEndpointConfig[] {
   const nodeDefaults = owner.resolvedNodeDefaults();
   return nodeIDs.map((nodeID) => {
     const nodeName = nodeID.nodeName.value;
     const portName = nodeID.portName?.value;
     const compass = nodeID.compass?.value;
     return {
-      node: owner.upsertNode(nodeName, nodeDefaults),
+      node: owner.upsertNode(nodeName, nodeDefaults).index,
       portName: portName === '' ? undefined : portName,
       compass: compass === '' ? undefined : compass,
     };
@@ -1135,10 +1140,12 @@ function buildEdgeEndpoints(
 
 function buildEdgeEndpointsFromSubgraph(
   subgraph: NormalizedSubgraph,
-): EdgeEndpoint[] {
-  return subgraph
-    .sortedMemberNodes()
-    .map((node) => ({ node, portName: undefined, compass: undefined }));
+): NormalizedEdgeEndpointConfig[] {
+  return subgraph.sortedMemberNodeIndexes().map((node) => ({
+    node,
+    portName: undefined,
+    compass: undefined,
+  }));
 }
 
 function isNumberToken(str: string): boolean {

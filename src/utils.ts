@@ -5,3 +5,7 @@ export function formatValueForDiagnostics(value: string) {
     .replaceAll(String.raw`\\`, '\\')
     .slice(1, -1);
 }
+
+export function cmpNumbersAsc(a: number, b: number) {
+  return a - b;
+}

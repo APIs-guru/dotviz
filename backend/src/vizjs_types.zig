@@ -25,16 +25,13 @@ pub const Attributes = std.json.ArrayHashMap(?AttributeValue);
 
 pub const Node = struct {
     name: [:0]const u8,
+    ports: []?[:0]const u8,
     attributes: Attributes,
 };
 
-pub const EdgePort = struct {
-    node: usize,
-    name: ?[:0]const u8 = null,
-};
-
 pub const EdgeEndpoint = struct {
-    port: EdgePort,
+    node: usize,
+    port: usize,
     compass: ?[:0]const u8 = null,
 };
 

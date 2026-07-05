@@ -124,6 +124,7 @@ describe('render', () => {
       './snapshots/multiple_pages.svg',
     );
   });
+
   it('circo layout', async () => {
     const result = dotviz.renderDot(readSnapshot('./snapshots/circo.gv'), {
       formats: ['dot', 'svg'],

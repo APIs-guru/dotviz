@@ -40,13 +40,13 @@ pub fn readGraphJSON(allocator: std.mem.Allocator, graph_json: vizjs_types.Graph
         const tail = edge_json.tail;
         const head = edge_json.head;
 
-        const tail_node = allNodes[tail.port.node];
-        const head_node = allNodes[head.port.node];
+        const tail_node = allNodes[tail.node];
+        const head_node = allNodes[head.node];
         const edge = agedge(allocator, graph, tail_node, head_node, edge_json.key);
-        if (edgePortToString(allocator, tail)) |tailport| {
+        if (edgePortToString(allocator, tail, graph_json)) |tailport| {
             agsafeset_text(allocator, edge, "tailport", tailport);
         }
-        if (edgePortToString(allocator, head)) |headport| {
+        if (edgePortToString(allocator, head, graph_json)) |headport| {
             agsafeset_text(allocator, edge, "headport", headport);
         }
         setAttributes(allocator, edge, edge_json.attributes);
@@ -157,11 +157,9 @@ fn setAttributes(
     }
 }
 
-fn edgePortToString(
-    allocator: std.mem.Allocator,
-    endpoint_json: vizjs_types.EdgeEndpoint,
-) ?[:0]const u8 {
-    const maybePort = endpoint_json.port.name;
+fn edgePortToString(allocator: std.mem.Allocator, endpoint_json: vizjs_types.EdgeEndpoint, graph_json: vizjs_types.Graph) ?[:0]const u8 {
+    const node = graph_json.allNodes[endpoint_json.node];
+    const maybePort = node.ports[endpoint_json.port];
     const maybeCompass = endpoint_json.compass;
     if (maybeCompass) |compass| {
         return std.fmt.allocPrintSentinel(allocator, "{s}:{s}", .{ maybePort orelse "", compass }, 0) catch @panic(

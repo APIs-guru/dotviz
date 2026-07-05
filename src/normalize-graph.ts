@@ -1,5 +1,27 @@
 import type { Attributes, Graph, Subgraph } from './graph.d.ts';
+import { cmpNumbersAsc } from './utils.ts';
 import { type OverrideAttributes } from './viz.ts';
+
+export declare const enum AllNodesIndex {}
+export declare const enum PortsIndex {}
+// declare const enum AllEdgesIndex {}
+// declare const enum SubgraphsIndex {}
+
+interface AllNodesArray {
+  length: AllNodesIndex;
+  map<T>(fn: (node: NormalizedNode) => T): T[];
+  push(node: NormalizedNode): void;
+  [Symbol.iterator](): ArrayIterator<NormalizedNode>;
+  [n: AllNodesIndex & number]: NormalizedNode;
+}
+
+interface PortsArray {
+  length: PortsIndex;
+  map<T>(fn: (port: NormalizedPort) => T): T[];
+  push(node: NormalizedPort): void;
+  [Symbol.iterator](): ArrayIterator<NormalizedPort>;
+  [n: PortsIndex & number]: NormalizedPort;
+}
 
 interface NormalizedGraphConfig {
   readonly name: string | undefined;
@@ -23,10 +45,10 @@ export class NormalizedGraph {
   graphAttributes: Readonly<NormalizedAttributes>;
   nodeAttributes: Readonly<NormalizedAttributes>;
   edgeAttributes: Readonly<NormalizedAttributes>;
-  readonly allNodes: NormalizedNode[] = [];
+  readonly allNodes: AllNodesArray = [];
   readonly allEdges: NormalizedEdge[] = [];
   readonly subgraphs: NormalizedSubgraph[] = [];
-  readonly namedNodes = new Map<string, NormalizedNode>();
+  readonly namedNodes = new Map<string, AllNodesIndex>();
   readonly namedSubgraphs = new Map<string, NormalizedSubgraph>();
   readonly deduplicatedEdgesMap = new Map<string, NormalizedEdge>();
 
@@ -121,18 +143,35 @@ export class NormalizedGraph {
   }
 
   upsertNode(name: string, nodeDefaults: NormalizedAttributes): NormalizedNode {
-    const node = this.namedNodes.get(name);
-    if (node !== undefined) {
-      return node;
+    let nodeIndex = this.namedNodes.get(name);
+    if (nodeIndex !== undefined) {
+      return this.allNodes[nodeIndex];
     }
 
-    const newNode = new NormalizedNode(this.allNodes.length, {
+    nodeIndex = this.allNodes.length;
+    const newNode = new NormalizedNode(nodeIndex, {
       name,
       attributes: nodeDefaults,
     });
-    this.namedNodes.set(name, newNode);
+    this.namedNodes.set(name, nodeIndex);
     this.allNodes.push(newNode);
     return newNode;
+  }
+
+  upsertEdgeEndpoint(
+    config: NormalizedEdgeEndpointConfig,
+  ): NormalizedEdgeEndpoint {
+    const { node, portName, compass } = config;
+
+    if (portName === undefined) {
+      if (compass === undefined) {
+        return this.allNodes[node].defaultEndpoint;
+      }
+      return { node, port: NormalizedNode.defaultPort, compass };
+    }
+
+    const port = this.allNodes[node].upsertPort(portName);
+    return { node, port, compass };
   }
 
   upsertEdge(
@@ -174,20 +213,19 @@ export class NormalizedGraph {
 
     let { tail, head } = config;
     if (!this.directed) {
-      const shouldSwap =
-        head.port.node.index > tail.port.node.index ||
-        (head.port.node.index === tail.port.node.index &&
-          head.port.index > tail.port.index);
-      if (shouldSwap) {
+      if (
+        head.node > tail.node ||
+        (head.node === tail.node && head.port > tail.port)
+      ) {
         [tail, head] = [head, tail];
       }
     }
 
     return [
-      tail.port.node.index.toString(),
-      tail.port.index.toString(),
-      head.port.node.index.toString(),
-      head.port.index.toString(),
+      tail.node.toString(),
+      tail.port.toString(),
+      head.node.toString(),
+      head.port.toString(),
       key ?? '',
     ].join(':');
   }
@@ -219,14 +257,8 @@ export class NormalizedGraph {
   }
 }
 
-export interface NormalizedPortConfig {
-  readonly node: NormalizedNode;
-  readonly name: string | undefined;
-}
-
 export interface NormalizedPort {
-  readonly index: number;
-  readonly node: NormalizedNode;
+  readonly index: PortsIndex;
   readonly name: string | undefined;
 }
 
@@ -236,21 +268,18 @@ export interface NormalizedNodeConfig {
 }
 
 export class NormalizedNode {
-  readonly index: number;
+  static readonly defaultPort: PortsIndex = 0;
+  readonly index: AllNodesIndex;
   readonly name: string;
-  readonly defaultPort = { index: 0, node: this, name: undefined };
-  readonly defaultEndpoint: NormalizedEdgeEndpoint = {
-    port: this.defaultPort,
-    compass: undefined,
-  };
-  readonly ports = new Map<string | undefined, NormalizedPort>([
-    [undefined, this.defaultPort],
-  ]);
+  readonly defaultEndpoint: NormalizedEdgeEndpoint;
+  readonly ports: PortsArray = [{ index: 0, name: undefined }];
+  readonly namedPorts = new Map<string, PortsIndex>();
   attributes: NormalizedAttributes;
 
   constructor(index: number, config: NormalizedNodeConfig) {
     this.index = index;
     this.name = config.name;
+    this.defaultEndpoint = { node: index, port: 0, compass: undefined };
     this.attributes = config.attributes;
   }
 
@@ -268,33 +297,28 @@ export class NormalizedNode {
     ]);
   }
 
-  upsertPort(portName: string): NormalizedPort {
-    const port = this.ports.get(portName);
-    if (port) {
-      return port;
+  upsertPort(portName: string): PortsIndex {
+    let portIndex = this.namedPorts.get(portName);
+    if (portIndex !== undefined) {
+      return portIndex;
     }
 
-    const newPort = { index: this.ports.size, node: this, name: portName };
-    this.ports.set(portName, newPort);
-    return newPort;
-  }
-
-  upsertEdgeEndpoint(
-    portName: string | undefined,
-    compass: string | undefined,
-  ): NormalizedEdgeEndpoint {
-    if (portName === undefined) {
-      if (compass === undefined) {
-        return this.defaultEndpoint;
-      }
-      return { port: this.defaultPort, compass };
-    }
-    return { port: this.upsertPort(portName), compass };
+    portIndex = this.ports.length;
+    this.ports.push({ index: portIndex, name: portName });
+    this.namedPorts.set(portName, portIndex);
+    return portIndex;
   }
 }
 
 export interface NormalizedEdgeEndpoint {
-  readonly port: NormalizedPort;
+  readonly node: AllNodesIndex;
+  readonly port: PortsIndex;
+  readonly compass: string | undefined;
+}
+
+export interface NormalizedEdgeEndpointConfig {
+  readonly node: AllNodesIndex;
+  readonly portName: string | undefined;
   readonly compass: string | undefined;
 }
 
@@ -353,7 +377,7 @@ export class NormalizedSubgraph {
   graphAttributes: NormalizedAttributes;
   nodeAttributes: NormalizedAttributes;
   edgeAttributes: NormalizedAttributes;
-  readonly memberNodes = new Set<NormalizedNode>();
+  readonly memberNodes = new Set<AllNodesIndex>();
   readonly memberEdges = new Set<NormalizedEdge>();
   readonly subgraphs: NormalizedSubgraph[] = [];
   readonly namedSubgraphs = new Map<string, NormalizedSubgraph>();
@@ -411,7 +435,7 @@ export class NormalizedSubgraph {
     defaultAttributes: NormalizedAttributes,
   ): NormalizedNode {
     const node = this.owner.upsertNode(name, defaultAttributes);
-    this.memberNodes.add(node);
+    this.memberNodes.add(node.index);
     return node;
   }
 
@@ -459,8 +483,8 @@ export class NormalizedSubgraph {
     ]);
   }
 
-  sortedMemberNodes(): NormalizedNode[] {
-    return [...this.memberNodes].sort((a, b) => a.index - b.index);
+  sortedMemberNodeIndexes(): AllNodesIndex[] {
+    return [...this.memberNodes].sort(cmpNumbersAsc);
   }
 
   sortedMemberEdges(): NormalizedEdge[] {
@@ -566,12 +590,16 @@ function applyDefinitions(
       const { key, tailport, headport } = configAttributes;
       const edge = owner.upsertEdge(
         {
-          tail: owner
-            .upsertNode(edgeConfig.tail, nodeDefaults)
-            .upsertEdgeEndpoint(tailport?.[0], tailport?.[1]),
-          head: owner
-            .upsertNode(edgeConfig.head, nodeDefaults)
-            .upsertEdgeEndpoint(headport?.[0], headport?.[1]),
+          tail: owner.root.upsertEdgeEndpoint({
+            node: owner.upsertNode(edgeConfig.tail, nodeDefaults).index,
+            portName: tailport?.[0],
+            compass: tailport?.[1],
+          }),
+          head: owner.root.upsertEdgeEndpoint({
+            node: owner.upsertNode(edgeConfig.head, nodeDefaults).index,
+            portName: headport?.[0],
+            compass: headport?.[1],
+          }),
           key,
         },
         edgeDefaults,

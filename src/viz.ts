@@ -2,7 +2,6 @@ import type { Attributes, Graph } from './graph.d.ts';
 import { type Location } from './location.ts';
 import {
   NormalizedAttributes,
-  type NormalizedEdgeEndpoint,
   type NormalizedGraph,
   NormalizedSubgraph,
   normalizeGraph,
@@ -429,11 +428,12 @@ function serializeGraph(graph: NormalizedGraph): unknown {
     edgeAttributes: serializeAttributes(graph.edgeAttributes),
     allNodes: graph.allNodes.map((node) => ({
       name: node.name,
+      ports: node.ports.map((port) => port.name),
       attributes: serializeAttributes(node.attributes),
     })),
     allEdges: graph.allEdges.map((edge) => ({
-      tail: serializeEdgeEndpoint(edge.tail),
-      head: serializeEdgeEndpoint(edge.head),
+      tail: edge.tail,
+      head: edge.head,
       key: edge.key,
       attributes: serializeAttributes(edge.attributes),
     })),
@@ -447,17 +447,9 @@ function serializeSubgraph(subgraph: NormalizedSubgraph): unknown {
     graphAttributes: serializeAttributes(subgraph.graphAttributes),
     nodeAttributes: serializeAttributes(subgraph.nodeAttributes),
     edgeAttributes: serializeAttributes(subgraph.edgeAttributes),
-    memberNodes: subgraph.sortedMemberNodes().map((node) => node.index),
+    memberNodes: subgraph.sortedMemberNodeIndexes(),
     memberEdges: subgraph.sortedMemberEdges().map((edge) => edge.index),
     subgraphs: subgraph.subgraphs.map(serializeSubgraph),
-  };
-}
-
-function serializeEdgeEndpoint(endpoint: NormalizedEdgeEndpoint): unknown {
-  const { port, compass } = endpoint;
-  return {
-    port: { node: port.node.index, name: port.name },
-    compass,
   };
 }
 
