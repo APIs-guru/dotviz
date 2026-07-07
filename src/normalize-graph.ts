@@ -159,18 +159,19 @@ export class NormalizedGraph {
   }
 
   upsertNode(name: string, nodeDefaults: NormalizedAttributes): NormalizedNode {
-    let nodeIndex = this.allNamedNodes.get(name);
-    if (nodeIndex !== undefined) {
-      return this.allNodes[nodeIndex];
+    const { allNodes, allNamedNodes } = this;
+    const newIndex = allNodes.length;
+    const nodeIndex = allNamedNodes.getOrInsert(name, newIndex);
+    if (nodeIndex !== newIndex) {
+      return allNodes[nodeIndex];
     }
 
-    nodeIndex = this.allNodes.length;
-    const newNode = new NormalizedNode(nodeIndex, {
+    allNamedNodes.set(name, newIndex);
+    const newNode = new NormalizedNode(newIndex, {
       name,
-      attributes: nodeDefaults,
+      attributes: new NormalizedAttributes(nodeDefaults),
     });
-    this.allNamedNodes.set(name, nodeIndex);
-    this.allNodes.push(newNode);
+    allNodes.push(newNode);
     return newNode;
   }
 
@@ -183,7 +184,7 @@ export class NormalizedGraph {
       if (compass === undefined) {
         return this.allNodes[node].defaultEndpoint;
       }
-      return { node, port: NormalizedNode.defaultPort, compass };
+      return { node, port: defaultPortIndex, compass };
     }
 
     const port = this.allNodes[node].upsertPort(portName);
@@ -194,26 +195,25 @@ export class NormalizedGraph {
     config: NormalizedEdgeConfig,
     edgeDefaults: NormalizedAttributes,
   ): NormalizedEdge {
+    const { allEdges } = this;
+    const newIndex = allEdges.length;
     const deduplicateKey = this.edgeDeduplicateKey(config);
-    if (deduplicateKey === undefined) {
-      const newEdge = new NormalizedEdge(
-        this.allEdges.length,
-        config,
-        edgeDefaults,
+    if (deduplicateKey !== undefined) {
+      const edgeIndex = this.#deduplicatedEdgesMap.getOrInsert(
+        deduplicateKey,
+        newIndex,
       );
-      this.allEdges.push(newEdge);
-      return newEdge;
+      if (edgeIndex !== newIndex) {
+        return allEdges[edgeIndex];
+      }
     }
 
-    let edgeIndex = this.#deduplicatedEdgesMap.get(deduplicateKey);
-    if (edgeIndex !== undefined) {
-      return this.allEdges[edgeIndex];
-    }
-
-    edgeIndex = this.allEdges.length;
-    this.#deduplicatedEdgesMap.set(deduplicateKey, edgeIndex);
-    const newEdge = new NormalizedEdge(edgeIndex, config, edgeDefaults);
-    this.allEdges.push(newEdge);
+    const newEdge = new NormalizedEdge(
+      newIndex,
+      config,
+      new NormalizedAttributes(edgeDefaults),
+    );
+    allEdges.push(newEdge);
     return newEdge;
   }
 
@@ -244,24 +244,18 @@ export class NormalizedGraph {
   }
 
   upsertSubgraph(config: NormalizedSubgraphConfig): NormalizedSubgraph {
-    const { name } = config;
-    const { allSubgraphs, subgraphs, namedSubgraphs } = this;
+    const { allSubgraphs } = this;
     const newIndex = allSubgraphs.length;
+    const { name } = config;
 
-    if (name === undefined) {
-      subgraphs.push(newIndex);
-      const newSubgraph = new NormalizedSubgraph(newIndex, this, config);
-      allSubgraphs.push(newSubgraph);
-      return newSubgraph;
+    if (name !== undefined) {
+      const subgraphIndex = this.namedSubgraphs.getOrInsert(name, newIndex);
+      if (subgraphIndex !== newIndex) {
+        return allSubgraphs[subgraphIndex];
+      }
     }
 
-    const existingIndex = namedSubgraphs.get(name);
-    if (existingIndex !== undefined) {
-      return allSubgraphs[existingIndex];
-    }
-
-    subgraphs.push(newIndex);
-    namedSubgraphs.set(name, newIndex);
+    this.subgraphs.push(newIndex);
     const newSubgraph = new NormalizedSubgraph(newIndex, this, config);
     allSubgraphs.push(newSubgraph);
     return newSubgraph;
@@ -476,24 +470,17 @@ export class NormalizedSubgraph {
   upsertSubgraph(
     config: Readonly<NormalizedSubgraphConfig>,
   ): NormalizedSubgraph {
-    const { subgraphs, namedSubgraphs } = this;
+    const { name } = config;
     const { allSubgraphs } = this.root;
     const newIndex = allSubgraphs.length;
-    const { name } = config;
-    if (name === undefined) {
-      subgraphs.push(newIndex);
-      const newSubgraph = new NormalizedSubgraph(newIndex, this, config);
-      allSubgraphs.push(newSubgraph);
-      return newSubgraph;
-    }
-
-    const subgraphIndex = namedSubgraphs.get(name);
-    if (subgraphIndex !== undefined) {
-      return allSubgraphs[subgraphIndex];
+    if (name !== undefined) {
+      const subgraphIndex = this.namedSubgraphs.getOrInsert(name, newIndex);
+      if (subgraphIndex !== newIndex) {
+        return allSubgraphs[subgraphIndex];
+      }
     }
 
     this.subgraphs.push(newIndex);
-    this.namedSubgraphs.set(name, newIndex);
     const newSubgraph = new NormalizedSubgraph(newIndex, this, config);
     allSubgraphs.push(newSubgraph);
     return newSubgraph;
