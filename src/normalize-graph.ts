@@ -3,40 +3,35 @@ import { cmpNumbersAsc } from './utils.ts';
 import { type OverrideAttributes } from './viz.ts';
 
 export declare const enum AllNodesIndex {}
+export interface AllNodesArray<T> extends IndexedArray<AllNodesIndex, T> {
+  [n: AllNodesIndex & number]: T;
+}
+
 export declare const enum PortsIndex {}
+export const defaultPortIndex: PortsIndex = 0;
+export interface PortsArray<T> extends IndexedArray<PortsIndex, T> {
+  [n: PortsIndex & number]: T;
+}
+
 export declare const enum AllEdgesIndex {}
-declare const enum AllSubgraphsIndex {}
-
-interface AllNodesArray {
-  length: AllNodesIndex;
-  map<T>(fn: (node: NormalizedNode) => T): T[];
-  push(node: NormalizedNode): void;
-  [Symbol.iterator](): ArrayIterator<NormalizedNode>;
-  [n: AllNodesIndex & number]: NormalizedNode;
+export interface AllEdgesArray<T> extends IndexedArray<AllEdgesIndex, T> {
+  [n: AllEdgesIndex & number]: T;
 }
 
-interface AllEdgesArray {
-  length: AllEdgesIndex;
-  map<T>(fn: (node: NormalizedEdge) => T): T[];
-  push(node: NormalizedEdge): void;
-  [Symbol.iterator](): ArrayIterator<NormalizedEdge>;
-  [n: AllEdgesIndex & number]: NormalizedEdge;
+export declare const enum AllSubgraphsIndex {}
+export interface AllSubgraphsArray<T> extends IndexedArray<
+  AllSubgraphsIndex,
+  T
+> {
+  [n: AllSubgraphsIndex & number]: T;
 }
 
-interface AllSubgraphsArray {
-  length: AllSubgraphsIndex;
-  map<T>(fn: (node: NormalizedSubgraph) => T): T[];
-  push(node: NormalizedSubgraph): void;
-  [Symbol.iterator](): ArrayIterator<NormalizedSubgraph>;
-  [n: AllSubgraphsIndex & number]: NormalizedSubgraph;
-}
-
-interface PortsArray {
-  length: PortsIndex;
-  map<T>(fn: (port: NormalizedPort) => T): T[];
-  push(node: NormalizedPort): void;
-  [Symbol.iterator](): ArrayIterator<NormalizedPort>;
-  [n: PortsIndex & number]: NormalizedPort;
+interface IndexedArray<Index, Item> {
+  length: Index;
+  map<T>(fn: (node: Item) => T): T[];
+  push(node: Item): void;
+  values(): ArrayIterator<Item>;
+  [Symbol.iterator](): ArrayIterator<Item>;
 }
 
 interface NormalizedGraphConfig {
@@ -61,13 +56,13 @@ export class NormalizedGraph {
   graphAttributes: Readonly<NormalizedAttributes>;
   nodeAttributes: Readonly<NormalizedAttributes>;
   edgeAttributes: Readonly<NormalizedAttributes>;
-  readonly allNodes: AllNodesArray = [];
-  readonly allEdges: AllEdgesArray = [];
-  readonly allSubgraphs: AllSubgraphsArray = [];
+  readonly allNodes: AllNodesArray<NormalizedNode> = [];
+  readonly allNamedNodes = new Map<string, AllNodesIndex>();
+  readonly allEdges: AllEdgesArray<NormalizedEdge> = [];
+  readonly allSubgraphs: AllSubgraphsArray<NormalizedSubgraph> = [];
   readonly subgraphs: AllSubgraphsIndex[] = [];
-  readonly namedNodes = new Map<string, AllNodesIndex>();
   readonly namedSubgraphs = new Map<string, AllSubgraphsIndex>();
-  readonly deduplicatedEdgesMap = new Map<string, AllEdgesIndex>();
+  readonly #deduplicatedEdgesMap = new Map<string, AllEdgesIndex>();
 
   constructor(
     config: NormalizedGraphConfig,
@@ -164,7 +159,7 @@ export class NormalizedGraph {
   }
 
   upsertNode(name: string, nodeDefaults: NormalizedAttributes): NormalizedNode {
-    let nodeIndex = this.namedNodes.get(name);
+    let nodeIndex = this.allNamedNodes.get(name);
     if (nodeIndex !== undefined) {
       return this.allNodes[nodeIndex];
     }
@@ -174,7 +169,7 @@ export class NormalizedGraph {
       name,
       attributes: nodeDefaults,
     });
-    this.namedNodes.set(name, nodeIndex);
+    this.allNamedNodes.set(name, nodeIndex);
     this.allNodes.push(newNode);
     return newNode;
   }
@@ -210,13 +205,13 @@ export class NormalizedGraph {
       return newEdge;
     }
 
-    let edgeIndex = this.deduplicatedEdgesMap.get(deduplicateKey);
+    let edgeIndex = this.#deduplicatedEdgesMap.get(deduplicateKey);
     if (edgeIndex !== undefined) {
       return this.allEdges[edgeIndex];
     }
 
     edgeIndex = this.allEdges.length;
-    this.deduplicatedEdgesMap.set(deduplicateKey, edgeIndex);
+    this.#deduplicatedEdgesMap.set(deduplicateKey, edgeIndex);
     const newEdge = new NormalizedEdge(edgeIndex, config, edgeDefaults);
     this.allEdges.push(newEdge);
     return newEdge;
@@ -296,11 +291,11 @@ export class NormalizedNode {
   readonly index: AllNodesIndex;
   readonly name: string;
   readonly defaultEndpoint: NormalizedEdgeEndpoint;
-  readonly ports: PortsArray = [{ index: 0, name: undefined }];
+  readonly ports: PortsArray<NormalizedPort> = [{ index: 0, name: undefined }];
   readonly namedPorts = new Map<string, PortsIndex>();
   attributes: NormalizedAttributes;
 
-  constructor(index: number, config: NormalizedNodeConfig) {
+  constructor(index: AllNodesIndex, config: NormalizedNodeConfig) {
     this.index = index;
     this.name = config.name;
     this.defaultEndpoint = { node: index, port: 0, compass: undefined };
@@ -353,14 +348,14 @@ interface NormalizedEdgeConfig {
 }
 
 export class NormalizedEdge {
-  readonly index: number;
+  readonly index: AllEdgesIndex;
   readonly tail: NormalizedEdgeEndpoint;
   readonly head: NormalizedEdgeEndpoint;
   readonly key: string | undefined;
   attributes: NormalizedAttributes;
 
   constructor(
-    index: number,
+    index: AllEdgesIndex,
     config: NormalizedEdgeConfig,
     attributes: NormalizedAttributes,
   ) {
