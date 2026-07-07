@@ -98,10 +98,12 @@ export class NormalizedGraph {
 
   mergeGraphAttributes(newAttributes: NormalizedAttributes) {
     const defaultAttributes = new NormalizedAttributes();
-    for (const key of newAttributes.keys()) {
+    for (const [key, value] of newAttributes) {
       if (!this.#overrideGraphAttributes.has(key)) {
+        const oldValue = this.graphAttributes.get(key);
+        this.graphAttributes.set(key, value);
         // Seed with the current value (or `undefined`) so existing subgraphs retain whatever was in effect before this change.
-        defaultAttributes.set(key, this.graphAttributes.get(key));
+        defaultAttributes.set(key, oldValue);
       }
     }
 
@@ -111,18 +113,13 @@ export class NormalizedGraph {
         defaultAttributes,
       );
     }
-
-    this.graphAttributes = new NormalizedAttributes([
-      ...this.graphAttributes,
-      ...newAttributes,
-      ...this.#overrideGraphAttributes,
-    ]);
   }
 
   mergeNodeAttributes(newAttributes: NormalizedAttributes) {
     const defaultAttributes = new NormalizedAttributes();
-    for (const key of newAttributes.keys()) {
-      if (!this.nodeAttributes.has(key)) {
+    for (const [key, value] of newAttributes) {
+      if (!this.#overrideNodeAttributes.has(key)) {
+        this.nodeAttributes.set(key, value);
         // Seed existing nodes with `undefined` so a later-declared default doesn't retroactively win
         defaultAttributes.set(key, undefined);
       }
@@ -131,18 +128,13 @@ export class NormalizedGraph {
     for (const node of this.allNodes) {
       node.applyDefaultAttributes(defaultAttributes);
     }
-
-    this.nodeAttributes = new NormalizedAttributes([
-      ...this.nodeAttributes,
-      ...newAttributes,
-      ...this.#overrideNodeAttributes,
-    ]);
   }
 
   mergeEdgeAttributes(newAttributes: NormalizedAttributes) {
     const defaultAttributes = new NormalizedAttributes();
-    for (const key of newAttributes.keys()) {
-      if (!this.edgeAttributes.has(key)) {
+    for (const [key, value] of newAttributes) {
+      if (!this.#overrideEdgeAttributes.has(key)) {
+        this.edgeAttributes.set(key, value);
         // Seed existing edges with `undefined` so a later-declared default doesn't retroactively win
         defaultAttributes.set(key, undefined);
       }
@@ -151,11 +143,6 @@ export class NormalizedGraph {
     for (const edge of this.allEdges) {
       edge.applyDefaultAttributes(defaultAttributes);
     }
-    this.edgeAttributes = new NormalizedAttributes([
-      ...this.edgeAttributes,
-      ...newAttributes,
-      ...this.#overrideEdgeAttributes,
-    ]);
   }
 
   upsertNode(name: string, nodeDefaults: NormalizedAttributes): NormalizedNode {
@@ -412,20 +399,19 @@ export class NormalizedSubgraph {
 
   mergeGraphAttributes(newAttributes: NormalizedAttributes): void {
     const defaultAttributes = new NormalizedAttributes();
-    for (const key of newAttributes.keys()) {
-      defaultAttributes.set(key, this.graphAttributes.get(key));
+    for (const [key, value] of newAttributes) {
+      const oldValue = this.graphAttributes.get(key);
+      this.graphAttributes.set(key, value);
+      // Seed with the current value (or `undefined`) so existing subgraphs retain whatever was in effect before this change.
+      defaultAttributes.set(key, oldValue);
     }
+
     const { allSubgraphs } = this.root;
     for (const subgraphIndex of this.subgraphs) {
       allSubgraphs[subgraphIndex].applyDefaultGraphAttributes(
         defaultAttributes,
       );
     }
-
-    this.graphAttributes = new NormalizedAttributes([
-      ...this.graphAttributes,
-      ...newAttributes,
-    ]);
   }
 
   mergeNodeAttributes(newAttributes: NormalizedAttributes): void {
