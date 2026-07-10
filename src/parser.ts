@@ -1,7 +1,8 @@
 import { type Location, printLocation } from './location.ts';
 import {
+  type AttributePair,
+  type EdgeConfigAttributes,
   extractEdgeConfigAttributes,
-  NormalizedAttributes,
   type NormalizedAttributeValue,
   type NormalizedEdgeEndpointConfig,
   NormalizedGraph,
@@ -819,12 +820,10 @@ class Parser {
         strict,
         directed,
         name,
-        graphAttributes: new NormalizedAttributes(),
+        graphAttributes: [],
         // FIXME: check if it's viz.js hack or it also present in graphviz
-        nodeAttributes: new NormalizedAttributes([
-          ['label', { text: String.raw`\N`, html: undefined }],
-        ]),
-        edgeAttributes: new NormalizedAttributes(),
+        nodeAttributes: [['label', { text: String.raw`\N`, html: undefined }]],
+        edgeAttributes: [],
       },
       overrideAttributes,
     );
@@ -855,9 +854,7 @@ class Parser {
     if (this.#peekIs(ID)) {
       if (this.#peekAheadToken.kind === Kind['=']) {
         // ID '=' ID
-        const attributes = new NormalizedAttributes();
-        this.#parseAttr(attributes);
-        owner.mergeGraphAttributes(attributes);
+        owner.mergeGraphAttributes([this.#parseAttr()]);
         return;
       }
 
@@ -964,19 +961,19 @@ class Parser {
     return { nodeName, portName, compass };
   }
 
-  #optionalAttrList(): NormalizedAttributes | undefined {
-    return this.#peekKind() === Kind['['] ? this.#parseAttrList() : undefined;
+  #optionalAttrList(): AttributePair[] {
+    return this.#peekKind() === Kind['['] ? this.#parseAttrList() : [];
   }
 
-  #parseAttrList(): Readonly<NormalizedAttributes> {
-    const attributes = new NormalizedAttributes();
+  #parseAttrList(): AttributePair[] {
+    const attributes: AttributePair[] = [];
 
     // attr_list:	'[' [ a_list ] ']' [ attr_list ]
     do {
       this.#expected(Kind['[']);
       // a_list: ID '=' ID [ (';' | ',') ] [ a_list ]
       while (!this.#optional(Kind[']'])) {
-        this.#parseAttr(attributes);
+        attributes.push(this.#parseAttr());
 
         // Either ';' or ',' but doesn't allow both
         if (!this.#optional(Kind[';'])) {
@@ -988,12 +985,12 @@ class Parser {
     return attributes;
   }
 
-  #parseAttr(attributes: NormalizedAttributes): void {
+  #parseAttr(): AttributePair {
     const name = this.#expectedName('attribute name').value;
     this.#expected(Kind['=']);
     const { value } = this.#expectedValue('attribute value');
     // In graphviz, empty strings are treated as default values
-    attributes.set(name, value?.text === '' ? undefined : value);
+    return [name, value?.text === '' ? undefined : value];
   }
 
   #parseNamedSubgraph(
@@ -1010,9 +1007,9 @@ class Parser {
   ): NormalizedSubgraph {
     const subgraph = owner.upsertSubgraph({
       name,
-      graphAttributes: new NormalizedAttributes(),
-      nodeAttributes: new NormalizedAttributes(),
-      edgeAttributes: new NormalizedAttributes(),
+      graphAttributes: [],
+      nodeAttributes: [],
+      edgeAttributes: [],
     });
     this.#parseStatementList(subgraph);
     return subgraph;
@@ -1080,43 +1077,39 @@ class Parser {
       tailNodes = headNodes;
     } while (this.#optionalEdgeOp(owner));
 
-    const edgeDefaults = new Map(owner.resolvedEdgeDefaults());
-    const edgeDefaultConfigAttributes =
-      extractEdgeConfigAttributes(edgeDefaults);
-    const attributes = this.#optionalAttrList();
+    const configAttributes: EdgeConfigAttributes = {};
+    const edgeDefaults = extractEdgeConfigAttributes(
+      owner.resolvedEdgeDefaults(),
+      configAttributes,
+    );
+    const attributes = extractEdgeConfigAttributes(
+      this.#optionalAttrList(),
+      configAttributes,
+    );
     for (const [tail, head] of newEdges) {
-      let configAttributes = {
-        headport: [head.portName, head.compass],
-        tailport: [tail.portName, tail.compass],
-        ...edgeDefaultConfigAttributes,
+      const { key, tailport, headport } = {
+        headport: head,
+        tailport: tail,
+        ...configAttributes,
       };
-      if (attributes) {
-        configAttributes = {
-          ...configAttributes,
-          ...extractEdgeConfigAttributes(attributes),
-        };
-      }
 
-      const { key, tailport, headport } = configAttributes;
       const edge = owner.upsertEdge(
         {
           tail: owner.root.upsertEdgeEndpoint({
             node: tail.node,
-            portName: tailport?.[0],
-            compass: tailport?.[1],
+            portName: tailport?.portName,
+            compass: tailport?.compass,
           }),
           head: owner.root.upsertEdgeEndpoint({
             node: head.node,
-            portName: headport?.[0],
-            compass: headport?.[1],
+            portName: headport?.portName,
+            compass: headport?.compass,
           }),
           key,
         },
         edgeDefaults,
       );
-      if (attributes) {
-        edge.mergeAttributes(attributes);
-      }
+      edge.mergeAttributes(attributes);
     }
   }
 }
