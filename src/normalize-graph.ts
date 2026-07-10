@@ -38,24 +38,24 @@ interface NormalizedGraphConfig {
   readonly name: string | undefined;
   readonly strict: boolean;
   readonly directed: boolean;
-  readonly graphAttributes: Readonly<NormalizedAttributes>;
-  readonly nodeAttributes: Readonly<NormalizedAttributes>;
-  readonly edgeAttributes: Readonly<NormalizedAttributes>;
+  readonly graphAttributes: Iterable<AttributePair>;
+  readonly nodeAttributes: Iterable<AttributePair>;
+  readonly edgeAttributes: Iterable<AttributePair>;
 }
 
 export class NormalizedGraph {
-  readonly #overrideGraphAttributes: Readonly<NormalizedAttributes>;
-  readonly #overrideNodeAttributes: Readonly<NormalizedAttributes>;
-  readonly #overrideEdgeAttributes: Readonly<NormalizedAttributes>;
+  readonly #overrideGraphAttributes: NormalizedAttributes;
+  readonly #overrideNodeAttributes: NormalizedAttributes;
+  readonly #overrideEdgeAttributes: NormalizedAttributes;
   readonly owner = undefined;
   readonly root = this;
 
   readonly name: string | undefined;
   readonly strict: boolean;
   readonly directed: boolean;
-  graphAttributes: Readonly<NormalizedAttributes>;
-  nodeAttributes: Readonly<NormalizedAttributes>;
-  edgeAttributes: Readonly<NormalizedAttributes>;
+  graphAttributes: NormalizedAttributes;
+  nodeAttributes: NormalizedAttributes;
+  edgeAttributes: NormalizedAttributes;
   readonly allNodes: AllNodesArray<NormalizedNode> = [];
   readonly allNamedNodes = new Map<string, AllNodesIndex>();
   readonly allEdges: AllEdgesArray<NormalizedEdge> = [];
@@ -68,15 +68,16 @@ export class NormalizedGraph {
     config: NormalizedGraphConfig,
     overrideAttributes: OverrideAttributes,
   ) {
-    this.#overrideGraphAttributes = overrideAttributes.graphAttributes
-      ? normalizeAttributes(overrideAttributes.graphAttributes)
-      : new NormalizedAttributes();
-    this.#overrideNodeAttributes = overrideAttributes.nodeAttributes
-      ? normalizeAttributes(overrideAttributes.nodeAttributes)
-      : new NormalizedAttributes();
-    this.#overrideEdgeAttributes = overrideAttributes.edgeAttributes
-      ? normalizeAttributes(overrideAttributes.edgeAttributes)
-      : new NormalizedAttributes();
+    this.#overrideGraphAttributes = new NormalizedAttributes(
+      normalizeOptionalAttributes(overrideAttributes.graphAttributes),
+    );
+
+    this.#overrideNodeAttributes = new NormalizedAttributes(
+      normalizeOptionalAttributes(overrideAttributes.nodeAttributes),
+    );
+    this.#overrideEdgeAttributes = new Map(
+      normalizeOptionalAttributes(overrideAttributes.edgeAttributes),
+    );
 
     this.graphAttributes = new NormalizedAttributes([
       ...config.graphAttributes,
@@ -96,14 +97,14 @@ export class NormalizedGraph {
     this.directed = config.directed;
   }
 
-  mergeGraphAttributes(newAttributes: NormalizedAttributes) {
-    const defaultAttributes = new NormalizedAttributes();
+  mergeGraphAttributes(newAttributes: Iterable<AttributePair>) {
+    const defaultAttributes: AttributePair[] = [];
     for (const [key, value] of newAttributes) {
       if (!this.#overrideGraphAttributes.has(key)) {
         const oldValue = this.graphAttributes.get(key);
         this.graphAttributes.set(key, value);
         // Seed with the current value (or `undefined`) so existing subgraphs retain whatever was in effect before this change.
-        defaultAttributes.set(key, oldValue);
+        defaultAttributes.push([key, oldValue]);
       }
     }
 
@@ -115,13 +116,13 @@ export class NormalizedGraph {
     }
   }
 
-  mergeNodeAttributes(newAttributes: NormalizedAttributes) {
-    const defaultAttributes = new NormalizedAttributes();
+  mergeNodeAttributes(newAttributes: Iterable<AttributePair>) {
+    const defaultAttributes: AttributePair[] = [];
     for (const [key, value] of newAttributes) {
       if (!this.#overrideNodeAttributes.has(key)) {
         this.nodeAttributes.set(key, value);
         // Seed existing nodes with `undefined` so a later-declared default doesn't retroactively win
-        defaultAttributes.set(key, undefined);
+        defaultAttributes.push([key, undefined]);
       }
     }
 
@@ -130,13 +131,13 @@ export class NormalizedGraph {
     }
   }
 
-  mergeEdgeAttributes(newAttributes: NormalizedAttributes) {
-    const defaultAttributes = new NormalizedAttributes();
+  mergeEdgeAttributes(newAttributes: Iterable<AttributePair>) {
+    const defaultAttributes: AttributePair[] = [];
     for (const [key, value] of newAttributes) {
       if (!this.#overrideEdgeAttributes.has(key)) {
         this.edgeAttributes.set(key, value);
         // Seed existing edges with `undefined` so a later-declared default doesn't retroactively win
-        defaultAttributes.set(key, undefined);
+        defaultAttributes.push([key, undefined]);
       }
     }
 
@@ -145,7 +146,10 @@ export class NormalizedGraph {
     }
   }
 
-  upsertNode(name: string, nodeDefaults: NormalizedAttributes): NormalizedNode {
+  upsertNode(
+    name: string,
+    nodeDefaults: Iterable<AttributePair>,
+  ): NormalizedNode {
     const { allNodes, allNamedNodes } = this;
     const newIndex = allNodes.length;
     const nodeIndex = allNamedNodes.getOrInsert(name, newIndex);
@@ -156,7 +160,7 @@ export class NormalizedGraph {
     allNamedNodes.set(name, newIndex);
     const newNode = new NormalizedNode(newIndex, {
       name,
-      attributes: new NormalizedAttributes(nodeDefaults),
+      attributes: nodeDefaults,
     });
     allNodes.push(newNode);
     return newNode;
@@ -180,7 +184,7 @@ export class NormalizedGraph {
 
   upsertEdge(
     config: NormalizedEdgeConfig,
-    edgeDefaults: NormalizedAttributes,
+    edgeDefaults: Iterable<AttributePair>,
   ): NormalizedEdge {
     const { allEdges } = this;
     const newIndex = allEdges.length;
@@ -195,11 +199,7 @@ export class NormalizedGraph {
       }
     }
 
-    const newEdge = new NormalizedEdge(
-      newIndex,
-      config,
-      new NormalizedAttributes(edgeDefaults),
-    );
+    const newEdge = new NormalizedEdge(newIndex, config, edgeDefaults);
     allEdges.push(newEdge);
     return newEdge;
   }
@@ -264,7 +264,7 @@ export interface NormalizedPort {
 
 export interface NormalizedNodeConfig {
   readonly name: string;
-  readonly attributes: NormalizedAttributes;
+  readonly attributes: Iterable<AttributePair>;
 }
 
 export class NormalizedNode {
@@ -280,21 +280,19 @@ export class NormalizedNode {
     this.index = index;
     this.name = config.name;
     this.defaultEndpoint = { node: index, port: 0, compass: undefined };
-    this.attributes = config.attributes;
+    this.attributes = new NormalizedAttributes(config.attributes);
   }
 
-  mergeAttributes(newAttributes: NormalizedAttributes): void {
-    this.attributes = new NormalizedAttributes([
-      ...this.attributes,
-      ...newAttributes,
-    ]);
+  mergeAttributes(newAttributes: Iterable<AttributePair>): void {
+    for (const [key, value] of newAttributes) {
+      this.attributes.set(key, value);
+    }
   }
 
-  applyDefaultAttributes(defaults: NormalizedAttributes): void {
-    this.attributes = new NormalizedAttributes([
-      ...defaults,
-      ...this.attributes,
-    ]);
+  applyDefaultAttributes(defaults: Iterable<AttributePair>): void {
+    for (const [key, value] of defaults) {
+      this.attributes.getOrInsert(key, value);
+    }
   }
 
   upsertPort(portName: string): PortsIndex {
@@ -338,35 +336,33 @@ export class NormalizedEdge {
   constructor(
     index: AllEdgesIndex,
     config: NormalizedEdgeConfig,
-    attributes: NormalizedAttributes,
+    attributes: Iterable<AttributePair>,
   ) {
     this.index = index;
     this.tail = config.tail;
     this.head = config.head;
     this.key = config.key;
-    this.attributes = attributes;
+    this.attributes = new NormalizedAttributes(attributes);
   }
 
-  mergeAttributes(newAttributes: NormalizedAttributes) {
-    this.attributes = new NormalizedAttributes([
-      ...this.attributes,
-      ...newAttributes,
-    ]);
+  mergeAttributes(newAttributes: Iterable<AttributePair>) {
+    for (const [key, value] of newAttributes) {
+      this.attributes.set(key, value);
+    }
   }
 
-  applyDefaultAttributes(defaults: NormalizedAttributes) {
-    this.attributes = new NormalizedAttributes([
-      ...defaults,
-      ...this.attributes,
-    ]);
+  applyDefaultAttributes(defaults: Iterable<AttributePair>) {
+    for (const [key, value] of defaults) {
+      this.attributes.getOrInsert(key, value);
+    }
   }
 }
 
 interface NormalizedSubgraphConfig {
   readonly name: string | undefined;
-  readonly graphAttributes: NormalizedAttributes;
-  readonly nodeAttributes: NormalizedAttributes;
-  readonly edgeAttributes: NormalizedAttributes;
+  readonly graphAttributes: Iterable<AttributePair>;
+  readonly nodeAttributes: Iterable<AttributePair>;
+  readonly edgeAttributes: Iterable<AttributePair>;
 }
 
 export class NormalizedSubgraph {
@@ -392,18 +388,18 @@ export class NormalizedSubgraph {
     this.owner = owner;
     this.index = index;
     this.name = config.name;
-    this.graphAttributes = config.graphAttributes;
-    this.nodeAttributes = config.nodeAttributes;
-    this.edgeAttributes = config.edgeAttributes;
+    this.graphAttributes = new NormalizedAttributes(config.graphAttributes);
+    this.nodeAttributes = new NormalizedAttributes(config.nodeAttributes);
+    this.edgeAttributes = new NormalizedAttributes(config.edgeAttributes);
   }
 
-  mergeGraphAttributes(newAttributes: NormalizedAttributes): void {
-    const defaultAttributes = new NormalizedAttributes();
+  mergeGraphAttributes(newAttributes: Iterable<AttributePair>): void {
+    const defaultAttributes: AttributePair[] = [];
     for (const [key, value] of newAttributes) {
       const oldValue = this.graphAttributes.get(key);
       this.graphAttributes.set(key, value);
       // Seed with the current value (or `undefined`) so existing subgraphs retain whatever was in effect before this change.
-      defaultAttributes.set(key, oldValue);
+      defaultAttributes.push([key, oldValue]);
     }
 
     const { allSubgraphs } = this.root;
@@ -414,30 +410,27 @@ export class NormalizedSubgraph {
     }
   }
 
-  mergeNodeAttributes(newAttributes: NormalizedAttributes): void {
-    this.nodeAttributes = new NormalizedAttributes([
-      ...this.nodeAttributes,
-      ...newAttributes,
-    ]);
+  mergeNodeAttributes(newAttributes: Iterable<AttributePair>): void {
+    for (const [key, value] of newAttributes) {
+      this.nodeAttributes.set(key, value);
+    }
   }
 
-  mergeEdgeAttributes(newAttributes: NormalizedAttributes): void {
-    this.edgeAttributes = new NormalizedAttributes([
-      ...this.edgeAttributes,
-      ...newAttributes,
-    ]);
+  mergeEdgeAttributes(newAttributes: Iterable<AttributePair>): void {
+    for (const [key, value] of newAttributes) {
+      this.edgeAttributes.set(key, value);
+    }
   }
 
-  applyDefaultGraphAttributes(defaults: NormalizedAttributes): void {
-    this.graphAttributes = new NormalizedAttributes([
-      ...defaults,
-      ...this.graphAttributes,
-    ]);
+  applyDefaultGraphAttributes(defaults: Iterable<AttributePair>): void {
+    for (const [key, value] of defaults) {
+      this.graphAttributes.set(key, value);
+    }
   }
 
   upsertNode(
     name: string,
-    defaultAttributes: NormalizedAttributes,
+    defaultAttributes: Iterable<AttributePair>,
   ): NormalizedNode {
     const node = this.owner.upsertNode(name, defaultAttributes);
     this.memberNodes.add(node.index);
@@ -446,7 +439,7 @@ export class NormalizedSubgraph {
 
   upsertEdge(
     config: NormalizedEdgeConfig,
-    defaultAttributes: NormalizedAttributes,
+    defaultAttributes: Iterable<AttributePair>,
   ): NormalizedEdge {
     const edge = this.owner.upsertEdge(config, defaultAttributes);
     this.memberEdges.add(edge.index);
@@ -499,6 +492,7 @@ export type NormalizedAttributeValue =
   | { text: undefined; html: string }
   | { text: string; html: undefined };
 
+export type AttributePair = [string, NormalizedAttributeValue | undefined];
 export class NormalizedAttributes extends Map<
   string,
   NormalizedAttributeValue | undefined
@@ -508,25 +502,29 @@ export class NormalizedAttributes extends Map<
   }
 }
 
-function normalizeAttributes(attributes: Attributes): NormalizedAttributes {
-  return new NormalizedAttributes(
-    Object.entries(attributes).map(([name, value]) => {
-      switch (typeof value) {
-        case 'undefined':
-          return [name, undefined];
-        case 'string':
-          // In graphviz, empty strings are treated as default values
-          return [
-            name,
-            value === '' ? undefined : { text: value, html: undefined },
-          ];
-        case 'object':
-          return [name, { text: undefined, html: value.html }];
-        default:
-          return [name, { text: value.toString(), html: undefined }];
-      }
-    }),
-  );
+function normalizeOptionalAttributes(
+  attributes: Attributes | undefined,
+): AttributePair[] {
+  return attributes === undefined ? [] : normalizeAttributes(attributes);
+}
+
+function normalizeAttributes(attributes: Attributes): AttributePair[] {
+  return Object.entries(attributes).map(([name, value]) => {
+    switch (typeof value) {
+      case 'undefined':
+        return [name, undefined];
+      case 'string':
+        // In graphviz, empty strings are treated as default values
+        return [
+          name,
+          value === '' ? undefined : { text: value, html: undefined },
+        ];
+      case 'object':
+        return [name, { text: undefined, html: value.html }];
+      default:
+        return [name, { text: value.toString(), html: undefined }];
+    }
+  });
 }
 
 export function normalizeGraph(
@@ -538,15 +536,9 @@ export function normalizeGraph(
       name: config.name,
       strict: config.strict ?? false,
       directed: config.directed ?? true,
-      graphAttributes: config.graphAttributes
-        ? normalizeAttributes(config.graphAttributes)
-        : new NormalizedAttributes(),
-      nodeAttributes: config.nodeAttributes
-        ? normalizeAttributes(config.nodeAttributes)
-        : new NormalizedAttributes(),
-      edgeAttributes: config.edgeAttributes
-        ? normalizeAttributes(config.edgeAttributes)
-        : new NormalizedAttributes(),
+      graphAttributes: normalizeOptionalAttributes(config.graphAttributes),
+      nodeAttributes: normalizeOptionalAttributes(config.nodeAttributes),
+      edgeAttributes: normalizeOptionalAttributes(config.edgeAttributes),
     },
     overrideAttributes,
   );
@@ -575,41 +567,36 @@ function applyDefinitions(
   }
 
   if (config.edges) {
-    const edgeDefaults = owner.resolvedEdgeDefaults();
-    const edgeDefaultConfigAttributes =
-      extractEdgeConfigAttributes(edgeDefaults);
+    const edgeDefaultConfigAttributes: EdgeConfigAttributes = {};
+    const edgeDefaults = extractEdgeConfigAttributes(
+      owner.resolvedEdgeDefaults(),
+      edgeDefaultConfigAttributes,
+    );
 
     for (const edgeConfig of config.edges) {
-      let attributes;
-      let configAttributes = edgeDefaultConfigAttributes;
-      if (edgeConfig.attributes) {
-        attributes = normalizeAttributes(edgeConfig.attributes);
-        configAttributes = {
-          ...configAttributes,
-          ...extractEdgeConfigAttributes(attributes),
-        };
-      }
-
+      const configAttributes = { ...edgeDefaultConfigAttributes };
+      const attributes = extractEdgeConfigAttributes(
+        normalizeOptionalAttributes(edgeConfig.attributes),
+        configAttributes,
+      );
       const { key, tailport, headport } = configAttributes;
       const edge = owner.upsertEdge(
         {
           tail: owner.root.upsertEdgeEndpoint({
             node: owner.upsertNode(edgeConfig.tail, nodeDefaults).index,
-            portName: tailport?.[0],
-            compass: tailport?.[1],
+            portName: tailport?.portName,
+            compass: tailport?.compass,
           }),
           head: owner.root.upsertEdgeEndpoint({
             node: owner.upsertNode(edgeConfig.head, nodeDefaults).index,
-            portName: headport?.[0],
-            compass: headport?.[1],
+            portName: headport?.portName,
+            compass: headport?.compass,
           }),
           key,
         },
         edgeDefaults,
       );
-      if (attributes) {
-        edge.mergeAttributes(attributes);
-      }
+      edge.mergeAttributes(attributes);
     }
   }
 
@@ -632,60 +619,72 @@ function applyDefinitions(
   }
 }
 
-interface EdgeConfigAttributes {
+export interface EdgeConfigAttributes {
   key?: string | undefined;
-  tailport?: [string | undefined, string | undefined];
-  headport?: [string | undefined, string | undefined];
+  tailport?: { portName: string | undefined; compass: string | undefined };
+  headport?: { portName: string | undefined; compass: string | undefined };
 }
 
 export function extractEdgeConfigAttributes(
-  attributes: NormalizedAttributes,
-): EdgeConfigAttributes {
-  const result: EdgeConfigAttributes = {};
+  attributes: Iterable<AttributePair>,
+  configAttributes: EdgeConfigAttributes,
+): AttributePair[] {
+  const filteredPairs: AttributePair[] = [];
 
-  if (attributes.has('key')) {
-    const value = attributes.get('key');
-    /* v8 ignore start */
-    if (value?.html !== undefined) {
-      throw new TypeError(`HTML as edge 'key' is not supported`);
+  for (const [key, value] of attributes) {
+    switch (key) {
+      case 'key': {
+        /* v8 ignore start */
+        if (value?.html !== undefined) {
+          throw new TypeError(`HTML as edge 'key' is not supported`);
+        }
+        /* v8 ignore stop */
+        configAttributes.key = value?.text;
+        break;
+      }
+      case 'tailport': {
+        /* v8 ignore start */
+        if (value?.html !== undefined) {
+          throw new TypeError(`HTML as 'tailport' is not supported`);
+        }
+        /* v8 ignore stop */
+        configAttributes.tailport = splitPortString(value?.text);
+        break;
+      }
+      case 'headport': {
+        /* v8 ignore start */
+        if (value?.html !== undefined) {
+          throw new TypeError(`HTML as 'headport' is not supported`);
+        }
+        /* v8 ignore stop */
+        configAttributes.headport = splitPortString(value?.text);
+        break;
+      }
+      default:
+        filteredPairs.push([key, value]);
     }
-    /* v8 ignore stop */
-    result.key = value?.text;
-    attributes.delete('key');
   }
 
-  if (attributes.has('tailport')) {
-    const value = attributes.get('tailport');
-    /* v8 ignore start */
-    if (value?.html !== undefined) {
-      throw new TypeError(`HTML as 'tailport' is not supported`);
-    }
-    /* v8 ignore stop */
-    result.tailport = splitPortString(value?.text);
-    attributes.delete('tailport');
-  }
-
-  if (attributes.has('headport')) {
-    const value = attributes.get('headport');
-    /* v8 ignore start */
-    if (value?.html !== undefined) {
-      throw new TypeError(`HTML as 'headport' is not supported`);
-    }
-    /* v8 ignore stop */
-    result.headport = splitPortString(value?.text);
-    attributes.delete('headport');
-  }
-
-  return result;
+  return filteredPairs;
 }
 
-function splitPortString(
-  str: string | undefined,
-): [string | undefined, string | undefined] {
+function splitPortString(str: string | undefined): {
+  portName: string | undefined;
+  compass: string | undefined;
+} {
   if (str === undefined) {
-    return [undefined, undefined];
+    return { portName: undefined, compass: undefined };
   }
   // FIXME: missing validation of compass
-  const [port, compass] = str.split(':') as [string, string | undefined];
-  return [port === '' ? undefined : port, compass === '' ? undefined : compass];
+  let [portName, compass] = str.split(':') as [
+    string | undefined,
+    string | undefined,
+  ];
+  if (portName === '') {
+    portName = undefined;
+  }
+  if (compass === '') {
+    compass = undefined;
+  }
+  return { portName, compass };
 }
