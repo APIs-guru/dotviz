@@ -48,7 +48,6 @@ void svg_set_fillcolor(obj_state_t *obj, char *name);
 void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,
                            double frac);
 void svg_set_style(obj_state_t *obj, char **s);
-void svg_set_penwidth(obj_state_t *obj, double penwidth);
 
 extern char *svg_defaultlinestyle[3];
 
