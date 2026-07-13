@@ -52,7 +52,7 @@
 
 char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
 
-static imagescale_t get_imagescale(char *s) {
+imagescale_t get_imagescale(char *s) {
   if (*s == '\0')
     return IMAGESCALE_FALSE;
   if (!strcasecmp(s, "width"))
@@ -66,7 +66,7 @@ static imagescale_t get_imagescale(char *s) {
   return IMAGESCALE_FALSE;
 }
 
-static imagepos_t get_imagepos(char *s) {
+imagepos_t get_imagepos(char *s) {
   if (*s == '\0')
     return IMAGEPOS_MIDDLE_CENTER;
   if (!strcasecmp(s, "tl"))
@@ -96,8 +96,8 @@ extern point get_dimensions_by_name(const char *name, pointf dpi);
  * positioned at "imagepos"
  */
 void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
-                   char *name, pointf *a, size_t n, char *imagescale,
-                   char *imagepos) {
+                   char *name, pointf *a, size_t n, imagescale_t imagescale,
+                   imagepos_t imagepos) {
   assert(name);
   assert(name[0]);
 
@@ -122,7 +122,7 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
   double scalex = pw / iw;
   double scaley = ph / ih;
 
-  switch (get_imagescale(imagescale)) {
+  switch (imagescale) {
   case IMAGESCALE_TRUE:
     /* keep aspect ratio fixed by just using the smaller scale */
     if (scalex < scaley) {
@@ -149,9 +149,8 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
   }
 
   /* if image is smaller in any dimension, apply the specified positioning */
-  imagepos_t position = get_imagepos(imagepos);
   if (iw < pw) {
-    switch (position) {
+    switch (imagepos) {
     case IMAGEPOS_TOP_LEFT:
     case IMAGEPOS_MIDDLE_LEFT:
     case IMAGEPOS_BOTTOM_LEFT:
@@ -170,7 +169,7 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
     }
   }
   if (ih < ph) {
-    switch (position) {
+    switch (imagepos) {
     case IMAGEPOS_TOP_LEFT:
     case IMAGEPOS_TOP_CENTER:
     case IMAGEPOS_TOP_RIGHT:

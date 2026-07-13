@@ -590,7 +590,6 @@ static void emit_html_img(output_string *output, int rotation_deg, pointf dpi,
                           htmlimg_t *cp, htmlenv_t *env) {
   pointf A[4];
   boxf bb = cp->box;
-  char *scale;
 
   bb.LL.x += env->pos.x;
   bb.LL.y += env->pos.y;
@@ -604,13 +603,12 @@ static void emit_html_img(output_string *output, int rotation_deg, pointf dpi,
   A[3].x = A[0].x;
   A[3].y = A[2].y;
 
+  imagescale_t scale = get_imagescale(env->imgscale);
   if (cp->scale)
-    scale = cp->scale;
-  else
-    scale = env->imgscale;
+    scale = get_imagescale(cp->scale);
   assert(cp->src);
   assert(cp->src[0]);
-  svg_usershape(output, rotation_deg, dpi, cp->src, A, 4, scale, "mc");
+  svg_usershape(output, rotation_deg, dpi, cp->src, A, 4, scale, IMAGEPOS_MIDDLE_CENTER);
 }
 
 static void emit_html_cell(output_string *output, SafeLayer *safe_layer,

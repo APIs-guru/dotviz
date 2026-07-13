@@ -3075,10 +3075,13 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
         svg_polygon(output, obj, AF, sides, filled);
       }
     }
+
+    imagescale_t imagescale =
+        get_imagescale(late_string(n, N_imagescale, "false"));
+    imagepos_t imagepos = get_imagepos(late_string(n, N_imagepos, "mc"));
     svg_usershape(output, safe_layer->safe_job->rotation,
-                  safe_layer->safe_job->dpi, name, AF, sides,
-                  late_string(n, N_imagescale, "false"),
-                  late_string(n, N_imagepos, "mc"));
+                  safe_layer->safe_job->dpi, name, AF, sides, imagescale,
+                  imagepos);
     filled = 0; /* with user shapes, we have done the fill if needed */
   }
 
