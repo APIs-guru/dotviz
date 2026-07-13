@@ -73,14 +73,10 @@ static bool xml_isentity(const char *s) {
  * \param state Data to pass as the first parameter when calling `cb`.
  * \return The return value of a call to `cb`.
  */
-static void xml_core(char previous, const char **current, xml_flags_t flags,
+static void xml_core(char previous, const char *s, xml_flags_t flags,
                      output_string *output) {
 
-  const char *s = *current;
   char c = *s;
-
-  // we will consume at least one character, so note that now
-  ++*current;
 
   // escape '&' only if not part of a legal entity sequence
   if (c == '&' && (flags.raw || !xml_isentity(s))) {
@@ -147,9 +143,9 @@ void gvputs_xml_with_flags(output_string *output, const char *s,
                            xml_flags_t flags) {
   char previous = '\0';
   while (*s != '\0') {
-    char p = *s;
-    xml_core(previous, &s, flags, output);
-    previous = p;
+    xml_core(previous, s, flags, output);
+    previous = *s;
+    ++s;
   }
 }
 
