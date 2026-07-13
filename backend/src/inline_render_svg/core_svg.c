@@ -90,34 +90,6 @@ static imagepos_t get_imagepos(char *s) {
   return IMAGEPOS_MIDDLE_CENTER;
 }
 
-static void core_loadimage_svg(output_string *output, int rotation_deg,
-                               const char *name, boxf b) {
-  double width = (b.UR.x - b.LL.x);
-  double height = (b.UR.y - b.LL.y);
-  double originx = (b.UR.x + b.LL.x - width) / 2;
-  double originy = (b.UR.y + b.LL.y + height) / 2;
-
-  out_puts(output, "<image xlink:href=\"");
-  out_puts(output, name);
-  if (rotation_deg != 0) {
-
-    // FIXME - this is messed up >>>
-    gvprintf(output,
-             "\" width=\"%gpx\" height=\"%gpx\" preserveAspectRatio=\"xMidYMid "
-             "meet\" x=\"%g\" y=\"%g\"",
-             height, width, originx, -originy);
-    gvprintf(output, " transform=\"rotate(%d %g %g)\"", rotation_deg, originx,
-             -originy);
-    // <<<
-  } else {
-    gvprintf(output,
-             "\" width=\"%gpx\" height=\"%gpx\" preserveAspectRatio=\"xMinYMin "
-             "meet\" x=\"%g\" y=\"%g\"",
-             width, height, originx, -originy);
-  }
-  out_puts(output, "/>\n");
-}
-
 extern point get_dimensions_by_name(const char *name, pointf dpi);
 /* gvrender_usershape:
  * Scale image to fill polygon bounding box accordingus to "imagescale",
@@ -227,8 +199,32 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
     b.LL.y = b.UR.y;
     b.UR.y = d;
   }
-  core_loadimage_svg(output, rotation_deg, name, b);
+
+  double width = (b.UR.x - b.LL.x);
+  double height = (b.UR.y - b.LL.y);
+  double originx = (b.UR.x + b.LL.x - width) / 2;
+  double originy = (b.UR.y + b.LL.y + height) / 2;
+  out_puts(output, "<image xlink:href=\"");
+  out_puts(output, name);
+  if (rotation_deg != 0) {
+
+    // FIXME - this is messed up >>>
+    gvprintf(output,
+             "\" width=\"%gpx\" height=\"%gpx\" preserveAspectRatio=\"xMidYMid "
+             "meet\" x=\"%g\" y=\"%g\"",
+             height, width, originx, -originy);
+    gvprintf(output, " transform=\"rotate(%d %g %g)\"", rotation_deg, originx,
+             -originy);
+    // <<<
+  } else {
+    gvprintf(output,
+             "\" width=\"%gpx\" height=\"%gpx\" preserveAspectRatio=\"xMinYMin "
+             "meet\" x=\"%g\" y=\"%g\"",
+             width, height, originx, -originy);
+  }
+  out_puts(output, "/>\n");
 }
+
 
 #define LOCALNAMEPREFIX '%'
 
