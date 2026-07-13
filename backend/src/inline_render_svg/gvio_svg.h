@@ -23,8 +23,6 @@ typedef struct {
   unsigned dash : 1;
   /// escape consecutive ' '
   unsigned nbsp : 1;
-  /// anticipate non-ASCII characters that need to be encoded
-  unsigned utf8 : 1;
 } xml_flags_t;
 void gvputs_xml_with_flags(output_string *output, const char *s,
                            xml_flags_t flags);
