@@ -346,7 +346,7 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
   int filled;
   double frac;
   if (findStopColor(color, clrs, &frac)) {
-    svg_set_fillcolor(obj, clrs[0]);
+    obj->fillcolor = svg_resolve_color(clrs[0]);
     if (clrs[1])
       svg_set_gradient_vals(obj, clrs[1], angle, frac);
     else
@@ -356,7 +356,7 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
     else
       filled = GRADIENT;
   } else {
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
     filled = FILL;
   }
   obj->pencolor = svg_resolve_color("transparent");
@@ -451,7 +451,7 @@ static void emit_html_rules(output_string *output, obj_state_t *obj,
 
   if (!color)
     color = DEFAULT_COLOR;
-  svg_set_fillcolor(obj, color);
+  obj->fillcolor = svg_resolve_color(color);
   obj->pencolor = svg_resolve_color(color);
 
   pts = cp->data.box;
@@ -563,7 +563,7 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
      * calculations to take into account wider rules.
      */
     cells = tbl->u.n.cells;
-    obj->penwidth =  1.0;
+    obj->penwidth = 1.0;
     while ((cp = *cells++)) {
       if (cp->hruled || cp->vruled)
         emit_html_rules(output, obj, cp, env, tbl->data.pencolor, *cells);

@@ -517,7 +517,7 @@ static graphviz_polygon_style_t stylenode(obj_state_t *obj, node_t *n) {
 
   if (N_penwidth && (s = agxget(n, N_penwidth)) && s[0]) {
     penwidth = late_double(n, N_penwidth, 1.0, 0.0);
-    obj->penwidth =  penwidth;
+    obj->penwidth = penwidth;
   }
 
   return istyle;
@@ -2936,32 +2936,32 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
     pencolor = DEFAULT_ACTIVEPENCOLOR;
     obj->pencolor = svg_resolve_color(pencolor);
     color = DEFAULT_ACTIVEFILLCOLOR;
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
     pencolor = DEFAULT_SELECTEDPENCOLOR;
     obj->pencolor = svg_resolve_color(pencolor);
     color = DEFAULT_SELECTEDFILLCOLOR;
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
     pencolor = DEFAULT_DELETEDPENCOLOR;
     obj->pencolor = svg_resolve_color(pencolor);
     color = DEFAULT_DELETEDFILLCOLOR;
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
     pencolor = DEFAULT_VISITEDPENCOLOR;
     obj->pencolor = svg_resolve_color(pencolor);
     color = DEFAULT_VISITEDFILLCOLOR;
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
     filled = FILL;
   } else {
     if (style.filled) {
       double frac;
       fillcolor = findFill(n);
       if (findStopColor(fillcolor, clrs, &frac)) {
-        svg_set_fillcolor(obj, clrs[0]);
+        obj->fillcolor = svg_resolve_color(clrs[0]);
         if (clrs[1])
           svg_set_gradient_vals(obj, clrs[1],
                                 late_int(n, N_gradientangle, 0, 0), frac);
@@ -2973,7 +2973,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
         else
           filled = GRADIENT;
       } else {
-        svg_set_fillcolor(obj, fillcolor);
+        obj->fillcolor = svg_resolve_color(fillcolor);
         filled = FILL;
       }
     } else if (style.striped || style.wedged) {
@@ -3254,31 +3254,31 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
   else
     svg_set_style(obj, &point_style[1]);
   if (N_penwidth)
-    obj->penwidth =  late_double(n, N_penwidth, 1.0, 0.0);
+    obj->penwidth = late_double(n, N_penwidth, 1.0, 0.0);
 
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     color = DEFAULT_ACTIVEPENCOLOR;
     obj->pencolor = svg_resolve_color(color);
     color = DEFAULT_ACTIVEFILLCOLOR;
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
   } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
     color = DEFAULT_SELECTEDPENCOLOR;
     obj->pencolor = svg_resolve_color(color);
     color = DEFAULT_SELECTEDFILLCOLOR;
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
   } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
     color = DEFAULT_DELETEDPENCOLOR;
     obj->pencolor = svg_resolve_color(color);
     color = DEFAULT_DELETEDFILLCOLOR;
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
   } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
     color = DEFAULT_VISITEDPENCOLOR;
     obj->pencolor = svg_resolve_color(color);
     color = DEFAULT_VISITEDFILLCOLOR;
-    svg_set_fillcolor(obj, color);
+    obj->fillcolor = svg_resolve_color(color);
   } else {
     color = findFillDflt(n, "black");
-    svg_set_fillcolor(obj, color); /* emit fill color */
+    obj->fillcolor = svg_resolve_color(color); /* emit fill color */
     penColor(obj, n);              /* emit pen color */
   }
   filled = true;
@@ -3872,7 +3872,7 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
     double frac;
 
     if (findStopColor(fillcolor, clrs, &frac)) {
-      svg_set_fillcolor(obj, clrs[0]);
+      obj->fillcolor = svg_resolve_color(clrs[0]);
       if (clrs[1])
         svg_set_gradient_vals(obj, clrs[1], late_int(n, N_gradientangle, 0, 0),
                               frac);
@@ -3885,7 +3885,7 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
         filled = GRADIENT;
     } else {
       filled = FILL;
-      svg_set_fillcolor(obj, fillcolor);
+      obj->fillcolor = svg_resolve_color(fillcolor);
     }
   } else
     filled = 0;
