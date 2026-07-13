@@ -348,9 +348,11 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
   if (findStopColor(color, clrs, &frac)) {
     obj->fillcolor = svg_resolve_color(clrs[0]);
     if (clrs[1])
-      svg_set_gradient_vals(obj, clrs[1], angle, frac);
+      obj->stopcolor = svg_resolve_color(clrs[1]);
     else
-      svg_set_gradient_vals(obj, DEFAULT_COLOR, angle, frac);
+      obj->stopcolor = svg_resolve_color(DEFAULT_COLOR);
+    obj->gradient_angle = angle;
+    obj->gradient_frac = frac;
     if (style.radial)
       filled = RGRADIENT;
     else

@@ -804,7 +804,9 @@ static void emit_xdot(output_string *output, SafeLayer *safe_layer,
           angle = (int)(180 * acos((p->x0 - p->x1) / p->r0) / M_PI);
         }
         obj->fillcolor = svg_resolve_color(clr0);
-        svg_set_gradient_vals(obj, clr1, angle, frac);
+        obj->stopcolor = svg_resolve_color(clr1);
+        obj->gradient_angle = angle;
+        obj->gradient_frac = frac;
         filled = RGRADIENT;
       } else {
         xdot_linear_grad *p = &op->op.u.grad_color.u.ling;
@@ -813,7 +815,9 @@ static void emit_xdot(output_string *output, SafeLayer *safe_layer,
         const double frac = p->stops[1].frac;
         angle = (int)(180 * atan2(p->y1 - p->y0, p->x1 - p->x0) / M_PI);
         obj->fillcolor = svg_resolve_color(clr0);
-        svg_set_gradient_vals(obj, clr1, angle, frac);
+        obj->stopcolor = svg_resolve_color(clr1);
+        obj->gradient_angle = angle;
+        obj->gradient_frac = frac;
         filled = GRADIENT;
       }
       break;
@@ -868,11 +872,11 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
       obj->pencolor = svg_resolve_color("transparent");
       checkClusterStyle(g, &istyle);
       if (clrs[1])
-        svg_set_gradient_vals(obj, clrs[1], late_int(g, G_gradientangle, 0, 0),
-                              frac);
+        obj->stopcolor = svg_resolve_color(clrs[1]);
       else
-        svg_set_gradient_vals(obj, DEFAULT_COLOR,
-                              late_int(g, G_gradientangle, 0, 0), frac);
+        obj->stopcolor = svg_resolve_color(DEFAULT_COLOR);
+      obj->gradient_angle = late_int(g, G_gradientangle, 0, 0);
+      obj->gradient_frac = frac;
       if (istyle.radial)
         filled = RGRADIENT;
       else
@@ -2075,11 +2079,11 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
       if (findStopColor(fillcolor, clrs, &frac)) {
         obj.fillcolor = svg_resolve_color(clrs[0]);
         if (clrs[1])
-          svg_set_gradient_vals(&obj, clrs[1],
-                                late_int(sg, G_gradientangle, 0, 0), frac);
+          obj.stopcolor = svg_resolve_color(clrs[1]);
         else
-          svg_set_gradient_vals(&obj, DEFAULT_COLOR,
-                                late_int(sg, G_gradientangle, 0, 0), frac);
+          obj.stopcolor = svg_resolve_color(DEFAULT_COLOR);
+        obj.gradient_angle = late_int(sg, G_gradientangle, 0, 0);
+        obj.gradient_frac = frac;
         if (istyle.radial)
           filled = RGRADIENT;
         else

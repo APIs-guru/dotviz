@@ -1093,13 +1093,6 @@ gvcolor_t svg_resolve_color(char *name) {
   return color;
 }
 
-void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,
-                           double frac) {
-  obj->stopcolor = svg_resolve_color(stopcolor);
-  obj->gradient_angle = angle;
-  obj->gradient_frac = frac;
-}
-
 void svg_set_style(obj_state_t *obj, char **s) {
   char *line, *p;
 
