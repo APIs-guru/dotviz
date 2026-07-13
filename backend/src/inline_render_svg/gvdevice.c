@@ -9,20 +9,13 @@
  *************************************************************************/
 
 #include <ctype.h>
-#include <limits.h>
 #include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
 #include <errno.h>
 
 #include <assert.h>
-#include <const.h>
 #include "cgraph.h"
 #include "gvio_svg.h"
 #include <util/agxbuf.h>
-#include <util/exit.h>
-#include <util/startswith.h>
 
 #include "../output_string.h"
 
@@ -53,52 +46,6 @@ static bool xml_isentity(const char *s) {
   return *s == ';';
 }
 
-/** XML-escape a character
- *
- * \param previous The source character preceding the current one or '\0' if
- *   there was no prior character.
- * \param[in, out] current Pointer to the current position in a source string
- *   being escaped. The pointer is updated based on how many characters are
- *   consumed.
- * \param flags Options for configuring behavior.
- * \param cb User function for emitting escaped data. This is expected to take a
- *   caller-defined state type as the first parameter and the string to emit as
- *   the second, and then return an opaque value that is passed back to the
- *   caller.
- * \param state Data to pass as the first parameter when calling `cb`.
- * \return The return value of a call to `cb`.
- */
-static void xml_core(char previous, const char *s, xml_flags_t flags,
-                     output_string *output) {
-  char c = *s;
-  if (c == '&' && (flags.raw || !xml_isentity(s))) {
-    // escape '&' only if not part of a legal entity sequence
-    out_puts(output, "&amp;");
-  } else if (c == '<') {
-    // '<' '>' are safe to substitute even if string is already XML encoded
-    // since XML strings won’t contain '<' or '>'
-    out_puts(output, "&lt;");
-  } else if (c == '>') {
-    out_puts(output, "&gt;");
-  } else if (c == '-' && flags.dash) {
-    // '-' cannot be used in XML comment strings
-    out_puts(output, "&#45;");
-  } else if (c == ' ' && previous == ' ' && flags.nbsp) {
-    // substitute 2nd and subsequent spaces with required_spaces
-    out_puts(output, "&#160;"); // Inkscape does not recognize &nbsp;
-  } else if (c == '"') {
-    out_puts(output, "&quot;");
-  } else if (c == '\'') {
-    out_puts(output, "&#39;");
-  } else if (c == '\n' && flags.raw) {
-    out_puts(output, "&#10;");
-  } else if (c == '\r' && flags.raw) {
-    out_puts(output, "&#13;");
-  } else {
-    out_putc(output, c); // otherwise, output the character as-is
-  }
-}
-
 void gvputs_xml(output_string *output, const char *s) {
   const xml_flags_t flags = {.dash = 1, .nbsp = 1};
   gvputs_xml_with_flags(output, s, flags);
@@ -108,8 +55,35 @@ void gvputs_xml_with_flags(output_string *output, const char *s,
                            xml_flags_t flags) {
   char previous = '\0';
   while (*s != '\0') {
-    xml_core(previous, s, flags, output);
-    previous = *s;
+    char c = *s;
+    if (c == '&' && (flags.raw || !xml_isentity(s))) {
+      // escape '&' only if not part of a legal entity sequence
+      out_puts(output, "&amp;");
+    } else if (c == '<') {
+      // '<' '>' are safe to substitute even if string is already XML encoded
+      // since XML strings won’t contain '<' or '>'
+      out_puts(output, "&lt;");
+    } else if (c == '>') {
+      out_puts(output, "&gt;");
+    } else if (c == '-' && flags.dash) {
+      // '-' cannot be used in XML comment strings
+      out_puts(output, "&#45;");
+    } else if (c == ' ' && previous == ' ' && flags.nbsp) {
+      // substitute 2nd and subsequent spaces with required_spaces
+      out_puts(output, "&#160;"); // Inkscape does not recognize &nbsp;
+    } else if (c == '"') {
+      out_puts(output, "&quot;");
+    } else if (c == '\'') {
+      out_puts(output, "&#39;");
+    } else if (c == '\n' && flags.raw) {
+      out_puts(output, "&#10;");
+    } else if (c == '\r' && flags.raw) {
+      out_puts(output, "&#13;");
+    } else {
+      out_putc(output, c); // otherwise, output the character as-is
+    }
+
+    previous = c;
     ++s;
   }
 }
@@ -131,10 +105,6 @@ void gvprintf(output_string *output, const char *format, ...) {
 
   agxbfree(&buf);
 }
-
-/* Test with:
- *	cc -DGVPRINTNUM_TEST gvprintnum.c -o gvprintnum
- */
 
 /* gv_trim_zeros
  * Identify Trailing zeros and decimal point, if possible.
