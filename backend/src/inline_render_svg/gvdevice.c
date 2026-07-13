@@ -8,10 +8,6 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-/*
- *  This library forms the socket for run-time loadable device plugins.
- */
-
 #include <ctype.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -29,7 +25,6 @@
 #include <util/startswith.h>
 
 #include "../output_string.h"
-#include "unreachable.h"
 
 /* return true if *s points to &[A-Za-z]+;      (e.g. &Ccedil; )
  *                          or &#[0-9]*;        (e.g. &#38; )
@@ -75,63 +70,33 @@ static bool xml_isentity(const char *s) {
  */
 static void xml_core(char previous, const char *s, xml_flags_t flags,
                      output_string *output) {
-
   char c = *s;
-
-  // escape '&' only if not part of a legal entity sequence
   if (c == '&' && (flags.raw || !xml_isentity(s))) {
+    // escape '&' only if not part of a legal entity sequence
     out_puts(output, "&amp;");
-    return;
-  }
-
-  // '<' '>' are safe to substitute even if string is already XML encoded since
-  // XML strings won’t contain '<' or '>'
-  if (c == '<') {
+  } else if (c == '<') {
+    // '<' '>' are safe to substitute even if string is already XML encoded
+    // since XML strings won’t contain '<' or '>'
     out_puts(output, "&lt;");
-    return;
-  }
-
-  if (c == '>') {
+  } else if (c == '>') {
     out_puts(output, "&gt;");
-    return;
-  }
-
-  // '-' cannot be used in XML comment strings
-  if (c == '-' && flags.dash) {
+  } else if (c == '-' && flags.dash) {
+    // '-' cannot be used in XML comment strings
     out_puts(output, "&#45;");
-    return;
-  }
-
-  if (c == ' ' && previous == ' ' && flags.nbsp) {
+  } else if (c == ' ' && previous == ' ' && flags.nbsp) {
     // substitute 2nd and subsequent spaces with required_spaces
-    out_puts(output,
-             "&#160;"); // Inkscape does not recognize &nbsp;
-    return;
-  }
-
-  if (c == '"') {
+    out_puts(output, "&#160;"); // Inkscape does not recognize &nbsp;
+  } else if (c == '"') {
     out_puts(output, "&quot;");
-    return;
-  }
-
-  if (c == '\'') {
+  } else if (c == '\'') {
     out_puts(output, "&#39;");
-    return;
-  }
-
-  if (c == '\n' && flags.raw) {
+  } else if (c == '\n' && flags.raw) {
     out_puts(output, "&#10;");
-    return;
-  }
-
-  if (c == '\r' && flags.raw) {
+  } else if (c == '\r' && flags.raw) {
     out_puts(output, "&#13;");
-    return;
+  } else {
+    out_putc(output, c); // otherwise, output the character as-is
   }
-
-  // otherwise, output the character as-is
-  char buffer[2] = {c, '\0'};
-  out_puts(output, buffer);
 }
 
 void gvputs_xml(output_string *output, const char *s) {
