@@ -263,7 +263,7 @@ static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
     svg_set_style(obj, sptr);
   } else
     svg_set_style(obj, svg_defaultlinestyle);
-  svg_set_penwidth(obj, dp->border);
+  obj->penwidth = dp->border;
 
   if (dp->style.rounded)
     round_corners(output, obj, mkPts(AF, b, dp->border), 4,
@@ -563,7 +563,7 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
      * calculations to take into account wider rules.
      */
     cells = tbl->u.n.cells;
-    svg_set_penwidth(obj, 1.0);
+    obj->penwidth =  1.0;
     while ((cp = *cells++)) {
       if (cp->hruled || cp->vruled)
         emit_html_rules(output, obj, cp, env, tbl->data.pencolor, *cells);

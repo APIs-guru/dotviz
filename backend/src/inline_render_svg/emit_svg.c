@@ -518,7 +518,7 @@ int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
   const pointf ctr = mid_pointf(pf[0], pf[1]);
   const pointf semi = sub_pointf(pf[1], ctr);
   if (save_penwidth > THIN_LINE)
-    svg_set_penwidth(obj, THIN_LINE);
+    obj->penwidth = THIN_LINE;
 
   angle0 = 0;
   for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
@@ -540,7 +540,7 @@ int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
   }
 
   if (save_penwidth > THIN_LINE)
-    svg_set_penwidth(obj, save_penwidth);
+    obj->penwidth = save_penwidth;
   colorsegs_free(&segs);
   return rv;
 }
@@ -579,7 +579,7 @@ int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
   pts[1].x = pts[2].x = pts[0].x;
 
   if (save_penwidth > THIN_LINE)
-    svg_set_penwidth(obj, THIN_LINE);
+    obj->penwidth = THIN_LINE;
   for (size_t i = 0; i < colorsegs_size(&segs); ++i) {
     const colorseg_t s = colorsegs_get(&segs, i);
     if (s.color == NULL)
@@ -595,7 +595,7 @@ int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
     pts[0].x = pts[3].x = pts[1].x;
   }
   if (save_penwidth > THIN_LINE)
-    svg_set_penwidth(obj, save_penwidth);
+    obj->penwidth = save_penwidth;
   colorsegs_free(&segs);
   return rv;
 }
@@ -1567,7 +1567,7 @@ static void emit_begin_edge(output_string *output, SafeLayer *safe_layer,
 
   if (E_penwidth && (s = agxget(e, E_penwidth)) && s[0]) {
     penwidth = late_double(e, E_penwidth, 1.0, 0.0);
-    svg_set_penwidth(obj, penwidth);
+    obj->penwidth = penwidth;
   }
 
   if ((lab = ED_label(e)))
@@ -2090,7 +2090,7 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
 
     if (G_penwidth && ((s = ag_xget(sg, G_penwidth)) && s[0])) {
       penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
-      svg_set_penwidth(&obj, penwidth);
+      obj.penwidth = penwidth;
     }
 
     if (istyle.rounded) {

@@ -517,7 +517,7 @@ static graphviz_polygon_style_t stylenode(obj_state_t *obj, node_t *n) {
 
   if (N_penwidth && (s = agxget(n, N_penwidth)) && s[0]) {
     penwidth = late_double(n, N_penwidth, 1.0, 0.0);
-    svg_set_penwidth(obj, penwidth);
+    obj->penwidth =  penwidth;
   }
 
   return istyle;
@@ -3254,7 +3254,7 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
   else
     svg_set_style(obj, &point_style[1]);
   if (N_penwidth)
-    svg_set_penwidth(obj, late_double(n, N_penwidth, 1.0, 0.0));
+    obj->penwidth =  late_double(n, N_penwidth, 1.0, 0.0);
 
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     color = DEFAULT_ACTIVEPENCOLOR;

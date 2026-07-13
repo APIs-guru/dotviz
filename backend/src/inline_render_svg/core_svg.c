@@ -1156,7 +1156,3 @@ void svg_set_style(obj_state_t *obj, char **s) {
       }
     }
 }
-
-void svg_set_penwidth(obj_state_t *obj, double penwidth) {
-  obj->penwidth = penwidth;
-}

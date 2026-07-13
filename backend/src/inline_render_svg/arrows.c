@@ -1218,7 +1218,7 @@ void arrow_gen(output_string *output, obj_state_t *obj, emit_state_t emit_state,
   /* linewidth needs to be reset */
   svg_set_style(obj, svg_defaultlinestyle);
 
-  svg_set_penwidth(obj, penwidth);
+  obj->penwidth = penwidth;
 
   /* generate arrowhead vector */
   u.x -= p.x;
