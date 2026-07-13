@@ -29,7 +29,6 @@
 #include <util/startswith.h>
 
 #include "../output_string.h"
-#include "gv_ctype.h"
 #include "unreachable.h"
 
 /* return true if *s points to &[A-Za-z]+;      (e.g. &Ccedil; )
@@ -37,27 +36,25 @@
  *                          or &#x[0-9a-fA-F]*; (e.g. &#x6C34; )
  */
 static bool xml_isentity(const char *s) {
-  s++;             /* already known to be '&' */
-  if (*s == ';') { // '&;' is not a valid entity
-    return false;
-  }
+  s++; /* already known to be '&' */
   if (*s == '#') {
     s++;
     if (*s == 'x' || *s == 'X') {
       s++;
-      while (gv_isxdigit(*s))
+      while ((*s >= '0' && *s <= '9') || (*s >= 'a' && *s <= 'f') || (*s >= 'A' && *s <= 'F'))
         s++;
     } else {
-      while (gv_isdigit(*s))
+      while (*s >= '0' && *s <= '9')
         s++;
     }
-  } else {
-    while (gv_isalpha(*s))
-      s++;
+    return *s == ';';
   }
+
   if (*s == ';')
-    return true;
-  return false;
+    return false; // '&;' is not a valid entity
+  while ((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z'))
+    s++;
+  return *s == ';';
 }
 
 /** XML-escape a character
