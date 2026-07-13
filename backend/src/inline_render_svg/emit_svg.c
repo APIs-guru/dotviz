@@ -789,7 +789,7 @@ static void emit_xdot(output_string *output, SafeLayer *safe_layer,
       filled = FILL;
       break;
     case xd_pen_color:
-      svg_set_pencolor(obj, op->op.u.color);
+      obj->pencolor = svg_resolve_color(op->op.u.color);
       filled = FILL;
       break;
     case xd_grad_fill_color:
@@ -865,7 +865,7 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
       int filled;
       graphviz_polygon_style_t istyle = {0};
       svg_set_fillcolor(obj, clrs[0]);
-      svg_set_pencolor(obj, "transparent");
+      obj->pencolor = svg_resolve_color("transparent");
       checkClusterStyle(g, &istyle);
       if (clrs[1])
         svg_set_gradient_vals(obj, clrs[1], late_int(g, G_gradientangle, 0, 0),
@@ -882,7 +882,7 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
       free(clrs[1]);
     } else {
       svg_set_fillcolor(obj, str);
-      svg_set_pencolor(obj, "transparent");
+      obj->pencolor = svg_resolve_color("transparent");
       svg_box(output, obj, safe_layer->safe_job->clip, FILL); /* filled */
     }
   }
@@ -1096,7 +1096,7 @@ static void emit_attachment(output_string *output, obj_state_t *obj,
      - need something unambiguous in case of multicolored parallel edges
      - defaults to black for html-like labels
    */
-  svg_set_pencolor(obj, lp->fontcolor);
+  obj->pencolor = svg_resolve_color(lp->fontcolor);
   svg_polyline(output, obj, AF, 3);
 }
 
@@ -1213,7 +1213,7 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
         break;
       if (AEQ0(s.t))
         continue;
-      svg_set_pencolor(obj, s.color);
+      obj->pencolor = svg_resolve_color(s.color);
       left -= s.t;
       endcolor = s.color;
       if (first) {
@@ -1242,13 +1242,13 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
      * Use local copy of penwidth to work around reset.
      */
     if (bz.sflag) {
-      svg_set_pencolor(obj, colorsegs_front(&segs)->color);
+      obj->pencolor = svg_resolve_color(colorsegs_front(&segs)->color);
       svg_set_fillcolor(obj, colorsegs_front(&segs)->color);
       arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                 bz.sflag);
     }
     if (bz.eflag) {
-      svg_set_pencolor(obj, endcolor);
+      obj->pencolor = svg_resolve_color(endcolor);
       svg_set_fillcolor(obj, endcolor);
       arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
                 penwidth, bz.eflag);
@@ -1364,7 +1364,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     } else
       fillcolor = late_nnstring(e, E_fillcolor, color);
     if (pencolor != color)
-      svg_set_pencolor(obj, pencolor);
+      obj->pencolor = svg_resolve_color(pencolor);
     if (fillcolor != color)
       svg_set_fillcolor(obj, fillcolor);
     color = pencolor;
@@ -1374,14 +1374,14 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         color = DEFAULT_COLOR;
       if (*fillcolor == '\0')
         fillcolor = DEFAULT_COLOR;
-      svg_set_pencolor(obj, "transparent");
+      obj->pencolor = svg_resolve_color("transparent");
       svg_set_fillcolor(obj, color);
       bz = ED_spl(e)->list[0];
       stroke_t stp = taper(&bz, taperfun(e), penwidth);
       assert(stp.nvertices <= INT_MAX);
       svg_polygon(output, obj, stp.vertices, stp.nvertices, 1);
       free_stroke(stp);
-      svg_set_pencolor(obj, color);
+      obj->pencolor = svg_resolve_color(color);
       if (fillcolor != color)
         svg_set_fillcolor(obj, fillcolor);
       if (bz.sflag) {
@@ -1441,7 +1441,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
           color = DEFAULT_COLOR;
         if (color != lastcolor) {
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            svg_set_pencolor(obj, color);
+            obj->pencolor = svg_resolve_color(color);
             svg_set_fillcolor(obj, color);
           }
           lastcolor = color;
@@ -1464,7 +1464,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         if (color != tailcolor) {
           color = tailcolor;
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            svg_set_pencolor(obj, color);
+            obj->pencolor = svg_resolve_color(color);
             svg_set_fillcolor(obj, color);
           }
         }
@@ -1475,7 +1475,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         if (color != headcolor) {
           color = headcolor;
           if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            svg_set_pencolor(obj, color);
+            obj->pencolor = svg_resolve_color(color);
             svg_set_fillcolor(obj, color);
           }
         }
@@ -1492,10 +1492,10 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     } else {
       if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
         if (color[0]) {
-          svg_set_pencolor(obj, color);
+          obj->pencolor = svg_resolve_color(color);
           svg_set_fillcolor(obj, fillcolor);
         } else {
-          svg_set_pencolor(obj, DEFAULT_COLOR);
+          obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
           if (fillcolor[0])
             svg_set_fillcolor(obj, fillcolor);
           else
@@ -1930,7 +1930,7 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer,
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
 
   svg_begin_page(output, safe_layer, obj);
-  svg_set_pencolor(obj, DEFAULT_COLOR);
+  obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
   svg_set_fillcolor(obj, DEFAULT_FILL);
   if (obj->url || obj->explicit_tooltip) {
     obj->url_map_p = p;
@@ -2102,9 +2102,9 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
         AF[3].x = AF[0].x;
         AF[3].y = AF[2].y;
         if (doPerim)
-          svg_set_pencolor(&obj, pencolor);
+          obj.pencolor = svg_resolve_color(pencolor);
         else
-          svg_set_pencolor(&obj, "transparent");
+          obj.pencolor = svg_resolve_color("transparent");
         round_corners(output, &obj, AF, 4, istyle, filled);
       }
     } else if (istyle.striped) {
@@ -2115,18 +2115,18 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
       AF[3].x = AF[0].x;
       AF[3].y = AF[2].y;
       if (late_int(sg, G_peripheries, 1, 0) == 0)
-        svg_set_pencolor(&obj, "transparent");
+        obj.pencolor = svg_resolve_color("transparent");
       else
-        svg_set_pencolor(&obj, pencolor);
+        obj.pencolor = svg_resolve_color(pencolor);
       if (stripedBox(output, &obj, AF, fillcolor, 0) > 1)
         agerr(AGPREV, "in cluster %s\n", agnameof(sg));
       svg_box(output, &obj, GD_bb(sg), 0);
     } else {
       if (late_int(sg, G_peripheries, 1, 0)) {
-        svg_set_pencolor(&obj, pencolor);
+        obj.pencolor = svg_resolve_color(pencolor);
         svg_box(output, &obj, GD_bb(sg), filled);
       } else if (filled != 0) {
-        svg_set_pencolor(&obj, "transparent");
+        obj.pencolor = svg_resolve_color("transparent");
         svg_box(output, &obj, GD_bb(sg), filled);
       }
     }

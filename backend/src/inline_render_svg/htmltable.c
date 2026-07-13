@@ -168,7 +168,7 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
       else
         tf.flags = 0;
 
-      svg_set_pencolor(obj, tf.color);
+      obj->pencolor = svg_resolve_color(tf.color);
 
       tl.str = ti->str;
       tl.font = &tf;
@@ -253,7 +253,7 @@ static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
   unsigned short sides;
 
-  svg_set_pencolor(obj, color);
+  obj->pencolor = svg_resolve_color(color);
   if (dp->style.dashed || dp->style.dotted) {
     sptr[0] = sptr[1] = NULL;
     if (dp->style.dashed)
@@ -359,7 +359,7 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
     svg_set_fillcolor(obj, color);
     filled = FILL;
   }
-  svg_set_pencolor(obj, "transparent");
+  obj->pencolor = svg_resolve_color("transparent");
   return filled;
 }
 
@@ -452,7 +452,7 @@ static void emit_html_rules(output_string *output, obj_state_t *obj,
   if (!color)
     color = DEFAULT_COLOR;
   svg_set_fillcolor(obj, color);
-  svg_set_pencolor(obj, color);
+  obj->pencolor = svg_resolve_color(color);
 
   pts = cp->data.box;
   pts.LL.x += pos.x;
@@ -754,9 +754,9 @@ void svg_html_label(output_string *output, SafeLayer *safe_layer,
     /* Need to override line style set by node. */
     svg_set_style(&obj, svg_defaultlinestyle);
     if (tbl->data.pencolor)
-      svg_set_pencolor(&obj, tbl->data.pencolor);
+      obj.pencolor = svg_resolve_color(tbl->data.pencolor);
     else
-      svg_set_pencolor(&obj, DEFAULT_COLOR);
+      obj.pencolor = svg_resolve_color(DEFAULT_COLOR);
     emit_html_tbl(output, safe_layer, &obj, tbl, &env);
   } else {
     emit_html_txt(output, GD_fontnames(safe_layer->safe_job->graph), &obj,

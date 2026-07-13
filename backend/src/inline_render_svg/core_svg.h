@@ -1,6 +1,7 @@
 #ifndef CORE_SVG_H
 #define CORE_SVG_H
 
+#include "color.h"
 #include "geom.h"
 #include "gvcext.h"
 #include "safe_job.h"
@@ -43,7 +44,7 @@ void svg_begin_job(output_string *output, const char *stylesheet);
 void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
                    char *name, pointf *a, size_t n, char *imagescale,
                    char *imagepos);
-void svg_set_pencolor(obj_state_t *obj, char *name);
+gvcolor_t svg_resolve_color(char *name);
 void svg_set_fillcolor(obj_state_t *obj, char *name);
 void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,
                            double frac);

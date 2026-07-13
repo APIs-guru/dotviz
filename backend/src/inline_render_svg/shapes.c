@@ -378,7 +378,7 @@ static char *penColor(obj_state_t *obj, node_t *n) {
   color = late_nnstring(n, N_color, "");
   if (!color[0])
     color = DEFAULT_COLOR;
-  svg_set_pencolor(obj, color);
+  obj->pencolor = svg_resolve_color(color);
   return color;
 }
 
@@ -2934,25 +2934,25 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   char *clrs[2] = {0};
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     pencolor = DEFAULT_ACTIVEPENCOLOR;
-    svg_set_pencolor(obj, pencolor);
+    obj->pencolor = svg_resolve_color(pencolor);
     color = DEFAULT_ACTIVEFILLCOLOR;
     svg_set_fillcolor(obj, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
     pencolor = DEFAULT_SELECTEDPENCOLOR;
-    svg_set_pencolor(obj, pencolor);
+    obj->pencolor = svg_resolve_color(pencolor);
     color = DEFAULT_SELECTEDFILLCOLOR;
     svg_set_fillcolor(obj, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
     pencolor = DEFAULT_DELETEDPENCOLOR;
-    svg_set_pencolor(obj, pencolor);
+    obj->pencolor = svg_resolve_color(pencolor);
     color = DEFAULT_DELETEDFILLCOLOR;
     svg_set_fillcolor(obj, color);
     filled = FILL;
   } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
     pencolor = DEFAULT_VISITEDPENCOLOR;
-    svg_set_pencolor(obj, pencolor);
+    obj->pencolor = svg_resolve_color(pencolor);
     color = DEFAULT_VISITEDFILLCOLOR;
     svg_set_fillcolor(obj, color);
     filled = FILL;
@@ -2990,7 +2990,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   /* if no boundary but filled, set boundary color to transparent */
   if (peripheries == 0 && filled != 0 && pfilled) {
     peripheries = 1;
-    svg_set_pencolor(obj, "transparent");
+    obj->pencolor = svg_resolve_color("transparent");
   }
 
   /* draw peripheries first */
@@ -3020,9 +3020,9 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
       }
       svg_polygon(output, obj, AF, sides, 0);
     } else if (style.underline) {
-      svg_set_pencolor(obj, "transparent");
+      obj->pencolor = svg_resolve_color("transparent");
       svg_polygon(output, obj, AF, sides, filled);
-      svg_set_pencolor(obj, pencolor);
+      obj->pencolor = svg_resolve_color(pencolor);
       svg_polyline(output, obj, AF + 2, 2);
     } else if (SPECIAL_CORNERS(style)) {
       round_corners(output, obj, AF, sides, style, filled);
@@ -3258,22 +3258,22 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
 
   if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
     color = DEFAULT_ACTIVEPENCOLOR;
-    svg_set_pencolor(obj, color);
+    obj->pencolor = svg_resolve_color(color);
     color = DEFAULT_ACTIVEFILLCOLOR;
     svg_set_fillcolor(obj, color);
   } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
     color = DEFAULT_SELECTEDPENCOLOR;
-    svg_set_pencolor(obj, color);
+    obj->pencolor = svg_resolve_color(color);
     color = DEFAULT_SELECTEDFILLCOLOR;
     svg_set_fillcolor(obj, color);
   } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
     color = DEFAULT_DELETEDPENCOLOR;
-    svg_set_pencolor(obj, color);
+    obj->pencolor = svg_resolve_color(color);
     color = DEFAULT_DELETEDFILLCOLOR;
     svg_set_fillcolor(obj, color);
   } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
     color = DEFAULT_VISITEDPENCOLOR;
-    svg_set_pencolor(obj, color);
+    obj->pencolor = svg_resolve_color(color);
     color = DEFAULT_VISITEDFILLCOLOR;
     svg_set_fillcolor(obj, color);
   } else {
@@ -3287,7 +3287,7 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
   if (peripheries == 0) {
     peripheries = 1;
     if (color[0])
-      svg_set_pencolor(obj, color);
+      obj->pencolor = svg_resolve_color(color);
   }
 
   for (size_t j = 0; j < peripheries; j++) {
