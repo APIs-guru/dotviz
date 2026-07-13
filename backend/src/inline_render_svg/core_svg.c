@@ -227,15 +227,6 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
 
 #define LOCALNAMEPREFIX '%'
 
-/* SVG dash array */
-static const char sdasharray[] = "5,2";
-/* SVG dot array */
-static const char sdotarray[] = "1,5";
-
-static const char transparent[] = "transparent";
-static const char none[] = "none";
-static const char black[] = "black";
-
 static void svg_bzptarray(output_string *output, pointf *A, size_t n) {
   char c;
 
@@ -276,14 +267,14 @@ static void svg_print_id_class(output_string *output, char *id, char *idx,
 static void svg_print_paint(output_string *output, gvcolor_t color) {
   switch (color.type) {
   case COLOR_STRING:
-    if (!strcmp(color.u.string, transparent))
-      out_puts(output, none);
+    if (!strcmp(color.u.string, "transparent"))
+      out_puts(output, "none");
     else
       out_puts(output, color.u.string);
     break;
   case RGBA_BYTE:
     if (color.u.rgba[3] == 0) /* transparent */
-      out_puts(output, none);
+      out_puts(output, "none");
     else
       gvprintf(output, "#%02x%02x%02x", color.u.rgba[0], color.u.rgba[1],
                color.u.rgba[2]);
@@ -303,8 +294,8 @@ static void svg_print_paint(output_string *output, gvcolor_t color) {
 static void svg_print_gradient_color(output_string *output, gvcolor_t color) {
   switch (color.type) {
   case COLOR_STRING:
-    if (!strcmp(color.u.string, transparent))
-      out_puts(output, black);
+    if (!strcmp(color.u.string, "transparent"))
+      out_puts(output, "black");
     else
       out_puts(output, color.u.string);
     break;
@@ -351,10 +342,11 @@ static void svg_grstyle(output_string *output, obj_state_t *obj, int filled,
     out_puts(output, "\" stroke-width=\"");
     gvprintdouble(output, obj->penwidth);
   }
+  /* SVG dash array */
   if (obj->pen == PEN_DASHED) {
-    gvprintf(output, "\" stroke-dasharray=\"%s", sdasharray);
+    out_puts(output, "\" stroke-dasharray=\"5,2");
   } else if (obj->pen == PEN_DOTTED) {
-    gvprintf(output, "\" stroke-dasharray=\"%s", sdotarray);
+    out_puts(output, "\" stroke-dasharray=\"1,5");
   }
   if (obj->pencolor.type == RGBA_BYTE && obj->pencolor.u.rgba[3] > 0 &&
       obj->pencolor.u.rgba[3] < 255)
@@ -690,7 +682,7 @@ static void svg_print_stop(output_string *output, double offset,
   out_puts(output, ";stop-opacity:");
   if (color.type == RGBA_BYTE && color.u.rgba[3] < 255)
     gvprintf(output, "%f", (float)color.u.rgba[3] / 255.0);
-  else if (color.type == COLOR_STRING && !strcmp(color.u.string, transparent))
+  else if (color.type == COLOR_STRING && !strcmp(color.u.string, "transparent"))
     out_puts(output, "0");
   else
     out_puts(output, "1.");
@@ -1044,12 +1036,6 @@ char *svg_knowncolors[] = {"aliceblue",
                            "yellowgreen"};
 
 extern bool mapbool(const char *s);
-
-/* font modifiers */
-#define REGULAR 0
-#define BOLD 1
-#define ITALIC 2
-
 static int svg_comparestr(const void *s1, const void *s2) {
   return strcasecmp(s1, *(char *const *)s2);
 }
