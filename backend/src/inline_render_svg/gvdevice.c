@@ -106,40 +106,20 @@ void gvprintf(output_string *output, const char *format, ...) {
   agxbfree(&buf);
 }
 
-/* gv_trim_zeros
- * Identify Trailing zeros and decimal point, if possible.
- * Assumes the input is the result of %.02f printing.
- */
-static size_t gv_trim_zeros(const char *buf) {
-  char *dotp = strchr(buf, '.');
-  if (dotp == NULL) {
-    return strlen(buf);
-  }
-
-  // check this really is the result of %.02f printing
-  assert(isdigit((int)dotp[1]) && isdigit((int)dotp[2]) && dotp[3] == '\0');
-
-  if (dotp[2] == '0') {
-    if (dotp[1] == '0') {
-      return (size_t)(dotp - buf);
-    } else {
-      return (size_t)(dotp - buf) + 2;
-    }
-  }
-
-  return strlen(buf);
-}
-
 void gvprintdouble(output_string *output, double num) {
   // Prevents values like -0
   if (num > -0.005 && num < 0.005) {
     out_putc(output, '0');
     return;
   }
+
   char buf[50];
-
-  snprintf(buf, 50, "%.02f", num);
-  size_t len = gv_trim_zeros(buf);
-
+  size_t len = snprintf(buf, 50, "%.02f", num);
+  if (buf[len - 1] == '0') {
+    len -= 1; // skip '0'
+  }
+  if (buf[len - 1] == '0') {
+    len -= 2; // skip both '.' and '0'
+  }
   out_put(output, buf, len);
 }
