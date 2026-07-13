@@ -41,7 +41,8 @@ static bool xml_isentity(const char *s) {
     s++;
     if (*s == 'x' || *s == 'X') {
       s++;
-      while ((*s >= '0' && *s <= '9') || (*s >= 'a' && *s <= 'f') || (*s >= 'A' && *s <= 'F'))
+      while ((*s >= '0' && *s <= '9') || (*s >= 'a' && *s <= 'f') ||
+             (*s >= 'A' && *s <= 'F'))
         s++;
     } else {
       while (*s >= '0' && *s <= '9')
@@ -137,24 +138,19 @@ static void xml_core(char previous, const char **current, xml_flags_t flags,
   out_puts(output, buffer);
 }
 
-static void my_xml_escape(const char *s, xml_flags_t flags,
-                          output_string *output) {
+void gvputs_xml(output_string *output, const char *s) {
+  const xml_flags_t flags = {.dash = 1, .nbsp = 1};
+  gvputs_xml_with_flags(output, s, flags);
+}
+
+void gvputs_xml_with_flags(output_string *output, const char *s,
+                           xml_flags_t flags) {
   char previous = '\0';
   while (*s != '\0') {
     char p = *s;
     xml_core(previous, &s, flags, output);
     previous = p;
   }
-}
-
-void gvputs_xml(output_string *output, const char *s) {
-  const xml_flags_t flags = {.dash = 1, .nbsp = 1};
-  my_xml_escape(s, flags, output);
-}
-
-void gvputs_xml_with_flags(output_string *output, const char *s,
-                           xml_flags_t flags) {
-  my_xml_escape(s, flags, output);
 }
 
 void gvprintf(output_string *output, const char *format, ...) {
