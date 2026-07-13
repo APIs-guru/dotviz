@@ -225,7 +225,6 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
   out_puts(output, "/>\n");
 }
 
-
 #define LOCALNAMEPREFIX '%'
 
 /* SVG dash array */
@@ -1062,14 +1061,18 @@ static int svg_comparestr(const void *s1, const void *s2) {
  * strcasecmp are both char*.
  */
 static void svg_resolve_color(char *name, gvcolor_t *color) {
-  int rc;
+  char *cp = NULL;
+
+  if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
+    *cp = '\0';
+
   color->u.string = name;
   color->type = COLOR_STRING;
   const size_t sz_knowncolors = sizeof(svg_knowncolors) / sizeof(char *);
   if (bsearch(name, svg_knowncolors, sz_knowncolors, sizeof(char *),
               svg_comparestr) == NULL) {
     /* if name was not found in known_colors */
-    rc = colorxlate(name, color, RGBA_BYTE);
+    int rc = colorxlate(name, color, RGBA_BYTE);
     if (rc != COLOR_OK) {
       if (rc == COLOR_UNKNOWN) {
         agxbuf missedcolor = {0};
@@ -1082,39 +1085,22 @@ static void svg_resolve_color(char *name, gvcolor_t *color) {
       }
     }
   }
-}
-
-void svg_set_pencolor(obj_state_t *obj, char *name) {
-  gvcolor_t *color = &(obj->pencolor);
-  char *cp = NULL;
-
-  if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
-    *cp = '\0';
-
-  svg_resolve_color(name, color);
 
   if (cp) /* restore color list */
     *cp = ':';
 }
 
+void svg_set_pencolor(obj_state_t *obj, char *name) {
+  svg_resolve_color(name, &(obj->pencolor));
+}
+
 void svg_set_fillcolor(obj_state_t *obj, char *name) {
-  gvcolor_t *color = &(obj->fillcolor);
-  char *cp = NULL;
-
-  if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
-    *cp = '\0';
-
-  svg_resolve_color(name, color);
-
-  if (cp)
-    *cp = ':';
+  svg_resolve_color(name, &(obj->fillcolor));
 }
 
 void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,
                            double frac) {
-  gvcolor_t *color = &(obj->stopcolor);
-
-  svg_resolve_color(stopcolor, color);
+  svg_resolve_color(stopcolor, &(obj->stopcolor));
 
   obj->gradient_angle = angle;
   obj->gradient_frac = frac;
