@@ -2963,11 +2963,11 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
       if (findStopColor(fillcolor, clrs, &frac)) {
         obj->fillcolor = svg_resolve_color(clrs[0]);
         if (clrs[1])
-          svg_set_gradient_vals(obj, clrs[1],
-                                late_int(n, N_gradientangle, 0, 0), frac);
+          obj->stopcolor = svg_resolve_color(clrs[1]);
         else
-          svg_set_gradient_vals(obj, DEFAULT_COLOR,
-                                late_int(n, N_gradientangle, 0, 0), frac);
+          obj->stopcolor = svg_resolve_color(DEFAULT_COLOR);
+        obj->gradient_angle = late_int(n, N_gradientangle, 0, 0);
+        obj->gradient_frac = frac;
         if (style.radial)
           filled = RGRADIENT;
         else
@@ -3279,7 +3279,7 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
   } else {
     color = findFillDflt(n, "black");
     obj->fillcolor = svg_resolve_color(color); /* emit fill color */
-    penColor(obj, n);              /* emit pen color */
+    penColor(obj, n);                          /* emit pen color */
   }
   filled = true;
 
@@ -3874,11 +3874,11 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
     if (findStopColor(fillcolor, clrs, &frac)) {
       obj->fillcolor = svg_resolve_color(clrs[0]);
       if (clrs[1])
-        svg_set_gradient_vals(obj, clrs[1], late_int(n, N_gradientangle, 0, 0),
-                              frac);
+        obj->stopcolor = svg_resolve_color(clrs[1]);
       else
-        svg_set_gradient_vals(obj, DEFAULT_COLOR,
-                              late_int(n, N_gradientangle, 0, 0), frac);
+        obj->stopcolor = svg_resolve_color(DEFAULT_COLOR);
+      obj->gradient_angle = late_int(n, N_gradientangle, 0, 0);
+      obj->gradient_frac = frac;
       if (style.radial)
         filled = RGRADIENT;
       else
