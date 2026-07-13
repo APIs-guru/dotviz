@@ -236,7 +236,7 @@ void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
   if (lp->u.txt.nspans < 1)
     return;
 
-  svg_set_pencolor(obj, lp->fontcolor);
+  obj->pencolor = svg_resolve_color(lp->fontcolor);
 
   /* position for first span */
   switch (lp->valign) {
