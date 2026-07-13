@@ -1060,19 +1060,20 @@ static int svg_comparestr(const void *s1, const void *s2) {
  * as an argument of the compare function, while the arguments to
  * strcasecmp are both char*.
  */
-static void svg_resolve_color(char *name, gvcolor_t *color) {
+gvcolor_t svg_resolve_color(char *name) {
+  gvcolor_t color = {0};
   char *cp = NULL;
 
   if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
     *cp = '\0';
 
-  color->u.string = name;
-  color->type = COLOR_STRING;
+  color.u.string = name;
+  color.type = COLOR_STRING;
   const size_t sz_knowncolors = sizeof(svg_knowncolors) / sizeof(char *);
   if (bsearch(name, svg_knowncolors, sz_knowncolors, sizeof(char *),
               svg_comparestr) == NULL) {
     /* if name was not found in known_colors */
-    int rc = colorxlate(name, color, RGBA_BYTE);
+    int rc = colorxlate(name, &color, RGBA_BYTE);
     if (rc != COLOR_OK) {
       if (rc == COLOR_UNKNOWN) {
         agxbuf missedcolor = {0};
@@ -1088,20 +1089,21 @@ static void svg_resolve_color(char *name, gvcolor_t *color) {
 
   if (cp) /* restore color list */
     *cp = ':';
+
+  return color;
 }
 
 void svg_set_pencolor(obj_state_t *obj, char *name) {
-  svg_resolve_color(name, &(obj->pencolor));
+  obj->pencolor = svg_resolve_color(name);
 }
 
 void svg_set_fillcolor(obj_state_t *obj, char *name) {
-  svg_resolve_color(name, &(obj->fillcolor));
+  obj->fillcolor = svg_resolve_color(name);
 }
 
 void svg_set_gradient_vals(obj_state_t *obj, char *stopcolor, int angle,
                            double frac) {
-  svg_resolve_color(stopcolor, &(obj->stopcolor));
-
+  obj->stopcolor = svg_resolve_color(stopcolor);
   obj->gradient_angle = angle;
   obj->gradient_frac = frac;
 }
