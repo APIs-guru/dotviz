@@ -31,7 +31,6 @@
 #include <limits.h>
 #include <math.h>
 #include <geomprocs.h>
-#include "gvcext.h"
 #include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
 #include "textspan.h"
@@ -56,6 +55,7 @@
 #include "xdot/xdot.h"
 #include "internal_render_svg.h"
 #include "core_svg.h"
+#include "gvio_svg.h"
 // clang-format on
 
 static void emit_clusters(output_string *output, SafeLayer *safe_layer,
@@ -2348,6 +2348,33 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
   char *s = late_string(g, agattr_text(g, AGRAPH, "comment", 0), "");
   svg_comment(&output, s);
 
+  out_puts(&output, "<!--");
+  if (agnameof(g)[0] && agnameof(g)[0] != LOCALNAMEPREFIX) {
+    out_puts(&output, " Title: ");
+    gvputs_xml(&output, agnameof(g));
+  }
+  out_puts(&output, " Pages: 1 -->\n");
+
+  gvprintf(&output, "<svg width=\"%dpt\" height=\"%dpt\"\n", safe_job->width,
+           safe_job->height);
+  gvprintf(&output, " viewBox=\"%d.00 %d.00 %d.00 %d.00\"",
+           safe_job->pageBoundingBox.LL.x, safe_job->pageBoundingBox.LL.y,
+           safe_job->pageBoundingBox.UR.x, safe_job->pageBoundingBox.UR.y);
+  // https://svgwg.org/svg2-draft/struct.html#Namespace says:
+  // > There's no need to have an ‘xmlns’ attribute declaring that the
+  // > element is in the SVG namespace when using the HTML parser. The HTML
+  // > parser will automatically create the SVG elements in the proper
+  // > namespace.
+  /* namespace of svg */
+  out_puts(&output, " xmlns=\"http://www.w3.org/2000/svg\""
+                    /* namespace of xlink */
+                    " xmlns:xlink=\"http://www.w3.org/1999/xlink\"");
+  out_puts(&output, ">\n");
+
+  /* reset node state */
+  for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
+    ND_state(n) = 0;
+
   obj_state_t obj = child_obj_state(NULL);
   obj.type = ROOTGRAPH_OBJTYPE;
   obj.u.g = g;
@@ -2355,12 +2382,6 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
 
   SafeLayer dummy_layer = {.layerNum = 0, .safe_job = safe_job};
   initObjMapData(&dummy_layer, &obj, GD_label(g), g);
-
-  svg_begin_graph(&output, safe_job, &obj);
-
-  /* reset node state */
-  for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
-    ND_state(n) = 0;
 
   int *lp = NULL;
   int layerNum = 1;
@@ -2391,8 +2412,7 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
       layerNum += 1;
     }
   }
-  svg_end_graph(&output);
+  out_puts(&output, "</svg>\n"); // end graph
   free_child_obj(&obj);
-
   return output;
 }

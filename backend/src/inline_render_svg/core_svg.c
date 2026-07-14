@@ -224,8 +224,6 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
   out_puts(output, "/>\n");
 }
 
-#define LOCALNAMEPREFIX '%'
-
 static void svg_bzptarray(output_string *output, pointf *A, size_t n) {
   char c;
 
@@ -363,35 +361,6 @@ void svg_comment(output_string *output, char *str) {
   gvputs_xml(output, str);
   out_puts(output, " -->\n");
 }
-
-void svg_begin_graph(output_string *output, SafeJob *safe_job,
-                     obj_state_t *obj) {
-
-  out_puts(output, "<!--");
-  if (agnameof(obj->u.g)[0] && agnameof(obj->u.g)[0] != LOCALNAMEPREFIX) {
-    out_puts(output, " Title: ");
-    gvputs_xml(output, agnameof(obj->u.g));
-  }
-  out_puts(output, " Pages: 1 -->\n");
-
-  gvprintf(output, "<svg width=\"%dpt\" height=\"%dpt\"\n", safe_job->width,
-           safe_job->height);
-  gvprintf(output, " viewBox=\"%d.00 %d.00 %d.00 %d.00\"",
-           safe_job->pageBoundingBox.LL.x, safe_job->pageBoundingBox.LL.y,
-           safe_job->pageBoundingBox.UR.x, safe_job->pageBoundingBox.UR.y);
-  // https://svgwg.org/svg2-draft/struct.html#Namespace says:
-  // > There's no need to have an ‘xmlns’ attribute declaring that the
-  // > element is in the SVG namespace when using the HTML parser. The HTML
-  // > parser will automatically create the SVG elements in the proper
-  // > namespace.
-  /* namespace of svg */
-  out_puts(output, " xmlns=\"http://www.w3.org/2000/svg\""
-                   /* namespace of xlink */
-                   " xmlns:xlink=\"http://www.w3.org/1999/xlink\"");
-  out_puts(output, ">\n");
-}
-
-void svg_end_graph(output_string *output) { out_puts(output, "</svg>\n"); }
 
 void svg_begin_layer(output_string *output, obj_state_t *obj, char *layername) {
   svg_print_id_class(output, layername, NULL, "layer", obj->u.g);
