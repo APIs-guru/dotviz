@@ -267,10 +267,6 @@ output_string render_svg(Agraph_t *g) {
     dpi.x = dpi.y = GD_drawing(g)->dpi;
   }
 
-  int rv;
-  Agnode_t *n;
-  char *nodename = NULL;
-
   /* bounding box */
   boxf graph_bb = GD_bb(g);
   boxf bb = {
@@ -314,11 +310,11 @@ output_string render_svg(Agraph_t *g) {
 
   /* user can override */
   if ((str = agget(g, "viewport"))) {
-    nodename = gv_alloc(strlen(str) + 1);
-    rv = sscanf(str, "%lf,%lf,%lf,\'%[^\']\'", &view.x, &view.y, &zoom,
+    char *nodename = gv_alloc(strlen(str) + 1);
+    int rv = sscanf(str, "%lf,%lf,%lf,\'%[^\']\'", &view.x, &view.y, &zoom,
                 nodename);
     if (rv == 4) {
-      n = agfindnode(g->root, nodename);
+      Agnode_t *n = agfindnode(g->root, nodename);
       if (n) {
         focus = ND_coord(n);
       }
@@ -326,7 +322,7 @@ output_string render_svg(Agraph_t *g) {
       rv = sscanf(str, "%lf,%lf,%lf,%[^,]%c", &view.x, &view.y, &zoom, nodename,
                   &(char){0});
       if (rv == 4) {
-        n = agfindnode(g->root, nodename);
+        Agnode_t *n = agfindnode(g->root, nodename);
         if (n) {
           focus = ND_coord(n);
         }
