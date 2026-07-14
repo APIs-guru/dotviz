@@ -364,18 +364,6 @@ void svg_comment(output_string *output, char *str) {
   out_puts(output, " -->\n");
 }
 
-void svg_begin_job(output_string *output, const char *stylesheet) {
-  out_puts(output,
-           "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
-  if (stylesheet && stylesheet[0]) {
-    out_puts(output, "<?xml-stylesheet href=\"");
-    out_puts(output, stylesheet);
-    out_puts(output, "\" type=\"text/css\"?>\n");
-  }
-  out_puts(output, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n"
-                   " \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n");
-}
-
 void svg_begin_graph(output_string *output, SafeJob *safe_job,
                      obj_state_t *obj) {
 
