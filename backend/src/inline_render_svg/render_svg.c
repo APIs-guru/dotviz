@@ -175,14 +175,12 @@ output_string render_svg(Agraph_t *g) {
   // FIXME: do we need it? we suspect it is used only for clip!
   init_bb(g);
 
-  double xf, yf;
   char *p;
-  int i;
-
   /* margin - in points - in page orientation */
   pointf margin = (pointf){0, 0}; // margin for a page of the graph - points
   if ((p = agget(g, "margin"))) {
-    i = sscanf(p, "%lf,%lf", &xf, &yf);
+    double xf, yf;
+    int i = sscanf(p, "%lf,%lf", &xf, &yf);
     if (i > 0) {
       margin.x = margin.y = xf * POINTS_PER_INCH;
       if (i > 1)
@@ -193,7 +191,8 @@ output_string render_svg(Agraph_t *g) {
   /* pad */
   pointf pad = {.x = 4., .y = 4.};
   if ((p = agget(g, "pad"))) {
-    i = sscanf(p, "%lf,%lf", &xf, &yf);
+    double xf, yf;
+    int i = sscanf(p, "%lf,%lf", &xf, &yf);
     if (i > 0) {
       pad.x = pad.y = xf * POINTS_PER_INCH;
       if (i > 1)
@@ -210,7 +209,6 @@ output_string render_svg(Agraph_t *g) {
   G_peripheries = agfindgraphattr(g, "peripheries"); // FIXME: used only once
   G_penwidth = agfindgraphattr(g, "penwidth");       // FIXME: used only once
 
-  char *str;
   /* free layer strings and pointers from previous graph */
   char **layerIDs = NULL;
   int *layerlist = NULL;
@@ -290,6 +288,7 @@ output_string render_svg(Agraph_t *g) {
   pointf view = scale(zoom, sz);
 
   /* user can override */
+  char *str;
   if ((str = agget(g, "viewport"))) {
     char *nodename = gv_alloc(strlen(str) + 1);
     int rv = sscanf(str, "%lf,%lf,%lf,\'%[^\']\'", &view.x, &view.y, &zoom,
