@@ -73,8 +73,8 @@ RENDER_API void bezier_clip(inside_t *inside_context,
 RENDER_API Ppolyline_t *ellipticWedge(pointf ctr, double major, double minor,
                                       double angle0, double angle1);
 char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb);
-void emit_graph(output_string *output, SafeJob *safe_job, graph_t *g,
-                int *layerlist, int graph_outputorder);
+output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
+                         int graph_outputorder);
 void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
                 emit_state_t emit_state, textlabel_t *lp);
 bool emit_once(char *message);
