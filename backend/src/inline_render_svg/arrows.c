@@ -11,17 +11,15 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-#include <assert.h>
-#include <geomprocs.h>
-#include "internal_render_svg.h"
-#include <math.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <util/startswith.h>
-#include <util/streq.h>
-#include "core_svg.h"
 #include "types.h"
+#include "const.h"
+#include "utils.h"
+#include "geomprocs.h"
+#include "util/startswith.h"
+#include "util/streq.h"
+
+#include "core_svg.h"
+#include "internal_render_svg.h"
 
 extern Agsym_t *E_dir, *E_penwidth, *E_arrowsz;
 

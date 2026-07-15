@@ -28,33 +28,22 @@
 // e.g., CELLGRID=n, which sets CELLBORDER=0 and has the border drawing
 // handled correctly by the table.
 
-// clang-format off
-#include <assert.h>
-#include <pointset.h>
-#include <cdt.h>
-#include <float.h>
-#include <inttypes.h>
-#include <limits.h>
-#include <math.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <util/agxbuf.h>
-#include <util/alloc.h>
-#include <util/bitarray.h>
-#include <util/exit.h>
+#include "const.h"
+#include "types.h"
+#include "utils.h"
+#include "util/bitarray.h"
 #include <util/gv_math.h>
-#include <util/prisize_t.h>
-#include <util/strcasecmp.h>
-#include <util/streq.h>
-#include <util/unreachable.h>
+#include "util/streq.h"
+#include "util/unreachable.h"
+#include "pointset.h"
+#include "htmltable.h"
 
-#include "internal_render_svg.h"
-#include <htmltable.h>
+#include <gvcint.h>
+#include "gvcproc.h"
+
 #include "core_svg.h"
 #include "safe_job.h"
-// clang-format on
+#include "internal_render_svg.h"
 
 #define DEFAULT_BORDER 1
 #define DEFAULT_CELLPADDING 2

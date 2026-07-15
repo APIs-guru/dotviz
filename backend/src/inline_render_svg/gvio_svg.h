@@ -12,7 +12,9 @@
 #define GVIO_SVG_ /* nothing */
 
 #include <stddef.h>
-#include "../output_string.h"
+
+typedef struct output_string_s output_string;
+
 // `gvputs`, but XML-escape the input string
 void gvputs_xml(output_string *output, const char *s);
 /// options to tweak the behavior of XML escaping

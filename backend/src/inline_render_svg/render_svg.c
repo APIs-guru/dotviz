@@ -1,23 +1,14 @@
-#include "../output_string.h"
-#include "cgraph.h"
 #include "const.h"
-#include "geom.h"
+#include "types.h"
+#include "util/list.h"
 #include "geomprocs.h"
 #include "gv_ctype.h"
 #include "gv_math.h"
-#include "gvc.h" // IWYU pragma: keep
-#include "gvcext.h"
-#include "gvcint.h" // IWYU pragma: keep
 #include "gvcjob.h"
-#include "gvplugin_render.h" // IWYU pragma: keep
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "core_svg.h"
-#include "safe_job.h"
 #include "streq.h"
-#include "types.h"
-#include "util/list.h"
+
+#include "safe_job.h"
+#include "../output_string.h"
 
 static bool is_natural_number(const char *sstr) {
   const char *str = sstr;

@@ -14,49 +14,28 @@
  *
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
-// clang-format off
-#include "const.h"
-#include "gvplugin_render.h" // IWYU pragma: keep
-#include "safe_job.h"
-#include "types.h"
-#include "config.h"
-#include <assert.h>
-#include <float.h>
+
 #include <stdatomic.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
-#include <math.h>
-#include <geomprocs.h>
-#include "gvcint.h" // IWYU pragma: keep
-#include "gvcjob.h"
-#include "textspan.h"
-#include "geom.h"
-#include "textspan.h"
+
 #include "types.h"
-#include <htmltable.h>
-#include <gvc.h>
-#include <cdt.h>
-#include <pathgeom.h>
-#include <util/agxbuf.h>
-#include <util/alloc.h>
-#include <util/gv_ctype.h>
-#include <util/gv_math.h>
-#include <util/list.h>
-#include <util/streq.h>
-#include <util/strview.h>
-#include <util/tokenize.h>
-#include <util/unreachable.h>
-#include <util/unused.h>
+#include "const.h"
 #include "utils.h"
+#include "config.h"
+#include "geomprocs.h"
+#include "util/gv_ctype.h"
+#include "util/gv_math.h"
+#include "util/list.h"
+#include "util/streq.h"
+#include "util/tokenize.h"
+#include "util/unreachable.h"
 #include "xdot/xdot.h"
-#include "internal_render_svg.h"
+#include "colorprocs.h"
+
 #include "core_svg.h"
+#include "safe_job.h"
 #include "gvio_svg.h"
-// clang-format on
+#include "internal_render_svg.h"
+#include "../output_string.h"
 
 static void emit_clusters(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *parent, Agraph_t *g);

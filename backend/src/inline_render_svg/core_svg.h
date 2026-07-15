@@ -1,14 +1,10 @@
 #ifndef CORE_SVG_H
 #define CORE_SVG_H
 
-#include "color.h"
-#include "geom.h"
-#include "safe_job.h"
-#include "textspan.h"
-#include <stdbool.h>
 #include <stddef.h>
-#include "../output_string.h"
 #include "types.h"
+
+typedef struct color_s gvcolor_t;
 
 void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
                 int filled);
