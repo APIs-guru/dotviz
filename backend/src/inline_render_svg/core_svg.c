@@ -222,18 +222,20 @@ static void svg_bzptarray(output_string *output, pointf *A, size_t n) {
   }
 }
 
-static void svg_print_id_class(output_string *output, char *id, char *idx,
-                               char *kind, void *obj) {
-  char *str;
-
-  out_puts(output, "<g id=\"");
+static void svg_print_id(output_string *output, char *id, char *idx) {
+  out_puts(output, " id=\"");
   gvputs_xml(output, id);
   if (idx) {
     out_putc(output, '_');
     gvputs_xml(output, idx);
   }
-  gvprintf(output, "\" class=\"%s", kind);
-  if ((str = agget(obj, "class")) && *str) {
+  out_putc(output, '"');
+}
+
+static void svg_print_class(output_string *output, char *kind, void *obj) {
+  gvprintf(output, " class=\"%s", kind);
+  char *str =agget(obj, "class");
+  if (str && *str) {
     out_putc(output, ' ');
     gvputs_xml(output, str);
   }
@@ -345,7 +347,9 @@ void svg_comment(output_string *output, char *str) {
 }
 
 void svg_begin_layer(output_string *output, obj_state_t *obj, char *layername) {
-  svg_print_id_class(output, layername, NULL, "layer", obj->u.g);
+  out_puts(output, "<g");
+  svg_print_id(output, layername, NULL);
+  svg_print_class(output, "layer", obj->u.g);
   out_puts(output, ">\n");
 }
 
@@ -365,7 +369,9 @@ void svg_begin_page(output_string *output, SafeLayer *safe_layer,
 
   /* its really just a page of the graph, but its still a graph,
    * and it is the entire graph if we're not currently paging */
-  svg_print_id_class(output, obj->id, NULL, "graph", obj->u.g);
+  out_puts(output, "<g");
+  svg_print_id(output, obj->id, NULL);
+  svg_print_class(output, "graph", obj->u.g);
   out_puts(output, " transform=\"scale(");
   // cannot be gvprintdouble because 2 digits precision insufficient
   gvprintf(output, "%g %g", scale.x, scale.y);
@@ -407,9 +413,10 @@ void svg_begin_page(output_string *output, SafeLayer *safe_layer,
 void svg_end_page(output_string *output) { out_puts(output, "</g>\n"); }
 
 void svg_begin_cluster(output_string *output, obj_state_t *obj) {
-  svg_print_id_class(output, obj->id, NULL, "cluster", obj->u.sg);
-  out_puts(output, ">\n"
-                   "<title>");
+  out_puts(output, "<g");
+  svg_print_id(output, obj->id, NULL);
+  svg_print_class(output, "cluster", obj->u.sg);
+  out_puts(output, ">\n<title>");
   gvputs_xml(output, agnameof(obj->u.g));
   out_puts(output, "</title>\n");
 }
@@ -418,15 +425,15 @@ void svg_end_cluster(output_string *output) { out_puts(output, "</g>\n"); }
 
 void svg_begin_node(output_string *output, SafeLayer *safe_layer,
                     obj_state_t *obj) {
-  char *idx;
-
-  if (safe_layer->layerNum > 1)
-    idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
+  out_puts(output, "<g");
+  if (safe_layer->layerNum > 1) {
+    char* idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
+    svg_print_id(output, obj->id, idx);
+  }
   else
-    idx = NULL;
-  svg_print_id_class(output, obj->id, idx, "node", obj->u.n);
-  out_puts(output, ">\n"
-                   "<title>");
+    svg_print_id(output, obj->id, NULL);
+  svg_print_class(output, "node", obj->u.n);
+  out_puts(output, ">\n<title>");
   gvputs_xml(output, agnameof(obj->u.n));
   out_puts(output, "</title>\n");
 }
@@ -434,13 +441,11 @@ void svg_begin_node(output_string *output, SafeLayer *safe_layer,
 void svg_end_node(output_string *output) { out_puts(output, "</g>\n"); }
 
 void svg_begin_edge(output_string *output, obj_state_t *obj) {
-  char *ename;
-
-  svg_print_id_class(output, obj->id, NULL, "edge", obj->u.e);
-  out_puts(output, ">\n"
-
-                   "<title>");
-  ename = strdup_and_subst_obj("\\E", obj->u.e);
+  out_puts(output, "<g");
+  svg_print_id(output, obj->id, NULL);
+  svg_print_class(output, "edge", obj->u.e);
+  out_puts(output, ">\n<title>");
+  char *ename = strdup_and_subst_obj("\\E", obj->u.e);
   gvputs_xml(output, ename);
   free(ename);
   out_puts(output, "</title>\n");
