@@ -22,7 +22,6 @@
 
 typedef struct SafeJob_s SafeJob;
 
-
 void arrow_flags(Agedge_t *e, uint32_t *sflag, uint32_t *eflag);
 boxf arrow_bb(pointf p, pointf u, double arrowsize);
 void arrow_gen(output_string *output, obj_state_t *obj, emit_state_t emit_state,
@@ -34,8 +33,7 @@ void bezier_clip(inside_t *inside_context,
                  pointf *sp, bool left_inside);
 Ppolyline_t *ellipticWedge(pointf ctr, double major, double minor,
                            double angle0, double angle1);
-output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
-                         int graph_outputorder);
+output_string emit_graph(SafeJob *safe_job, graph_t *g, int graph_outputorder);
 void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
                 emit_state_t emit_state, textlabel_t *lp);
 bool emit_once(char *message);
