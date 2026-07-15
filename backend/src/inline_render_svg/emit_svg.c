@@ -2369,23 +2369,24 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
 
   int viewNum = 0; ///< current view - 1 based count of views, all pages
                    ///< in all layers
-  /* iterate layers */
-  while (layerNum <= safe_job->numLayers) {
-    if (num_physical_layers > 1) {
-      svg_begin_layer(&output, &obj, safe_job->layerIDs[layerNum]);
+  if (num_physical_layers > 1) {
+    /* iterate layers */
+    while (layerNum <= safe_job->numLayers) {
+        svg_begin_layer(&output, &obj, safe_job->layerIDs[layerNum]);
+        SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
+        emit_layer(&output, &safe_layer, &obj, g, &viewNum, graph_outputorder);
+        svg_end_layer(&output);
+
+      if (lp) {
+        layerNum = *lp;
+        lp += 1;
+      } else {
+        layerNum += 1;
+      }
     }
+  } else {
     SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
     emit_layer(&output, &safe_layer, &obj, g, &viewNum, graph_outputorder);
-
-    if (num_physical_layers > 1)
-      svg_end_layer(&output);
-
-    if (lp) {
-      layerNum = *lp;
-      lp += 1;
-    } else {
-      layerNum += 1;
-    }
   }
   out_puts(&output, "</svg>\n"); // end graph
   free_child_obj(&obj);
