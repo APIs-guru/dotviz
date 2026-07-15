@@ -6,6 +6,8 @@
 
 typedef struct color_s gvcolor_t;
 
+void svg_print_id(output_string *output, char *id, char *idx);
+void svg_print_class(output_string *output, char *kind, void *obj);
 void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
                 int filled);
 void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
@@ -30,8 +32,6 @@ void svg_begin_page(output_string *output, SafeLayer *safe_layer,
 void svg_end_page(output_string *output);
 void svg_begin_cluster(output_string *output, obj_state_t *obj);
 void svg_end_cluster(output_string *output);
-void svg_begin_layer(output_string *output, obj_state_t *obj, char *layername);
-void svg_end_layer(output_string *output);
 void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
                    char *name, pointf *a, size_t n, imagescale_t imagescale,
                    imagepos_t imagepos);
