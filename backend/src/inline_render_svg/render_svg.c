@@ -20,14 +20,12 @@ static bool is_natural_number(const char *sstr) {
 }
 
 static int layer_index(int numLayers, char **layerIDs, char *str, int all) {
-  int i;
-
   if (streq(str, "all"))
     return all;
   if (is_natural_number(str))
     return atoi(str);
   if (layerIDs)
-    for (i = 1; i <= numLayers; i++)
+    for (int i = 1; i <= numLayers; i++)
       if (streq(str, layerIDs[i]))
         return i;
   return -1;
@@ -35,32 +33,34 @@ static int layer_index(int numLayers, char **layerIDs, char *str, int all) {
 
 static bool selectedLayer(int layerNum, int numLayers, char *layerDelims,
                           char *layerListDelims, char **layerIDs, char *spec) {
-  int n0, n1;
-  char *w0, *w1;
-  char *buf_part_p = NULL, *buf_p = NULL, *cur, *part_in_p;
-  bool rval = false;
-
   // copy `spec` so we can `strtok_r` it
   char *spec_copy = gv_strdup(spec);
-  part_in_p = spec_copy;
+  char *part_in_p = spec_copy;
 
-  while (!rval && (cur = strtok_r(part_in_p, layerListDelims, &buf_part_p))) {
-    w1 = w0 = strtok_r(cur, layerDelims, &buf_p);
-    if (w0)
-      w1 = strtok_r(NULL, layerDelims, &buf_p);
-    if (w1 != NULL) {
-      assert(w0 != NULL);
-      n0 = layer_index(numLayers, layerIDs, w0, 0);
-      n1 = layer_index(numLayers, layerIDs, w1, numLayers);
-      if (n0 >= 0 || n1 >= 0) {
-        if (n0 > n1) {
-          SWAP(&n0, &n1);
+  bool rval = false;
+  char *buf_part_p = NULL;
+  while (!rval) {
+    char *cur = strtok_r(part_in_p, layerListDelims, &buf_part_p);
+    if (cur == NULL)
+      break;
+
+    char *buf_p = NULL;
+    char *w0 = strtok_r(cur, layerDelims, &buf_p);
+    if (w0 != NULL) {
+      char *w1 = strtok_r(NULL, layerDelims, &buf_p);
+      if (w1 != NULL) {
+        int n0 = layer_index(numLayers, layerIDs, w0, 0);
+        int n1 = layer_index(numLayers, layerIDs, w1, numLayers);
+        if (n0 >= 0 || n1 >= 0) {
+          if (n0 > n1) {
+            SWAP(&n0, &n1);
+          }
+          rval = BETWEEN(n0, layerNum, n1);
         }
-        rval = BETWEEN(n0, layerNum, n1);
+      } else {
+        int n0 = layer_index(numLayers, layerIDs, w0, layerNum);
+        rval = (n0 == layerNum);
       }
-    } else if (w0 != NULL) {
-      n0 = layer_index(numLayers, layerIDs, w0, layerNum);
-      rval = (n0 == layerNum);
     } else {
       rval = false;
     }
@@ -104,23 +104,22 @@ DEFINE_LIST(layer_names, char *)
 static int *parse_layerselect(int numLayers, char *layerDelims,
                               char *layerListDelims, char **layerIDs, char *p) {
   int *laylist = gv_calloc(numLayers + 2, sizeof(int));
-  int i, cnt = 0;
-  for (i = 1; i <= numLayers; i++) {
+  int cnt = 0;
+  for (int i = 1; i <= numLayers; i++) {
     if (selectedLayer(i, numLayers, layerDelims, layerListDelims, layerIDs,
                       p)) {
       laylist[++cnt] = i;
     }
   }
-  if (cnt) {
-    laylist[0] = cnt;
-    laylist[cnt + 1] = numLayers + 1;
-  } else {
+  if (cnt == 0) {
     agwarningf("The layerselect attribute \"%s\" does not match any layer "
                "specifed by the layers attribute - ignored.\n",
                p);
     free(laylist);
-    laylist = NULL;
+    return NULL;
   }
+  laylist[0] = cnt;
+  laylist[cnt + 1] = numLayers + 1;
   return laylist;
 }
 
@@ -130,7 +129,7 @@ static int *parse_layerselect(int numLayers, char *layerDelims,
  * Note that there is no mechanism
  * to free the memory before exit.
  */
-static int parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
+static size_t parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
   char *tok;
 
   char *layers = gv_strdup(p);
@@ -145,10 +144,10 @@ static int parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
   }
 
   assert(layer_names_size(&layerIDs) - 1 <= INT_MAX);
-  int ntok = (int)(layer_names_size(&layerIDs) - 1);
+  size_t ntok = layer_names_size(&layerIDs) - 1;
 
   // if we found layers, save them for later reference
-  if (layer_names_size(&layerIDs) > 1) {
+  if (ntok > 0) {
     layer_names_append(&layerIDs, NULL); // add a terminating entry
     *out_layerIDs = layer_names_detach(&layerIDs);
   }
@@ -225,8 +224,8 @@ output_string render_svg(Agraph_t *g) {
     }
 
     numLayers = parse_layers(&layerIDs, layerDelims, layer_str);
-    char *layerselect_str = NULL;
-    if ((layerselect_str = agget(g, "layerselect")) != 0 && *layerselect_str) {
+    char *layerselect_str = agget(g, "layerselect");
+    if (layerselect_str != NULL && *layerselect_str) {
       layerlist = parse_layerselect(numLayers, layerDelims, layerListDelims,
                                     layerIDs, layerselect_str);
     }
