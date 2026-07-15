@@ -222,7 +222,7 @@ static void svg_bzptarray(output_string *output, pointf *A, size_t n) {
   }
 }
 
-static void svg_print_id(output_string *output, char *id, char *idx) {
+void svg_print_id(output_string *output, char *id, char *idx) {
   out_puts(output, " id=\"");
   gvputs_xml(output, id);
   if (idx) {
@@ -232,7 +232,7 @@ static void svg_print_id(output_string *output, char *id, char *idx) {
   out_putc(output, '"');
 }
 
-static void svg_print_class(output_string *output, char *kind, void *obj) {
+void svg_print_class(output_string *output, char *kind, void *obj) {
   gvprintf(output, " class=\"%s", kind);
   char *str =agget(obj, "class");
   if (str && *str) {
@@ -345,15 +345,6 @@ void svg_comment(output_string *output, char *str) {
   gvputs_xml(output, str);
   out_puts(output, " -->\n");
 }
-
-void svg_begin_layer(output_string *output, obj_state_t *obj, char *layername) {
-  out_puts(output, "<g");
-  svg_print_id(output, layername, NULL);
-  svg_print_class(output, "layer", obj->u.g);
-  out_puts(output, ">\n");
-}
-
-void svg_end_layer(output_string *output) { out_puts(output, "</g>\n"); }
 
 /* svg_begin_page:
  * Currently, svg output does not support pages.

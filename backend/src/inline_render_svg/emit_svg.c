@@ -2417,10 +2417,13 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
   if (num_physical_layers > 1) {
     /* iterate layers */
     while (layerNum <= safe_job->numLayers) {
-        svg_begin_layer(&output, &obj, safe_job->layerIDs[layerNum]);
+        out_puts(&output, "<g");
+        svg_print_id(&output, safe_job->layerIDs[layerNum], NULL);
+        svg_print_class(&output, "layer", g);
+        out_puts(&output, ">\n");
         SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
         emit_layer(&output, &safe_layer, &obj, g, &viewNum, graph_outputorder);
-        svg_end_layer(&output);
+        out_puts(&output, "</g>\n");
 
       if (lp) {
         layerNum = *lp;
