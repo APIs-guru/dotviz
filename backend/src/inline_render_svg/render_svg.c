@@ -206,8 +206,8 @@ output_string render_svg(Agraph_t *g) {
   char *layerListDelims = NULL;
   char *layerDelims = NULL;
   int numLayers = 1;
-  char *layer_str;
-  if ((layer_str = agget(g, "layers")) != 0) {
+  char *layer_str = agget(g, "layers");
+  if (layer_str != NULL) {
     layerDelims = agget(g, "layersep");
     if (!layerDelims)
       layerDelims = DEFAULT_LAYERSEP;
