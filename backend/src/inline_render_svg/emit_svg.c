@@ -639,51 +639,51 @@ static bool is_natural_number(const char *sstr) {
   return true;
 }
 
-static int layer_index(SafeLayer *safe_layer, char *str, int all) {
-  int i;
-
+static size_t layer_index(SafeJob *safe_job, char *str, int all) {
   if (streq(str, "all"))
     return all;
   if (is_natural_number(str))
     return atoi(str);
-  if (safe_layer->safe_job->layerIDs)
-    for (i = 1; i <= safe_layer->safe_job->numLayers; i++)
-      if (streq(str, safe_layer->safe_job->layerIDs[i]))
+  if (safe_job->layerIDs)
+    for (int i = 1; i <= safe_job->numLayers; i++)
+      if (streq(str, safe_job->layerIDs[i]))
         return i;
   return -1;
 }
 
-static bool selectedLayer(SafeLayer *safe_layer, char *spec) {
-  int layerNum = safe_layer->layerNum;
-  int numLayers =safe_layer->safe_job->numLayers;
-  bool rval = false;
+static bool selectedLayer(int layerNum, SafeJob *safe_job, char *spec) {
+  int numLayers = safe_job->numLayers;
+  char *const layerDelims = safe_job->layerDelims;
+  char *const layerListDelims = safe_job->layerListDelims;
 
   // copy `spec` so we can `strtok_r` it
   char *spec_copy = gv_strdup(spec);
-  char* part_in_p = spec_copy;
+  char *part_in_p = spec_copy;
 
-  char *buf_part_p = NULL, *cur;
-  while (!rval &&
-         (cur = strtok_r(part_in_p, safe_layer->safe_job->layerListDelims,
-                         &buf_part_p))) {
-    char*buf_p = NULL;
-    char* w0 = strtok_r(cur, safe_layer->safe_job->layerDelims, &buf_p);
-    char* w1 = w0;
-    if (w0)
-      w1 = strtok_r(NULL, safe_layer->safe_job->layerDelims, &buf_p);
-    if (w1 != NULL) {
-      assert(w0 != NULL);
-      int n0 = layer_index(safe_layer, w0, 0);
-      int n1 = layer_index(safe_layer, w1, numLayers);
-      if (n0 >= 0 || n1 >= 0) {
-        if (n0 > n1) {
-          SWAP(&n0, &n1);
+  bool rval = false;
+  char *buf_part_p = NULL;
+  while (!rval) {
+    char *cur = strtok_r(part_in_p, layerListDelims, &buf_part_p);
+    if (cur == NULL)
+      break;
+
+    char *buf_p = NULL;
+    char *w0 = strtok_r(cur, layerDelims, &buf_p);
+    if (w0 != NULL) {
+      char *w1 = strtok_r(NULL, layerDelims, &buf_p);
+      if (w1 != NULL) {
+        int n0 = layer_index(safe_job, w0, 0);
+        int n1 = layer_index(safe_job, w1, numLayers);
+        if (n0 >= 0 || n1 >= 0) {
+          if (n0 > n1) {
+            SWAP(&n0, &n1);
+          }
+          rval = BETWEEN(n0, layerNum, n1);
         }
-        rval = BETWEEN(n0, layerNum, n1);
+      } else {
+        int n0 = layer_index(safe_job, w0, layerNum);
+        rval = (n0 == layerNum);
       }
-    } else if (w0 != NULL) {
-      int n0 = layer_index(safe_layer, w0, layerNum);
-      rval = (n0 == layerNum);
     } else {
       rval = false;
     }
@@ -694,6 +694,42 @@ static bool selectedLayer(SafeLayer *safe_layer, char *spec) {
 }
 
 DEFINE_LIST(layer_names, char *)
+
+/* Parse the graph's layerselect attribute, which determines
+ * which layers are emitted. The specification is the same used
+ * by the layer attribute.
+ *
+ * If we find n layers, we return an array arr of n+2 ints. arr[0]=n.
+ * arr[n+1]=numLayers+1, acting as a sentinel. The other entries give
+ * the desired layer indices.
+ *
+ * If no layers are detected, NULL is returned.
+ *
+ * This implementation does a linear walk through each layer index and
+ * uses selectedLayer to match it against p. There is probably a more
+ * efficient way to do this, but this is simple and until we find people
+ * using huge numbers of layers, it should be adequate.
+ */
+static int *parse_layerselect(SafeJob *safe_job, char *p) {
+  int numLayers = safe_job->numLayers;
+  int *laylist = gv_calloc(numLayers + 2, sizeof(int));
+  int cnt = 0;
+  for (int i = 1; i <= numLayers; i++) {
+    if (selectedLayer(i, safe_job, p)) {
+      laylist[++cnt] = i;
+    }
+  }
+  if (cnt == 0) {
+    agwarningf("The layerselect attribute \"%s\" does not match any layer "
+               "specifed by the layers attribute - ignored.\n",
+               p);
+    free(laylist);
+    return NULL;
+  }
+  laylist[0] = cnt;
+  laylist[cnt + 1] = numLayers + 1;
+  return laylist;
+}
 
 static pointf *copyPts(xdot_point *inpts, size_t numpts) {
   pointf *pts = gv_calloc(numpts, sizeof(pointf));
@@ -870,14 +906,14 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
     emit_xdot(output, safe_layer, obj, xd);
 }
 
-static bool node_in_layer(SafeLayer *safe_layer, graph_t *g, node_t *n) {
+static bool node_in_layer(int layerNum, SafeJob *safe_job, graph_t *g, node_t *n) {
   char *pn, *pe;
   edge_t *e;
 
-  if (safe_layer->safe_job->numLayers <= 1)
+  if (safe_job->numLayers <= 1)
     return true;
   pn = late_string(n, N_layer, "");
-  if (selectedLayer(safe_layer, pn))
+  if (selectedLayer(layerNum, safe_job, pn))
     return true;
   if (pn[0])
     return false; /* Only check edges if pn = "" */
@@ -885,44 +921,44 @@ static bool node_in_layer(SafeLayer *safe_layer, graph_t *g, node_t *n) {
     return true;
   for (e = agfstedge(g, n); e; e = agnxtedge(g, e, n)) {
     pe = late_string(e, E_layer, "");
-    if (pe[0] == '\0' || selectedLayer(safe_layer, pe))
+    if (pe[0] == '\0' || selectedLayer(layerNum, safe_job, pe))
       return true;
   }
   return false;
 }
 
-static bool edge_in_layer(SafeLayer *safe_layer, edge_t *e) {
+static bool edge_in_layer(int layerNum, SafeJob *safe_job, edge_t *e) {
   char *pe, *pn;
   int cnt;
 
-  if (safe_layer->safe_job->numLayers <= 1)
+  if (safe_job->numLayers <= 1)
     return true;
   pe = late_string(e, E_layer, "");
-  if (selectedLayer(safe_layer, pe))
+  if (selectedLayer(layerNum, safe_job, pe))
     return true;
   if (pe[0])
     return false;
   for (cnt = 0; cnt < 2; cnt++) {
     pn = late_string(cnt < 1 ? agtail(e) : aghead(e), N_layer, "");
-    if (pn[0] == '\0' || selectedLayer(safe_layer, pn))
+    if (pn[0] == '\0' || selectedLayer(layerNum, safe_job, pn))
       return true;
   }
   return false;
 }
 
-static bool clust_in_layer(SafeLayer *safe_layer, graph_t *sg) {
+static bool clust_in_layer(int layerNum, SafeJob *safe_job, graph_t *sg) {
   char *pg;
   node_t *n;
 
-  if (safe_layer->safe_job->numLayers <= 1)
+  if (safe_job->numLayers <= 1)
     return true;
   pg = late_string(sg, agattr_text(sg, AGRAPH, "layer", 0), "");
-  if (selectedLayer(safe_layer, pg))
+  if (selectedLayer(layerNum, safe_job, pg))
     return true;
   if (pg[0])
     return false;
   for (n = agfstnode(sg); n; n = agnxtnode(sg, n))
-    if (node_in_layer(safe_layer, sg, n))
+    if (node_in_layer(layerNum, safe_job, sg, n))
       return true;
   return false;
 }
@@ -984,9 +1020,11 @@ static void emit_end_node(output_string *output) {
 
 static void emit_node(output_string *output, SafeLayer *safe_layer,
                       int *viewNum, obj_state_t *parent, node_t *n) {
+  int layerNum = safe_layer->layerNum;
+  SafeJob *safe_job = safe_layer->safe_job;
   if (ND_shape(n)                                   /* node has a shape */
-      && node_in_layer(safe_layer, agraphof(n), n)  /* and is in layer */
-      && node_in_box(n, safe_layer->safe_job->clip) /* and is in page/view */
+      && node_in_layer(layerNum, safe_job, agraphof(n), n)  /* and is in layer */
+      && node_in_box(n, safe_job->clip) /* and is in page/view */
       && ND_state(n) != *viewNum)                   /* and not already drawn */
   {
     ND_state(n) = *viewNum; /* mark node as drawn */
@@ -1805,9 +1843,11 @@ static void emit_edge(output_string *output, SafeLayer *safe_layer,
   char **styles = NULL;
   char **sp;
   char *p;
+  int layerNum = safe_layer->layerNum;
+  SafeJob *safe_job = safe_layer->safe_job;
 
-  if (edge_in_box(e, safe_layer->safe_job->clip) &&
-      edge_in_layer(safe_layer, e)) {
+  if (edge_in_box(e, safe_job->clip) &&
+      edge_in_layer(layerNum, safe_job, e)) {
 
     agxbuf edge = {0};
     agxbput(&edge, agnameof(agtail(e)));
@@ -1988,10 +2028,12 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
   textlabel_t *lab;
   int doAnchor;
   double penwidth;
+  int layerNum = safe_layer->layerNum;
+  SafeJob *safe_job = safe_layer->safe_job;
 
   for (c = 1; c <= GD_n_cluster(g); c++) {
     sg = GD_clust(g)[c];
-    if (!clust_in_layer(safe_layer, sg))
+    if (!clust_in_layer(layerNum, safe_job, sg))
       continue;
     obj_state_t obj = child_obj_state(parent);
     emit_begin_cluster(output, safe_layer, &obj, sg);
@@ -2298,7 +2340,7 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   return true;
 }
 
-output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
+output_string emit_graph(SafeJob *safe_job, graph_t *g,
                          int graph_outputorder) {
   /* page size on Linux, Mac OS X and Windows */
   output_string output = {.data_position = 0, .data_allocated = 4096};
@@ -2361,7 +2403,10 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
   int *lp = NULL;
   int layerNum = 1;
   int num_physical_layers = safe_job->numLayers;
-  if (layerlist) {
+
+  char *layerselect_str = agget(g, "layerselect");
+  if (layerselect_str != NULL && *layerselect_str) {
+    int *layerlist = parse_layerselect(safe_job, layerselect_str);
     num_physical_layers = layerlist[0];
     layerNum = layerlist[1]; // first layer
     lp = layerlist + 2;      // tail layers

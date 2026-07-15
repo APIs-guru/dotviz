@@ -2,73 +2,11 @@
 #include "types.h"
 #include "util/list.h"
 #include "geomprocs.h"
-#include "gv_ctype.h"
-#include "gv_math.h"
 #include "gvcjob.h"
-#include "streq.h"
 
 #include "safe_job.h"
+#include "internal_render_svg.h"
 #include "../output_string.h"
-
-static bool is_natural_number(const char *sstr) {
-  const char *str = sstr;
-
-  while (*str)
-    if (!gv_isdigit(*str++))
-      return false;
-  return true;
-}
-
-static int layer_index(int numLayers, char **layerIDs, char *str, int all) {
-  if (streq(str, "all"))
-    return all;
-  if (is_natural_number(str))
-    return atoi(str);
-  if (layerIDs)
-    for (int i = 1; i <= numLayers; i++)
-      if (streq(str, layerIDs[i]))
-        return i;
-  return -1;
-}
-
-static bool selectedLayer(int layerNum, int numLayers, char *layerDelims,
-                          char *layerListDelims, char **layerIDs, char *spec) {
-  // copy `spec` so we can `strtok_r` it
-  char *spec_copy = gv_strdup(spec);
-  char *part_in_p = spec_copy;
-
-  bool rval = false;
-  char *buf_part_p = NULL;
-  while (!rval) {
-    char *cur = strtok_r(part_in_p, layerListDelims, &buf_part_p);
-    if (cur == NULL)
-      break;
-
-    char *buf_p = NULL;
-    char *w0 = strtok_r(cur, layerDelims, &buf_p);
-    if (w0 != NULL) {
-      char *w1 = strtok_r(NULL, layerDelims, &buf_p);
-      if (w1 != NULL) {
-        int n0 = layer_index(numLayers, layerIDs, w0, 0);
-        int n1 = layer_index(numLayers, layerIDs, w1, numLayers);
-        if (n0 >= 0 || n1 >= 0) {
-          if (n0 > n1) {
-            SWAP(&n0, &n1);
-          }
-          rval = BETWEEN(n0, layerNum, n1);
-        }
-      } else {
-        int n0 = layer_index(numLayers, layerIDs, w0, layerNum);
-        rval = (n0 == layerNum);
-      }
-    } else {
-      rval = false;
-    }
-    part_in_p = NULL;
-  }
-  free(spec_copy);
-  return rval;
-}
 
 /* Determine order of output.
  * Output usually in breadth first graph walk order
@@ -85,43 +23,6 @@ static int chkOrder(graph_t *g) {
 }
 
 DEFINE_LIST(layer_names, char *)
-
-/* Parse the graph's layerselect attribute, which determines
- * which layers are emitted. The specification is the same used
- * by the layer attribute.
- *
- * If we find n layers, we return an array arr of n+2 ints. arr[0]=n.
- * arr[n+1]=numLayers+1, acting as a sentinel. The other entries give
- * the desired layer indices.
- *
- * If no layers are detected, NULL is returned.
- *
- * This implementation does a linear walk through each layer index and
- * uses selectedLayer to match it against p. There is probably a more
- * efficient way to do this, but this is simple and until we find people
- * using huge numbers of layers, it should be adequate.
- */
-static int *parse_layerselect(int numLayers, char *layerDelims,
-                              char *layerListDelims, char **layerIDs, char *p) {
-  int *laylist = gv_calloc(numLayers + 2, sizeof(int));
-  int cnt = 0;
-  for (int i = 1; i <= numLayers; i++) {
-    if (selectedLayer(i, numLayers, layerDelims, layerListDelims, layerIDs,
-                      p)) {
-      laylist[++cnt] = i;
-    }
-  }
-  if (cnt == 0) {
-    agwarningf("The layerselect attribute \"%s\" does not match any layer "
-               "specifed by the layers attribute - ignored.\n",
-               p);
-    free(laylist);
-    return NULL;
-  }
-  laylist[0] = cnt;
-  laylist[cnt + 1] = numLayers + 1;
-  return laylist;
-}
 
 /* Split input string into tokens, with separators specified by
  * the layersep attribute. Store the values in the gvc->layerIDs array,
@@ -158,8 +59,6 @@ static size_t parse_layers(char ***out_layerIDs, char *layerDelims, char *p) {
 
 extern Agsym_t *G_peripheries, *G_penwidth;
 extern void init_bb(graph_t *g);
-output_string emit_graph(SafeJob *safe_job, graph_t *g, int *layerlist,
-                         int graph_outputorder);
 
 output_string render_svg(Agraph_t *g) {
   // FIXME: do we need it? we suspect it is used only for clip!
@@ -201,7 +100,6 @@ output_string render_svg(Agraph_t *g) {
 
   /* free layer strings and pointers from previous graph */
   char **layerIDs = NULL;
-  int *layerlist = NULL;
   char *layerListDelims = NULL;
   char *layerDelims = NULL;
   int numLayers = 1;
@@ -224,11 +122,6 @@ output_string render_svg(Agraph_t *g) {
     }
 
     numLayers = parse_layers(&layerIDs, layerDelims, layer_str);
-    char *layerselect_str = agget(g, "layerselect");
-    if (layerselect_str != NULL && *layerselect_str) {
-      layerlist = parse_layerselect(numLayers, layerDelims, layerListDelims,
-                                    layerIDs, layerselect_str);
-    }
   }
 
   pointf dpi = (pointf){72, 72}; // FIXME: make dpi single value
@@ -372,5 +265,5 @@ output_string render_svg(Agraph_t *g) {
       .layerListDelims = layerListDelims,
       .numLayers = numLayers,
   };
-  return emit_graph(&safe_job, g, layerlist, chkOrder(g));
+  return emit_graph(&safe_job, g, chkOrder(g));
 }
