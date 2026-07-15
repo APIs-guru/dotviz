@@ -8,14 +8,11 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-#include <ctype.h>
-#include <stdarg.h>
 #include <errno.h>
 
-#include <assert.h>
 #include "cgraph.h"
 #include "gvio_svg.h"
-#include <util/agxbuf.h>
+#include "util/agxbuf.h"
 
 #include "../output_string.h"
 

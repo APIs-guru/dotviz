@@ -1,8 +1,8 @@
+#include <assert.h>
+#include <stddef.h>
+
+#include "types.h"
 #include "geomprocs.h"
-#include "gvc.h" // IWYU pragma: keep
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 static boxf bezier_bb(bezier bz) {
   assert(bz.size > 0);

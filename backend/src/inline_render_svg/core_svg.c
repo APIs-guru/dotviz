@@ -18,37 +18,19 @@
    was not constrained.)
  */
 
-#include "cgraph.h"
-#include "colorprocs.h"
-#include "config.h"
-#include <math.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <macros.h>
-#include <const.h>
-
-#include <gvplugin_render.h>
-#include <utils.h>
-#include <gvplugin_device.h>
-#include <gvcint.h>
-#include <util/agxbuf.h>
-#include <util/strcasecmp.h>
-#include <util/unreachable.h>
-
-#include "geomprocs.h"
-#include "gvcjob.h"
-#include "gvio_svg.h"
-#include "../output_string.h"
-#include "internal_render_svg.h"
-#include "safe_job.h"
-#include "streq.h"
 #include "types.h"
+#include "const.h"
+#include "utils.h"
+#include "util/unreachable.h"
+#include "colorprocs.h"
+#include "geomprocs.h"
+#include "streq.h"
+
+#include "safe_job.h"
 #include "core_svg.h"
+#include "gvio_svg.h"
+#include "internal_render_svg.h"
+#include "../output_string.h"
 
 char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
 

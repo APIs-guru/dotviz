@@ -11,26 +11,28 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-// clang-format off
-#include <assert.h>
-#include "internal_render_svg.h"
-#include <htmltable.h>
-#include <float.h>
-#include <limits.h>
-#include <math.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <util/alloc.h>
-#include <util/gv_math.h>
+
+#include "const.h"
+#include "types.h"
+#include "utils.h"
+#include "util/gv_math.h"
 #include <util/streq.h>
 #include <util/unreachable.h>
-#include "core_svg.h"
 #include "gvcjob.h"
+#include "macros.h"
+#include "geomprocs.h"
+#include <gvcint.h>
+#include "gvcproc.h"
+
+#include "internal_render_svg.h"
+#include "htmltable.h"
+#include "core_svg.h"
 #include "safe_job.h"
 
-// clang-format on
+typedef struct epsf_s {
+	int macro_id;
+	pointf offset;
+} epsf_t;
 
 extern const char **Lib;
 

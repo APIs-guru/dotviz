@@ -11,18 +11,14 @@
  *************************************************************************/
 
 #include <types.h>
-#include <geom.h>
-#include <htmltable.h>
-#include <limits.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <util/agxbuf.h>
-#include <util/alloc.h>
-#include "core_svg.h"
-#include "gvcint.h"
-#include "safe_job.h"
-
+#include "const.h"
 #include <utils.h>
+#include <gvcint.h>
+#include <htmltable.h>
+
+#include "safe_job.h"
+#include "core_svg.h"
+
 
 extern pointf textspan_size(GVC_t *gvc, textspan_t *span);
 static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash);

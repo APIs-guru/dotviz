@@ -1,7 +1,6 @@
 #ifndef SAFE_JOB_H
 #define SAFE_JOB_H
 
-#include "const.h"
 #include "types.h"
 
 /// 1. ONLY CONST FIELDS!!!!!!!!!!!!!!
