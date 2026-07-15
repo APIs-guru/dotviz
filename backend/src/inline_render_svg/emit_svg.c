@@ -267,26 +267,36 @@ static char *preprocessTooltip(char *s, void *gobj) {
 
 static void initObjMapData(SafeLayer *safe_layer, obj_state_t *obj,
                            textlabel_t *lab, void *gobj) {
-  char *lbl;
-  char *url = agget(gobj, "href");
-  char *tooltip = agget(gobj, "tooltip");
-  char *target = agget(gobj, "target");
-  char *id;
+
   agxbuf xb = {0};
+  char *id = getObjId(safe_layer, gobj, &xb);
+  agxbfree(&xb);
+  obj->id = strdup_and_subst_obj(id, gobj);
 
   if (lab)
-    lbl = lab->text;
-  else
-    lbl = NULL;
+    obj->label = lab->text;
+
+  char *url = agget(gobj, "href");
   if (!url || !*url) /* try URL as an alias for href */
     url = agget(gobj, "URL");
-  id = getObjId(safe_layer, gobj, &xb);
-  if (tooltip)
-    tooltip = preprocessTooltip(tooltip, gobj);
-  initMapData(obj, lbl, url, tooltip, target, id, gobj);
+  if (url && url[0]) {
+    obj->url = strdup_and_subst_obj(url, gobj);
+  }
 
-  free(tooltip);
-  agxbfree(&xb);
+  char *tooltip = agget(gobj, "tooltip");
+  if (tooltip && tooltip[0]) {
+    tooltip = preprocessTooltip(tooltip, gobj);
+    obj->tooltip = strdup_and_subst_obj(tooltip, gobj);
+    obj->explicit_tooltip = true;
+    free(tooltip);
+  } else if (obj->label) {
+    obj->tooltip = gv_strdup(obj->label);
+  }
+
+  char *target = agget(gobj, "target");
+  if (target && target[0]) {
+    obj->target = strdup_and_subst_obj(target, gobj);
+  }
 }
 
 static void map_point(obj_state_t *obj, pointf pf) {
