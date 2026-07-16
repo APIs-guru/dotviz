@@ -138,7 +138,6 @@ const graphviz_lib_files = [_][]const u8{
 
     "common/splines.c",
     "common/htmllex.c",
-    "common/colxlate.c",
     "common/textspan_lut.c",
     "common/postproc.c",
     "common/taper.c",
