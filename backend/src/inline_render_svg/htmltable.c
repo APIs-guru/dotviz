@@ -364,7 +364,7 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
  * FIX: Should we provide a tooltip if none is set, as is done
  * for nodes, edges, etc. ?
  */
-static int initAnchor(output_string *output, SafeLayer *safe_layer,
+static void initAnchor(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *obj, htmlenv_t *env, htmldata_t *data,
                       boxf b, htmlmap_data_t *save) {
   char *id;
@@ -385,17 +385,13 @@ static int initAnchor(output_string *output, SafeLayer *safe_layer,
     agxbprint(&xb, "%s_%d", env->objid, anchorId++);
     id = agxbuse(&xb);
   }
-  const bool changed = initMapData(obj, NULL, data->href, data->title,
-                                   data->target, id, obj->u.g);
+  initMapData(obj, NULL, data->href, data->title, data->target, id, obj->u.g);
   agxbfree(&xb);
 
-  if (changed) {
-    if (obj->url || obj->explicit_tooltip) {
-      emit_map_rect(obj, b);
-      svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
-    }
+  if (obj->url || obj->explicit_tooltip) {
+    emit_map_rect(obj, b);
+    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
   }
-  return changed;
 }
 
 #define RESET(fld)                                                             \
@@ -510,8 +506,6 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
   htmlcell_t *cp;
   static textfont_t savef;
   htmlmap_data_t saved;
-  int anchor; /* if true, we need to undo anchor settings. */
-  const bool doAnchor = tbl->data.href || tbl->data.target || tbl->data.title;
   pointf AF[4];
 
   if (tbl->font)
@@ -522,10 +516,9 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
   pts.LL.y += pos.y;
   pts.UR.y += pos.y;
 
+  const bool doAnchor = tbl->data.href || tbl->data.target || tbl->data.title;
   if (doAnchor)
-    anchor = initAnchor(output, safe_layer, obj, env, &tbl->data, pts, &saved);
-  else
-    anchor = 0;
+    initAnchor(output, safe_layer, obj, env, &tbl->data, pts, &saved);
 
   if (!tbl->data.style.invisible) {
 
@@ -564,7 +557,7 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
       doBorder(output, obj, &tbl->data, pts);
   }
 
-  if (anchor)
+  if (doAnchor)
     endAnchor(output, obj, &saved);
 
   if (tbl->font)
@@ -597,7 +590,8 @@ static void emit_html_img(output_string *output, int rotation_deg, pointf dpi,
     scale = get_imagescale(cp->scale);
   assert(cp->src);
   assert(cp->src[0]);
-  svg_usershape(output, rotation_deg, dpi, cp->src, A, 4, scale, IMAGEPOS_MIDDLE_CENTER);
+  svg_usershape(output, rotation_deg, dpi, cp->src, A, 4, scale,
+                IMAGEPOS_MIDDLE_CENTER);
 }
 
 static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
@@ -605,8 +599,6 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
   htmlmap_data_t saved;
   boxf pts = cp->data.box;
   pointf pos = env->pos;
-  int inAnchor;
-  const bool doAnchor = cp->data.href || cp->data.target || cp->data.title;
   pointf AF[4];
 
   pts.LL.x += pos.x;
@@ -614,10 +606,9 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
   pts.LL.y += pos.y;
   pts.UR.y += pos.y;
 
+  const bool doAnchor = cp->data.href || cp->data.target || cp->data.title;
   if (doAnchor)
-    inAnchor = initAnchor(output, safe_layer, obj, env, &cp->data, pts, &saved);
-  else
-    inAnchor = 0;
+    initAnchor(output, safe_layer, obj, env, &cp->data, pts, &saved);
 
   if (!cp->data.style.invisible) {
     if (cp->data.bgcolor) {
@@ -646,7 +637,7 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
     }
   }
 
-  if (inAnchor)
+  if (doAnchor)
     endAnchor(output, obj, &saved);
 }
 
