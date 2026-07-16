@@ -365,28 +365,37 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
  * for nodes, edges, etc. ?
  */
 static void initAnchor(output_string *output, SafeLayer *safe_layer,
-                      obj_state_t *obj, htmlenv_t *env, htmldata_t *data,
-                      boxf b, htmlmap_data_t *save) {
-  char *id;
+                       obj_state_t *obj, htmlenv_t *env, htmldata_t *data,
+                       boxf b, htmlmap_data_t *save) {
   static int anchorId;
-  agxbuf xb = {0};
 
   save->url = obj->url;
   save->tooltip = obj->tooltip;
   save->target = obj->target;
   save->id = obj->id;
   save->explicit_tooltip = obj->explicit_tooltip != 0;
-  id = data->id;
+  char *id = data->id;
   if (!id || !*id) { /* no external id, so use the internal one */
+    agxbuf xb = {0};
     if (!env->objid) {
       env->objid = gv_strdup(getObjId(safe_layer, obj->u.n, &xb));
       env->objid_set = true;
     }
     agxbprint(&xb, "%s_%d", env->objid, anchorId++);
-    id = agxbuse(&xb);
+    obj->id = strdup_and_subst_obj(agxbuse(&xb), obj->u.g);
+    agxbfree(&xb);
   }
-  initMapData(obj, NULL, data->href, data->title, data->target, id, obj->u.g);
-  agxbfree(&xb);
+
+  if (data->href && data->href[0]) {
+    obj->url = strdup_and_subst_obj(data->href, obj->u.g);
+  }
+  if (data->title && data->title[0]) {
+    obj->tooltip = strdup_and_subst_obj(data->title, obj->u.g);
+    obj->explicit_tooltip = true;
+  }
+  if (data->target && data->target[0]) {
+    obj->target = strdup_and_subst_obj(data->target, obj->u.g);
+  }
 
   if (obj->url || obj->explicit_tooltip) {
     emit_map_rect(obj, b);
