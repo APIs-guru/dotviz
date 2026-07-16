@@ -206,22 +206,6 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
   out_puts(output, "/>\n");
 }
 
-static void svg_bzptarray(output_string *output, pointf *A, size_t n) {
-  char c;
-
-  c = 'M'; /* first point */
-  for (size_t i = 0; i < n; i++) {
-    out_putc(output, c);
-    gvprintdouble(output, A[i].x);
-    out_putc(output, ',');
-    gvprintdouble(output, -A[i].y);
-    if (i == 0)
-      c = 'C'; /* second point */
-    else
-      c = ' '; /* remaining points */
-  }
-}
-
 void svg_print_id(output_string *output, char *id, char *idx) {
   out_puts(output, " id=\"");
   gvputs_xml(output, id);
@@ -234,7 +218,7 @@ void svg_print_id(output_string *output, char *id, char *idx) {
 
 void svg_print_class(output_string *output, char *kind, void *obj) {
   gvprintf(output, " class=\"%s", kind);
-  char *str =agget(obj, "class");
+  char *str = agget(obj, "class");
   if (str && *str) {
     out_putc(output, ' ');
     gvputs_xml(output, str);
@@ -403,25 +387,15 @@ void svg_begin_page(output_string *output, SafeLayer *safe_layer,
 
 void svg_end_page(output_string *output) { out_puts(output, "</g>\n"); }
 
-void svg_begin_cluster(output_string *output, obj_state_t *obj) {
-  out_puts(output, "<g");
-  svg_print_id(output, obj->id, NULL);
-  svg_print_class(output, "cluster", obj->u.sg);
-  out_puts(output, ">\n<title>");
-  gvputs_xml(output, agnameof(obj->u.g));
-  out_puts(output, "</title>\n");
-}
-
 void svg_end_cluster(output_string *output) { out_puts(output, "</g>\n"); }
 
 void svg_begin_node(output_string *output, SafeLayer *safe_layer,
                     obj_state_t *obj) {
   out_puts(output, "<g");
   if (safe_layer->layerNum > 1) {
-    char* idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
+    char *idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
     svg_print_id(output, obj->id, idx);
-  }
-  else
+  } else
     svg_print_id(output, obj->id, NULL);
   svg_print_class(output, "node", obj->u.n);
   out_puts(output, ">\n<title>");
@@ -728,25 +702,38 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
 
 void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
                 int filled) {
-  if (obj->pen != PEN_NONE) {
-    int gid = 0;
-
-    if (filled == GRADIENT) {
-      gid = svg_gradstyle(output, obj, A, n);
-    } else if (filled == RGRADIENT) {
-      gid = svg_rgradstyle(output, obj);
-    }
-    out_puts(output, "<path");
-    if (obj->labeledgealigned) {
-      out_puts(output, " id=\"");
-      gvputs_xml(output, obj->id);
-      out_puts(output, "_p\" ");
-    }
-    svg_grstyle(output, obj, filled, gid);
-    out_puts(output, " d=\"");
-    svg_bzptarray(output, A, n);
-    out_puts(output, "\"/>\n");
+  if (obj->pen == PEN_NONE) {
+    return;
   }
+  int gid = 0;
+
+  if (filled == GRADIENT) {
+    gid = svg_gradstyle(output, obj, A, n);
+  } else if (filled == RGRADIENT) {
+    gid = svg_rgradstyle(output, obj);
+  }
+  out_puts(output, "<path");
+  if (obj->labeledgealigned) {
+    out_puts(output, " id=\"");
+    gvputs_xml(output, obj->id);
+    out_puts(output, "_p\" ");
+  }
+  svg_grstyle(output, obj, filled, gid);
+
+  out_puts(output, " d=\"");
+  char c = 'M'; /* first point */
+  for (size_t i = 0; i < n; i++) {
+    out_putc(output, c);
+    gvprintdouble(output, A[i].x);
+    out_putc(output, ',');
+    gvprintdouble(output, -A[i].y);
+    if (i == 0)
+      c = 'C'; /* second point */
+    else
+      c = ' '; /* remaining points */
+  }
+
+  out_puts(output, "\"/>\n");
 }
 
 void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
