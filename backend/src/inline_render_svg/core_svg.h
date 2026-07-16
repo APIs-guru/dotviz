@@ -30,7 +30,6 @@ void svg_end_edge(output_string *output);
 void svg_begin_page(output_string *output, SafeLayer *safe_layer,
                     obj_state_t *obj);
 void svg_end_page(output_string *output);
-void svg_begin_cluster(output_string *output, obj_state_t *obj);
 void svg_end_cluster(output_string *output);
 void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
                    char *name, pointf *a, size_t n, imagescale_t imagescale,

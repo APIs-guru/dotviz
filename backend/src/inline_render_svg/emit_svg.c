@@ -1994,7 +1994,12 @@ static void emit_begin_cluster(output_string *output, SafeLayer *safe_layer,
 
   initObjMapData(safe_layer, obj, GD_label(sg), sg);
 
-  svg_begin_cluster(output, obj);
+  out_puts(output, "<g");
+  svg_print_id(output, obj->id, NULL);
+  svg_print_class(output, "cluster", sg);
+  out_puts(output, ">\n<title>");
+  gvputs_xml(output, agnameof(sg));
+  out_puts(output, "</title>\n");
 }
 
 static void emit_clusters(output_string *output, SafeLayer *safe_layer,
