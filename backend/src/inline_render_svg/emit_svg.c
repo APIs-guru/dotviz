@@ -126,32 +126,24 @@ void free_child_obj(obj_state_t *child) {
  * names.
  * @return True if an assignment was made for ID, URL, tooltip, or target
  */
-bool initMapData(obj_state_t *obj, char *lbl, char *url, char *tooltip,
+void initMapData(obj_state_t *obj, char *lbl, char *url, char *tooltip,
                  char *target, char *id, void *gobj) {
-  bool assigned = false;
-
   if (lbl)
     obj->label = lbl;
   obj->id = strdup_and_subst_obj(id, gobj);
   if (url && url[0]) {
     obj->url = strdup_and_subst_obj(url, gobj);
   }
-  assigned = true;
-
   if (tooltip && tooltip[0]) {
     obj->tooltip = strdup_and_subst_obj(tooltip, gobj);
     obj->explicit_tooltip = true;
-    assigned = true;
   } else if (obj->label) {
     obj->tooltip = gv_strdup(obj->label);
-    assigned = true;
   }
 
   if (target && target[0]) {
     obj->target = strdup_and_subst_obj(target, gobj);
-    assigned = true;
   }
-  return assigned;
 }
 
 static void layerPagePrefix(const SafeLayer *safe_layer, agxbuf *xb) {

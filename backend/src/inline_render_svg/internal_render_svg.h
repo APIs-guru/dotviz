@@ -43,7 +43,7 @@ void epsf_free(node_t *n);
 void free_label(textlabel_t *);
 void free_textspan(textspan_t *tl, size_t);
 void *init_xdot(Agraph_t *g);
-bool initMapData(obj_state_t *, char *, char *, char *, char *, char *, void *);
+void initMapData(obj_state_t *, char *, char *, char *, char *, char *, void *);
 bool isPolygon(node_t *);
 textlabel_t *make_label(void *obj, char *str, int kind, double fontsize,
                         char *fontname, char *fontcolor);
