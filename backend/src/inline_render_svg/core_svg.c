@@ -389,21 +389,6 @@ void svg_end_page(output_string *output) { out_puts(output, "</g>\n"); }
 
 void svg_end_cluster(output_string *output) { out_puts(output, "</g>\n"); }
 
-void svg_begin_node(output_string *output, SafeLayer *safe_layer,
-                    obj_state_t *obj) {
-  out_puts(output, "<g");
-  if (safe_layer->layerNum > 1) {
-    char *idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
-    svg_print_id(output, obj->id, idx);
-  } else
-    svg_print_id(output, obj->id, NULL);
-  svg_print_class(output, "node", obj->u.n);
-  out_puts(output, ">\n<title>");
-  gvputs_xml(output, agnameof(obj->u.n));
-  out_puts(output, "</title>\n");
-}
-
-void svg_end_node(output_string *output) { out_puts(output, "</g>\n"); }
 
 void svg_begin_edge(output_string *output, obj_state_t *obj) {
   out_puts(output, "<g");

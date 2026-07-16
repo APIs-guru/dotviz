@@ -984,11 +984,21 @@ static void emit_begin_node(output_string *output, SafeLayer *safe_layer,
   }
 
   saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
-  svg_begin_node(output, safe_layer, obj);
+
+  out_puts(output, "<g");
+  if (safe_layer->layerNum > 1) {
+    char *idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
+    svg_print_id(output, obj->id, idx);
+  } else
+    svg_print_id(output, obj->id, NULL);
+  svg_print_class(output, "node", n);
+  out_puts(output, ">\n<title>");
+  gvputs_xml(output, agnameof(n));
+  out_puts(output, "</title>\n");
 }
 
 static void emit_end_node(output_string *output) {
-  svg_end_node(output);
+  out_puts(output, "</g>\n");
 
   char *color_scheme = setColorScheme(saved_color_scheme);
   free(color_scheme);
