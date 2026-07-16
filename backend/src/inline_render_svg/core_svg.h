@@ -18,9 +18,7 @@ void svg_polyline(output_string *output, obj_state_t *obj, pointf *A, size_t n);
 void svg_textspan(output_string *output, fontname_kind fontnames,
                   obj_state_t *obj, pointf p, textspan_t *span);
 void svg_box(output_string *output, obj_state_t *obj, boxf B, int filled);
-void svg_begin_node(output_string *output, SafeLayer *safe_layer,
-                    obj_state_t *obj);
-void svg_end_node(output_string *output);
+
 void svg_comment(output_string *output, char *str);
 void svg_begin_edge(output_string *output, obj_state_t *obj);
 void svg_begin_anchor(output_string *output, char *href, char *tooltip,
