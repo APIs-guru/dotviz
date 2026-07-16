@@ -95,8 +95,7 @@ static char *fullColor(agxbuf *xb, const char *prefix, const char *str) {
   return agxbuse(xb);
 }
 
-static int colorcmpf(const void *p0, const void *p1)
-{
+static int colorcmpf(const void *p0, const void *p1) {
   return strcasecmp(p0, ((const hsvrgbacolor_t *)p1)->name);
 }
 
@@ -136,7 +135,7 @@ static int colorcmpf(const void *p0, const void *p1)
 #define DFLT_SCHEME_LEN ((sizeof(DFLT_SCHEME) - 1) / sizeof(char))
 #define ISNONDFLT(s)                                                           \
   ((s) && *(s) && strncasecmp(DFLT_SCHEME, s, DFLT_SCHEME_LEN - 1))
-static char* colorscheme;
+static char *colorscheme;
 
 char *setColorScheme(const char *s) {
   char *previous = colorscheme;
@@ -179,24 +178,17 @@ static char *resolveColor(const char *str) {
   return on_heap;
 }
 
-static int my_colorxlate(const char *str, gvcolor_t *color) {
-  char c;
-  double H, S, V, A, R, G, B;
-  unsigned int r, g, b;
-
-  color->type = RGBA_BYTE;
-
-  int rc = COLOR_OK;
+static void my_colorxlate(const char *str, gvcolor_t *color) {
   for (; *str == ' '; str++)
     ; /* skip over any leading whitespace */
-  const char *p = str;
 
   /* test for rgb value such as: "#ff0000"
      or rgba value such as "#ff000080" */
   unsigned a = 255; // default alpha channel value=opaque in case not supplied
-  bool is_rgb = sscanf(p, "#%2x%2x%2x%2x", &r, &g, &b, &a) >= 3;
+  unsigned int r, g, b;
+  bool is_rgb = sscanf(str, "#%2x%2x%2x%2x", &r, &g, &b, &a) >= 3;
   if (!is_rgb) { // try 3 letter form
-    is_rgb = strlen(p) == 4 && sscanf(p, "#%1x%1x%1x", &r, &g, &b) == 3;
+    is_rgb = strlen(str) == 4 && sscanf(str, "#%1x%1x%1x", &r, &g, &b) == 3;
     if (is_rgb) {
       r |= r << 4;
       g |= g << 4;
@@ -204,20 +196,24 @@ static int my_colorxlate(const char *str, gvcolor_t *color) {
     }
   }
   if (is_rgb) {
+    color->type = RGBA_BYTE;
     color->u.rgba[0] = (unsigned char)r;
     color->u.rgba[1] = (unsigned char)g;
     color->u.rgba[2] = (unsigned char)b;
     color->u.rgba[3] = (unsigned char)a;
-    return rc;
+    return;
   }
 
   /* test for hsv value such as: ".6,.5,.3" */
-  if ((c = *p) == '.' || (c >= '0' && c <= '9')) {
+  const char *p = str;
+  char c = *p;
+  if (c == '.' || (c >= '0' && c <= '9')) {
     agxbuf canon = {0};
     while ((c = *p++)) {
       agxbputc(&canon, c == ',' ? ' ' : c);
     }
 
+    double H, S, V, A, R, G, B;
     A = 1.0; // default
     if (sscanf(agxbuse(&canon), "%lf%lf%lf%lf", &H, &S, &V, &A) >= 3) {
       /* clip to reasonable values */
@@ -226,12 +222,13 @@ static int my_colorxlate(const char *str, gvcolor_t *color) {
       V = fmax(fmin(V, 1.0), 0.0);
       A = fmax(fmin(A, 1.0), 0.0);
       hsv2rgb(H, S, V, &R, &G, &B);
+      color->type = RGBA_BYTE;
       color->u.rgba[0] = (unsigned char)(R * 255);
       color->u.rgba[1] = (unsigned char)(G * 255);
       color->u.rgba[2] = (unsigned char)(B * 255);
       color->u.rgba[3] = (unsigned char)(A * 255);
       agxbfree(&canon);
-      return rc;
+      return;
     }
     agxbfree(&canon);
   }
@@ -239,23 +236,30 @@ static int my_colorxlate(const char *str, gvcolor_t *color) {
   /* test for known color name (generic, not renderer specific known names) */
   char *name = resolveColor(str);
   if (!name)
-    return COLOR_MALLOC_FAIL;
+    return;
   const hsvrgbacolor_t *known =
       bsearch(name, color_lib, sizeof(color_lib) / sizeof(hsvrgbacolor_t),
               sizeof(color_lib[0]), colorcmpf);
   free(name);
   if (known != NULL) {
+    color->type = RGBA_BYTE;
     color->u.rgba[0] = known->r;
     color->u.rgba[1] = known->g;
     color->u.rgba[2] = known->b;
     color->u.rgba[3] = known->a;
-    return rc;
+    return;
   }
 
   /* if we're still here then we failed to find a valid color spec */
+  agxbuf missedcolor = {0};
+  agxbprint(&missedcolor, "color %s", name);
+  if (emit_once(agxbuse(&missedcolor)))
+    agwarningf("%s is not a known color.\n", name);
+  agxbfree(&missedcolor);
+
+  color->type = RGBA_BYTE;
   color->u.rgba[0] = color->u.rgba[1] = color->u.rgba[2] = 0;
   color->u.rgba[3] = 255; /* opaque */
-  return COLOR_UNKNOWN;
 }
 
 char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
@@ -1190,18 +1194,7 @@ gvcolor_t svg_resolve_color(char *name) {
   if (bsearch(name, svg_knowncolors, sz_knowncolors, sizeof(char *),
               svg_comparestr) == NULL) {
     /* if name was not found in known_colors */
-    int rc = my_colorxlate(name, &color);
-    if (rc != COLOR_OK) {
-      if (rc == COLOR_UNKNOWN) {
-        agxbuf missedcolor = {0};
-        agxbprint(&missedcolor, "color %s", name);
-        if (emit_once(agxbuse(&missedcolor)))
-          agwarningf("%s is not a known color.\n", name);
-        agxbfree(&missedcolor);
-      } else {
-        agerrorf("error in colorxlate()\n");
-      }
-    }
+    my_colorxlate(name, &color);
   }
 
   if (cp) /* restore color list */
