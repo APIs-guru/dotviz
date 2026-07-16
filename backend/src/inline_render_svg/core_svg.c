@@ -34,56 +34,54 @@
 
 static void hsv2rgb(double h, double s, double v, double *r, double *g,
                     double *b) {
-  int i;
-  double f, p, q, t;
-
   if (s <= 0.0) { /* achromatic */
     *r = v;
     *g = v;
     *b = v;
-  } else {
-    if (h >= 1.0)
-      h = 0.0;
-    h = 6.0 * h;
-    i = (int)h;
-    f = h - i;
-    p = v * (1 - s);
-    q = v * (1 - s * f);
-    t = v * (1 - s * (1 - f));
-    switch (i) {
-    case 0:
-      *r = v;
-      *g = t;
-      *b = p;
-      break;
-    case 1:
-      *r = q;
-      *g = v;
-      *b = p;
-      break;
-    case 2:
-      *r = p;
-      *g = v;
-      *b = t;
-      break;
-    case 3:
-      *r = p;
-      *g = q;
-      *b = v;
-      break;
-    case 4:
-      *r = t;
-      *g = p;
-      *b = v;
-      break;
-    case 5:
-      *r = v;
-      *g = p;
-      *b = q;
-      break;
-    default:
-      UNREACHABLE();
-    }
+    return;
+  }
+
+  if (h >= 1.0)
+    h = 0.0;
+  h = 6.0 * h;
+  int i = (int)h;
+  double f = h - i;
+  double p = v * (1 - s);
+  double q = v * (1 - s * f);
+  double t = v * (1 - s * (1 - f));
+  switch (i) {
+  case 0:
+    *r = v;
+    *g = t;
+    *b = p;
+    break;
+  case 1:
+    *r = q;
+    *g = v;
+    *b = p;
+    break;
+  case 2:
+    *r = p;
+    *g = v;
+    *b = t;
+    break;
+  case 3:
+    *r = p;
+    *g = q;
+    *b = v;
+    break;
+  case 4:
+    *r = t;
+    *g = p;
+    *b = v;
+    break;
+  case 5:
+    *r = v;
+    *g = p;
+    *b = q;
+    break;
+  default:
+    UNREACHABLE();
   }
 }
 
@@ -178,7 +176,7 @@ static char *resolveColor(const char *str) {
   return on_heap;
 }
 
-static gvcolor_t  my_colorxlate(const char *str) {
+static gvcolor_t my_colorxlate(const char *str) {
   for (; *str == ' '; str++)
     ; /* skip over any leading whitespace */
 
@@ -214,14 +212,15 @@ static gvcolor_t  my_colorxlate(const char *str) {
       agxbputc(&canon, c == ',' ? ' ' : c);
     }
 
-    double H, S, V, A, R, G, B;
-    A = 1.0; // default
+    double H, S, V, A = 1.0; // default
     if (sscanf(agxbuse(&canon), "%lf%lf%lf%lf", &H, &S, &V, &A) >= 3) {
       /* clip to reasonable values */
       H = fmax(fmin(H, 1.0), 0.0);
       S = fmax(fmin(S, 1.0), 0.0);
       V = fmax(fmin(V, 1.0), 0.0);
       A = fmax(fmin(A, 1.0), 0.0);
+
+      double R, G, B;
       hsv2rgb(H, S, V, &R, &G, &B);
 
       gvcolor_t color = {0};
