@@ -22,7 +22,6 @@
 #include "const.h"
 #include "utils.h"
 #include "util/unreachable.h"
-#include "colorprocs.h"
 #include "geomprocs.h"
 #include "streq.h"
 
@@ -30,7 +29,234 @@
 #include "core_svg.h"
 #include "gvio_svg.h"
 #include "internal_render_svg.h"
+#include "colortbl.h"
 #include "../output_string.h"
+
+static void hsv2rgb(double h, double s, double v, double *r, double *g,
+                    double *b) {
+  int i;
+  double f, p, q, t;
+
+  if (s <= 0.0) { /* achromatic */
+    *r = v;
+    *g = v;
+    *b = v;
+  } else {
+    if (h >= 1.0)
+      h = 0.0;
+    h = 6.0 * h;
+    i = (int)h;
+    f = h - i;
+    p = v * (1 - s);
+    q = v * (1 - s * f);
+    t = v * (1 - s * (1 - f));
+    switch (i) {
+    case 0:
+      *r = v;
+      *g = t;
+      *b = p;
+      break;
+    case 1:
+      *r = q;
+      *g = v;
+      *b = p;
+      break;
+    case 2:
+      *r = p;
+      *g = v;
+      *b = t;
+      break;
+    case 3:
+      *r = p;
+      *g = q;
+      *b = v;
+      break;
+    case 4:
+      *r = t;
+      *g = p;
+      *b = v;
+      break;
+    case 5:
+      *r = v;
+      *g = p;
+      *b = q;
+      break;
+    default:
+      UNREACHABLE();
+    }
+  }
+}
+
+/* fullColor:
+ * Return "/prefix/str"
+ */
+static char *fullColor(agxbuf *xb, const char *prefix, const char *str) {
+  agxbprint(xb, "/%s/%s", prefix, str);
+  return agxbuse(xb);
+}
+
+static int colorcmpf(const void *p0, const void *p1)
+{
+  return strcasecmp(p0, ((const hsvrgbacolor_t *)p1)->name);
+}
+
+/* resolveColor:
+ * Resolve input color str allowing color scheme namespaces.
+ *  0) "black" => "black"
+ *     "white" => "white"
+ *     "lightgrey" => "lightgrey"
+ *    NB: This is something of a hack due to the remaining codegen.
+ *        Once these are gone, this case could be removed and all references
+ *        to "black" could be replaced by "/X11/black".
+ *  1) No initial / =>
+ *          if colorscheme is defined and no "X11", return /colorscheme/str
+ *          else return str
+ *  2) One initial / => return str+1
+ *  3) Two initial /'s =>
+ *       a) If colorscheme is defined and not "X11", return /colorscheme/(str+2)
+ *       b) else return (str+2)
+ *  4) Two /'s, not both initial => return str.
+ *
+ * Note that 1), 2), and 3b) allow the default X11 color scheme.
+ *
+ * In other words,
+ *   xxx => /colorscheme/xxx     if colorscheme is defined and not "X11"
+ *   xxx => xxx                  otherwise
+ *   /xxx => xxx
+ *   /X11/yyy => yyy
+ *   /xxx/yyy => /xxx/yyy
+ *   //yyy => /colorscheme/yyy   if colorscheme is defined and not "X11"
+ *   //yyy => yyy                otherwise
+ *
+ * At present, no other error checking is done. For example,
+ * yyy could be "". This will be caught later.
+ */
+
+#define DFLT_SCHEME "X11/" /* Must have final '/' */
+#define DFLT_SCHEME_LEN ((sizeof(DFLT_SCHEME) - 1) / sizeof(char))
+#define ISNONDFLT(s)                                                           \
+  ((s) && *(s) && strncasecmp(DFLT_SCHEME, s, DFLT_SCHEME_LEN - 1))
+static char* colorscheme;
+
+char *setColorScheme(const char *s) {
+  char *previous = colorscheme;
+  colorscheme = s == NULL ? NULL : gv_strdup(s);
+  return previous;
+}
+
+static char *resolveColor(const char *str) {
+  const char *s;
+
+  if (!strcmp(str, "black"))
+    return strdup(str);
+  if (!strcmp(str, "white"))
+    return strdup(str);
+  if (!strcmp(str, "lightgrey"))
+    return strdup(str);
+  agxbuf xb = {0};
+  if (*str == '/') {                        /* if begins with '/' */
+    const char *const c2 = str + 1;         // second char
+    const char *const ss = strchr(c2, '/'); // second slash
+    if (ss != NULL) {                       // if has second '/'
+      if (*c2 == '/') { /* if second '/' is second character */
+                        /* Do not compare against final '/' */
+        if (ISNONDFLT(colorscheme))
+          s = fullColor(&xb, colorscheme, c2 + 1);
+        else
+          s = c2 + 1;
+      } else if (strncasecmp(DFLT_SCHEME, c2, DFLT_SCHEME_LEN))
+        s = str;
+      else
+        s = ss + 1;
+    } else
+      s = c2;
+  } else if (ISNONDFLT(colorscheme))
+    s = fullColor(&xb, colorscheme, str);
+  else
+    s = str;
+  char *on_heap = strdup(s);
+  agxbfree(&xb);
+  return on_heap;
+}
+
+static int my_colorxlate(const char *str, gvcolor_t *color) {
+  char c;
+  double H, S, V, A, R, G, B;
+  unsigned int r, g, b;
+
+  color->type = RGBA_BYTE;
+
+  int rc = COLOR_OK;
+  for (; *str == ' '; str++)
+    ; /* skip over any leading whitespace */
+  const char *p = str;
+
+  /* test for rgb value such as: "#ff0000"
+     or rgba value such as "#ff000080" */
+  unsigned a = 255; // default alpha channel value=opaque in case not supplied
+  bool is_rgb = sscanf(p, "#%2x%2x%2x%2x", &r, &g, &b, &a) >= 3;
+  if (!is_rgb) { // try 3 letter form
+    is_rgb = strlen(p) == 4 && sscanf(p, "#%1x%1x%1x", &r, &g, &b) == 3;
+    if (is_rgb) {
+      r |= r << 4;
+      g |= g << 4;
+      b |= b << 4;
+    }
+  }
+  if (is_rgb) {
+    color->u.rgba[0] = (unsigned char)r;
+    color->u.rgba[1] = (unsigned char)g;
+    color->u.rgba[2] = (unsigned char)b;
+    color->u.rgba[3] = (unsigned char)a;
+    return rc;
+  }
+
+  /* test for hsv value such as: ".6,.5,.3" */
+  if ((c = *p) == '.' || (c >= '0' && c <= '9')) {
+    agxbuf canon = {0};
+    while ((c = *p++)) {
+      agxbputc(&canon, c == ',' ? ' ' : c);
+    }
+
+    A = 1.0; // default
+    if (sscanf(agxbuse(&canon), "%lf%lf%lf%lf", &H, &S, &V, &A) >= 3) {
+      /* clip to reasonable values */
+      H = fmax(fmin(H, 1.0), 0.0);
+      S = fmax(fmin(S, 1.0), 0.0);
+      V = fmax(fmin(V, 1.0), 0.0);
+      A = fmax(fmin(A, 1.0), 0.0);
+      hsv2rgb(H, S, V, &R, &G, &B);
+      color->u.rgba[0] = (unsigned char)(R * 255);
+      color->u.rgba[1] = (unsigned char)(G * 255);
+      color->u.rgba[2] = (unsigned char)(B * 255);
+      color->u.rgba[3] = (unsigned char)(A * 255);
+      agxbfree(&canon);
+      return rc;
+    }
+    agxbfree(&canon);
+  }
+
+  /* test for known color name (generic, not renderer specific known names) */
+  char *name = resolveColor(str);
+  if (!name)
+    return COLOR_MALLOC_FAIL;
+  const hsvrgbacolor_t *known =
+      bsearch(name, color_lib, sizeof(color_lib) / sizeof(hsvrgbacolor_t),
+              sizeof(color_lib[0]), colorcmpf);
+  free(name);
+  if (known != NULL) {
+    color->u.rgba[0] = known->r;
+    color->u.rgba[1] = known->g;
+    color->u.rgba[2] = known->b;
+    color->u.rgba[3] = known->a;
+    return rc;
+  }
+
+  /* if we're still here then we failed to find a valid color spec */
+  color->u.rgba[0] = color->u.rgba[1] = color->u.rgba[2] = 0;
+  color->u.rgba[3] = 255; /* opaque */
+  return COLOR_UNKNOWN;
+}
 
 char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
 
@@ -388,7 +614,6 @@ void svg_begin_page(output_string *output, SafeLayer *safe_layer,
 void svg_end_page(output_string *output) { out_puts(output, "</g>\n"); }
 
 void svg_end_cluster(output_string *output) { out_puts(output, "</g>\n"); }
-
 
 void svg_begin_edge(output_string *output, obj_state_t *obj) {
   out_puts(output, "<g");
@@ -965,7 +1190,7 @@ gvcolor_t svg_resolve_color(char *name) {
   if (bsearch(name, svg_knowncolors, sz_knowncolors, sizeof(char *),
               svg_comparestr) == NULL) {
     /* if name was not found in known_colors */
-    int rc = colorxlate(name, &color, RGBA_BYTE);
+    int rc = my_colorxlate(name, &color);
     if (rc != COLOR_OK) {
       if (rc == COLOR_UNKNOWN) {
         agxbuf missedcolor = {0};
