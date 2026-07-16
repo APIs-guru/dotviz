@@ -32,12 +32,10 @@
 #include "colortbl.h"
 #include "../output_string.h"
 
-static void hsv2rgb(double h, double s, double v, double *r, double *g,
-                    double *b) {
+static void hsv2rgb(double h, double s, double v, unsigned char *r,
+                    unsigned char *g, unsigned char *b) {
   if (s <= 0.0) { /* achromatic */
-    *r = v;
-    *g = v;
-    *b = v;
+    *r = *g = *b = (unsigned char)(v * 255);
     return;
   }
 
@@ -51,34 +49,34 @@ static void hsv2rgb(double h, double s, double v, double *r, double *g,
   double t = v * (1 - s * (1 - f));
   switch (i) {
   case 0:
-    *r = v;
-    *g = t;
-    *b = p;
+    *r = (unsigned char)(v * 255);
+    *g = (unsigned char)(t * 255);
+    *b = (unsigned char)(p * 255);
     break;
   case 1:
-    *r = q;
-    *g = v;
-    *b = p;
+    *r = (unsigned char)(q * 255);
+    *g = (unsigned char)(v * 255);
+    *b = (unsigned char)(p * 255);
     break;
   case 2:
-    *r = p;
-    *g = v;
-    *b = t;
+    *r = (unsigned char)(p * 255);
+    *g = (unsigned char)(v * 255);
+    *b = (unsigned char)(t * 255);
     break;
   case 3:
-    *r = p;
-    *g = q;
-    *b = v;
+    *r = (unsigned char)(p * 255);
+    *g = (unsigned char)(q * 255);
+    *b = (unsigned char)(v * 255);
     break;
   case 4:
-    *r = t;
-    *g = p;
-    *b = v;
+    *r = (unsigned char)(t * 255);
+    *g = (unsigned char)(p * 255);
+    *b = (unsigned char)(v * 255);
     break;
   case 5:
-    *r = v;
-    *g = p;
-    *b = q;
+    *r = (unsigned char)(v * 255);
+    *g = (unsigned char)(p * 255);
+    *b = (unsigned char)(q * 255);
     break;
   default:
     UNREACHABLE();
@@ -220,14 +218,9 @@ static gvcolor_t my_colorxlate(const char *str) {
       V = fmax(fmin(V, 1.0), 0.0);
       A = fmax(fmin(A, 1.0), 0.0);
 
-      double R, G, B;
-      hsv2rgb(H, S, V, &R, &G, &B);
-
       gvcolor_t color = {0};
       color.type = RGBA_BYTE;
-      color.u.rgba[0] = (unsigned char)(R * 255);
-      color.u.rgba[1] = (unsigned char)(G * 255);
-      color.u.rgba[2] = (unsigned char)(B * 255);
+      hsv2rgb(H, S, V, &color.u.rgba[0], &color.u.rgba[1], &color.u.rgba[2]);
       color.u.rgba[3] = (unsigned char)(A * 255);
       agxbfree(&canon);
       return color;
