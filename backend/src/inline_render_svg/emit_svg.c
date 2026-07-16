@@ -122,30 +122,6 @@ void free_child_obj(obj_state_t *child) {
   free(child->url_bsplinemap_n);
 }
 
-/* Store image map data into job, substituting for node, edge, etc.
- * names.
- * @return True if an assignment was made for ID, URL, tooltip, or target
- */
-void initMapData(obj_state_t *obj, char *lbl, char *url, char *tooltip,
-                 char *target, char *id, void *gobj) {
-  if (lbl)
-    obj->label = lbl;
-  obj->id = strdup_and_subst_obj(id, gobj);
-  if (url && url[0]) {
-    obj->url = strdup_and_subst_obj(url, gobj);
-  }
-  if (tooltip && tooltip[0]) {
-    obj->tooltip = strdup_and_subst_obj(tooltip, gobj);
-    obj->explicit_tooltip = true;
-  } else if (obj->label) {
-    obj->tooltip = gv_strdup(obj->label);
-  }
-
-  if (target && target[0]) {
-    obj->target = strdup_and_subst_obj(target, gobj);
-  }
-}
-
 static void layerPagePrefix(const SafeLayer *safe_layer, agxbuf *xb) {
   if (safe_layer->layerNum > 1) {
     agxbprint(xb, "%s_", safe_layer->safe_job->layerIDs[safe_layer->layerNum]);
