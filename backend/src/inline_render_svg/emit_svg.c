@@ -947,10 +947,6 @@ static char *saved_color_scheme;
 
 static void emit_begin_node(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, node_t *n) {
-  size_t nump = 0;
-  pointf *p = NULL;
-  pointf coord;
-
   obj->type = NODE_OBJTYPE;
   obj->u.n = n;
   obj->emit_state = EMIT_NDRAW;
@@ -959,7 +955,7 @@ static void emit_begin_node(output_string *output, SafeLayer *safe_layer,
   if (obj->url || obj->explicit_tooltip) {
 
     /* node coordinate */
-    coord = ND_coord(n);
+    pointf coord = ND_coord(n);
 
     /* When node has polygon shape and requested output supports polygons
      * we use a polygon to map the clickable region that is a:
@@ -972,8 +968,8 @@ static void emit_begin_node(output_string *output, SafeLayer *safe_layer,
      * when requested output format is not capable of polygons.
      */
     obj->url_map_shape = MAP_RECTANGLE;
-    nump = 2;
-    p = gv_calloc(nump, sizeof(pointf));
+    size_t nump = 2;
+    pointf *p = gv_calloc(nump, sizeof(pointf));
     p[0].x = coord.x - ND_lw(n);
     p[0].y = coord.y - (ND_ht(n) / 2);
     p[1].x = coord.x + ND_rw(n);
