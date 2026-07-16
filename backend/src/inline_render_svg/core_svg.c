@@ -144,14 +144,14 @@ char *setColorScheme(const char *s) {
 }
 
 static char *resolveColor(const char *str) {
-  const char *s;
-
   if (!strcmp(str, "black"))
     return strdup(str);
   if (!strcmp(str, "white"))
     return strdup(str);
   if (!strcmp(str, "lightgrey"))
     return strdup(str);
+
+  const char *s;
   agxbuf xb = {0};
   if (*str == '/') {                        /* if begins with '/' */
     const char *const c2 = str + 1;         // second char
@@ -178,7 +178,7 @@ static char *resolveColor(const char *str) {
   return on_heap;
 }
 
-static void my_colorxlate(const char *str, gvcolor_t *color) {
+static gvcolor_t  my_colorxlate(const char *str) {
   for (; *str == ' '; str++)
     ; /* skip over any leading whitespace */
 
@@ -196,12 +196,13 @@ static void my_colorxlate(const char *str, gvcolor_t *color) {
     }
   }
   if (is_rgb) {
-    color->type = RGBA_BYTE;
-    color->u.rgba[0] = (unsigned char)r;
-    color->u.rgba[1] = (unsigned char)g;
-    color->u.rgba[2] = (unsigned char)b;
-    color->u.rgba[3] = (unsigned char)a;
-    return;
+    gvcolor_t color = {0};
+    color.type = RGBA_BYTE;
+    color.u.rgba[0] = (unsigned char)r;
+    color.u.rgba[1] = (unsigned char)g;
+    color.u.rgba[2] = (unsigned char)b;
+    color.u.rgba[3] = (unsigned char)a;
+    return color;
   }
 
   /* test for hsv value such as: ".6,.5,.3" */
@@ -222,32 +223,33 @@ static void my_colorxlate(const char *str, gvcolor_t *color) {
       V = fmax(fmin(V, 1.0), 0.0);
       A = fmax(fmin(A, 1.0), 0.0);
       hsv2rgb(H, S, V, &R, &G, &B);
-      color->type = RGBA_BYTE;
-      color->u.rgba[0] = (unsigned char)(R * 255);
-      color->u.rgba[1] = (unsigned char)(G * 255);
-      color->u.rgba[2] = (unsigned char)(B * 255);
-      color->u.rgba[3] = (unsigned char)(A * 255);
+
+      gvcolor_t color = {0};
+      color.type = RGBA_BYTE;
+      color.u.rgba[0] = (unsigned char)(R * 255);
+      color.u.rgba[1] = (unsigned char)(G * 255);
+      color.u.rgba[2] = (unsigned char)(B * 255);
+      color.u.rgba[3] = (unsigned char)(A * 255);
       agxbfree(&canon);
-      return;
+      return color;
     }
     agxbfree(&canon);
   }
 
   /* test for known color name (generic, not renderer specific known names) */
   char *name = resolveColor(str);
-  if (!name)
-    return;
   const hsvrgbacolor_t *known =
       bsearch(name, color_lib, sizeof(color_lib) / sizeof(hsvrgbacolor_t),
               sizeof(color_lib[0]), colorcmpf);
   free(name);
   if (known != NULL) {
-    color->type = RGBA_BYTE;
-    color->u.rgba[0] = known->r;
-    color->u.rgba[1] = known->g;
-    color->u.rgba[2] = known->b;
-    color->u.rgba[3] = known->a;
-    return;
+    gvcolor_t color = {0};
+    color.type = RGBA_BYTE;
+    color.u.rgba[0] = known->r;
+    color.u.rgba[1] = known->g;
+    color.u.rgba[2] = known->b;
+    color.u.rgba[3] = known->a;
+    return color;
   }
 
   /* if we're still here then we failed to find a valid color spec */
@@ -257,9 +259,11 @@ static void my_colorxlate(const char *str, gvcolor_t *color) {
     agwarningf("%s is not a known color.\n", name);
   agxbfree(&missedcolor);
 
-  color->type = RGBA_BYTE;
-  color->u.rgba[0] = color->u.rgba[1] = color->u.rgba[2] = 0;
-  color->u.rgba[3] = 255; /* opaque */
+  gvcolor_t color = {0};
+  color.type = RGBA_BYTE;
+  color.u.rgba[0] = color.u.rgba[1] = color.u.rgba[2] = 0;
+  color.u.rgba[3] = 255; /* opaque */
+  return color;
 }
 
 char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
@@ -1183,18 +1187,19 @@ static int svg_comparestr(const void *s1, const void *s2) {
  */
 gvcolor_t svg_resolve_color(char *name) {
   gvcolor_t color = {0};
-  char *cp = NULL;
 
-  if ((cp = strchr(name, ':'))) // if it’s a color list, then use only first
+  char *cp = strchr(name, ':');
+  if (cp != NULL) // if it’s a color list, then use only first
     *cp = '\0';
 
-  color.u.string = name;
-  color.type = COLOR_STRING;
   const size_t sz_knowncolors = sizeof(svg_knowncolors) / sizeof(char *);
   if (bsearch(name, svg_knowncolors, sz_knowncolors, sizeof(char *),
-              svg_comparestr) == NULL) {
+              svg_comparestr) != NULL) {
+    color.type = COLOR_STRING;
+    color.u.string = name;
+  } else {
     /* if name was not found in known_colors */
-    my_colorxlate(name, &color);
+    color = my_colorxlate(name);
   }
 
   if (cp) /* restore color list */
