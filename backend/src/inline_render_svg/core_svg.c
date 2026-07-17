@@ -98,86 +98,7 @@ static gvcolor_t hsva2rgb(double h, double s, double v, double a) {
   }
 }
 
-/* resolveColor:
- * Resolve input color str allowing color scheme namespaces.
- *  0) "black" => "black"
- *     "white" => "white"
- *     "lightgrey" => "lightgrey"
- *    NB: This is something of a hack due to the remaining codegen.
- *        Once these are gone, this case could be removed and all references
- *        to "black" could be replaced by "/X11/black".
- *  1) No initial / =>
- *          if colorscheme is defined and no "X11", return /colorscheme/str
- *          else return str
- *  2) One initial / => return str+1
- *  3) Two initial /'s =>
- *       a) If colorscheme is defined and not "X11", return /colorscheme/(str+2)
- *       b) else return (str+2)
- *  4) Two /'s, not both initial => return str.
- *
- * Note that 1), 2), and 3b) allow the default X11 color scheme.
- *
- * In other words,
- *   xxx => /colorscheme/xxx     if colorscheme is defined and not "X11"
- *   xxx => xxx                  otherwise
- *   /xxx => xxx
- *   /X11/yyy => yyy
- *   /xxx/yyy => /xxx/yyy
- * |  //yyy => /colorscheme/yyy   if colorscheme is defined and not "X11"
- * |  //yyy => yyy                otherwise
- *
- * At present, no other error checking is done. For example,
- * yyy could be "". This will be caught later.
- */
-
-#define DFLT_SCHEME "X11/" /* Must have final '/' */
-#define DFLT_SCHEME_LEN ((sizeof(DFLT_SCHEME) - 1) / sizeof(char))
-#define ISNONDFLT(s)                                                           \
-  ((s) && *(s) && strncasecmp(DFLT_SCHEME, s, DFLT_SCHEME_LEN - 1))
-static char *colorscheme;
-
-char *setColorScheme(const char *s) {
-  char *previous = colorscheme;
-  colorscheme = s == NULL ? NULL : gv_strdup(s);
-  return previous;
-}
-
-/* fullColor:
- * Return "/prefix/str"
- */
-static char *fullColor(const char *str) {
-  if (colorscheme && *colorscheme &&
-      strncasecmp(DFLT_SCHEME, colorscheme, DFLT_SCHEME_LEN - 1)) {
-    agxbuf xb = {0};
-    agxbprint(&xb, "/%s/%s", colorscheme, str);
-    char *result = strdup(agxbuse(&xb));
-    agxbfree(&xb);
-    return result;
-  }
-  return strdup(str);
-}
-
-const hsvrgbacolor_t *resolveColorImpl(char const *name);
-static char *resolveColor(const char *str) {
-  if (!strcmp(str, "black"))
-    return strdup(str);
-  if (!strcmp(str, "white"))
-    return strdup(str);
-  if (!strcmp(str, "lightgrey"))
-    return strdup(str);
-
-  if (str[0] != '/') {
-    return fullColor(str);
-  }
-  if (str[1] == '/') {
-    return fullColor(&str[2]);
-  }
-  if (strncasecmp(DFLT_SCHEME, &str[1], DFLT_SCHEME_LEN) == 0) {
-    return strdup(&str[1 + DFLT_SCHEME_LEN]);
-  }
-  return strdup(str);
-}
-
+const hsvrgbacolor_t *resolveColor(char const *name);
 static gvcolor_t my_colorxlate(const char *str) {
   for (; *str == ' '; str++)
     ; /* skip over any leading whitespace */
@@ -223,9 +144,7 @@ static gvcolor_t my_colorxlate(const char *str) {
   }
 
   /* test for known color name (generic, not renderer specific known names) */
-  char *name = resolveColor(str);
-  const hsvrgbacolor_t *known = resolveColorImpl(name);
-  free(name);
+  const hsvrgbacolor_t *known = resolveColor(str);
   if (known != NULL) {
     gvcolor_t color = {0};
     color.type = RGBA_BYTE;
@@ -238,9 +157,9 @@ static gvcolor_t my_colorxlate(const char *str) {
 
   /* if we're still here then we failed to find a valid color spec */
   agxbuf missedcolor = {0};
-  agxbprint(&missedcolor, "color %s", name);
+  agxbprint(&missedcolor, "color %s", str);
   if (emit_once(agxbuse(&missedcolor)))
-    agwarningf("%s is not a known color.\n", name);
+    agwarningf("%s is not a known color.\n", str);
   agxbfree(&missedcolor);
 
   return (gvcolor_t){

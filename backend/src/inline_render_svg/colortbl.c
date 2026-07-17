@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "color.h"
+#include "agxbuf.h"
 
 static const hsvrgbacolor_t color_lib[] = {
     {"/accent3/1", 85, 93, 201, 127, 201, 127, 255},
@@ -2525,7 +2526,83 @@ static int colorcmpf(const void *p0, const void *p1) {
   return strcasecmp(p0, ((const hsvrgbacolor_t *)p1)->name);
 }
 
-const hsvrgbacolor_t *resolveColorImpl(char const *name) {
+static const hsvrgbacolor_t *findColor(char const *name) {
   return bsearch(name, color_lib, sizeof(color_lib) / sizeof(hsvrgbacolor_t),
                  sizeof(color_lib[0]), colorcmpf);
+}
+
+#define DFLT_SCHEME "X11/" /* Must have final '/' */
+#define DFLT_SCHEME_LEN ((sizeof(DFLT_SCHEME) - 1) / sizeof(char))
+static char *colorscheme;
+
+/* fullColor:
+ * Return "/prefix/str"
+ */
+static const hsvrgbacolor_t *findFullColor(const char *str) {
+  if (colorscheme && *colorscheme &&
+      strncasecmp(DFLT_SCHEME, colorscheme, DFLT_SCHEME_LEN - 1)) {
+    agxbuf xb = {0};
+    agxbprint(&xb, "/%s/%s", colorscheme, str);
+    const hsvrgbacolor_t *color = findColor(agxbuse(&xb));
+    agxbfree(&xb);
+    return color;
+  }
+  return findColor(str);
+}
+
+char *setColorScheme(const char *s) {
+  char *previous = colorscheme;
+  colorscheme = s == NULL ? NULL : gv_strdup(s);
+  return previous;
+}
+
+/* resolveColor:
+ * Resolve input color str allowing color scheme namespaces.
+ *  0) "black" => "black"
+ *     "white" => "white"
+ *     "lightgrey" => "lightgrey"
+ *    NB: This is something of a hack due to the remaining codegen.
+ *        Once these are gone, this case could be removed and all references
+ *        to "black" could be replaced by "/X11/black".
+ *  1) No initial / =>
+ *          if colorscheme is defined and no "X11", return /colorscheme/str
+ *          else return str
+ *  2) One initial / => return str+1
+ *  3) Two initial /'s =>
+ *       a) If colorscheme is defined and not "X11", return /colorscheme/(str+2)
+ *       b) else return (str+2)
+ *  4) Two /'s, not both initial => return str.
+ *
+ * Note that 1), 2), and 3b) allow the default X11 color scheme.
+ *
+ * In other words,
+ *   xxx => /colorscheme/xxx     if colorscheme is defined and not "X11"
+ *   xxx => xxx                  otherwise
+ *   /xxx => xxx
+ *   /X11/yyy => yyy
+ *   /xxx/yyy => /xxx/yyy
+ * |  //yyy => /colorscheme/yyy   if colorscheme is defined and not "X11"
+ * |  //yyy => yyy                otherwise
+ *
+ * At present, no other error checking is done. For example,
+ * yyy could be "". This will be caught later.
+ */
+hsvrgbacolor_t const *resolveColor(const char *str) {
+  if (!strcmp(str, "black"))
+    return findColor(str);
+  if (!strcmp(str, "white"))
+    return findColor(str);
+  if (!strcmp(str, "lightgrey"))
+    return findColor(str);
+
+  if (str[0] != '/') {
+    return findFullColor(str);
+  }
+  if (str[1] == '/') {
+    return findFullColor(&str[2]);
+  }
+  if (strncasecmp(DFLT_SCHEME, &str[1], DFLT_SCHEME_LEN) == 0) {
+    return findColor(&str[1 + DFLT_SCHEME_LEN]);
+  }
+  return findColor(str);
 }
