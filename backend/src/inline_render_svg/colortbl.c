@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "color.h"
 
 static const hsvrgbacolor_t color_lib[] = {
@@ -2517,3 +2520,12 @@ static const hsvrgbacolor_t color_lib[] = {
     {"yellow4", 42, 255, 139, 139, 139, 0, 255},
     {"yellowgreen", 56, 192, 205, 154, 205, 50, 255},
 };
+
+static int colorcmpf(const void *p0, const void *p1) {
+  return strcasecmp(p0, ((const hsvrgbacolor_t *)p1)->name);
+}
+
+const hsvrgbacolor_t *resolveColorImpl(char const *name) {
+  return bsearch(name, color_lib, sizeof(color_lib) / sizeof(hsvrgbacolor_t),
+                 sizeof(color_lib[0]), colorcmpf);
+}
