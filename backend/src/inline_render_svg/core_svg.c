@@ -32,14 +32,27 @@
 #include "colortbl.h"
 #include "../output_string.h"
 
-static void hsv2rgb(double h, double s, double v, unsigned char *r,
-                    unsigned char *g, unsigned char *b) {
-  if (s <= 0.0) { /* achromatic */
-    *r = *g = *b = (unsigned char)(v * 255);
-    return;
+static gvcolor_t hsva2rgb(double h, double s, double v, double a) {
+  /* clip to reasonable values */
+  h = fmax(fmin(h, 1.0), 0.0);
+  s = fmax(fmin(s, 1.0), 0.0);
+  a = fmax(fmin(a, 1.0), 0.0);
+  v = fmax(fmin(v, 1.0), 0.0);
+
+  gvcolor_t color = {0};
+  color.type = RGBA_BYTE;
+
+  unsigned char *r = &color.u.rgba[0];
+  unsigned char *g = &color.u.rgba[1];
+  unsigned char *b = &color.u.rgba[2];
+  color.u.rgba[3] = (a * 255);
+
+  if (s == 0.0) { /* achromatic */
+    *r = *g = *b = (v * 255);
+    return color;
   }
 
-  if (h >= 1.0)
+  if (h == 1.0)
     h = 0.0;
   h = 6.0 * h;
   int i = (int)h;
@@ -47,37 +60,39 @@ static void hsv2rgb(double h, double s, double v, unsigned char *r,
   double p = v * (1 - s);
   double q = v * (1 - s * f);
   double t = v * (1 - s * (1 - f));
+
+  // conver floats in [0,1] range into [0, 255] integers
   switch (i) {
   case 0:
-    *r = (unsigned char)(v * 255);
-    *g = (unsigned char)(t * 255);
-    *b = (unsigned char)(p * 255);
-    break;
+    *r = (v * 255);
+    *g = (t * 255);
+    *b = (p * 255);
+    return color;
   case 1:
-    *r = (unsigned char)(q * 255);
-    *g = (unsigned char)(v * 255);
-    *b = (unsigned char)(p * 255);
-    break;
+    *r = (q * 255);
+    *g = (v * 255);
+    *b = (p * 255);
+    return color;
   case 2:
-    *r = (unsigned char)(p * 255);
-    *g = (unsigned char)(v * 255);
-    *b = (unsigned char)(t * 255);
-    break;
+    *r = (p * 255);
+    *g = (v * 255);
+    *b = (t * 255);
+    return color;
   case 3:
-    *r = (unsigned char)(p * 255);
-    *g = (unsigned char)(q * 255);
-    *b = (unsigned char)(v * 255);
-    break;
+    *r = (p * 255);
+    *g = (q * 255);
+    *b = (v * 255);
+    return color;
   case 4:
-    *r = (unsigned char)(t * 255);
-    *g = (unsigned char)(p * 255);
-    *b = (unsigned char)(v * 255);
-    break;
+    *r = (t * 255);
+    *g = (p * 255);
+    *b = (v * 255);
+    return color;
   case 5:
-    *r = (unsigned char)(v * 255);
-    *g = (unsigned char)(p * 255);
-    *b = (unsigned char)(q * 255);
-    break;
+    *r = (v * 255);
+    *g = (p * 255);
+    *b = (q * 255);
+    return color;
   default:
     UNREACHABLE();
   }
@@ -180,25 +195,25 @@ static gvcolor_t my_colorxlate(const char *str) {
 
   /* test for rgb value such as: "#ff0000"
      or rgba value such as "#ff000080" */
-  unsigned a = 255; // default alpha channel value=opaque in case not supplied
-  unsigned int r, g, b;
-  bool is_rgb = sscanf(str, "#%2x%2x%2x%2x", &r, &g, &b, &a) >= 3;
-  if (!is_rgb) { // try 3 letter form
-    is_rgb = strlen(str) == 4 && sscanf(str, "#%1x%1x%1x", &r, &g, &b) == 3;
-    if (is_rgb) {
-      r |= r << 4;
-      g |= g << 4;
-      b |= b << 4;
-    }
+  unsigned char a =
+      255; // default alpha channel value=opaque in case not supplied
+  unsigned char r, g, b;
+  if (sscanf(str, "#%2hhx%2hhx%2hhx%2hhx", &r, &g, &b, &a) >= 3) {
+    return (gvcolor_t){
+        .type = RGBA_BYTE,
+        .u.rgba = {r, g, b, a},
+    };
   }
-  if (is_rgb) {
-    gvcolor_t color = {0};
-    color.type = RGBA_BYTE;
-    color.u.rgba[0] = (unsigned char)r;
-    color.u.rgba[1] = (unsigned char)g;
-    color.u.rgba[2] = (unsigned char)b;
-    color.u.rgba[3] = (unsigned char)a;
-    return color;
+
+  // try 3 letter form
+  if (strlen(str) == 4 && sscanf(str, "#%1hhx%1hhx%1hhx", &r, &g, &b) == 3) {
+    r |= r << 4;
+    g |= g << 4;
+    b |= b << 4;
+    return (gvcolor_t){
+        .type = RGBA_BYTE,
+        .u.rgba = {r, g, b, a},
+    };
   }
 
   /* test for hsv value such as: ".6,.5,.3" */
@@ -212,16 +227,7 @@ static gvcolor_t my_colorxlate(const char *str) {
 
     double H, S, V, A = 1.0; // default
     if (sscanf(agxbuse(&canon), "%lf%lf%lf%lf", &H, &S, &V, &A) >= 3) {
-      /* clip to reasonable values */
-      H = fmax(fmin(H, 1.0), 0.0);
-      S = fmax(fmin(S, 1.0), 0.0);
-      V = fmax(fmin(V, 1.0), 0.0);
-      A = fmax(fmin(A, 1.0), 0.0);
-
-      gvcolor_t color = {0};
-      color.type = RGBA_BYTE;
-      hsv2rgb(H, S, V, &color.u.rgba[0], &color.u.rgba[1], &color.u.rgba[2]);
-      color.u.rgba[3] = (unsigned char)(A * 255);
+      gvcolor_t color = hsva2rgb(H, S, V, A);
       agxbfree(&canon);
       return color;
     }
