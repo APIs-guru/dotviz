@@ -227,9 +227,8 @@ static gvcolor_t my_colorxlate(const char *str) {
 
     double H, S, V, A = 1.0; // default
     if (sscanf(agxbuse(&canon), "%lf%lf%lf%lf", &H, &S, &V, &A) >= 3) {
-      gvcolor_t color = hsva2rgb(H, S, V, A);
       agxbfree(&canon);
-      return color;
+      return hsva2rgb(H, S, V, A);
     }
     agxbfree(&canon);
   }
@@ -257,11 +256,10 @@ static gvcolor_t my_colorxlate(const char *str) {
     agwarningf("%s is not a known color.\n", name);
   agxbfree(&missedcolor);
 
-  gvcolor_t color = {0};
-  color.type = RGBA_BYTE;
-  color.u.rgba[0] = color.u.rgba[1] = color.u.rgba[2] = 0;
-  color.u.rgba[3] = 255; /* opaque */
-  return color;
+  return (gvcolor_t){
+      .type = RGBA_BYTE,
+      .u.rgba = {0, 0, 0, 255},
+  };
 }
 
 char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
