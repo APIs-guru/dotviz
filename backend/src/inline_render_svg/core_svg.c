@@ -18,6 +18,7 @@
    was not constrained.)
  */
 
+#include "agxbuf.h"
 #include "types.h"
 #include "const.h"
 #include "utils.h"
@@ -98,14 +99,6 @@ static gvcolor_t hsva2rgb(double h, double s, double v, double a) {
   }
 }
 
-/* fullColor:
- * Return "/prefix/str"
- */
-static char *fullColor(agxbuf *xb, const char *prefix, const char *str) {
-  agxbprint(xb, "/%s/%s", prefix, str);
-  return agxbuse(xb);
-}
-
 static int colorcmpf(const void *p0, const void *p1) {
   return strcasecmp(p0, ((const hsvrgbacolor_t *)p1)->name);
 }
@@ -135,8 +128,8 @@ static int colorcmpf(const void *p0, const void *p1) {
  *   /xxx => xxx
  *   /X11/yyy => yyy
  *   /xxx/yyy => /xxx/yyy
- *   //yyy => /colorscheme/yyy   if colorscheme is defined and not "X11"
- *   //yyy => yyy                otherwise
+ * |  //yyy => /colorscheme/yyy   if colorscheme is defined and not "X11"
+ * |  //yyy => yyy                otherwise
  *
  * At present, no other error checking is done. For example,
  * yyy could be "". This will be caught later.
@@ -154,6 +147,21 @@ char *setColorScheme(const char *s) {
   return previous;
 }
 
+/* fullColor:
+ * Return "/prefix/str"
+ */
+static char *fullColor(const char *str) {
+  if (colorscheme && *colorscheme &&
+      strncasecmp(DFLT_SCHEME, colorscheme, DFLT_SCHEME_LEN - 1)) {
+    agxbuf xb = {0};
+    agxbprint(&xb, "/%s/%s", colorscheme, str);
+    char *result = strdup(agxbuse(&xb));
+    agxbfree(&xb);
+    return result;
+  }
+  return strdup(str);
+}
+
 static char *resolveColor(const char *str) {
   if (!strcmp(str, "black"))
     return strdup(str);
@@ -162,31 +170,16 @@ static char *resolveColor(const char *str) {
   if (!strcmp(str, "lightgrey"))
     return strdup(str);
 
-  const char *s;
-  agxbuf xb = {0};
-  if (*str == '/') {                        /* if begins with '/' */
-    const char *const c2 = str + 1;         // second char
-    const char *const ss = strchr(c2, '/'); // second slash
-    if (ss != NULL) {                       // if has second '/'
-      if (*c2 == '/') { /* if second '/' is second character */
-                        /* Do not compare against final '/' */
-        if (ISNONDFLT(colorscheme))
-          s = fullColor(&xb, colorscheme, c2 + 1);
-        else
-          s = c2 + 1;
-      } else if (strncasecmp(DFLT_SCHEME, c2, DFLT_SCHEME_LEN))
-        s = str;
-      else
-        s = ss + 1;
-    } else
-      s = c2;
-  } else if (ISNONDFLT(colorscheme))
-    s = fullColor(&xb, colorscheme, str);
-  else
-    s = str;
-  char *on_heap = strdup(s);
-  agxbfree(&xb);
-  return on_heap;
+  if (str[0] != '/') {
+    return fullColor(str);
+  }
+  if (str[1] == '/') {
+    return fullColor(&str[2]);
+  }
+  if (strncasecmp(DFLT_SCHEME, &str[1], DFLT_SCHEME_LEN) == 0) {
+    return strdup(&str[1 + DFLT_SCHEME_LEN]);
+  }
+  return strdup(str);
 }
 
 static gvcolor_t my_colorxlate(const char *str) {
