@@ -30,7 +30,6 @@
 #include "core_svg.h"
 #include "gvio_svg.h"
 #include "internal_render_svg.h"
-#include "colortbl.h"
 #include "../output_string.h"
 
 static gvcolor_t hsva2rgb(double h, double s, double v, double a) {
@@ -99,10 +98,6 @@ static gvcolor_t hsva2rgb(double h, double s, double v, double a) {
   }
 }
 
-static int colorcmpf(const void *p0, const void *p1) {
-  return strcasecmp(p0, ((const hsvrgbacolor_t *)p1)->name);
-}
-
 /* resolveColor:
  * Resolve input color str allowing color scheme namespaces.
  *  0) "black" => "black"
@@ -162,6 +157,7 @@ static char *fullColor(const char *str) {
   return strdup(str);
 }
 
+const hsvrgbacolor_t *resolveColorImpl(char const *name);
 static char *resolveColor(const char *str) {
   if (!strcmp(str, "black"))
     return strdup(str);
@@ -228,9 +224,7 @@ static gvcolor_t my_colorxlate(const char *str) {
 
   /* test for known color name (generic, not renderer specific known names) */
   char *name = resolveColor(str);
-  const hsvrgbacolor_t *known =
-      bsearch(name, color_lib, sizeof(color_lib) / sizeof(hsvrgbacolor_t),
-              sizeof(color_lib[0]), colorcmpf);
+  const hsvrgbacolor_t *known = resolveColorImpl(name);
   free(name);
   if (known != NULL) {
     gvcolor_t color = {0};

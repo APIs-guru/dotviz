@@ -74,6 +74,7 @@ pub fn build(b: *std.Build) void {
             "src/inline_render_svg/emit_svg.c",
             "src/inline_render_svg/core_svg.c",
             "src/inline_render_svg/htmltable.c",
+            "src/inline_render_svg/colortbl.c",
             "src/inline_render_svg/shapes.c",
             "src/inline_render_svg/arrows.c",
             "src/inline_render_svg/labels.c",
