@@ -19,6 +19,7 @@
  */
 
 #include "agxbuf.h"
+#include "color.h"
 #include "types.h"
 #include "const.h"
 #include "utils.h"
@@ -32,141 +33,6 @@
 #include "internal_render_svg.h"
 #include "../output_string.h"
 
-static gvcolor_t hsva2rgb(double h, double s, double v, double a) {
-  /* clip to reasonable values */
-  h = fmax(fmin(h, 1.0), 0.0);
-  s = fmax(fmin(s, 1.0), 0.0);
-  a = fmax(fmin(a, 1.0), 0.0);
-  v = fmax(fmin(v, 1.0), 0.0);
-
-  gvcolor_t color = {0};
-  color.type = RGBA_BYTE;
-
-  unsigned char *r = &color.u.rgba[0];
-  unsigned char *g = &color.u.rgba[1];
-  unsigned char *b = &color.u.rgba[2];
-  color.u.rgba[3] = (a * 255);
-
-  if (s == 0.0) { /* achromatic */
-    *r = *g = *b = (v * 255);
-    return color;
-  }
-
-  if (h == 1.0)
-    h = 0.0;
-  h = 6.0 * h;
-  int i = (int)h;
-  double f = h - i;
-  double p = v * (1 - s);
-  double q = v * (1 - s * f);
-  double t = v * (1 - s * (1 - f));
-
-  // conver floats in [0,1] range into [0, 255] integers
-  switch (i) {
-  case 0:
-    *r = (v * 255);
-    *g = (t * 255);
-    *b = (p * 255);
-    return color;
-  case 1:
-    *r = (q * 255);
-    *g = (v * 255);
-    *b = (p * 255);
-    return color;
-  case 2:
-    *r = (p * 255);
-    *g = (v * 255);
-    *b = (t * 255);
-    return color;
-  case 3:
-    *r = (p * 255);
-    *g = (q * 255);
-    *b = (v * 255);
-    return color;
-  case 4:
-    *r = (t * 255);
-    *g = (p * 255);
-    *b = (v * 255);
-    return color;
-  case 5:
-    *r = (v * 255);
-    *g = (p * 255);
-    *b = (q * 255);
-    return color;
-  default:
-    UNREACHABLE();
-  }
-}
-
-const hsvrgbacolor_t *resolveColor(char const *name);
-static gvcolor_t my_colorxlate(const char *str) {
-  for (; *str == ' '; str++)
-    ; /* skip over any leading whitespace */
-
-  /* test for rgb value such as: "#ff0000"
-     or rgba value such as "#ff000080" */
-  unsigned char a =
-      255; // default alpha channel value=opaque in case not supplied
-  unsigned char r, g, b;
-  if (sscanf(str, "#%2hhx%2hhx%2hhx%2hhx", &r, &g, &b, &a) >= 3) {
-    return (gvcolor_t){
-        .type = RGBA_BYTE,
-        .u.rgba = {r, g, b, a},
-    };
-  }
-
-  // try 3 letter form
-  if (strlen(str) == 4 && sscanf(str, "#%1hhx%1hhx%1hhx", &r, &g, &b) == 3) {
-    r |= r << 4;
-    g |= g << 4;
-    b |= b << 4;
-    return (gvcolor_t){
-        .type = RGBA_BYTE,
-        .u.rgba = {r, g, b, a},
-    };
-  }
-
-  /* test for hsv value such as: ".6,.5,.3" */
-  const char *p = str;
-  char c = *p;
-  if (c == '.' || (c >= '0' && c <= '9')) {
-    agxbuf canon = {0};
-    while ((c = *p++)) {
-      agxbputc(&canon, c == ',' ? ' ' : c);
-    }
-
-    double H, S, V, A = 1.0; // default
-    if (sscanf(agxbuse(&canon), "%lf%lf%lf%lf", &H, &S, &V, &A) >= 3) {
-      agxbfree(&canon);
-      return hsva2rgb(H, S, V, A);
-    }
-    agxbfree(&canon);
-  }
-
-  /* test for known color name (generic, not renderer specific known names) */
-  const hsvrgbacolor_t *known = resolveColor(str);
-  if (known != NULL) {
-    gvcolor_t color = {0};
-    color.type = RGBA_BYTE;
-    color.u.rgba[0] = known->r;
-    color.u.rgba[1] = known->g;
-    color.u.rgba[2] = known->b;
-    color.u.rgba[3] = known->a;
-    return color;
-  }
-
-  /* if we're still here then we failed to find a valid color spec */
-  agxbuf missedcolor = {0};
-  agxbprint(&missedcolor, "color %s", str);
-  if (emit_once(agxbuse(&missedcolor)))
-    agwarningf("%s is not a known color.\n", str);
-  agxbfree(&missedcolor);
-
-  return (gvcolor_t){
-      .type = RGBA_BYTE,
-      .u.rgba = {0, 0, 0, 255},
-  };
-}
 
 char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
 
@@ -925,168 +791,8 @@ void svg_polyline(output_string *output, obj_state_t *obj, pointf *A,
   }
 }
 
-/* color names from http://www.w3.org/TR/SVG/types.html */
-/* NB.  List must be LANG_C sorted */
-char *svg_knowncolors[] = {"aliceblue",
-                           "antiquewhite",
-                           "aqua",
-                           "aquamarine",
-                           "azure",
-                           "beige",
-                           "bisque",
-                           "black",
-                           "blanchedalmond",
-                           "blue",
-                           "blueviolet",
-                           "brown",
-                           "burlywood",
-                           "cadetblue",
-                           "chartreuse",
-                           "chocolate",
-                           "coral",
-                           "cornflowerblue",
-                           "cornsilk",
-                           "crimson",
-                           "cyan",
-                           "darkblue",
-                           "darkcyan",
-                           "darkgoldenrod",
-                           "darkgray",
-                           "darkgreen",
-                           "darkgrey",
-                           "darkkhaki",
-                           "darkmagenta",
-                           "darkolivegreen",
-                           "darkorange",
-                           "darkorchid",
-                           "darkred",
-                           "darksalmon",
-                           "darkseagreen",
-                           "darkslateblue",
-                           "darkslategray",
-                           "darkslategrey",
-                           "darkturquoise",
-                           "darkviolet",
-                           "deeppink",
-                           "deepskyblue",
-                           "dimgray",
-                           "dimgrey",
-                           "dodgerblue",
-                           "firebrick",
-                           "floralwhite",
-                           "forestgreen",
-                           "fuchsia",
-                           "gainsboro",
-                           "ghostwhite",
-                           "gold",
-                           "goldenrod",
-                           "gray",
-                           "green",
-                           "greenyellow",
-                           "grey",
-                           "honeydew",
-                           "hotpink",
-                           "indianred",
-                           "indigo",
-                           "ivory",
-                           "khaki",
-                           "lavender",
-                           "lavenderblush",
-                           "lawngreen",
-                           "lemonchiffon",
-                           "lightblue",
-                           "lightcoral",
-                           "lightcyan",
-                           "lightgoldenrodyellow",
-                           "lightgray",
-                           "lightgreen",
-                           "lightgrey",
-                           "lightpink",
-                           "lightsalmon",
-                           "lightseagreen",
-                           "lightskyblue",
-                           "lightslategray",
-                           "lightslategrey",
-                           "lightsteelblue",
-                           "lightyellow",
-                           "lime",
-                           "limegreen",
-                           "linen",
-                           "magenta",
-                           "maroon",
-                           "mediumaquamarine",
-                           "mediumblue",
-                           "mediumorchid",
-                           "mediumpurple",
-                           "mediumseagreen",
-                           "mediumslateblue",
-                           "mediumspringgreen",
-                           "mediumturquoise",
-                           "mediumvioletred",
-                           "midnightblue",
-                           "mintcream",
-                           "mistyrose",
-                           "moccasin",
-                           "navajowhite",
-                           "navy",
-                           "oldlace",
-                           "olive",
-                           "olivedrab",
-                           "orange",
-                           "orangered",
-                           "orchid",
-                           "palegoldenrod",
-                           "palegreen",
-                           "paleturquoise",
-                           "palevioletred",
-                           "papayawhip",
-                           "peachpuff",
-                           "peru",
-                           "pink",
-                           "plum",
-                           "powderblue",
-                           "purple",
-                           "red",
-                           "rosybrown",
-                           "royalblue",
-                           "saddlebrown",
-                           "salmon",
-                           "sandybrown",
-                           "seagreen",
-                           "seashell",
-                           "sienna",
-                           "silver",
-                           "skyblue",
-                           "slateblue",
-                           "slategray",
-                           "slategrey",
-                           "snow",
-                           "springgreen",
-                           "steelblue",
-                           "tan",
-                           "teal",
-                           "thistle",
-                           "tomato",
-                           "transparent",
-                           "turquoise",
-                           "violet",
-                           "wheat",
-                           "white",
-                           "whitesmoke",
-                           "yellow",
-                           "yellowgreen"};
 
-extern bool mapbool(const char *s);
-static int svg_comparestr(const void *s1, const void *s2) {
-  return strcasecmp(s1, *(char *const *)s2);
-}
-
-/* gvrender_resolve_color:
- * N.B. strcasecmp cannot be used in bsearch, as it will pass a pointer
- * to an element in the array features->knowncolors (i.e., a char**)
- * as an argument of the compare function, while the arguments to
- * strcasecmp are both char*.
- */
+bool resolveColor(const char *str, gvcolor_t *result);
 gvcolor_t svg_resolve_color(char *name) {
   gvcolor_t color = {0};
 
@@ -1094,14 +800,19 @@ gvcolor_t svg_resolve_color(char *name) {
   if (cp != NULL) // if it’s a color list, then use only first
     *cp = '\0';
 
-  const size_t sz_knowncolors = sizeof(svg_knowncolors) / sizeof(char *);
-  if (bsearch(name, svg_knowncolors, sz_knowncolors, sizeof(char *),
-              svg_comparestr) != NULL) {
-    color.type = COLOR_STRING;
-    color.u.string = name;
-  } else {
-    /* if name was not found in known_colors */
-    color = my_colorxlate(name);
+  if (!resolveColor(name, &color)) {
+    // if we here then we failed to find a valid color spec
+    agxbuf missedcolor = {0};
+    agxbprint(&missedcolor, "color %s", name);
+    if (emit_once(agxbuse(&missedcolor)))
+      agwarningf("%s is not a known color.\n", name);
+    agxbfree(&missedcolor);
+
+    color.type = RGBA_BYTE;
+    color.u.rgba[0] = 0;
+    color.u.rgba[1] = 0;
+    color.u.rgba[2] = 0;
+    color.u.rgba[3] = 255;
   }
 
   if (cp) /* restore color list */
