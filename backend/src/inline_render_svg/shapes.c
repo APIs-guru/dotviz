@@ -685,8 +685,6 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
   assert(sides > 0);
   assert(memcmp(&style, &(graphviz_polygon_style_t){0}, sizeof(style)) != 0);
 
-  pointf C[5];
-
   struct {
     unsigned shape : 7;
   } mode = {0};
@@ -721,6 +719,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
 
     /* Draw the inner edge. */
     const size_t sseg = sides - 1;
+    pointf C[5];
     C[0] = B[3 * sseg + 2];
     C[1] = B[3 * sseg + 4];
     C[2].x = C[1].x + (C[0].x - B[3 * sseg + 3].x);
@@ -758,6 +757,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     /* Draw the inner edge. */
+    pointf C[5];
     C[0] = B[3];
     C[1] = B[2];
     svg_polyline(output, obj, C, 2);
@@ -808,6 +808,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     /* Draw the inner vertices. */
+    pointf C[5];
     C[0].x = B[1].x + (B[11].x - B[0].x);
     C[0].y = B[1].y + (B[11].y - B[0].y);
     C[1] = B[4];
@@ -862,6 +863,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 8, filled);
 
     /* Draw the internal vertices. */
+    pointf C[5];
     C[0] = D[2];
     C[1].x = D[2].x - (D[3].x - D[2].x);
     C[1].y = D[2].y - (D[3].y - D[2].y);
@@ -922,6 +924,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 5, filled);
 
     /*dsDNA line*/
+    pointf C[5];
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
@@ -1001,6 +1004,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 4, filled);
 
     /*dsDNA line*/
+    pointf C[5];
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
@@ -1043,6 +1047,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 2, filled);
 
     /*dsDNA line*/
+    pointf C[5];
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
@@ -1084,6 +1089,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 1, filled);
 
     /*dsDNA line*/
+    pointf C[5];
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
@@ -1130,6 +1136,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 4, filled);
 
     /*dsDNA line left half*/
+    pointf C[5];
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = D[4].x;
@@ -1188,6 +1195,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides, filled);
 
     /*dsDNA line right half*/
+    pointf C[5];
     C[0].x = D[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
@@ -1239,6 +1247,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides, filled);
 
     /*dsDNA line left half*/
+    pointf C[5];
     C[0].x = AF[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = D[3].x;
@@ -1323,6 +1332,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides, filled);
 
     /*dsDNA line right half*/
+    pointf C[5];
     C[0].x = D[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
@@ -1382,6 +1392,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides, filled);
 
     /*dsDNA line right half*/
+    pointf C[5];
     C[0].x = D[1].x;
     C[0].y = mid_y(&AF[1]);
     C[1].x = AF[0].x;
@@ -1423,6 +1434,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides, filled);
 
     /* "\" of the X*/
+    pointf C[5];
     C[0].x = AF[1].x + (B[2].x - B[3].x) / 4;
     C[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 8; // y_center + 1/4 width
     C[1].x = C[0].x + (B[2].x - B[3].x) / 4;        // C[0].x + width/2
@@ -1470,6 +1482,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     /*outer square line*/
+    pointf C[5];
     C[0].x = mid_x(AF) + (B[2].x - B[3].x) * 3 / 4;     // x_center+1.5*width
     C[0].y = mid_y(&AF[1]) + (B[2].x - B[3].x) * 3 / 4; // y_center
     C[1].x = C[0].x;
@@ -1549,6 +1562,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // 2-part dash line
 
     /*line below the x, bottom dash*/
+    pointf C[5];
     C[0].x = D[14].x; // x_center
     C[0].y = mid_y(&AF[1]);
     C[1].x = C[0].x;
@@ -1607,6 +1621,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // 2-part dash line
 
     /*line below the x, bottom dash*/
+    pointf C[5];
     C[0].x = mid_x(AF);
     C[0].y = mid_y(&AF[1]);
     C[1].x = C[0].x;
@@ -1679,6 +1694,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 12, filled);
 
     /*line below the x*/
+    pointf C[5];
     C[0] = D[14];
     C[1].x = C[0].x;
     C[1].y = mid_y(&AF[1]);
@@ -1727,6 +1743,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 4, filled);
 
     /*line below the x*/
+    pointf C[5];
     C[0].x = mid_x(AF);
     C[0].y = D[0].y;
     C[1].x = C[0].x;
