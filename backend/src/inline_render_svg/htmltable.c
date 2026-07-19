@@ -59,10 +59,6 @@ typedef struct {
   point UR;
 } htmlmap_data_t;
 
-#ifdef DEBUG
-static void printCell(htmlcell_t *cp, int ind);
-#endif
-
 /* Replace current font attributes in env with ones from fp,
  * storing old attributes in savp. We only deal with attributes
  * set in env. The attributes are restored via popFontInfo.
@@ -1650,118 +1646,6 @@ static char *nameOf(void *obj, agxbuf *xb) {
   }
   return agxbuse(xb);
 }
-
-#ifdef DEBUG
-void indent(int i) {
-  while (i--)
-    fprintf(stderr, "  ");
-}
-
-void printBox(boxf b) {
-  fprintf(stderr, "(%f,%f)(%f,%f)", b.LL.x, b.LL.y, b.UR.x, b.UR.y);
-}
-
-void printImage(htmlimg_t *ip, int ind) {
-  indent(ind);
-  fprintf(stderr, "img: %s\n", ip->src);
-}
-
-void printTxt(htmltxt_t *txt, int ind) {
-  indent(ind);
-  fprintf(stderr, "txt spans = %" PRISIZE_T " \n", txt->nspans);
-  for (size_t i = 0; i < txt->nspans; i++) {
-    indent(ind + 1);
-    fprintf(stderr, "[%" PRISIZE_T "] %" PRISIZE_T " items\n", i,
-            txt->spans[i].nitems);
-    for (size_t j = 0; j < txt->spans[i].nitems; j++) {
-      indent(ind + 2);
-      fprintf(stderr, "[%" PRISIZE_T "] (%f,%f) \"%s\" ", j,
-              txt->spans[i].items[j].size.x, txt->spans[i].items[j].size.y,
-              txt->spans[i].items[j].str);
-      if (txt->spans[i].items[j].font)
-        fprintf(stderr, "font %s color %s size %f\n",
-                txt->spans[i].items[j].font->name,
-                txt->spans[i].items[j].font->color,
-                txt->spans[i].items[j].font->size);
-      else
-        fprintf(stderr, "\n");
-    }
-  }
-}
-
-void printData(htmldata_t *dp) {
-  unsigned char flags = dp->flags;
-  char c;
-
-  fprintf(stderr, "s%d(%d) ", dp->space, (flags & SPACE_SET ? 1 : 0));
-  fprintf(stderr, "b%d(%d) ", dp->border, (flags & BORDER_SET ? 1 : 0));
-  fprintf(stderr, "p%d(%d) ", dp->pad, (flags & PAD_SET ? 1 : 0));
-  switch (flags & HALIGN_MASK) {
-  case HALIGN_RIGHT:
-    c = 'r';
-    break;
-  case HALIGN_LEFT:
-    c = 'l';
-    break;
-  default:
-    c = 'n';
-    break;
-  }
-  fprintf(stderr, "%c", c);
-  switch (flags & VALIGN_MASK) {
-  case VALIGN_TOP:
-    c = 't';
-    break;
-  case VALIGN_BOTTOM:
-    c = 'b';
-    break;
-  default:
-    c = 'c';
-    break;
-  }
-  fprintf(stderr, "%c ", c);
-  printBox(dp->box);
-}
-
-void printTbl(htmltbl_t *tbl, int ind) {
-  htmlcell_t **cells = tbl->u.n.cells;
-  indent(ind);
-  fprintf(stderr, "tbl (%p) %" PRISIZE_T " %" PRISIZE_T " ", tbl,
-          tbl->column_count, tbl->row_count);
-  printData(&tbl->data);
-  fputs("\n", stderr);
-  while (*cells)
-    printCell(*cells++, ind + 1);
-}
-
-static void printCell(htmlcell_t *cp, int ind) {
-  indent(ind);
-  fprintf(stderr, "cell %" PRIu16 " %" PRIu16 " %" PRIu16 " %" PRIu16 " ",
-          cp->colspan, cp->colspan, cp->rowspan, cp->col, cp->row);
-  printData(&cp->data);
-  fputs("\n", stderr);
-  switch (cp->child.kind) {
-  case HTML_TBL:
-    printTbl(cp->child.u.tbl, ind + 1);
-    break;
-  case HTML_TEXT:
-    printTxt(cp->child.u.txt, ind + 1);
-    break;
-  case HTML_IMAGE:
-    printImage(cp->child.u.img, ind + 1);
-    break;
-  default:
-    break;
-  }
-}
-
-void printLbl(htmllabel_t *lbl) {
-  if (lbl->kind == HTML_TBL)
-    printTbl(lbl->u.tbl, 0);
-  else
-    printTxt(lbl->u.txt, 0);
-}
-#endif /* DEBUG */
 
 static char *getPenColor(void *obj) {
   char *str;
