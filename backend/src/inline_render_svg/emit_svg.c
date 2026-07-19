@@ -1298,17 +1298,15 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
       free(offspl.list);
       free(tmpspl.list);
     } else {
-      if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-        if (color[0]) {
-          obj->pencolor = svg_resolve_color(color);
+      if (color[0]) {
+        obj->pencolor = svg_resolve_color(color);
+        obj->fillcolor = svg_resolve_color(fillcolor);
+      } else {
+        obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
+        if (fillcolor[0])
           obj->fillcolor = svg_resolve_color(fillcolor);
-        } else {
-          obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
-          if (fillcolor[0])
-            obj->fillcolor = svg_resolve_color(fillcolor);
-          else
-            obj->fillcolor = svg_resolve_color(DEFAULT_COLOR);
-        }
+        else
+          obj->fillcolor = svg_resolve_color(DEFAULT_COLOR);
       }
       for (size_t i = 0; i < ED_spl(e)->size; i++) {
         bz = ED_spl(e)->list[i];
