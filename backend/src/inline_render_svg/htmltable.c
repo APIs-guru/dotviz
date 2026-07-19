@@ -1665,7 +1665,6 @@ int make_html_label(void *obj, textlabel_t *lp) {
   graph_t *g;
   htmllabel_t *lbl;
   htmlenv_t env;
-  char *s;
 
   env.obj = obj;
   switch (agobjkind(obj)) {
@@ -1697,14 +1696,7 @@ int make_html_label(void *obj, textlabel_t *lp) {
     agxbuf xb = {0};
     lp->html = false;
     lp->text = gv_strdup(nameOf(obj, &xb));
-    switch (lp->charset) {
-    case CHAR_LATIN1:
-      s = latin1ToUTF8(lp->text);
-      break;
-    default: /* UTF8 */
-      s = htmlEntityUTF8(lp->text, env.g);
-      break;
-    }
+    char* s = htmlEntityUTF8(lp->text, env.g);
     free(lp->text);
     lp->text = s;
     make_simple_label(GD_gvc(g), lp);
