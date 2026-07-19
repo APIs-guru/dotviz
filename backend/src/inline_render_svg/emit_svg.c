@@ -1144,27 +1144,21 @@ static radfunc_t taperfun(edge_t *e) {
 
 static void emit_edge_graphics(output_string *output, obj_state_t *obj,
                                edge_t *e, char **styles) {
-  int cnum, numsemi = 0;
-  char *color, *pencolor, *fillcolor;
-  char *headcolor, *tailcolor, *lastcolor;
-  char *colors = NULL;
   bezier bz;
-  splines offspl, tmpspl;
-  pointf pf0, pf1, pf2 = {0, 0}, pf3, *offlist, *tmplist;
-  double arrowsize, numc2, penwidth = obj->penwidth;
-  char *p;
-  bool tapered = false;
+  double penwidth = obj->penwidth;
   agxbuf buf = {0};
 
 #define SEP 2.0
 
   char *previous_color_scheme = setColorScheme(agget(e, "colorscheme"));
   if (ED_spl(e)) {
-    arrowsize = late_double(e, E_arrowsz, 1.0, 0.0);
-    color = late_string(e, E_color, "");
+    double arrowsize = late_double(e, E_arrowsz, 1.0, 0.0);
+    char* color = late_string(e, E_color, "");
+    bool tapered = false;
 
     if (styles) {
       char **sp = styles;
+      char* p;
       while ((p = *sp++)) {
         if (streq(p, "tapered")) {
           tapered = true;
@@ -1174,8 +1168,9 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     }
 
     /* need to know how many colors separated by ':' */
+    int numsemi = 0;
     size_t numc = 0;
-    for (p = color; *p; p++) {
+    for (char* p = color; *p; p++) {
       if (*p == ':')
         numc++;
       else if (*p == ';')
@@ -1189,7 +1184,8 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         goto done;
     }
 
-    fillcolor = pencolor = color;
+    char* pencolor = color;
+    char* fillcolor = color;
     if (ED_gui_state(e) & GUI_STATE_ACTIVE) {
       pencolor = default_pencolor(&buf, pencolor, DEFAULT_ACTIVEPENCOLOR);
       fillcolor = DEFAULT_ACTIVEFILLCOLOR;
@@ -1238,20 +1234,23 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     else if (numc) {
       /* calculate and save offset vector spline and initialize first offset
        * spline */
+      splines tmpspl;
+      splines offspl;
       tmpspl.size = offspl.size = ED_spl(e)->size;
       offspl.list = gv_calloc(offspl.size, sizeof(bezier));
       tmpspl.list = gv_calloc(tmpspl.size, sizeof(bezier));
-      numc2 = (2 + (double)numc) / 2.0;
+      double numc2 = (2 + (double)numc) / 2.0;
       for (size_t i = 0; i < offspl.size; i++) {
         bz = ED_spl(e)->list[i];
         tmpspl.list[i].size = offspl.list[i].size = bz.size;
-        offlist = offspl.list[i].list = gv_calloc(bz.size, sizeof(pointf));
-        tmplist = tmpspl.list[i].list = gv_calloc(bz.size, sizeof(pointf));
-        pf3 = bz.list[0];
+        pointf *offlist = offspl.list[i].list = gv_calloc(bz.size, sizeof(pointf));
+        pointf *tmplist = tmpspl.list[i].list = gv_calloc(bz.size, sizeof(pointf));
+        pointf pf2 = {0, 0};
+        pointf pf3 = bz.list[0];
         size_t j;
         for (j = 0; j < bz.size - 1; j += 3) {
-          pf0 = pf3;
-          pf1 = bz.list[j + 1];
+          pointf pf0 = pf3;
+          pointf pf1 = bz.list[j + 1];
           /* calculate perpendicular vectors for each bezier point */
           if (j == 0) /* first segment, no previous pf2 */
             offlist[j] = computeoffset_p(pf0, pf1, SEP);
@@ -1274,9 +1273,13 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         tmplist[j].x = pf3.x - numc2 * offlist[j].x;
         tmplist[j].y = pf3.y - numc2 * offlist[j].y;
       }
-      lastcolor = headcolor = tailcolor = color;
-      colors = gv_strdup(color);
-      for (cnum = 0, color = strtok(colors, ":"); color;
+
+      char* lastcolor = color;
+      char* headcolor = color;
+      char* tailcolor = color;
+      char *colors = gv_strdup(color);
+      int cnum = 0;
+      for (color = strtok(colors, ":"); color;
            cnum++, color = strtok(0, ":")) {
         if (!color[0])
           color = DEFAULT_COLOR;
@@ -1292,8 +1295,8 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         if (cnum == 1)
           tailcolor = color;
         for (size_t i = 0; i < tmpspl.size; i++) {
-          tmplist = tmpspl.list[i].list;
-          offlist = offspl.list[i].list;
+          pointf *tmplist = tmpspl.list[i].list;
+          pointf *offlist = offspl.list[i].list;
           for (size_t j = 0; j < tmpspl.list[i].size; j++) {
             tmplist[j].x += offlist[j].x;
             tmplist[j].y += offlist[j].y;
