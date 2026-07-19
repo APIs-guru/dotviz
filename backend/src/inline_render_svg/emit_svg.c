@@ -2084,11 +2084,10 @@ char **parse_style(char *s) {
  */
 bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   colorsegs_t segs = {0};
-  int rv;
   clrs[0] = NULL;
   clrs[1] = NULL;
 
-  rv = parseSegs(colorlist, &segs);
+  int rv = parseSegs(colorlist, &segs);
   if (rv || colorsegs_size(&segs) < 2 ||
       colorsegs_front(&segs)->color == NULL) {
     colorsegs_free(&segs);
