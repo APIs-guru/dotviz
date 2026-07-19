@@ -33,9 +33,6 @@
 #include "internal_render_svg.h"
 #include "../output_string.h"
 
-
-char *svg_defaultlinestyle[3] = {"solid\0", "setlinewidth\0001\0", 0};
-
 imagescale_t get_imagescale(char *s) {
   if (*s == '\0')
     return IMAGESCALE_FALSE;
@@ -791,7 +788,6 @@ void svg_polyline(output_string *output, obj_state_t *obj, pointf *A,
   }
 }
 
-
 bool resolveColor(const char *str, gvcolor_t *result);
 gvcolor_t svg_resolve_color(char *name) {
   gvcolor_t color = {0};
@@ -823,8 +819,6 @@ gvcolor_t svg_resolve_color(char *name) {
 
 void svg_set_style(obj_state_t *obj, char **s) {
   char *line, *p;
-
-  obj->rawstyle = s;
   if (s)
     while ((p = line = *s++)) {
       if (streq(line, "solid"))

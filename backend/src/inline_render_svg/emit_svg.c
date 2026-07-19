@@ -931,7 +931,8 @@ static void emit_attachment(output_string *output, obj_state_t *obj,
   AF[1] = (pointf){AF[0].x - sz.x, AF[0].y};
   AF[2] = dotneato_closest(spl, lp->pos);
   /* Don't use edge style to draw attachment */
-  svg_set_style(obj, svg_defaultlinestyle);
+  obj->pen = PEN_SOLID; // default line style
+  obj->penwidth = 1.0;  // default line style
   /* Use font color to draw attachment
      - need something unambiguous in case of multicolored parallel edges
      - defaults to black for html-like labels

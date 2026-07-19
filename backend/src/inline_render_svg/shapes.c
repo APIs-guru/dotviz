@@ -69,10 +69,6 @@ static port Center = {.theta = -1, .clip = true};
  * non-zero number output by gvprintdouble in gvdevice.c
  */
 #define MIN_POINT 0.0003
-/* extra null character needed to avoid style emitter from thinking
- * there are arguments.
- */
-static char *point_style[3] = {"invis\0", "filled\0", 0};
 
 /* forward declarations of functions used in shapes tables */
 
@@ -510,16 +506,14 @@ static char **checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
 }
 
 static graphviz_polygon_style_t stylenode(obj_state_t *obj, node_t *n) {
-  char **pstyle, *s;
   graphviz_polygon_style_t istyle = {0};
-  double penwidth;
-
-  if ((pstyle = checkStyle(n, &istyle)))
+  char **pstyle = checkStyle(n, &istyle);
+  if (pstyle)
     svg_set_style(obj, pstyle);
 
-  if (N_penwidth && (s = agxget(n, N_penwidth)) && s[0]) {
-    penwidth = late_double(n, N_penwidth, 1.0, 0.0);
-    obj->penwidth = penwidth;
+  char* s = agxget(n, N_penwidth);
+  if (N_penwidth && s && s[0]) {
+    obj->penwidth = late_double(n, N_penwidth, 1.0, 0.0);
   }
 
   return istyle;
@@ -3254,10 +3248,10 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
 
   graphviz_polygon_style_t style = {0};
   checkStyle(n, &style);
+
+  obj->fill = FILL_SOLID;
   if (style.invisible)
-    svg_set_style(obj, point_style);
-  else
-    svg_set_style(obj, &point_style[1]);
+    obj->pen = PEN_NONE;
   if (N_penwidth)
     obj->penwidth = late_double(n, N_penwidth, 1.0, 0.0);
 

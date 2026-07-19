@@ -35,7 +35,6 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
 gvcolor_t svg_resolve_color(char *name);
 void svg_set_style(obj_state_t *obj, char **s);
 
-extern char *svg_defaultlinestyle[3];
 imagescale_t get_imagescale(char *s);
 imagepos_t get_imagepos(char *s);
 
