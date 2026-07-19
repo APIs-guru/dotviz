@@ -191,17 +191,7 @@ static char *interpretCRNL(char *ins) {
  */
 static char *preprocessTooltip(char *s, void *gobj) {
   Agraph_t *g = agroot(gobj);
-  int charset = GD_charset(g);
-  char *news;
-  switch (charset) {
-  case CHAR_LATIN1:
-    news = latin1ToUTF8(s);
-    break;
-  default: /* UTF8 */
-    news = htmlEntityUTF8(s, g);
-    break;
-  }
-
+  char *news = htmlEntityUTF8(s, g);
   return interpretCRNL(news);
 }
 

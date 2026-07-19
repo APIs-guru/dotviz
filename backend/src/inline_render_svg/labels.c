@@ -19,7 +19,6 @@
 #include "safe_job.h"
 #include "core_svg.h"
 
-
 extern pointf textspan_size(GVC_t *gvc, textspan_t *span);
 static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash);
 
@@ -60,37 +59,23 @@ void make_simple_label(GVC_t *gvc, textlabel_t *lp) {
 
   agxbuf line = {0};
   for (char c, *p = lp->text; (c = *p++);) {
-    unsigned char byte = (unsigned char)c;
-    /* wingraphviz allows a combination of ascii and big-5. The latter
-     * is a two-byte encoding, with the first byte in 0xA1-0xFE, and
-     * the second in 0x40-0x7e or 0xa1-0xfe. We assume that the input
-     * is well-formed, but check that we don't go past the ending '\0'.
-     */
-    if (lp->charset == CHAR_BIG5 && 0xA1 <= byte && byte <= 0xFE) {
-      agxbputc(&line, c);
-      c = *p++;
-      agxbputc(&line, c);
-      if (!c) /* NB. Protect against unexpected string end here */
+    if (c == '\\') {
+      switch (*p) {
+      case 'n':
+      case 'l':
+      case 'r':
+        storeline(gvc, lp, agxbdisown(&line), *p);
         break;
-    } else {
-      if (c == '\\') {
-        switch (*p) {
-        case 'n':
-        case 'l':
-        case 'r':
-          storeline(gvc, lp, agxbdisown(&line), *p);
-          break;
-        default:
-          agxbputc(&line, *p);
-        }
-        if (*p)
-          p++;
-        /* tcldot can enter real linend characters */
-      } else if (c == '\n') {
-        storeline(gvc, lp, agxbdisown(&line), 'n');
-      } else {
-        agxbputc(&line, c);
+      default:
+        agxbputc(&line, *p);
       }
+      if (*p)
+        p++;
+      /* tcldot can enter real linend characters */
+    } else if (c == '\n') {
+      storeline(gvc, lp, agxbdisown(&line), 'n');
+    } else {
+      agxbputc(&line, c);
     }
   }
 
@@ -112,7 +97,6 @@ textlabel_t *make_label(void *obj, char *str, int kind, double fontsize,
   graph_t *g = NULL, *sg = NULL;
   node_t *n = NULL;
   edge_t *e = NULL;
-  char *s;
 
   switch (agobjkind(obj)) {
   case AGRAPH:
@@ -131,7 +115,7 @@ textlabel_t *make_label(void *obj, char *str, int kind, double fontsize,
   rv->fontname = fontname;
   rv->fontcolor = fontcolor;
   rv->fontsize = fontsize;
-  rv->charset = GD_charset(g);
+  rv->charset = CHAR_UTF8;
   if (kind & LT_RECD) {
     rv->text = gv_strdup(str);
     if (kind & LT_HTML) {
@@ -161,14 +145,7 @@ textlabel_t *make_label(void *obj, char *str, int kind, double fontsize,
      * make_simple_label. That call also replaces \\ with \.
      */
     rv->text = strdup_and_subst_obj0(str, obj, 0);
-    switch (rv->charset) {
-    case CHAR_LATIN1:
-      s = latin1ToUTF8(rv->text);
-      break;
-    default: /* UTF8 */
-      s = htmlEntityUTF8(rv->text, g);
-      break;
-    }
+    char *s = htmlEntityUTF8(rv->text, g);
     free(rv->text);
     rv->text = s;
     make_simple_label(GD_gvc(g), rv);
