@@ -11,7 +11,6 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-
 #include "const.h"
 #include "types.h"
 #include "utils.h"
@@ -30,8 +29,8 @@
 #include "safe_job.h"
 
 typedef struct epsf_s {
-	int macro_id;
-	pointf offset;
+  int macro_id;
+  pointf offset;
 } epsf_t;
 
 extern const char **Lib;
@@ -511,7 +510,7 @@ static graphviz_polygon_style_t stylenode(obj_state_t *obj, node_t *n) {
   if (pstyle)
     svg_set_style(obj, pstyle);
 
-  char* s = agxget(n, N_penwidth);
+  char *s = agxget(n, N_penwidth);
   if (N_penwidth && s && s[0]) {
     obj->penwidth = late_double(n, N_penwidth, 1.0, 0.0);
   }
@@ -2905,7 +2904,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   int filled;
   bool usershape_p;
   bool pfilled; /* true if fill not handled by user shape */
-  char *color, *name;
+  char *name;
   int doMap = (obj->url || obj->explicit_tooltip);
   char *fillcolor = NULL;
   char *pencolor = NULL;
@@ -2928,59 +2927,32 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   const graphviz_polygon_style_t style = stylenode(obj, n);
 
   char *clrs[2] = {0};
-  if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
-    pencolor = DEFAULT_ACTIVEPENCOLOR;
-    obj->pencolor = svg_resolve_color(pencolor);
-    color = DEFAULT_ACTIVEFILLCOLOR;
-    obj->fillcolor = svg_resolve_color(color);
-    filled = FILL;
-  } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
-    pencolor = DEFAULT_SELECTEDPENCOLOR;
-    obj->pencolor = svg_resolve_color(pencolor);
-    color = DEFAULT_SELECTEDFILLCOLOR;
-    obj->fillcolor = svg_resolve_color(color);
-    filled = FILL;
-  } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
-    pencolor = DEFAULT_DELETEDPENCOLOR;
-    obj->pencolor = svg_resolve_color(pencolor);
-    color = DEFAULT_DELETEDFILLCOLOR;
-    obj->fillcolor = svg_resolve_color(color);
-    filled = FILL;
-  } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
-    pencolor = DEFAULT_VISITEDPENCOLOR;
-    obj->pencolor = svg_resolve_color(pencolor);
-    color = DEFAULT_VISITEDFILLCOLOR;
-    obj->fillcolor = svg_resolve_color(color);
-    filled = FILL;
-  } else {
-    if (style.filled) {
-      double frac;
-      fillcolor = findFill(n);
-      if (findStopColor(fillcolor, clrs, &frac)) {
-        obj->fillcolor = svg_resolve_color(clrs[0]);
-        if (clrs[1])
-          obj->stopcolor = svg_resolve_color(clrs[1]);
-        else
-          obj->stopcolor = svg_resolve_color(DEFAULT_COLOR);
-        obj->gradient_angle = late_int(n, N_gradientangle, 0, 0);
-        obj->gradient_frac = frac;
-        if (style.radial)
-          filled = RGRADIENT;
-        else
-          filled = GRADIENT;
-      } else {
-        obj->fillcolor = svg_resolve_color(fillcolor);
-        filled = FILL;
-      }
-    } else if (style.striped || style.wedged) {
-      fillcolor = findFill(n);
-      filled = 1;
+  if (style.filled) {
+    double frac;
+    fillcolor = findFill(n);
+    if (findStopColor(fillcolor, clrs, &frac)) {
+      obj->fillcolor = svg_resolve_color(clrs[0]);
+      if (clrs[1])
+        obj->stopcolor = svg_resolve_color(clrs[1]);
+      else
+        obj->stopcolor = svg_resolve_color(DEFAULT_COLOR);
+      obj->gradient_angle = late_int(n, N_gradientangle, 0, 0);
+      obj->gradient_frac = frac;
+      if (style.radial)
+        filled = RGRADIENT;
+      else
+        filled = GRADIENT;
     } else {
-      filled = 0;
+      obj->fillcolor = svg_resolve_color(fillcolor);
+      filled = FILL;
     }
-    pencolor = penColor(obj, n); /* emit pen color */
+  } else if (style.striped || style.wedged) {
+    fillcolor = findFill(n);
+    filled = 1;
+  } else {
+    filled = 0;
   }
-
+  pencolor = penColor(obj, n); /* emit pen color */
   pfilled = !ND_shape(n)->usershape || streq(ND_shape(n)->name, "custom");
 
   /* if no boundary but filled, set boundary color to transparent */
@@ -3255,31 +3227,9 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
   if (N_penwidth)
     obj->penwidth = late_double(n, N_penwidth, 1.0, 0.0);
 
-  if (ND_gui_state(n) & GUI_STATE_ACTIVE) {
-    color = DEFAULT_ACTIVEPENCOLOR;
-    obj->pencolor = svg_resolve_color(color);
-    color = DEFAULT_ACTIVEFILLCOLOR;
-    obj->fillcolor = svg_resolve_color(color);
-  } else if (ND_gui_state(n) & GUI_STATE_SELECTED) {
-    color = DEFAULT_SELECTEDPENCOLOR;
-    obj->pencolor = svg_resolve_color(color);
-    color = DEFAULT_SELECTEDFILLCOLOR;
-    obj->fillcolor = svg_resolve_color(color);
-  } else if (ND_gui_state(n) & GUI_STATE_DELETED) {
-    color = DEFAULT_DELETEDPENCOLOR;
-    obj->pencolor = svg_resolve_color(color);
-    color = DEFAULT_DELETEDFILLCOLOR;
-    obj->fillcolor = svg_resolve_color(color);
-  } else if (ND_gui_state(n) & GUI_STATE_VISITED) {
-    color = DEFAULT_VISITEDPENCOLOR;
-    obj->pencolor = svg_resolve_color(color);
-    color = DEFAULT_VISITEDFILLCOLOR;
-    obj->fillcolor = svg_resolve_color(color);
-  } else {
-    color = findFillDflt(n, "black");
-    obj->fillcolor = svg_resolve_color(color); /* emit fill color */
-    penColor(obj, n);                          /* emit pen color */
-  }
+  color = findFillDflt(n, "black");
+  obj->fillcolor = svg_resolve_color(color); /* emit fill color */
+  penColor(obj, n);                          /* emit pen color */
   filled = true;
 
   /* if no boundary but filled, set boundary color to fill color */
