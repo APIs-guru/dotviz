@@ -238,21 +238,16 @@ static pointf *mkPts(pointf *AF, boxf b, int border) {
 static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
                      boxf b) {
   pointf AF[7];
-  char *sptr[2];
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
   unsigned short sides;
 
   obj->pencolor = svg_resolve_color(color);
-  if (dp->style.dashed || dp->style.dotted) {
-    sptr[0] = sptr[1] = NULL;
-    if (dp->style.dashed)
-      sptr[0] = "dashed";
-    else if (dp->style.dotted)
-      sptr[0] = "dotted";
-    svg_set_style(obj, sptr);
-  } else
-    svg_set_style(obj, svg_defaultlinestyle);
   obj->penwidth = dp->border;
+  obj->pen = PEN_SOLID; // default line style
+  if (dp->style.dashed)
+    obj->pen = PEN_DASHED;
+  else if (dp->style.dotted)
+    obj->pen = PEN_DOTTED;
 
   if (dp->style.rounded)
     round_corners(output, obj, mkPts(AF, b, dp->border), 4,
@@ -741,11 +736,11 @@ void svg_html_label(output_string *output, SafeLayer *safe_layer,
 
     /* set basic graphics context */
     /* Need to override line style set by node. */
-    svg_set_style(&obj, svg_defaultlinestyle);
-    if (tbl->data.pencolor)
-      obj.pencolor = svg_resolve_color(tbl->data.pencolor);
-    else
-      obj.pencolor = svg_resolve_color(DEFAULT_COLOR);
+    char* pencolor = tbl->data.pencolor ? tbl->data.pencolor : DEFAULT_COLOR;
+    obj.pencolor = svg_resolve_color(pencolor);
+    obj.pen = PEN_SOLID; // default line style
+    obj.penwidth = 1.0;  // default line style
+
     emit_html_tbl(output, safe_layer, &obj, tbl, &env);
   } else {
     emit_html_txt(output, GD_fontnames(safe_layer->safe_job->graph), &obj,

@@ -1214,8 +1214,8 @@ void arrow_gen(output_string *output, obj_state_t *obj, emit_state_t emit_state,
 
   /* Dotted and dashed styles on the arrowhead are ugly (dds) */
   /* linewidth needs to be reset */
-  svg_set_style(obj, svg_defaultlinestyle);
-
+  obj->pen = PEN_SOLID; // default line style
+  obj->penwidth = 1.0;  // default line style
   obj->penwidth = penwidth;
 
   /* generate arrowhead vector */
