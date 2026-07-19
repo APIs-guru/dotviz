@@ -543,36 +543,37 @@ static void Mcircle_hack(output_string *output, obj_state_t *obj, node_t *n) {
 static pointf *alloc_interpolation_points(pointf *AF, size_t sides,
                                           graphviz_polygon_style_t style,
                                           bool rounded) {
-  pointf *B = gv_calloc(4 * sides + 4, sizeof(pointf));
-  size_t i = 0;
-  pointf p0, p1;
-  double dx, dy, t;
   /* rbconst is distance offset from a corner of the polygon.
    * It should be the same for every corner, and also never
    * bigger than one-third the length of a side.
    */
   double rbconst = RBCONST;
   for (size_t seg = 0; seg < sides; seg++) {
-    p0 = AF[seg];
+    pointf p0 = AF[seg];
+    pointf p1;
     if (seg + 1 < sides)
       p1 = AF[seg + 1];
     else
       p1 = AF[0];
-    dx = p1.x - p0.x;
-    dy = p1.y - p0.y;
+    double dx = p1.x - p0.x;
+    double dy = p1.y - p0.y;
     const double d = hypot(dx, dy);
     rbconst = fmin(rbconst, d / 3.0);
   }
+
+  size_t i = 0;
+  pointf *B = gv_calloc(4 * sides + 4, sizeof(pointf));
   for (size_t seg = 0; seg < sides; seg++) {
-    p0 = AF[seg];
+    pointf p0 = AF[seg];
+    pointf p1;
     if (seg + 1 < sides)
       p1 = AF[seg + 1];
     else
       p1 = AF[0];
-    dx = p1.x - p0.x;
-    dy = p1.y - p0.y;
+    double dx = p1.x - p0.x;
+    double dy = p1.y - p0.y;
     const double d = hypot(dx, dy);
-    t = rbconst / d;
+    double t = rbconst / d;
     if (style.shape == BOX3D || style.shape == COMPONENT)
       t /= 3;
     else if (style.shape == DOGEAR)
@@ -689,15 +690,10 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
   assert(sides > 0);
   assert(memcmp(&style, &(graphviz_polygon_style_t){0}, sizeof(style)) != 0);
 
-  struct {
-    unsigned shape : 7;
-  } mode = {0};
-
   if (style.diagonals) {
     diagonals_draw(output, obj, AF, sides, style, filled);
     return;
   } else if (style.shape != 0) {
-    mode.shape = style.shape;
   } else if (style.rounded) {
     rounded_draw(output, obj, AF, sides, style, filled);
     return;
@@ -705,12 +701,12 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     UNREACHABLE();
   }
 
-  if (mode.shape == CYLINDER) {
+  if (style.shape == CYLINDER) {
     cylinder_draw(output, obj, AF, sides, filled);
     return;
   }
   pointf *B = alloc_interpolation_points(AF, sides, style, false);
-  switch (mode.shape) {
+  switch (style.shape) {
   case DOGEAR: {
     /* Add the cutoff edge. */
     pointf *D = gv_calloc(sides + 1, sizeof(pointf));
