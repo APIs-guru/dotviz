@@ -2898,22 +2898,13 @@ static bool multicolor(const char *f) { return strchr(f, ':') != NULL; }
 /* generic polygon gencode routine */
 static void poly_gencode(output_string *output, SafeLayer *safe_layer,
                          obj_state_t *obj, node_t *n) {
-  polygon_t *poly;
-  double xsize, ysize;
-  pointf P, *vertices;
-  int filled;
-  bool usershape_p;
-  bool pfilled; /* true if fill not handled by user shape */
-  char *name;
   int doMap = (obj->url || obj->explicit_tooltip);
-  char *fillcolor = NULL;
-  char *pencolor = NULL;
 
   if (doMap)
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
 
-  poly = ND_shape_info(n);
-  vertices = poly->vertices;
+  polygon_t *poly = ND_shape_info(n);
+  pointf *vertices = poly->vertices;
   const size_t sides = poly->sides;
   size_t peripheries = poly->peripheries;
   pointf *AF = gv_calloc(sides + 5, sizeof(pointf));
@@ -2921,12 +2912,14 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   /* nominal label position in the center of the node */
   ND_label(n)->pos = ND_coord(n);
 
-  xsize = (ND_lw(n) + ND_rw(n)) / INCH2PS(ND_width(n));
-  ysize = ND_ht(n) / INCH2PS(ND_height(n));
+  double xsize = (ND_lw(n) + ND_rw(n)) / INCH2PS(ND_width(n));
+  double ysize = ND_ht(n) / INCH2PS(ND_height(n));
 
   const graphviz_polygon_style_t style = stylenode(obj, n);
 
   char *clrs[2] = {0};
+  int filled = 0;
+  char *fillcolor = NULL;
   if (style.filled) {
     double frac;
     fillcolor = findFill(n);
@@ -2949,11 +2942,11 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   } else if (style.striped || style.wedged) {
     fillcolor = findFill(n);
     filled = 1;
-  } else {
-    filled = 0;
   }
-  pencolor = penColor(obj, n); /* emit pen color */
-  pfilled = !ND_shape(n)->usershape || streq(ND_shape(n)->name, "custom");
+
+  char *pencolor = penColor(obj, n); /* emit pen color */
+  /* true if fill not handled by user shape */
+  bool pfilled = !ND_shape(n)->usershape || streq(ND_shape(n)->name, "custom");
 
   /* if no boundary but filled, set boundary color to transparent */
   if (peripheries == 0 && filled != 0 && pfilled) {
@@ -2965,7 +2958,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   size_t j;
   for (j = 0; j < peripheries; j++) {
     for (size_t i = 0; i < sides; i++) {
-      P = vertices[i + j * sides];
+      pointf P = vertices[i + j * sides];
       AF[i].x = P.x * xsize + ND_coord(n).x;
       AF[i].y = P.y * ysize + ND_coord(n).y;
     }
@@ -3001,7 +2994,8 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
     filled = 0;
   }
 
-  usershape_p = false;
+  bool usershape_p = false;
+  char *name;
   if (ND_shape(n)->usershape) {
     name = ND_shape(n)->name;
     if (streq(name, "custom")) {
@@ -3015,7 +3009,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   if (usershape_p) {
     /* get coords of innermost periphery */
     for (size_t i = 0; i < sides; i++) {
-      P = vertices[i];
+      pointf P = vertices[i];
       AF[i].x = P.x * xsize + ND_coord(n).x;
       AF[i].y = P.y * ysize + ND_coord(n).y;
     }
