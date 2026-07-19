@@ -28,7 +28,6 @@
 #include "util/streq.h"
 #include "util/tokenize.h"
 #include "util/unreachable.h"
-#include "xdot/xdot.h"
 #include "colorprocs.h"
 
 #include "core_svg.h"
@@ -52,33 +51,6 @@ extern Agsym_t *E_layer, *E_dir, *E_arrowsz, *E_color, *E_fillcolor,
    pr[1].y = p.y + sy)
 #define FUZZ 3
 #define EPSILON .0001
-
-typedef struct {
-  xdot_op op;
-  boxf bb;
-  textspan_t *span;
-} exdot_op;
-
-void *init_xdot(Agraph_t *g) {
-  char *p;
-  xdot *xd = NULL;
-
-  if (!((p = agget(g, "_background")) && p[0])) {
-    if (!((p = agget(g, "_draw_")) && p[0])) {
-      return NULL;
-    }
-  }
-
-  xd = parseXDotF(p, NULL, sizeof(exdot_op));
-
-  if (!xd) {
-    agwarningf("Could not parse \"_background\" attribute in graph %s\n",
-               agnameof(g));
-    agerr(AGPREV, "  \"%s\"\n", p);
-  }
-
-  return xd;
-}
 
 /* push empty graphic state for current object */
 obj_state_t child_obj_state(obj_state_t *parent) {
@@ -709,138 +681,8 @@ static int *parse_layerselect(SafeJob *safe_job, char *p) {
   return laylist;
 }
 
-static pointf *copyPts(xdot_point *inpts, size_t numpts) {
-  pointf *pts = gv_calloc(numpts, sizeof(pointf));
-  for (size_t i = 0; i < numpts; i++) {
-    pts[i].x = inpts[i].x;
-    pts[i].y = inpts[i].y;
-  }
-  return pts;
-}
-
-static void emit_xdot(output_string *output, SafeLayer *safe_layer,
-                      obj_state_t *obj, xdot *xd) {
-  int image_warn = 1;
-  int angle;
-  char **styles = NULL;
-  int filled = FILL;
-
-  exdot_op *op = (exdot_op *)xd->ops;
-  for (size_t i = 0; i < xd->cnt; i++) {
-    switch (op->op.kind) {
-    case xd_filled_ellipse:
-    case xd_unfilled_ellipse:
-      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
-        pointf pts[] = {{.x = op->op.u.ellipse.x - op->op.u.ellipse.w,
-                         .y = op->op.u.ellipse.y - op->op.u.ellipse.h},
-                        {.x = op->op.u.ellipse.x + op->op.u.ellipse.w,
-                         .y = op->op.u.ellipse.y + op->op.u.ellipse.h}};
-        svg_ellipse(output, obj, pts,
-                    op->op.kind == xd_filled_ellipse ? filled : 0);
-      }
-      break;
-    case xd_filled_polygon:
-    case xd_unfilled_polygon:
-      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
-        pointf *pts = copyPts(op->op.u.polygon.pts, op->op.u.polygon.cnt);
-        assert(op->op.u.polygon.cnt <= INT_MAX &&
-               "polygon count exceeds svg_polygon support");
-        svg_polygon(output, obj, pts, op->op.u.polygon.cnt,
-                    op->op.kind == xd_filled_polygon ? filled : 0);
-        free(pts);
-      }
-      break;
-    case xd_filled_bezier:
-    case xd_unfilled_bezier:
-      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
-        pointf *pts = copyPts(op->op.u.bezier.pts, op->op.u.bezier.cnt);
-        svg_bezier(output, obj, pts, op->op.u.bezier.cnt,
-                   op->op.kind == xd_filled_bezier ? filled : 0);
-        free(pts);
-      }
-      break;
-    case xd_polyline:
-      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
-        pointf *pts = copyPts(op->op.u.polyline.pts, op->op.u.polyline.cnt);
-        svg_polyline(output, obj, pts, op->op.u.polyline.cnt);
-        free(pts);
-      }
-      break;
-    case xd_text:
-      if (boxf_overlap(op->bb, safe_layer->safe_job->clip)) {
-        pointf pt = {.x = op->op.u.text.x, .y = op->op.u.text.y};
-        svg_textspan(output, GD_fontnames(safe_layer->safe_job->graph), obj, pt,
-                     op->span);
-      }
-      break;
-    case xd_fill_color:
-      obj->fillcolor = svg_resolve_color(op->op.u.color);
-      filled = FILL;
-      break;
-    case xd_pen_color:
-      obj->pencolor = svg_resolve_color(op->op.u.color);
-      filled = FILL;
-      break;
-    case xd_grad_fill_color:
-      if (op->op.u.grad_color.type == xd_radial) {
-        xdot_radial_grad *p = &op->op.u.grad_color.u.ring;
-        char *const clr0 = p->stops[0].color;
-        char *const clr1 = p->stops[1].color;
-        const double frac = p->stops[1].frac;
-        if (p->x1 == p->x0 && p->y1 == p->y0) {
-          angle = 0;
-        } else {
-          angle = (int)(180 * acos((p->x0 - p->x1) / p->r0) / M_PI);
-        }
-        obj->fillcolor = svg_resolve_color(clr0);
-        obj->stopcolor = svg_resolve_color(clr1);
-        obj->gradient_angle = angle;
-        obj->gradient_frac = frac;
-        filled = RGRADIENT;
-      } else {
-        xdot_linear_grad *p = &op->op.u.grad_color.u.ling;
-        char *const clr0 = p->stops[0].color;
-        char *const clr1 = p->stops[1].color;
-        const double frac = p->stops[1].frac;
-        angle = (int)(180 * atan2(p->y1 - p->y0, p->x1 - p->x0) / M_PI);
-        obj->fillcolor = svg_resolve_color(clr0);
-        obj->stopcolor = svg_resolve_color(clr1);
-        obj->gradient_angle = angle;
-        obj->gradient_frac = frac;
-        filled = GRADIENT;
-      }
-      break;
-    case xd_grad_pen_color:
-      agwarningf("gradient pen colors not yet supported.\n");
-      break;
-    case xd_font:
-      /* fontsize and fontname already encoded via xdotBB */
-      break;
-    case xd_style:
-      styles = parse_style(op->op.u.style);
-      svg_set_style(obj, styles);
-      break;
-    case xd_fontchar:
-      /* font characteristics already encoded via xdotBB */
-      break;
-    case xd_image:
-      if (image_warn) {
-        agwarningf("Images unsupported in \"background\" attribute\n");
-        image_warn = 0;
-      }
-      break;
-    default:
-      UNREACHABLE();
-    }
-    op++;
-  }
-  if (styles)
-    svg_set_style(obj, svg_defaultlinestyle);
-}
-
 static void emit_background(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, graph_t *g) {
-  xdot *xd;
   char *str;
 
   /* if no bgcolor specified - first assume default of "white" */
@@ -879,9 +721,6 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
       svg_box(output, obj, safe_layer->safe_job->clip, FILL); /* filled */
     }
   }
-
-  if ((xd = GD_drawing(g)->xdots))
-    emit_xdot(output, safe_layer, obj, xd);
 }
 
 static bool node_in_layer(int layerNum, SafeJob *safe_job, graph_t *g, node_t *n) {

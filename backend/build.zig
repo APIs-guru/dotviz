@@ -170,8 +170,6 @@ const graphviz_lib_files = [_][]const u8{
     "gvc/gvtool_tred.c",
     "gvc/gvloadimage.c",
 
-    "xdot/xdot.c",
-
     "label/index.c",
     "label/split.q.c",
     "label/xlabels.c",
