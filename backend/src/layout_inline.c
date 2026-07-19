@@ -56,8 +56,6 @@ extern char *late_nnstring(void *obj, attrsym_t *attr, char *defaultValue);
 
 extern void do_graph_label(graph_t *sg);
 
-extern void *init_xdot(Agraph_t *g);
-
 /* converts a graph attribute in inches to a pointf in points.
  * If only one number is given, it is used for both x and y.
  * Returns true if the attribute ends in '!'.
@@ -272,9 +270,6 @@ void my_graph_init(Agraph_t *g, bool use_rankdir) {
   E_tailclip = agfindedgeattr(g, "tailclip");
   E_headclip = agfindedgeattr(g, "headclip");
   E_penwidth = agfindedgeattr(g, "penwidth");
-
-  /* background */
-  GD_drawing(g)->xdots = init_xdot(g);
 
   /* initialize id, if any */
   if ((p = agget(g, "id")) && *p)

@@ -154,9 +154,6 @@ pub export fn render(json_bytes: [*]u8, size: usize) WasmString {
     defer {
         const info = graphviz.graphInfo(graph);
         const drawing = info.*.drawing;
-        if (drawing.*.xdots != null) {
-            graphviz.freeXDot(@ptrCast(@alignCast(drawing.*.xdots)));
-        }
         graphviz.free(drawing.*.id);
         graphviz.free(drawing);
         info.*.drawing = null;

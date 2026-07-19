@@ -296,18 +296,28 @@ describe('render', () => {
   });
 
   it('returns an error that uses AGPREV with the correct level', async () => {
-    const result = dotviz.renderDot('graph { _background=123 }');
+    const result = dotviz.renderDot(
+      'graph { layout=neato; model=mds; a -- b }',
+    );
 
     expectDotWithWarnings(result).toMatchRawStringInlineSnapshot(`
-      RenderingBackendWarning: Could not parse "_background" attribute in graph %1
+      RenderingBackendWarning: edges in graph %1 have no len attribute. Hence, the mds model
 
-      RenderingBackendWarning:   "123"
+      RenderingBackendWarning: is inappropriate. Reverting to the shortest path model.
 
       graph {
-      	graph [_background=123,
-      		bb="0,0,0,0"
+      	graph [bb="0,0,125.21,46.639",
+      		layout=neato,
+      		model=mds
       	];
       	node [label="\\N"];
+      	a	[height=0.5,
+      		pos="27,28.639",
+      		width=0.75];
+      	b	[height=0.5,
+      		pos="98.21,18",
+      		width=0.75];
+      	a -- b	[pos="53.516,24.677 59.368,23.803 65.572,22.876 71.434,22"];
       }
     `);
   });

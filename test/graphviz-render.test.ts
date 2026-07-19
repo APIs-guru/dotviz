@@ -7,6 +7,7 @@ import { dotvizInstance } from '../src/index.ts';
 import {
   expectDot,
   expectDotWithWarnings,
+  expectFailureResult,
   expectSvg,
 } from './util/render-result.ts';
 
@@ -87,7 +88,7 @@ describe('render', () => {
       './snapshots/layers_support.svg',
     );
   });
-  it('_background attribute', async () => {
+  it('_background attribute is not supported', async () => {
     const dot = `
       digraph G {
         _background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36";
@@ -95,23 +96,8 @@ describe('render', () => {
       }
     `;
     const result = dotviz.renderDot(dot, { formats: ['dot', 'svg'] });
-    expectDot(result).toMatchRawStringInlineSnapshot(`
-      digraph G {
-      	graph [_background="c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36",
-      		bb="0,0,54,108"
-      	];
-      	node [label="\\N"];
-      	a	[height=0.5,
-      		pos="27,90",
-      		width=0.75];
-      	b	[height=0.5,
-      		pos="27,18",
-      		width=0.75];
-      	a -> b	[pos="e,27,36.104 27,71.697 27,64.407 27,55.726 27,47.536"];
-      }
-    `);
-    await expectSvg(result).toMatchFileSnapshot(
-      './snapshots/_background_attribute.svg',
+    expectFailureResult(result).toMatchRawStringInlineSnapshot(
+      `RenderingBackendError: '_background' is not supported. If you need it, open an issue: https://github.com/APIs-guru/dotviz/issues`,
     );
   });
   it('multiple pages in ps, one in svg', async () => {

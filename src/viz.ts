@@ -207,6 +207,15 @@ export class Viz {
   ): RenderResult {
     let { engine } = options;
 
+    const background = graph.graphAttributes.get('_background');
+    if (background !== undefined) {
+      return failureResult([
+        new RenderingBackendError(
+          `'_background' is not supported. If you need it, open an issue: https://github.com/APIs-guru/dotviz/issues`,
+        ),
+      ]);
+    }
+
     const layout = graph.graphAttributes.get('layout');
     if (layout !== undefined) {
       if (layout.html !== undefined || !isLayoutEngine(layout.text)) {
