@@ -685,7 +685,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
   assert(sides > 0);
   assert(memcmp(&style, &(graphviz_polygon_style_t){0}, sizeof(style)) != 0);
 
-  pointf *B, C[5], *D;
+  pointf C[5];
 
   struct {
     unsigned shape : 7;
@@ -707,11 +707,11 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     cylinder_draw(output, obj, AF, sides, filled);
     return;
   }
-  B = alloc_interpolation_points(AF, sides, style, false);
+  pointf *B = alloc_interpolation_points(AF, sides, style, false);
   switch (mode.shape) {
-  case DOGEAR:
+  case DOGEAR: {
     /* Add the cutoff edge. */
-    D = gv_calloc(sides + 1, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 1, sizeof(pointf));
     for (size_t seg = 1; seg < sides; seg++)
       D[seg] = AF[seg];
     D[0] = B[3 * (sides - 1) + 4];
@@ -729,7 +729,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     C[1] = C[2];
     svg_polyline(output, obj, C, 2);
     break;
-  case TAB:
+  }
+  case TAB: {
     /*
      * Adjust the perimeter for the protrusions.
      *
@@ -744,7 +745,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *
      */
     /* Add the tab edges. */
-    D = gv_calloc(sides + 2, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 2, sizeof(pointf));
     D[0] = AF[0];
     D[1] = B[2];
     D[2].x = B[2].x + (B[3].x - B[4].x) / 3;
@@ -761,7 +762,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     C[1] = B[2];
     svg_polyline(output, obj, C, 2);
     break;
-  case FOLDER:
+  }
+  case FOLDER: {
     /*
      * Adjust the perimeter for the protrusions.
      *
@@ -776,7 +778,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *
      */
     /* Add the folder edges. */
-    D = gv_calloc(sides + 3, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 3, sizeof(pointf));
     D[0] = AF[0];
     D[1].x = AF[0].x - (AF[0].x - B[1].x) / 4;
     D[1].y = AF[0].y + (B[3].y - B[4].y) / 3;
@@ -791,10 +793,11 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 3, filled);
     free(D);
     break;
-  case BOX3D:
+  }
+  case BOX3D: {
     assert(sides == 4);
     /* Adjust for the cutoff edges. */
-    D = gv_calloc(sides + 2, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 2, sizeof(pointf));
     D[0] = AF[0];
     D[1] = B[2];
     D[2] = B[4];
@@ -814,7 +817,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     C[1] = B[0];
     svg_polyline(output, obj, C, 2);
     break;
-  case COMPONENT:
+  }
+  case COMPONENT: {
     assert(sides == 4);
     /*
      * Adjust the perimeter for the protrusions.
@@ -832,7 +836,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *     10×────────────────× D[11]
      *
      */
-    D = gv_calloc(sides + 8, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 8, sizeof(pointf));
     D[0] = AF[0];
     D[1] = AF[1];
     D[2].x = B[3].x + (B[4].x - B[3].x);
@@ -875,8 +879,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
 
     free(D);
     break;
-
-  case PROMOTER:
+  }
+  case PROMOTER: {
     /*
      * L-shaped arrow on a center line, scales in the x direction
      *
@@ -896,7 +900,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // the arrow's thickness is (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
     //  the thickness is substituted with (AF[0].x - AF[1].x)/8 to make it
     //  scalable in the y with label length
-    D = gv_calloc(sides + 5, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 5, sizeof(pointf));
     D[0].x = mid_x(AF) + (AF[0].x - AF[1].x) / 8;       // x_center + width
     D[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) * 3 / 2; // D[4].y + width
     D[1].x = mid_x(AF) - (AF[0].x - AF[1].x) / 4;       // x_center - 2*width
@@ -926,8 +930,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-
-  case CDS:
+  }
+  case CDS: {
     /*
      * arrow without the protrusions, scales normally
      *
@@ -942,7 +946,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *                        D[3]
      *
      */
-    D = gv_calloc(sides + 1, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 1, sizeof(pointf));
     D[0].x = B[1].x;
     D[0].y = B[1].y - (B[3].y - B[4].y) / 2;
     D[1].x = B[3].x;
@@ -958,8 +962,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-
-  case TERMINATOR:
+  }
+  case TERMINATOR: {
     /*
      * T-shape, does not scale, always in the center
      *
@@ -975,7 +979,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *  ─────────┴───────×─D[0]──────
      */
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
-    D = gv_calloc(sides + 4, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 4, sizeof(pointf));
     D[0].x = mid_x(AF) + (B[2].x - B[3].x) / 4; // x_center + width/2
     D[0].y = mid_y(&AF[1]);
     D[1].x = D[0].x;
@@ -1005,8 +1009,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-
-  case UTR:
+  }
+  case UTR: {
     /*
      * half-octagon with line, does not scale, always in center
      *
@@ -1022,7 +1026,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *
      */
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
-    D = gv_calloc(sides + 2, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 2, sizeof(pointf));
     D[0].x = mid_x(AF) + (B[2].x - B[3].x) * 3 / 4; // x_center+width
     D[0].y = mid_y(&AF[1]);
     D[1].x = D[0].x;
@@ -1047,7 +1051,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case PRIMERSITE:
+  }
+  case PRIMERSITE: {
     /*
      * half arrow shape, scales in the x-direction
      *                 D[1]
@@ -1064,7 +1069,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
     //  the thickness is substituted with (AF[0].x - AF[1].x)/8 to make it
     //  scalable in the y with label length
-    D = gv_calloc(sides + 1, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 1, sizeof(pointf));
     D[0].x = mid_x(AF) + (B[2].x - B[3].x);         // x_center + width*2
     D[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 4; // y_center + 1/2 width
     D[1].x = D[0].x - (B[2].x - B[3].x);            // x_center
@@ -1085,9 +1090,9 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     C[1].y = AF[2].y + (AF[0].y - AF[3].y) / 2;
     svg_polyline(output, obj, C, 2);
     free(D);
-
     break;
-  case RESTRICTIONSITE:
+  }
+  case RESTRICTIONSITE: {
     /*
      * zigzag shape, scales in the x-direction (only the middle section)
      *
@@ -1104,7 +1109,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
     //  the thickness is substituted with (AF[0].x - AF[1].x)/8 to make it
     //  scalable in the y with label length
-    D = gv_calloc(sides + 4, sizeof(pointf));
+    pointf *D = gv_calloc(sides + 4, sizeof(pointf));
     D[0].x = mid_x(AF) + (AF[0].x - AF[1].x) / 8 +
              (B[2].x - B[3].x) / 2; // x_center + scalable_width + width
     D[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 4; // y_center + 1/2 width
@@ -1140,7 +1145,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case FIVEPOVERHANG:
+  }
+  case FIVEPOVERHANG: {
     /*
      *  does not scale, on the left side
      *
@@ -1157,7 +1163,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
     //  the thickness is substituted with (AF[0].x - AF[1].x)/8 to make it
     //  scalable in the y with label length
-    D = gv_calloc(sides, sizeof(pointf));
+    pointf *D = gv_calloc(sides, sizeof(pointf));
     D[0].x = AF[1].x;                               // the very left edge
     D[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 8; // y_center + 1/4 width
     D[1].x = D[0].x + 2 * (B[2].x - B[3].x);
@@ -1190,7 +1196,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case THREEPOVERHANG:
+  }
+  case THREEPOVERHANG: {
     /*
      *  does not scale, on the right side
      *
@@ -1207,7 +1214,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
     //  the thickness is substituted with (AF[0].x - AF[1].x)/8 to make it
     //  scalable in the y with label length
-    D = gv_calloc(sides, sizeof(pointf));
+    pointf *D = gv_calloc(sides, sizeof(pointf));
     D[0].x = AF[0].x;                               // the very right edge
     D[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 8; // y_center + 1/4 width
     D[1].x = D[0].x;
@@ -1240,7 +1247,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case NOVERHANG:
+  }
+  case NOVERHANG: {
     /*
      *  does not scale
      *
@@ -1259,7 +1267,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     //  the thickness is substituted with (AF[0].x - AF[1].x)/8 to make it
     //  scalable in the y with label length
     /*upper left rectangle*/
-    D = gv_calloc(sides, sizeof(pointf));
+    pointf *D = gv_calloc(sides, sizeof(pointf));
     D[0].x =
         mid_x(AF) - (B[2].x - B[3].x) * 9 / 8; // x_center - 2*width - 1/4*width
     D[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 8; // y_center + 1/4 width
@@ -1331,7 +1339,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case ASSEMBLY:
+  }
+  case ASSEMBLY: {
     /*
      *  does not scale
      *
@@ -1347,7 +1356,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
     //  the thickness is substituted with (AF[0].x - AF[1].x)/8 to make it
     //  scalable in the y with label length
-    D = gv_calloc(sides, sizeof(pointf));
+    pointf *D = gv_calloc(sides, sizeof(pointf));
     D[0].x = mid_x(AF) - (B[2].x - B[3].x);         // x_center - 2*width
     D[0].y = mid_y(&AF[1]) + (B[3].y - B[4].y) / 8; // y_center + 1/4 width
     D[1].x = D[0].x + 2 * (B[2].x - B[3].x);
@@ -1388,7 +1397,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case SIGNATURE:
+  }
+  case SIGNATURE: {
     /*
      *
      *
@@ -1401,7 +1411,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
     //  the thickness is substituted with (AF[0].x - AF[1].x)/8 to make it
     //  scalable in the y with label length
-    D = gv_calloc(sides, sizeof(pointf));
+    pointf *D = gv_calloc(sides, sizeof(pointf));
     D[0].x = AF[0].x;
     D[0].y = B[1].y - (B[3].y - B[4].y) / 2;
     D[1].x = B[3].x;
@@ -1435,7 +1445,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case INSULATOR:
+  }
+  case INSULATOR: {
     /*
      * double square
      *
@@ -1446,7 +1457,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *
      */
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
-    D = gv_calloc(sides, sizeof(pointf));
+    pointf *D = gv_calloc(sides, sizeof(pointf));
     D[0].x = mid_x(AF) + (B[2].x - B[3].x) / 2; // x_center+width
     D[0].y = mid_y(&AF[1]) + (B[2].x - B[3].x) / 2;
     D[1].x = D[0].x;
@@ -1485,7 +1496,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polyline(output, obj, C, 2);
 
     break;
-  case RIBOSITE:
+  }
+  case RIBOSITE: {
     /*
      * X with a dashed line on the bottom
      *
@@ -1496,7 +1508,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      */
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
 
-    D = gv_calloc(sides + 12, sizeof(pointf)); // 12-sided x
+    pointf *D = gv_calloc(sides + 12, sizeof(pointf)); // 12-sided x
     D[0].x =
         mid_x(AF) +
         (B[2].x - B[3].x) / 4; // x_center+width/2 , lower right corner of the x
@@ -1559,7 +1571,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case RNASTAB:
+  }
+  case RNASTAB: {
     /*
      * octagon with a dashed line on the bottom
      *
@@ -1570,7 +1583,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      */
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
 
-    D = gv_calloc(sides + 4, sizeof(pointf)); // 12-sided x
+    pointf *D = gv_calloc(sides + 4, sizeof(pointf)); // 12-sided x
     D[0].x = mid_x(AF) +
              (B[2].x - B[3].x) /
                  8; // x_center+width/8 , lower right corner of the hexagon
@@ -1616,7 +1629,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case PROTEASESITE:
+  }
+  case PROTEASESITE: {
     /*
      * X with a solid line on the bottom
      *
@@ -1626,7 +1640,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *      ─────┴──────
      */
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
-    D = gv_calloc(sides + 12, sizeof(pointf)); // 12-sided x
+    pointf *D = gv_calloc(sides + 12, sizeof(pointf)); // 12-sided x
     D[0].x =
         mid_x(AF) +
         (B[2].x - B[3].x) / 4; // x_center+width/2 , lower right corner of the x
@@ -1679,7 +1693,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-  case PROTEINSTAB:
+  }
+  case PROTEINSTAB: {
     /*
      * octagon with a solid line on the bottom
      *
@@ -1690,7 +1705,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      */
     // width units are (B[2].x-B[3].x)/2 or (B[3].y-B[4].y)/2;
 
-    D = gv_calloc(sides + 4, sizeof(pointf)); // 12-sided x
+    pointf *D = gv_calloc(sides + 4, sizeof(pointf)); // 12-sided x
     D[0].x = mid_x(AF) +
              (B[2].x - B[3].x) /
                  8; // x_center+width/8 , lower right corner of the hexagon
@@ -1727,8 +1742,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     free(D);
 
     break;
-
-  case RPROMOTER:
+  }
+  case RPROMOTER: {
     /*
      * Adjust the perimeter for the protrusions.
      *
@@ -1744,7 +1759,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *       └────────┘
      */
     /* Add the tab edges. */
-    D = gv_calloc(sides + 5, sizeof(pointf)); // 5 new points
+    pointf *D = gv_calloc(sides + 5, sizeof(pointf)); // 5 new points
     D[0].x = B[1].x - (B[2].x - B[3].x) / 2;
     D[0].y = B[1].y - (B[3].y - B[4].y) / 2;
     D[1].x = B[3].x;
@@ -1767,8 +1782,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 5, filled);
     free(D);
     break;
-
-  case RARROW:
+  }
+  case RARROW: {
     /*
      * Adjust the perimeter for the protrusions.
      *
@@ -1784,7 +1799,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *
      */
     /* Add the tab edges. */
-    D = gv_calloc(sides + 3, sizeof(pointf)); // 3 new points
+    pointf *D = gv_calloc(sides + 3, sizeof(pointf)); // 3 new points
     D[0].x = B[1].x - (B[2].x - B[3].x) / 2;
     D[0].y = B[1].y - (B[3].y - B[4].y) / 2;
     D[1].x = B[3].x;
@@ -1803,8 +1818,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 3, filled);
     free(D);
     break;
-
-  case LARROW:
+  }
+  case LARROW: {
     /*
      * Adjust the perimeter for the protrusions.
      *
@@ -1818,7 +1833,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *
      */
     /* Add the tab edges. */
-    D = gv_calloc(sides + 3, sizeof(pointf)); // 3 new points
+    pointf *D = gv_calloc(sides + 3, sizeof(pointf)); // 3 new points
     D[0].x = AF[0].x;
     D[0].y = AF[0].y - (B[3].y - B[4].y) / 2;
     D[1].x = B[2].x + (B[2].x - B[3].x) / 2;
@@ -1837,8 +1852,8 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 3, filled);
     free(D);
     break;
-
-  case LPROMOTER:
+  }
+  case LPROMOTER: {
     /*
      * Adjust the perimeter for the protrusions.
      *
@@ -1854,7 +1869,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
      *                └───────┘
      */
     /* Add the tab edges. */
-    D = gv_calloc(sides + 5, sizeof(pointf)); // 3 new points
+    pointf *D = gv_calloc(sides + 5, sizeof(pointf)); // 3 new points
     D[0].x = AF[0].x;
     D[0].y = AF[0].y - (B[3].y - B[4].y) / 2;
     D[1].x = B[2].x + (B[2].x - B[3].x) / 2;
@@ -1877,6 +1892,7 @@ void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     svg_polygon(output, obj, D, sides + 5, filled);
     free(D);
     break;
+  }
   }
   free(B);
 }
@@ -2179,9 +2195,9 @@ static void poly_init(node_t *n) {
     /*
      * FIXME - this code is wrong - it doesn't work for concave boundaries.
      *          (e.g. "folder"  or "promoter")
-     *   I don't think it even needs sectorangle, or knowledge of skewed shapes.
-     *   (Concepts that only work for convex regular (modulo skew/distort)
-     * polygons.)
+     *   I don't think it even needs sectorangle, or knowledge of skewed
+     * shapes. (Concepts that only work for convex regular (modulo
+     * skew/distort) polygons.)
      *
      *   I think it only needs to know inside v. outside (by always drawing
      *   boundaries clockwise, say),  and the two adjacent segments.
@@ -2322,7 +2338,8 @@ static void poly_init(node_t *n) {
           vertices[i + j * sides] = Q;
         }
         if (outp > peripheries) {
-          // add an outline at half the penwidth outside the outermost periphery
+          // add an outline at half the penwidth outside the outermost
+          // periphery
           Q.x += cosx * penwidth / 2 / GAP;
           Q.y += sinx * penwidth / 2 / GAP;
           vertices[i + peripheries * sides] = Q;
@@ -2371,11 +2388,11 @@ static void poly_free(node_t *n) {
 }
 
 /* poly_inside:
- * Return true if point p is inside polygonal shape of node inside_context->s.n.
- * Calculations are done using unrotated node shape. Thus, if p is in a rotated
- * coordinate system, it is reset as P in the unrotated coordinate system.
- * Similarly, the ND_rw, ND_lw and ND_ht values are rotated if the graph is
- * flipped.
+ * Return true if point p is inside polygonal shape of node
+ * inside_context->s.n. Calculations are done using unrotated node shape.
+ * Thus, if p is in a rotated coordinate system, it is reset as P in the
+ * unrotated coordinate system. Similarly, the ND_rw, ND_lw and ND_ht values
+ * are rotated if the graph is flipped.
  */
 static bool poly_inside(inside_t *inside_context, pointf p) {
   size_t sides;
