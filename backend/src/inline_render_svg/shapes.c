@@ -439,31 +439,27 @@ static graphviz_polygon_style_t style_or(graphviz_polygon_style_t a,
 }
 
 static char **checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
-  char *style;
   char **pstyle = 0;
   graphviz_polygon_style_t istyle = {0};
-  polygon_t *poly;
 
-  style = late_nnstring(n, N_style, "");
+  char *style = late_nnstring(n, N_style, "");
   if (style[0]) {
-    char **pp;
-    char **qp;
+    char **pp = pstyle = parse_style(style);
     char *p;
-    pp = pstyle = parse_style(style);
     while ((p = *pp)) {
       if (streq(p, "filled")) {
         istyle.filled = true;
         pp++;
       } else if (streq(p, "rounded")) {
         istyle.rounded = true;
-        qp = pp; /* remove rounded from list passed to renderer */
+        char **qp = pp; /* remove rounded from list passed to renderer */
         do {
           qp++;
           *(qp - 1) = *qp;
         } while (*qp);
       } else if (streq(p, "diagonals")) {
         istyle.diagonals = true;
-        qp = pp; /* remove diagonals from list passed to renderer */
+        char **qp = pp; /* remove diagonals from list passed to renderer */
         do {
           qp++;
           *(qp - 1) = *qp;
@@ -474,21 +470,21 @@ static char **checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
       } else if (streq(p, "radial")) {
         istyle.radial = true;
         istyle.filled = true;
-        qp = pp; /* remove radial from list passed to renderer */
+        char **qp = pp; /* remove radial from list passed to renderer */
         do {
           qp++;
           *(qp - 1) = *qp;
         } while (*qp);
       } else if (streq(p, "striped") && isBox(n)) {
         istyle.striped = true;
-        qp = pp; /* remove striped from list passed to renderer */
+        char **qp = pp; /* remove striped from list passed to renderer */
         do {
           qp++;
           *(qp - 1) = *qp;
         } while (*qp);
       } else if (streq(p, "wedged") && isEllipse(n)) {
         istyle.wedged = true;
-        qp = pp; /* remove wedged from list passed to renderer */
+        char **qp = pp; /* remove wedged from list passed to renderer */
         do {
           qp++;
           *(qp - 1) = *qp;
@@ -497,7 +493,8 @@ static char **checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
         pp++;
     }
   }
-  if ((poly = ND_shape(n)->polygon))
+  polygon_t *poly = ND_shape(n)->polygon;
+  if (poly)
     istyle = style_or(istyle, poly->option);
 
   *flagp = istyle;
