@@ -941,18 +941,6 @@ static void emit_attachment(output_string *output, obj_state_t *obj,
   svg_polyline(output, obj, AF, 3);
 }
 
-/* edges’ colors can be multiple colors separated by ":"
- * so we compute a default pencolor with the same number of colors. */
-static char *default_pencolor(agxbuf *buf, const char *pencolor,
-                              const char *deflt) {
-  agxbput(buf, deflt);
-  for (const char *p = pencolor; *p; p++) {
-    if (*p == ':')
-      agxbprint(buf, ":%s", deflt);
-  }
-  return agxbuse(buf);
-}
-
 static double approxLen(pointf *pts) {
   double d = DIST(pts[0], pts[1]);
   d += DIST(pts[1], pts[2]);
@@ -1184,27 +1172,9 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         goto done;
     }
 
-    char* pencolor = color;
-    char* fillcolor = color;
-    if (ED_gui_state(e) & GUI_STATE_ACTIVE) {
-      pencolor = default_pencolor(&buf, pencolor, DEFAULT_ACTIVEPENCOLOR);
-      fillcolor = DEFAULT_ACTIVEFILLCOLOR;
-    } else if (ED_gui_state(e) & GUI_STATE_SELECTED) {
-      pencolor = default_pencolor(&buf, pencolor, DEFAULT_SELECTEDPENCOLOR);
-      fillcolor = DEFAULT_SELECTEDFILLCOLOR;
-    } else if (ED_gui_state(e) & GUI_STATE_DELETED) {
-      pencolor = default_pencolor(&buf, pencolor, DEFAULT_DELETEDPENCOLOR);
-      fillcolor = DEFAULT_DELETEDFILLCOLOR;
-    } else if (ED_gui_state(e) & GUI_STATE_VISITED) {
-      pencolor = default_pencolor(&buf, pencolor, DEFAULT_VISITEDPENCOLOR);
-      fillcolor = DEFAULT_VISITEDFILLCOLOR;
-    } else
-      fillcolor = late_nnstring(e, E_fillcolor, color);
-    if (pencolor != color)
-      obj->pencolor = svg_resolve_color(pencolor);
+    char* fillcolor = late_nnstring(e, E_fillcolor, color);
     if (fillcolor != color)
       obj->fillcolor = svg_resolve_color(fillcolor);
-    color = pencolor;
 
     if (tapered) {
       if (*color == '\0')
@@ -1284,10 +1254,8 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         if (!color[0])
           color = DEFAULT_COLOR;
         if (color != lastcolor) {
-          if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            obj->pencolor = svg_resolve_color(color);
-            obj->fillcolor = svg_resolve_color(color);
-          }
+          obj->pencolor = svg_resolve_color(color);
+          obj->fillcolor = svg_resolve_color(color);
           lastcolor = color;
         }
         if (cnum == 0)
@@ -1307,10 +1275,8 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
       if (bz.sflag) {
         if (color != tailcolor) {
           color = tailcolor;
-          if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            obj->pencolor = svg_resolve_color(color);
-            obj->fillcolor = svg_resolve_color(color);
-          }
+          obj->pencolor = svg_resolve_color(color);
+          obj->fillcolor = svg_resolve_color(color);
         }
         arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
                   penwidth, bz.sflag);
@@ -1318,10 +1284,8 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
       if (bz.eflag) {
         if (color != headcolor) {
           color = headcolor;
-          if (!(ED_gui_state(e) & (GUI_STATE_ACTIVE | GUI_STATE_SELECTED))) {
-            obj->pencolor = svg_resolve_color(color);
-            obj->fillcolor = svg_resolve_color(color);
-          }
+          obj->pencolor = svg_resolve_color(color);
+          obj->fillcolor = svg_resolve_color(color);
         }
         arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
                   arrowsize, penwidth, bz.eflag);
@@ -1883,40 +1847,21 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
         filled = FILL;
     }
     fillcolor = pencolor = 0;
-
-    if (GD_gui_state(sg) & GUI_STATE_ACTIVE) {
-      pencolor = DEFAULT_ACTIVEPENCOLOR;
-      fillcolor = DEFAULT_ACTIVEFILLCOLOR;
+    if ((color = agget(sg, "color")) != 0 && color[0])
+      fillcolor = pencolor = color;
+    if ((color = agget(sg, "pencolor")) != 0 && color[0])
+      pencolor = color;
+    if ((color = agget(sg, "fillcolor")) != 0 && color[0])
+      fillcolor = color;
+    /* bgcolor is supported for backward compatibility
+        if fill is set, fillcolor trumps bgcolor, so
+        don't bother checking.
+        if gradient is set fillcolor trumps bgcolor
+      */
+    if ((filled == 0 || !fillcolor) && (color = agget(sg, "bgcolor")) != 0 &&
+        color[0]) {
+      fillcolor = color;
       filled = FILL;
-    } else if (GD_gui_state(sg) & GUI_STATE_SELECTED) {
-      pencolor = DEFAULT_SELECTEDPENCOLOR;
-      fillcolor = DEFAULT_SELECTEDFILLCOLOR;
-      filled = FILL;
-    } else if (GD_gui_state(sg) & GUI_STATE_DELETED) {
-      pencolor = DEFAULT_DELETEDPENCOLOR;
-      fillcolor = DEFAULT_DELETEDFILLCOLOR;
-      filled = FILL;
-    } else if (GD_gui_state(sg) & GUI_STATE_VISITED) {
-      pencolor = DEFAULT_VISITEDPENCOLOR;
-      fillcolor = DEFAULT_VISITEDFILLCOLOR;
-      filled = FILL;
-    } else {
-      if ((color = agget(sg, "color")) != 0 && color[0])
-        fillcolor = pencolor = color;
-      if ((color = agget(sg, "pencolor")) != 0 && color[0])
-        pencolor = color;
-      if ((color = agget(sg, "fillcolor")) != 0 && color[0])
-        fillcolor = color;
-      /* bgcolor is supported for backward compatibility
-         if fill is set, fillcolor trumps bgcolor, so
-         don't bother checking.
-         if gradient is set fillcolor trumps bgcolor
-       */
-      if ((filled == 0 || !fillcolor) && (color = agget(sg, "bgcolor")) != 0 &&
-          color[0]) {
-        fillcolor = color;
-        filled = FILL;
-      }
     }
     if (!pencolor)
       pencolor = DEFAULT_COLOR;
