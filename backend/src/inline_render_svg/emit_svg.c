@@ -1951,13 +1951,19 @@ char **parse_style(char *s) {
   static agxbuf ps_xb;
 
   char *p = s;
-  while (true) {
-    while (gv_isspace(*p) || *p == ',')
-      p++;
-
+  while (*p != '\0') {
     switch (*p) {
-    case '\0':
-      goto break_top_level_while;
+    case '\t':
+    case '\n':
+    case '\v':
+    case '\f':
+    case '\r':
+    case ' ':
+      ++p;
+      continue;
+    case ',':
+      ++p;
+      break;
     case '(':
       if (in_parens) {
         agerrorf("nesting not allowed in style: %s\n", s);
@@ -1998,7 +2004,6 @@ char **parse_style(char *s) {
     }
   }
 
-break_top_level_while:
   if (in_parens) {
     agerrorf("unmatched '(' in style: %s\n", s);
     parse[0] = NULL;
