@@ -1934,34 +1934,6 @@ static bool is_style_delim(int c) {
   }
 }
 
-/// Recognized token, returned from `style_token`
-///
-/// The token content fields, `.start` and `.size` are only populated with
-/// useful values when `.type` is `SID`, an identifier.
-typedef struct {
-  const char *start; ///< Beginning of the token content
-  size_t size;       ///< Number of bytes in the token content
-} token_t;
-
-static token_t style_token(const char *p) {
-  while (gv_isspace(*p) || *p == ',')
-    p++;
-
-  switch (*p) {
-  case '\0':
-    return (token_t){.start = p, .size = 0};
-  case '(':
-  case ')':
-    return (token_t){.start = p, .size = 1};
-  }
-
-  const char *start = p;
-  while (!is_style_delim(*p)) {
-    p++;
-  }
-  return (token_t){.start = start, .size = p - start};
-}
-
 #define FUNLIMIT 64
 
 /* This is one of the worst internal designs in graphviz.
@@ -1978,8 +1950,14 @@ char **parse_style(char *s) {
   bool in_parens = false;
   static agxbuf ps_xb;
 
-  for (token_t c = style_token(s); *c.start != 0; c = style_token(c.start + c.size)) {
-    switch (*c.start) {
+  char *p = s;
+  while (true) {
+    while (gv_isspace(*p) || *p == ',')
+      p++;
+
+    switch (*p) {
+    case '\0':
+      goto break_top_level_while;
     case '(':
       if (in_parens) {
         agerrorf("nesting not allowed in style: %s\n", s);
@@ -1987,6 +1965,7 @@ char **parse_style(char *s) {
         return parse;
       }
       in_parens = true;
+      ++p;
       break;
 
     case ')':
@@ -1996,6 +1975,7 @@ char **parse_style(char *s) {
         return parse;
       }
       in_parens = false;
+      ++p;
       break;
 
     default:
@@ -2008,11 +1988,17 @@ char **parse_style(char *s) {
         agxbputc(&ps_xb, '\0'); /* terminate previous */
         parse_offsets[fun++] = agxblen(&ps_xb);
       }
-      agxbput_n(&ps_xb, c.start, c.size);
+
+      char const* start = p;
+      while (!is_style_delim(*p)) {
+        p++;
+      }
+      agxbput_n(&ps_xb, start, p - start);
       agxbputc(&ps_xb, '\0');
     }
   }
 
+break_top_level_while:
   if (in_parens) {
     agerrorf("unmatched '(' in style: %s\n", s);
     parse[0] = NULL;
