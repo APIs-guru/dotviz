@@ -94,51 +94,38 @@ void free_child_obj(obj_state_t *child) {
   free(child->url_bsplinemap_n);
 }
 
-static void layerPagePrefix(const SafeLayer *safe_layer, agxbuf *xb) {
+/// Use id of root graph if any, plus kind and internal id of object
+char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb) {
+  const graph_t *const root = safe_layer->safe_job->graph;
   if (safe_layer->layerNum > 1) {
     agxbprint(xb, "%s_", safe_layer->safe_job->layerIDs[safe_layer->layerNum]);
   }
-}
 
-/// Use id of root graph if any, plus kind and internal id of object
-char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb) {
-  char *id;
-  const graph_t *const root = safe_layer->safe_job->graph;
-  char *gid = GD_drawing(root)->id;
-  long idnum = 0;
-  char *pfx = NULL;
-
-  layerPagePrefix(safe_layer, xb);
-
-  id = agget(obj, "id");
+  char *id = agget(obj, "id");
   if (id && *id != '\0') {
     agxbput(xb, id);
     return agxbuse(xb);
   }
 
+  char *gid = GD_drawing(root)->id;
   if (obj != root && gid) {
     agxbprint(xb, "%s_", gid);
   }
 
   switch (agobjkind(obj)) {
   case AGRAPH:
-    idnum = AGSEQ(obj);
     if (root == obj)
-      pfx = "graph";
+      agxbprint(xb, "graph%u", AGSEQ(obj));
     else
-      pfx = "clust";
+      agxbprint(xb, "clust%u", AGSEQ(obj));
     break;
   case AGNODE:
-    idnum = AGSEQ((Agnode_t *)obj);
-    pfx = "node";
+    agxbprint(xb, "node%u", AGSEQ((Agnode_t *)obj));
     break;
   case AGEDGE:
-    idnum = AGSEQ((Agedge_t *)obj);
-    pfx = "edge";
+    agxbprint(xb, "edge%u", AGSEQ((Agnode_t *)obj));
     break;
   }
-
-  agxbprint(xb, "%s%ld", pfx, idnum);
 
   return agxbuse(xb);
 }
@@ -1706,19 +1693,16 @@ static void emit_view(output_string *output, SafeLayer *safe_layer,
 static void emit_layer(output_string *output, SafeLayer *safe_layer,
                        obj_state_t *obj, graph_t *g, int *viewNum,
                        int graph_outputorder) {
-  size_t nump = 0;
-  textlabel_t *lab;
-  pointf *p = NULL;
-  char *saveid;
   agxbuf xb = {0};
 
   /* For the first page, we can use the values generated in emit_begin_graph.
    * For multiple pages, we need to generate a new id.
    */
   bool obj_id_needs_restore = false;
+  char *saveid;
   if (safe_layer->layerNum > 1) {
     saveid = obj->id;
-    layerPagePrefix(safe_layer, &xb);
+    agxbprint(&xb, "%s_", safe_layer->safe_job->layerIDs[safe_layer->layerNum]);
     agxbput(&xb, saveid == NULL ? "layer" : saveid);
     obj->id = agxbuse(&xb);
     obj_id_needs_restore = true;
@@ -1731,10 +1715,12 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer,
   obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
   obj->fillcolor = svg_resolve_color(DEFAULT_FILL);
   if (obj->url || obj->explicit_tooltip) {
-    obj->url_map_p = p;
-    obj->url_map_n = nump;
+    obj->url_map_p = NULL;
+    obj->url_map_n = 0;
   }
-  if ((lab = GD_label(g))) {
+
+  textlabel_t *lab = GD_label(g);
+  if (lab != NULL) {
     /* do graph label on every page and rely on clipping to show it on the right
      * one(s) */
     obj->label = lab->text;
@@ -1805,31 +1791,26 @@ static void emit_begin_cluster(output_string *output, SafeLayer *safe_layer,
 
 static void emit_clusters(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *parent, Agraph_t *g) {
-  int doPerim, c, filled;
-  pointf AF[4];
-  char *color, *fillcolor, *pencolor, **style, *s;
-  graph_t *sg;
-  textlabel_t *lab;
-  int doAnchor;
-  double penwidth;
-  int layerNum = safe_layer->layerNum;
+  char *color, *fillcolor, *pencolor;
   SafeJob *safe_job = safe_layer->safe_job;
 
-  for (c = 1; c <= GD_n_cluster(g); c++) {
-    sg = GD_clust(g)[c];
+  for (int c = 1; c <= GD_n_cluster(g); c++) {
+    graph_t *sg = GD_clust(g)[c];
+    int layerNum = safe_layer->layerNum;
     if (!clust_in_layer(layerNum, safe_job, sg))
       continue;
     obj_state_t obj = child_obj_state(parent);
     emit_begin_cluster(output, safe_layer, &obj, sg);
-    doAnchor = obj.url || obj.explicit_tooltip;
+    int doAnchor = obj.url || obj.explicit_tooltip;
     char *previous_color_scheme = setColorScheme(agget(sg, "colorscheme"));
     if (doAnchor) {
       emit_map_rect(&obj, GD_bb(sg));
       svg_begin_anchor(output, obj.url, obj.tooltip, obj.target, obj.id);
     }
-    filled = 0;
+    int filled = 0;
     graphviz_polygon_style_t istyle = {0};
-    if ((style = checkClusterStyle(sg, &istyle))) {
+    char** style = checkClusterStyle(sg, &istyle);
+    if (style != NULL) {
       svg_set_style(&obj, style);
       if (istyle.filled)
         filled = FILL;
@@ -1874,13 +1855,15 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
         obj.fillcolor = svg_resolve_color(fillcolor);
     }
 
+    char *s;
     if (G_penwidth && ((s = ag_xget(sg, G_penwidth)) && s[0])) {
-      penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
-      obj.penwidth = penwidth;
+      obj.penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
     }
 
     if (istyle.rounded) {
-      if ((doPerim = late_int(sg, G_peripheries, 1, 0)) || filled != 0) {
+      int doPerim = late_int(sg, G_peripheries, 1, 0);
+      if (doPerim != 0 || filled != 0) {
+        pointf AF[4];
         AF[0] = GD_bb(sg).LL;
         AF[2] = GD_bb(sg).UR;
         AF[1].x = AF[2].x;
@@ -1894,6 +1877,7 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
         round_corners(output, &obj, AF, 4, istyle, filled);
       }
     } else if (istyle.striped) {
+      pointf AF[4];
       AF[0] = GD_bb(sg).LL;
       AF[2] = GD_bb(sg).UR;
       AF[1].x = AF[2].x;
@@ -1919,7 +1903,8 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
 
     free(clrs[0]);
     free(clrs[1]);
-    if ((lab = GD_label(sg)))
+    textlabel_t *lab = GD_label(sg);
+    if (lab != NULL)
       emit_label(output, safe_layer, &obj, EMIT_CLABEL, lab);
 
     if (doAnchor) {
@@ -2156,7 +2141,11 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
   for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
 
-  obj_state_t obj = child_obj_state(NULL);
+  obj_state_t obj = {0};
+  obj.parent = NULL;
+  obj.pen = PEN_SOLID;
+  obj.fill = FILL_NONE;
+  obj.penwidth = PENWIDTH_NORMAL;
   obj.type = ROOTGRAPH_OBJTYPE;
   obj.u.g = g;
   obj.emit_state = EMIT_GDRAW;
