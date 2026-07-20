@@ -1946,8 +1946,7 @@ typedef struct {
   size_t size;       ///< Number of bytes in the token content
 } token_t;
 
-static token_t style_token(char **s) {
-  char *p = *s;
+static token_t style_token(const char *p) {
   int token;
 
   while (gv_isspace(*p) || *p == ',')
@@ -1967,7 +1966,6 @@ static token_t style_token(char **s) {
       p++;
     }
   }
-  *s = p;
   assert(start <= p);
   size_t size = (size_t)(p - start);
   return (token_t){.type = token, .start = start, .size = size};
@@ -1987,15 +1985,9 @@ char **parse_style(char *s) {
   size_t parse_offsets[sizeof(parse) / sizeof(parse[0])];
   size_t fun = 0;
   bool in_parens = false;
-  char *p;
   static agxbuf ps_xb;
 
-  p = s;
-  while (true) {
-    token_t c = style_token(&p);
-    if (c.type == 0) {
-      break;
-    }
+  for (token_t c = style_token(s); c.type != 0; c = style_token(c.start + c.size)) {
     switch (c.type) {
     case '(':
       if (in_parens) {
