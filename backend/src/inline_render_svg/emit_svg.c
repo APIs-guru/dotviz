@@ -1950,19 +1950,18 @@ char **parse_style(char *s) {
   bool in_parens = false;
   static agxbuf ps_xb;
 
-  char *p = s;
-  while (*p != '\0') {
-    switch (*p) {
+  for (size_t i = 0; s[i] != '\0'; ) {
+    switch (s[i]) {
     case '\t':
     case '\n':
     case '\v':
     case '\f':
     case '\r':
     case ' ':
-      ++p;
+      ++i;
       continue;
     case ',':
-      ++p;
+      ++i;
       break;
     case '(':
       if (in_parens) {
@@ -1971,7 +1970,7 @@ char **parse_style(char *s) {
         return parse;
       }
       in_parens = true;
-      ++p;
+      ++i;
       break;
 
     case ')':
@@ -1981,7 +1980,7 @@ char **parse_style(char *s) {
         return parse;
       }
       in_parens = false;
-      ++p;
+      ++i;
       break;
 
     default:
@@ -1995,11 +1994,11 @@ char **parse_style(char *s) {
         parse_offsets[fun++] = agxblen(&ps_xb);
       }
 
-      char const* start = p;
-      while (!is_style_delim(*p)) {
-        p++;
+      size_t start = i;
+      while (!is_style_delim(s[i])) {
+        ++i;
       }
-      agxbput_n(&ps_xb, start, p - start);
+      agxbput_n(&ps_xb, &s[start], i - start);
       agxbputc(&ps_xb, '\0');
     }
   }
