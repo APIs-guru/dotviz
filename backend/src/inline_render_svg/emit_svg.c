@@ -1934,41 +1934,32 @@ static bool is_style_delim(int c) {
   }
 }
 
-#define SID 1
-
 /// Recognized token, returned from `style_token`
 ///
 /// The token content fields, `.start` and `.size` are only populated with
 /// useful values when `.type` is `SID`, an identifier.
 typedef struct {
-  int type;          ///< Token category
   const char *start; ///< Beginning of the token content
   size_t size;       ///< Number of bytes in the token content
 } token_t;
 
 static token_t style_token(const char *p) {
-  int token;
-
   while (gv_isspace(*p) || *p == ',')
     p++;
-  const char *start = p;
+
   switch (*p) {
   case '\0':
-    token = 0;
-    break;
+    return (token_t){.start = p, .size = 0};
   case '(':
   case ')':
-    token = *p++;
-    break;
-  default:
-    token = SID;
-    while (!is_style_delim(*p)) {
-      p++;
-    }
+    return (token_t){.start = p, .size = 1};
   }
-  assert(start <= p);
-  size_t size = (size_t)(p - start);
-  return (token_t){.type = token, .start = start, .size = size};
+
+  const char *start = p;
+  while (!is_style_delim(*p)) {
+    p++;
+  }
+  return (token_t){.start = start, .size = p - start};
 }
 
 #define FUNLIMIT 64
@@ -1987,8 +1978,8 @@ char **parse_style(char *s) {
   bool in_parens = false;
   static agxbuf ps_xb;
 
-  for (token_t c = style_token(s); c.type != 0; c = style_token(c.start + c.size)) {
-    switch (c.type) {
+  for (token_t c = style_token(s); *c.start != 0; c = style_token(c.start + c.size)) {
+    switch (*c.start) {
     case '(':
       if (in_parens) {
         agerrorf("nesting not allowed in style: %s\n", s);
