@@ -1922,18 +1922,6 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
   }
 }
 
-static bool is_style_delim(int c) {
-  switch (c) {
-  case '(':
-  case ')':
-  case ',':
-  case '\0':
-    return true;
-  default:
-    return false;
-  }
-}
-
 #define FUNLIMIT 64
 
 /* This is one of the worst internal designs in graphviz.
@@ -1950,18 +1938,31 @@ char **parse_style(char *s) {
   bool in_parens = false;
   static agxbuf ps_xb;
 
-  for (size_t i = 0; s[i] != '\0'; ) {
-    switch (s[i]) {
+  const char *p = s;
+  const char *start = NULL;
+  bool is_arg = false;
+  do {
+    switch (*p) {
+    default:
+      if (start == NULL) {
+        start = p;
+        is_arg = in_parens;
+      }
     case '\t':
     case '\n':
     case '\v':
     case '\f':
     case '\r':
     case ' ':
-      ++i;
       continue;
+    case '\0':
+      if (in_parens) {
+        agerrorf("unmatched '(' in style: %s\n", s);
+        parse[0] = NULL;
+        return parse;
+      }
+      break;
     case ',':
-      ++i;
       break;
     case '(':
       if (in_parens) {
@@ -1970,9 +1971,7 @@ char **parse_style(char *s) {
         return parse;
       }
       in_parens = true;
-      ++i;
       break;
-
     case ')':
       if (!in_parens) {
         agerrorf("unmatched ')' in style: %s\n", s);
@@ -1980,34 +1979,24 @@ char **parse_style(char *s) {
         return parse;
       }
       in_parens = false;
-      ++i;
       break;
+    }
 
-    default:
-      if (!in_parens) {
+    if (start != NULL) {
+      if (!is_arg) {
         if (fun == FUNLIMIT - 1) {
           agwarningf("truncating style '%s'\n", s);
           parse[fun] = NULL;
           return parse;
         }
-        agxbputc(&ps_xb, '\0'); /* terminate previous */
         parse_offsets[fun++] = agxblen(&ps_xb);
       }
 
-      size_t start = i;
-      while (!is_style_delim(s[i])) {
-        ++i;
-      }
-      agxbput_n(&ps_xb, &s[start], i - start);
+      agxbput_n(&ps_xb, start, (size_t)(p - start));
       agxbputc(&ps_xb, '\0');
+      start = NULL;
     }
-  }
-
-  if (in_parens) {
-    agerrorf("unmatched '(' in style: %s\n", s);
-    parse[0] = NULL;
-    return parse;
-  }
+  } while (*p++ != '\0');
 
   char *base = agxbuse(&ps_xb); // add final '\0' to buffer
 
@@ -2016,7 +2005,6 @@ char **parse_style(char *s) {
     parse[i] = base + parse_offsets[i];
   }
   parse[fun] = NULL;
-
   return parse;
 }
 
