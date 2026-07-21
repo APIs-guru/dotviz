@@ -384,23 +384,6 @@ void svg_begin_page(output_string *output, SafeLayer *safe_layer,
   }
 }
 
-void svg_end_page(output_string *output) { out_puts(output, "</g>\n"); }
-
-void svg_end_cluster(output_string *output) { out_puts(output, "</g>\n"); }
-
-void svg_begin_edge(output_string *output, obj_state_t *obj) {
-  out_puts(output, "<g");
-  svg_print_id(output, obj->id, NULL);
-  svg_print_class(output, "edge", obj->u.e);
-  out_puts(output, ">\n<title>");
-  char *ename = strdup_and_subst_obj("\\E", obj->u.e);
-  gvputs_xml(output, ename);
-  free(ename);
-  out_puts(output, "</title>\n");
-}
-
-void svg_end_edge(output_string *output) { out_puts(output, "</g>\n"); }
-
 void svg_begin_anchor(output_string *output, char *href, char *tooltip,
                       char *target, char *id) {
   out_puts(output, "<g");
@@ -409,9 +392,7 @@ void svg_begin_anchor(output_string *output, char *href, char *tooltip,
     gvputs_xml(output, id);
     out_putc(output, '"');
   }
-  out_puts(output, ">"
-
-                   "<a");
+  out_puts(output, "><a");
   if (href && href[0]) {
     out_puts(output, " xlink:href=\"");
     const xml_flags_t flags = {0};
@@ -433,8 +414,7 @@ void svg_begin_anchor(output_string *output, char *href, char *tooltip,
 }
 
 void svg_end_anchor(output_string *output) {
-  out_puts(output, "</a>\n"
-                   "</g>\n");
+  out_puts(output, "</a>\n</g>\n");
 }
 
 // GD_fontnames(job->gvc->g)

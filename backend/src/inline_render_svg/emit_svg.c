@@ -1453,7 +1453,14 @@ static void emit_begin_edge(output_string *output, SafeLayer *safe_layer,
   free(dflt_url);
   free(dflt_target);
 
-  svg_begin_edge(output, obj);
+  out_puts(output, "<g");
+  svg_print_id(output, obj->id, NULL);
+  svg_print_class(output, "edge", e);
+  out_puts(output, ">\n<title>");
+  char *ename = strdup_and_subst_obj("\\E", e);
+  gvputs_xml(output, ename);
+  free(ename);
+  out_puts(output, "</title>\n");
   if (obj->url || obj->explicit_tooltip)
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
 }
@@ -1600,7 +1607,7 @@ static void emit_end_edge(output_string *output, SafeLayer *safe_layer,
                   obj->explicit_tailtooltip, obj->tailurl, obj->tailtooltip,
                   obj->tailtarget, obj->id, 0);
 
-  svg_end_edge(output);
+  out_puts(output, "</g>\n"); // end edge
 }
 
 static void emit_edge(output_string *output, SafeLayer *safe_layer,
@@ -1740,7 +1747,7 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer,
   if (obj->url || obj->explicit_tooltip)
     svg_end_anchor(output);
   emit_view(output, safe_layer, obj, g, viewNum, graph_outputorder);
-  svg_end_page(output);
+  out_puts(output, "</g>\n"); // end page
   if (obj_id_needs_restore) {
     obj->id = saveid;
   }
@@ -1912,7 +1919,7 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
       svg_end_anchor(output);
     }
 
-    svg_end_cluster(output);
+    out_puts(output, "</g>\n"); // end cluster
     free_child_obj(&obj);
     /* when drawing, lay down clusters before sub_clusters */
     emit_clusters(output, safe_layer, &obj, sg);
