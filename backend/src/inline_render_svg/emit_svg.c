@@ -519,18 +519,6 @@ void emit_map_rect(obj_state_t *obj, boxf b) {
   rect2poly(p);
 }
 
-static void map_label(obj_state_t *obj, textlabel_t *lab) {
-  pointf *p;
-
-  obj->url_map_shape = MAP_POLYGON;
-  obj->url_map_n = 4;
-
-  free(obj->url_map_p);
-  obj->url_map_p = p = gv_calloc(obj->url_map_n, sizeof(pointf));
-  P2RECT(lab->pos, p, lab->dimen.x / 2., lab->dimen.y / 2.);
-  rect2poly(p);
-}
-
 DEFINE_LIST(points, pointf)
 
 static UNUSED void psmapOutput(const points_t *ps, size_t start, size_t n) {
@@ -894,20 +882,20 @@ static pointf computeoffset_qr(pointf p, pointf q, pointf r, pointf s,
 
 static void emit_attachment(output_string *output, obj_state_t *obj,
                             textlabel_t *lp, splines *spl) {
-  pointf sz, AF[3];
-  const char *s;
 
-  for (s = lp->text; *s; s++) {
+  for (const char *s = lp->text; true; ++s) {
+    if (*s == '\0')
+      return;
     if (!gv_isspace(*s))
       break;
   }
-  if (*s == '\0')
-    return;
 
-  sz = lp->dimen;
-  AF[0] = (pointf){lp->pos.x + sz.x / 2., lp->pos.y - sz.y / 2.};
-  AF[1] = (pointf){AF[0].x - sz.x, AF[0].y};
-  AF[2] = dotneato_closest(spl, lp->pos);
+  pointf sz = lp->dimen;
+  pointf AF[3] = {
+    {lp->pos.x + sz.x / 2., lp->pos.y - sz.y / 2.},
+    {AF[0].x - sz.x, AF[0].y},
+    dotneato_closest(spl, lp->pos),
+  };
   /* Don't use edge style to draw attachment */
   obj->pen = PEN_SOLID; // default line style
   obj->penwidth = 1.0;  // default line style
@@ -1470,44 +1458,50 @@ static void emit_edge_label(output_string *output, SafeLayer *safe_layer,
                             emit_state_t lkind, int explicit, char *url,
                             char *tooltip, char *target, char *id,
                             splines *spl) {
-  emit_state_t old_emit_state;
-  char *newid;
-  agxbuf xb = {0};
-  char *type;
-
   if (lbl == NULL || !lbl->set)
     return;
-  if (id) { /* non-NULL if needed */
-    switch (lkind) {
-    case EMIT_ELABEL:
-      type = "label";
-      break;
-    case EMIT_HLABEL:
-      type = "headlabel";
-      break;
-    case EMIT_TLABEL:
-      type = "taillabel";
-      break;
-    default:
-      UNREACHABLE();
-    }
-    agxbprint(&xb, "%s-%s", id, type);
-    newid = agxbuse(&xb);
-  } else
-    newid = NULL;
-  old_emit_state = obj->emit_state;
+
+  emit_state_t old_emit_state = obj->emit_state;
   obj->emit_state = lkind;
   if (url || explicit) {
-    map_label(obj, lbl);
+    pointf *p;
+
+    obj->url_map_shape = MAP_POLYGON;
+    obj->url_map_n = 4;
+
+    free(obj->url_map_p);
+    obj->url_map_p = p = gv_calloc(obj->url_map_n, sizeof(pointf));
+    P2RECT(lbl->pos, p, lbl->dimen.x / 2., lbl->dimen.y / 2.);
+    rect2poly(p);
+
+    agxbuf xb = {0};
+    char *newid = NULL;
+    if (id) { /* non-NULL if needed */
+      switch (lkind) {
+      case EMIT_ELABEL:
+        agxbprint(&xb, "%s-label", id);
+        break;
+      case EMIT_HLABEL:
+        agxbprint(&xb, "%s-headlabel", id);
+        break;
+      case EMIT_TLABEL:
+        agxbprint(&xb, "%s-taillabel", id);
+        break;
+      default:
+        UNREACHABLE();
+      }
+      newid = agxbuse(&xb);
+    }
+
     svg_begin_anchor(output, url, tooltip, target, newid);
+    agxbfree(&xb);
   }
   emit_label(output, safe_layer, obj, lkind, lbl);
   if (spl)
     emit_attachment(output, obj, lbl, spl);
   if (url || explicit) {
-    svg_end_anchor(output);
+    out_puts(output, "</a>\n</g>\n"); // end anchor
   }
-  agxbfree(&xb);
   obj->emit_state = old_emit_state;
 }
 
