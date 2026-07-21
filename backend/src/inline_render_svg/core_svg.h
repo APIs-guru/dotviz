@@ -23,8 +23,6 @@ void svg_comment(output_string *output, char *str);
 void svg_begin_anchor(output_string *output, char *href, char *tooltip,
                       char *target, char *id);
 void svg_end_anchor(output_string *output);
-void svg_begin_page(output_string *output, SafeLayer *safe_layer,
-                    obj_state_t *obj);
 void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
                    char *name, pointf *a, size_t n, imagescale_t imagescale,
                    imagepos_t imagepos);

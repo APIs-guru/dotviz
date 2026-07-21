@@ -329,61 +329,6 @@ void svg_comment(output_string *output, char *str) {
   out_puts(output, " -->\n");
 }
 
-/* svg_begin_page:
- * Currently, svg output does not support pages.
- * FIX: If implemented, we must guarantee the id is unique.
- */
-void svg_begin_page(output_string *output, SafeLayer *safe_layer,
-                    obj_state_t *obj) {
-  pointf scale; /* composite device to graph units (zoom and dpi) */
-  scale.x = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi.x /
-            POINTS_PER_INCH;
-  scale.y = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi.y /
-            POINTS_PER_INCH;
-
-  /* its really just a page of the graph, but its still a graph,
-   * and it is the entire graph if we're not currently paging */
-  out_puts(output, "<g");
-  svg_print_id(output, obj->id, NULL);
-  svg_print_class(output, "graph", obj->u.g);
-  out_puts(output, " transform=\"scale(");
-  // cannot be gvprintdouble because 2 digits precision insufficient
-  gvprintf(output, "%g %g", scale.x, scale.y);
-  gvprintf(output, ") rotate(%d) translate(", -safe_layer->safe_job->rotation);
-
-  /* CAUTION - job->translation was difficult to get right. */
-  // Test with and without asymmetric margins, e.g: -Gmargin="1,0"
-  double translation_y = 0;
-  double translation_x = 0;
-  if (safe_layer->safe_job->rotation) {
-    translation_y =
-        -safe_layer->safe_job->clip.UR.y -
-        safe_layer->safe_job->canvasBox.LL.y / safe_layer->safe_job->zoom;
-    translation_x =
-        -safe_layer->safe_job->clip.UR.x -
-        safe_layer->safe_job->canvasBox.LL.x / safe_layer->safe_job->zoom;
-  } else {
-    /* pre unscale margins to keep them constant under scaling */
-    translation_x =
-        -safe_layer->safe_job->clip.LL.x +
-        safe_layer->safe_job->canvasBox.LL.x / safe_layer->safe_job->zoom;
-    translation_y =
-        -safe_layer->safe_job->clip.UR.y -
-        safe_layer->safe_job->canvasBox.LL.y / safe_layer->safe_job->zoom;
-  }
-
-  gvprintdouble(output, translation_x);
-  out_putc(output, ' ');
-  gvprintdouble(output, -translation_y);
-  out_puts(output, ")\">\n");
-  /* default style */
-  if (agnameof(obj->u.g)[0] && agnameof(obj->u.g)[0] != LOCALNAMEPREFIX) {
-    out_puts(output, "<title>");
-    gvputs_xml(output, agnameof(obj->u.g));
-    out_puts(output, "</title>\n");
-  }
-}
-
 void svg_begin_anchor(output_string *output, char *href, char *tooltip,
                       char *target, char *id) {
   out_puts(output, "<g");
