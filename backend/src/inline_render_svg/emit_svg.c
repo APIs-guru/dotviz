@@ -17,6 +17,7 @@
 
 #include <stdatomic.h>
 
+#include "agxbuf.h"
 #include "types.h"
 #include "const.h"
 #include "utils.h"
@@ -1922,6 +1923,60 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
   }
 }
 
+typedef struct {
+  bool in_parens;
+  bool has_error;
+  char const *input;
+  char const *p;
+} parser_state_t;
+
+static char const *next_token(parser_state_t *state) {
+  for (const char *start = NULL;; ++state->p) {
+    switch (*state->p) {
+    case '\0':
+      if (state->in_parens) {
+        agerrorf("unmatched '(' in style: %s\n", state->input);
+        state->has_error = true;
+        return NULL;
+      }
+      return start;
+    case '\t':
+    case '\n':
+    case '\v':
+    case '\f':
+    case '\r':
+    case ' ':
+    case ',':
+      if (start != NULL)
+        return start;
+      break;
+    case '(':
+      if (state->in_parens) {
+        agerrorf("nesting not allowed in style: %s\n", state->input);
+        state->has_error = true;
+        return NULL;
+      }
+      if (start != NULL)
+        return start;
+      state->in_parens = true;
+      break;
+    case ')':
+      if (!state->in_parens) {
+        agerrorf("unmatched ')' in style: %s\n", state->input);
+        state->has_error = true;
+        return NULL;
+      }
+      if (start != NULL)
+        return start;
+      state->in_parens = false;
+      break;
+    default:
+      if (start == NULL)
+        start = state->p;
+    }
+  }
+}
+
 #define FUNLIMIT 64
 
 /* This is one of the worst internal designs in graphviz.
@@ -1933,73 +1988,31 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
  */
 char **parse_style(char *s) {
   static char *parse[FUNLIMIT];
-  size_t parse_offsets[sizeof(parse) / sizeof(parse[0])];
+  size_t parse_offsets[FUNLIMIT];
   size_t fun = 0;
-  bool in_parens = false;
   static agxbuf ps_xb;
 
-  const char *p = s;
-  const char *start = NULL;
-  bool is_arg = false;
-  do {
-    switch (*p) {
-    default:
-      if (start == NULL) {
-        start = p;
-        is_arg = in_parens;
-      }
-    case '\t':
-    case '\n':
-    case '\v':
-    case '\f':
-    case '\r':
-    case ' ':
-      continue;
-    case '\0':
-      if (in_parens) {
-        agerrorf("unmatched '(' in style: %s\n", s);
-        parse[0] = NULL;
+  parser_state_t state = {.input = s, .p = s, .in_parens = false, .has_error = false};
+  const char *start;
+  while ((start = next_token(&state)) != NULL) {
+    if (!state.in_parens) {
+      if (fun == FUNLIMIT - 1) {
+        agwarningf("truncating style '%s'\n", s);
+        parse[fun] = NULL;
         return parse;
       }
-      break;
-    case ',':
-      break;
-    case '(':
-      if (in_parens) {
-        agerrorf("nesting not allowed in style: %s\n", s);
-        parse[0] = NULL;
-        return parse;
-      }
-      in_parens = true;
-      break;
-    case ')':
-      if (!in_parens) {
-        agerrorf("unmatched ')' in style: %s\n", s);
-        parse[0] = NULL;
-        return parse;
-      }
-      in_parens = false;
-      break;
+      parse_offsets[fun++] = agxblen(&ps_xb);
     }
-
-    if (start != NULL) {
-      if (!is_arg) {
-        if (fun == FUNLIMIT - 1) {
-          agwarningf("truncating style '%s'\n", s);
-          parse[fun] = NULL;
-          return parse;
-        }
-        parse_offsets[fun++] = agxblen(&ps_xb);
-      }
-
-      agxbput_n(&ps_xb, start, (size_t)(p - start));
-      agxbputc(&ps_xb, '\0');
-      start = NULL;
-    }
-  } while (*p++ != '\0');
+    agxbput_n(&ps_xb, start, state.p - start);
+    agxbputc(&ps_xb, '\0');
+  }
+  if (state.has_error) {
+    agxbstart(&ps_xb);
+    parse[0] = NULL;
+    return parse;
+  }
 
   char *base = agxbuse(&ps_xb); // add final '\0' to buffer
-
   // construct list of style strings
   for (size_t i = 0; i < fun; ++i) {
     parse[i] = base + parse_offsets[i];
