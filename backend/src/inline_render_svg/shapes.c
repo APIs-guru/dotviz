@@ -2961,7 +2961,8 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
     filled = 1;
   }
 
-  gvcolor_t pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
+  gvcolor_t pencolor =
+      svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
   obj->pencolor = pencolor;
   /* true if fill not handled by user shape */
   bool pfilled = !ND_shape(n)->usershape || streq(ND_shape(n)->name, "custom");
@@ -3001,7 +3002,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
     } else if (style.underline) {
       obj->pencolor = svg_resolve_color("transparent");
       svg_polygon(output, obj, AF, sides, filled);
-      obj->pencolor = pencolor);
+      obj->pencolor = pencolor;
       svg_polyline(output, obj, AF + 2, 2);
     } else if (SPECIAL_CORNERS(style)) {
       round_corners(output, obj, AF, sides, style, filled);
@@ -3773,24 +3774,21 @@ static void gen_fields(output_string *output, SafeLayer *safe_layer,
 
 static void record_gencode(output_string *output, SafeLayer *safe_layer,
                            obj_state_t *obj, node_t *n) {
-  boxf BF;
-  pointf AF[4];
-  field_t *f;
   int doMap = obj->url || obj->explicit_tooltip;
-  int filled;
+  if (doMap) {
+    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
+  }
 
-  f = ND_shape_info(n);
-  BF = f->b;
+  field_t *f = ND_shape_info(n);
+  boxf BF = f->b;
   BF.LL.x += ND_coord(n).x;
   BF.LL.y += ND_coord(n).y;
   BF.UR.x += ND_coord(n).x;
   BF.UR.y += ND_coord(n).y;
 
-  if (doMap) {
-    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
-  }
   graphviz_polygon_style_t style = stylenode(obj, n);
   obj->pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
+  int filled = 0;
   char *clrs[2] = {0};
   if (style.filled) {
     char *fillcolor = findFillDflt(n, DEFAULT_FILL);
@@ -3812,12 +3810,12 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
       filled = FILL;
       obj->fillcolor = svg_resolve_color(fillcolor);
     }
-  } else
-    filled = 0;
+  }
 
   if (streq(ND_shape(n)->name, "Mrecord"))
     style.rounded = true;
   if (SPECIAL_CORNERS(style)) {
+    pointf AF[4];
     AF[0] = BF.LL;
     AF[2] = BF.UR;
     AF[1].x = AF[2].x;
