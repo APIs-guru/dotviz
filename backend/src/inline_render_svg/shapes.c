@@ -369,31 +369,14 @@ static int same_side(pointf p0, pointf p1, pointf L0, pointf L1) {
   return s0 == s1;
 }
 
-static char *penColor(obj_state_t *obj, node_t *n) {
-  char *color;
-
-  color = late_nnstring(n, N_color, "");
-  if (!color[0])
-    color = DEFAULT_COLOR;
-  obj->pencolor = svg_resolve_color(color);
-  return color;
-}
-
 static char *findFillDflt(node_t *n, char *dflt) {
-  char *color;
-
-  color = late_nnstring(n, N_fillcolor, "");
+  char *color = late_nnstring(n, N_fillcolor, "");
   if (!color[0]) {
     /* for backward compatibility, default fill is same as pen */
-    color = late_nnstring(n, N_color, "");
-    if (!color[0]) {
-      color = dflt;
-    }
+    color = late_nnstring(n, N_color, dflt);
   }
   return color;
 }
-
-static char *findFill(node_t *n) { return findFillDflt(n, DEFAULT_FILL); }
 
 static bool isBox(node_t *n) {
   polygon_t *p;
@@ -2956,7 +2939,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   char *fillcolor = NULL;
   if (style.filled) {
     double frac;
-    fillcolor = findFill(n);
+    fillcolor = findFillDflt(n, DEFAULT_FILL);
     if (findStopColor(fillcolor, clrs, &frac)) {
       obj->fillcolor = svg_resolve_color(clrs[0]);
       if (clrs[1])
@@ -2974,11 +2957,12 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
       filled = FILL;
     }
   } else if (style.striped || style.wedged) {
-    fillcolor = findFill(n);
+    fillcolor = findFillDflt(n, DEFAULT_FILL);
     filled = 1;
   }
 
-  char *pencolor = penColor(obj, n); /* emit pen color */
+  gvcolor_t pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
+  obj->pencolor = pencolor;
   /* true if fill not handled by user shape */
   bool pfilled = !ND_shape(n)->usershape || streq(ND_shape(n)->name, "custom");
 
@@ -3017,7 +3001,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
     } else if (style.underline) {
       obj->pencolor = svg_resolve_color("transparent");
       svg_polygon(output, obj, AF, sides, filled);
-      obj->pencolor = svg_resolve_color(pencolor);
+      obj->pencolor = pencolor);
       svg_polyline(output, obj, AF + 2, 2);
     } else if (SPECIAL_CORNERS(style)) {
       round_corners(output, obj, AF, sides, style, filled);
@@ -3232,17 +3216,12 @@ static bool point_inside(inside_t *inside_context, pointf p) {
 static void point_gencode(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *obj, node_t *n) {
   (void)safe_layer;
-  polygon_t *poly;
-  pointf P, *vertices;
-  bool filled;
-  char *color;
   int doMap = obj->url || obj->explicit_tooltip;
-
   if (doMap)
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
 
-  poly = ND_shape_info(n);
-  vertices = poly->vertices;
+  polygon_t *poly = ND_shape_info(n);
+  pointf *vertices = poly->vertices;
   const size_t sides = poly->sides;
   size_t peripheries = poly->peripheries;
 
@@ -3255,23 +3234,21 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
   if (N_penwidth)
     obj->penwidth = late_double(n, N_penwidth, 1.0, 0.0);
 
-  color = findFillDflt(n, "black");
-  obj->fillcolor = svg_resolve_color(color); /* emit fill color */
-  penColor(obj, n);                          /* emit pen color */
-  filled = true;
+  obj->pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
+  obj->fillcolor = svg_resolve_color(findFillDflt(n, "black"));
 
   /* if no boundary but filled, set boundary color to fill color */
   if (peripheries == 0) {
     peripheries = 1;
-    if (color[0])
-      obj->pencolor = svg_resolve_color(color);
+    obj->pencolor = obj->fillcolor;
   }
 
+  bool filled = true;
   for (size_t j = 0; j < peripheries; j++) {
     enum { A_size = 2 };
     pointf AF[A_size] = {{0}};
     for (size_t i = 0; i < sides; i++) {
-      P = vertices[i + j * sides];
+      pointf P = vertices[i + j * sides];
       if (i < A_size) {
         AF[i].x = P.x + ND_coord(n).x;
         AF[i].y = P.y + ND_coord(n).y;
@@ -3771,7 +3748,7 @@ static void gen_fields(output_string *output, SafeLayer *safe_layer,
   if (f->lp) {
     f->lp->pos = add_pointf(mid_pointf(f->b.LL, f->b.UR), ND_coord(n));
     emit_label(output, safe_layer, obj, EMIT_NLABEL, f->lp);
-    penColor(obj, n);
+    obj->pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
   }
 
   coord = ND_coord(n);
@@ -3813,10 +3790,10 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
   }
   graphviz_polygon_style_t style = stylenode(obj, n);
-  penColor(obj, n);
+  obj->pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
   char *clrs[2] = {0};
   if (style.filled) {
-    char *fillcolor = findFill(n);
+    char *fillcolor = findFillDflt(n, DEFAULT_FILL);
     double frac;
 
     if (findStopColor(fillcolor, clrs, &frac)) {
