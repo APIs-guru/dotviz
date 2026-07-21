@@ -521,16 +521,6 @@ void emit_map_rect(obj_state_t *obj, boxf b) {
 
 DEFINE_LIST(points, pointf)
 
-static UNUSED void psmapOutput(const points_t *ps, size_t start, size_t n) {
-  const pointf first = points_get(ps, start);
-  fprintf(stdout, "newpath %f %f moveto\n", first.x, first.y);
-  for (size_t i = start + 1; i < start + n; ++i) {
-    const pointf pt = points_get(ps, i);
-    fprintf(stdout, "%f %f lineto\n", pt.x, pt.y);
-  }
-  fprintf(stdout, "closepath stroke\n");
-}
-
 typedef struct segitem_s {
   pointf p;
   struct segitem_s *next;
