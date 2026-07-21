@@ -357,7 +357,7 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
  */
 static void initAnchor(output_string *output, SafeLayer *safe_layer,
                        obj_state_t *obj, htmlenv_t *env, htmldata_t *data,
-                       boxf b, htmlmap_data_t *save) {
+                       htmlmap_data_t *save) {
   static int anchorId;
 
   save->url = obj->url;
@@ -389,7 +389,6 @@ static void initAnchor(output_string *output, SafeLayer *safe_layer,
   }
 
   if (obj->url || obj->explicit_tooltip) {
-    emit_map_rect(obj, b);
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
   }
 }
@@ -518,7 +517,7 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
 
   const bool doAnchor = tbl->data.href || tbl->data.target || tbl->data.title;
   if (doAnchor)
-    initAnchor(output, safe_layer, obj, env, &tbl->data, pts, &saved);
+    initAnchor(output, safe_layer, obj, env, &tbl->data, &saved);
 
   if (!tbl->data.style.invisible) {
 
@@ -608,7 +607,7 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
 
   const bool doAnchor = cp->data.href || cp->data.target || cp->data.title;
   if (doAnchor)
-    initAnchor(output, safe_layer, obj, env, &cp->data, pts, &saved);
+    initAnchor(output, safe_layer, obj, env, &cp->data, &saved);
 
   if (!cp->data.style.invisible) {
     if (cp->data.bgcolor) {

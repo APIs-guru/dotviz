@@ -37,7 +37,6 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int graph_outputorder);
 void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
                 emit_state_t emit_state, textlabel_t *lp);
 bool emit_once(char *message);
-void emit_map_rect(obj_state_t *obj, boxf b);
 void epsf_init(node_t *n);
 void epsf_free(node_t *n);
 void free_label(textlabel_t *);

@@ -40,17 +40,11 @@
 static void emit_clusters(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *parent, Agraph_t *g);
 
-extern bool Y_invert;
-
 extern Agsym_t *G_gradientangle, *G_peripheries, *G_penwidth;
-extern Agsym_t *N_style, *N_layer, *N_comment, *N_fontname, *N_fontsize;
+extern Agsym_t *N_style, *N_layer, *N_comment;
 extern Agsym_t *E_layer, *E_dir, *E_arrowsz, *E_color, *E_fillcolor,
     *E_penwidth, *E_decorate, *E_comment, *E_style;
 
-#define P2RECT(p, pr, sx, sy)                                                  \
-  (pr[0].x = p.x - sx, pr[0].y = p.y - sy, pr[1].x = p.x + sx,                 \
-   pr[1].y = p.y + sy)
-#define FUZZ 3
 #define EPSILON .0001
 
 /* push empty graphic state for current object */
@@ -90,9 +84,6 @@ void free_child_obj(obj_state_t *child) {
   free(child->labeltarget);
   free(child->tailtarget);
   free(child->headtarget);
-  free(child->url_map_p);
-  free(child->url_bsplinemap_p);
-  free(child->url_bsplinemap_n);
 }
 
 /// Use id of root graph if any, plus kind and internal id of object
@@ -215,17 +206,6 @@ static void initObjMapData(SafeLayer *safe_layer, obj_state_t *obj,
   if (target && target[0]) {
     obj->target = strdup_and_subst_obj(target, gobj);
   }
-}
-
-static void map_point(obj_state_t *obj, pointf pf) {
-  pointf *p;
-
-  obj->url_map_shape = MAP_POLYGON;
-  obj->url_map_n = 4;
-  free(obj->url_map_p);
-  obj->url_map_p = p = gv_calloc(obj->url_map_n, sizeof(pointf));
-  P2RECT(pf, p, FUZZ, FUZZ);
-  rect2poly(p);
 }
 
 static char **checkClusterStyle(graph_t *sg, graphviz_polygon_style_t *flagp) {
@@ -507,35 +487,6 @@ int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
   return rv;
 }
 
-void emit_map_rect(obj_state_t *obj, boxf b) {
-  pointf *p;
-
-  obj->url_map_shape = MAP_POLYGON;
-  obj->url_map_n = 4;
-  free(obj->url_map_p);
-  obj->url_map_p = p = gv_calloc(obj->url_map_n, sizeof(pointf));
-  p[0] = b.LL;
-  p[1] = b.UR;
-  rect2poly(p);
-}
-
-DEFINE_LIST(points, pointf)
-
-typedef struct segitem_s {
-  pointf p;
-  struct segitem_s *next;
-} segitem_t;
-
-#define MARK_FIRST_SEG(L) ((L)->next = (segitem_t *)1)
-#define FIRST_SEG(L) ((L)->next == (segitem_t *)1)
-#define INIT_SEG(P, L)                                                         \
-  {                                                                            \
-    (L)->next = 0;                                                             \
-    (L)->p = P;                                                                \
-  }
-
-DEFINE_LIST(pbs_size, size_t)
-
 static bool is_natural_number(const char *sstr) {
   const char *str = sstr;
 
@@ -747,33 +698,6 @@ static void emit_begin_node(output_string *output, SafeLayer *safe_layer,
   obj->emit_state = EMIT_NDRAW;
 
   initObjMapData(safe_layer, obj, ND_label(n), n);
-  if (obj->url || obj->explicit_tooltip) {
-
-    /* node coordinate */
-    pointf coord = ND_coord(n);
-
-    /* When node has polygon shape and requested output supports polygons
-     * we use a polygon to map the clickable region that is a:
-     * circle, ellipse, polygon with n side, or point.
-     * For regular rectangular shape we have use node's bounding box to map
-     * clickable region
-     */
-
-    /* we have to use the node's bounding box to map clickable region
-     * when requested output format is not capable of polygons.
-     */
-    obj->url_map_shape = MAP_RECTANGLE;
-    size_t nump = 2;
-    pointf *p = gv_calloc(nump, sizeof(pointf));
-    p[0].x = coord.x - ND_lw(n);
-    p[0].y = coord.y - (ND_ht(n) / 2);
-    p[1].x = coord.x + ND_rw(n);
-    p[1].y = coord.y + (ND_ht(n) / 2);
-
-    obj->url_map_p = p;
-    obj->url_map_n = nump;
-  }
-
   saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
 
   out_puts(output, "<g");
@@ -1454,16 +1378,6 @@ static void emit_edge_label(output_string *output, SafeLayer *safe_layer,
   emit_state_t old_emit_state = obj->emit_state;
   obj->emit_state = lkind;
   if (url || explicit) {
-    pointf *p;
-
-    obj->url_map_shape = MAP_POLYGON;
-    obj->url_map_n = 4;
-
-    free(obj->url_map_p);
-    obj->url_map_p = p = gv_calloc(obj->url_map_n, sizeof(pointf));
-    P2RECT(lbl->pos, p, lbl->dimen.x / 2., lbl->dimen.y / 2.);
-    rect2poly(p);
-
     agxbuf xb = {0};
     char *newid = NULL;
     if (id) { /* non-NULL if needed */
@@ -1495,83 +1409,13 @@ static void emit_edge_label(output_string *output, SafeLayer *safe_layer,
   obj->emit_state = old_emit_state;
 }
 
-/* Common logic for setting hot spots at the beginning and end of
- * an edge.
- * If we are given a value (url, tooltip, target) explicitly set for
- * the head/tail, we use that.
- * Otherwise, if we are given a value explicitly set for the edge,
- * we use that.
- * Otherwise, we use whatever the argument value is.
- * We also note whether or not the tooltip was explicitly set.
- * If the url is non-NULL or the tooltip was explicit, we set
- * a hot spot around point p.
- */
-static void nodeIntersect(obj_state_t *obj, pointf p, bool explicit_iurl,
-                          char *iurl, bool explicit_itooltip) {
-  char *url;
-  bool explicit;
-
-  if (explicit_iurl)
-    url = iurl;
-  else
-    url = obj->url;
-  if (explicit_itooltip) {
-    explicit = true;
-  } else if (obj->explicit_tooltip) {
-    explicit = true;
-  } else {
-    explicit = false;
-  }
-
-  if (url || explicit) {
-    map_point(obj, p);
-  }
-}
-
 static void emit_end_edge(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *obj) {
   edge_t *e = obj->u.e;
 
   if (obj->url || obj->explicit_tooltip) {
     svg_end_anchor(output);
-    if (obj->url_bsplinemap_poly_n) {
-      for (size_t nump = obj->url_bsplinemap_n[0], i = 1;
-           i < obj->url_bsplinemap_poly_n; i++) {
-        /* additional polygon maps around remaining bezier pieces */
-        obj->url_map_n = obj->url_bsplinemap_n[i];
-        obj->url_map_p = &(obj->url_bsplinemap_p[nump]);
-        svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
-        svg_end_anchor(output);
-        nump += obj->url_bsplinemap_n[i];
-      }
-    }
   }
-  obj->url_map_n = 0; /* null out copy so that it doesn't get freed twice */
-  obj->url_map_p = NULL;
-
-  if (ED_spl(e)) {
-    pointf p;
-    bezier bz;
-
-    /* process intersection with tail node */
-    bz = ED_spl(e)->list[0];
-    if (bz.sflag) /* Arrow at start of splines */
-      p = bz.sp;
-    else /* No arrow at start of splines */
-      p = bz.list[0];
-    nodeIntersect(obj, p, obj->explicit_tailurl != 0, obj->tailurl,
-                  obj->explicit_tailtooltip != 0);
-
-    /* process intersection with head node */
-    bz = ED_spl(e)->list[ED_spl(e)->size - 1];
-    if (bz.eflag) /* Arrow at end of splines */
-      p = bz.ep;
-    else /* No arrow at end of splines */
-      p = bz.list[bz.size - 1];
-    nodeIntersect(obj, p, obj->explicit_headurl != 0, obj->headurl,
-                  obj->explicit_headtooltip != 0);
-  }
-
   emit_edge_label(output, safe_layer, obj, ED_label(e), EMIT_ELABEL,
                   obj->explicit_labeltooltip, obj->labelurl, obj->labeltooltip,
                   obj->labeltarget, obj->id,
@@ -1706,10 +1550,6 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer,
   svg_begin_page(output, safe_layer, obj);
   obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
   obj->fillcolor = svg_resolve_color(DEFAULT_FILL);
-  if (obj->url || obj->explicit_tooltip) {
-    obj->url_map_p = NULL;
-    obj->url_map_n = 0;
-  }
 
   textlabel_t *lab = GD_label(g);
   if (lab != NULL) {
@@ -1722,7 +1562,6 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer,
    * or end_page of renderer.
    */
   if (obj->url || obj->explicit_tooltip) {
-    emit_map_rect(obj, safe_layer->safe_job->clip);
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
   }
   emit_background(output, safe_layer, obj, g);
@@ -1796,7 +1635,6 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
     int doAnchor = obj.url || obj.explicit_tooltip;
     char *previous_color_scheme = setColorScheme(agget(sg, "colorscheme"));
     if (doAnchor) {
-      emit_map_rect(&obj, GD_bb(sg));
       svg_begin_anchor(output, obj.url, obj.tooltip, obj.target, obj.id);
     }
     int filled = 0;
