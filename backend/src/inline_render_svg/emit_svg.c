@@ -174,14 +174,7 @@ static char *preprocessTooltip(char *s, void *gobj) {
   return interpretCRNL(news);
 }
 
-static void initObjMapData(SafeLayer *safe_layer, obj_state_t *obj,
-                           textlabel_t *lab, void *gobj) {
-
-  agxbuf xb = {0};
-  char *id = getObjId(safe_layer, gobj, &xb);
-  obj->id = strdup_and_subst_obj(id, gobj);
-  agxbfree(&xb);
-
+static void initObjMapData(obj_state_t *obj, textlabel_t *lab, void *gobj) {
   if (lab)
     obj->label = lab->text;
 
@@ -696,8 +689,11 @@ static void emit_begin_node(output_string *output, SafeLayer *safe_layer,
   obj->type = NODE_OBJTYPE;
   obj->u.n = n;
   obj->emit_state = EMIT_NDRAW;
-
-  initObjMapData(safe_layer, obj, ND_label(n), n);
+  agxbuf xb = {0};
+  char *id = getObjId(safe_layer, n, &xb);
+  obj->id = strdup_and_subst_obj(id, n);
+  agxbfree(&xb);
+  initObjMapData(obj, ND_label(n), n);
   saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
 
   out_puts(output, "<g");
@@ -1655,8 +1651,11 @@ static void emit_begin_cluster(output_string *output, SafeLayer *safe_layer,
   obj->type = CLUSTER_OBJTYPE;
   obj->u.sg = sg;
   obj->emit_state = EMIT_CDRAW;
-
-  initObjMapData(safe_layer, obj, GD_label(sg), sg);
+  agxbuf xb = {0};
+  char *id = getObjId(safe_layer, sg, &xb);
+  obj->id = strdup_and_subst_obj(id, sg);
+  agxbfree(&xb);
+  initObjMapData(obj, GD_label(sg), sg);
 
   out_puts(output, "<g");
   svg_print_id(output, obj->id, NULL);
@@ -2000,7 +1999,11 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
   obj.emit_state = EMIT_GDRAW;
 
   SafeLayer dummy_layer = {.layerNum = 0, .safe_job = safe_job};
-  initObjMapData(&dummy_layer, &obj, GD_label(g), g);
+  agxbuf xb = {0};
+  char *id = getObjId(&dummy_layer, g, &xb);
+  obj.id = strdup_and_subst_obj(id, g);
+  agxbfree(&xb);
+  initObjMapData(&obj, GD_label(g), g);
 
   int *lp = NULL;
   int layerNum = 1;
