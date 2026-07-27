@@ -5,6 +5,7 @@
 #include "types.h"
 
 typedef struct color_s gvcolor_t;
+typedef struct output_string_s output_string;
 
 void svg_print_id(output_string *output, char *id, char *idx);
 void svg_print_class(output_string *output, char *kind, void *obj);

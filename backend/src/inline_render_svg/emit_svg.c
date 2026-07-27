@@ -112,10 +112,10 @@ char *getObjId(const SafeLayer *safe_layer, void *obj, agxbuf *xb) {
       agxbprint(xb, "clust%u", AGSEQ(obj));
     break;
   case AGNODE:
-    agxbprint(xb, "node%u", AGSEQ((Agnode_t *)obj));
+    agxbprint(xb, "node%u", AGSEQ(obj));
     break;
   case AGEDGE:
-    agxbprint(xb, "edge%u", AGSEQ((Agnode_t *)obj));
+    agxbprint(xb, "edge%u", AGSEQ(obj));
     break;
   }
 
@@ -179,8 +179,8 @@ static void initObjMapData(SafeLayer *safe_layer, obj_state_t *obj,
 
   agxbuf xb = {0};
   char *id = getObjId(safe_layer, gobj, &xb);
-  agxbfree(&xb);
   obj->id = strdup_and_subst_obj(id, gobj);
+  agxbfree(&xb);
 
   if (lab)
     obj->label = lab->text;
