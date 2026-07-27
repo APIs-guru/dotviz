@@ -1523,26 +1523,24 @@ static void emit_view(output_string *output, SafeLayer *safe_layer,
 }
 
 static void emit_layer(output_string *output, SafeLayer *safe_layer,
-                       obj_state_t *obj, graph_t *g, int *viewNum,
+                       graph_t *g, int *viewNum,
                        int graph_outputorder) {
-  agxbuf xb = {0};
+  obj_state_t obj = {0};
+  obj.parent = NULL;
+  obj.pen = PEN_SOLID;
+  obj.fill = FILL_NONE;
+  obj.penwidth = PENWIDTH_NORMAL;
+  obj.type = ROOTGRAPH_OBJTYPE;
+  obj.u.g = g;
+  obj.emit_state = EMIT_GDRAW;
 
-  /* For the first page, we can use the values generated in emit_begin_graph.
-   * For multiple pages, we need to generate a new id.
-   */
-  bool obj_id_needs_restore = false;
-  char *saveid;
-  if (safe_layer->layerNum > 1) {
-    saveid = obj->id;
-    agxbprint(&xb, "%s_", safe_layer->safe_job->layerIDs[safe_layer->layerNum]);
-    agxbput(&xb, saveid == NULL ? "layer" : saveid);
-    obj->id = agxbuse(&xb);
-    obj_id_needs_restore = true;
-  } else
-    saveid = NULL;
+  agxbuf xb = {0};
+  char *id = getObjId(safe_layer, g, &xb);
+  obj.id = strdup_and_subst_obj(id, g);
+  agxbfree(&xb);
+  initObjMapData(&obj, GD_label(g), g);
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
-
   pointf scale; /* composite device to graph units (zoom and dpi) */
   scale.x = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi.x /
             POINTS_PER_INCH;
@@ -1552,7 +1550,7 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer,
   /* its really just a page of the graph, but its still a graph,
    * and it is the entire graph if we're not currently paging */
   out_puts(output, "<g");
-  svg_print_id(output, obj->id, NULL);
+  svg_print_id(output, obj.id, NULL);
   svg_print_class(output, "graph", g);
   out_puts(output, " transform=\"scale(");
   // cannot be gvprintdouble because 2 digits precision insufficient
@@ -1585,42 +1583,39 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer,
   gvprintdouble(output, -translation_y);
   out_puts(output, ")\">\n");
   /* default style */
-  if (agnameof(obj->u.g)[0] && agnameof(g)[0] != LOCALNAMEPREFIX) {
+  if (agnameof(g)[0] && agnameof(g)[0] != LOCALNAMEPREFIX) {
     out_puts(output, "<title>");
     gvputs_xml(output, agnameof(g));
     out_puts(output, "</title>\n");
   }
-  obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
-  obj->fillcolor = svg_resolve_color(DEFAULT_FILL);
+  obj.pencolor = svg_resolve_color(DEFAULT_COLOR);
+  obj.fillcolor = svg_resolve_color(DEFAULT_FILL);
 
   textlabel_t *lab = GD_label(g);
   if (lab != NULL) {
     /* do graph label on every page and rely on clipping to show it on the right
      * one(s) */
-    obj->label = lab->text;
+    obj.label = lab->text;
   }
   /* If EMIT_CLUSTERS_LAST is set, we assume any URL or tooltip
    * attached to the root graph is emitted either in begin_page
    * or end_page of renderer.
    */
-  if (obj->url || obj->explicit_tooltip) {
-    svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
+  if (obj.url || obj.explicit_tooltip) {
+    svg_begin_anchor(output, obj.url, obj.tooltip, obj.target, obj.id);
   }
-  emit_background(output, safe_layer, obj, g);
+  emit_background(output, safe_layer, &obj, g);
   if (GD_label(g))
-    emit_label(output, safe_layer, obj, EMIT_GLABEL, GD_label(g));
-  if (obj->url || obj->explicit_tooltip)
+    emit_label(output, safe_layer, &obj, EMIT_GLABEL, GD_label(g));
+  if (obj.url || obj.explicit_tooltip)
     svg_end_anchor(output);
-  emit_view(output, safe_layer, obj, g, viewNum, graph_outputorder);
+  emit_view(output, safe_layer, &obj, g, viewNum, graph_outputorder);
   out_puts(output, "</g>\n"); // end page
-  if (obj_id_needs_restore) {
-    obj->id = saveid;
-  }
-  agxbfree(&xb);
 
   char *color_scheme = setColorScheme(previous_color_scheme);
   free(color_scheme);
   free(previous_color_scheme);
+  free_child_obj(&obj);
 }
 
 static Dict_t *strings;
@@ -1989,22 +1984,6 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
   for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
 
-  obj_state_t obj = {0};
-  obj.parent = NULL;
-  obj.pen = PEN_SOLID;
-  obj.fill = FILL_NONE;
-  obj.penwidth = PENWIDTH_NORMAL;
-  obj.type = ROOTGRAPH_OBJTYPE;
-  obj.u.g = g;
-  obj.emit_state = EMIT_GDRAW;
-
-  SafeLayer dummy_layer = {.layerNum = 0, .safe_job = safe_job};
-  agxbuf xb = {0};
-  char *id = getObjId(&dummy_layer, g, &xb);
-  obj.id = strdup_and_subst_obj(id, g);
-  agxbfree(&xb);
-  initObjMapData(&obj, GD_label(g), g);
-
   int *lp = NULL;
   int layerNum = 1;
   int num_physical_layers = safe_job->numLayers;
@@ -2027,7 +2006,7 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
         svg_print_class(&output, "layer", g);
         out_puts(&output, ">\n");
         SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
-        emit_layer(&output, &safe_layer, &obj, g, &viewNum, graph_outputorder);
+        emit_layer(&output, &safe_layer, g, &viewNum, graph_outputorder);
         out_puts(&output, "</g>\n");
 
       if (lp) {
@@ -2039,9 +2018,8 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
     }
   } else {
     SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
-    emit_layer(&output, &safe_layer, &obj, g, &viewNum, graph_outputorder);
+    emit_layer(&output, &safe_layer, g, &viewNum, graph_outputorder);
   }
   out_puts(&output, "</svg>\n"); // end graph
-  free_child_obj(&obj);
   return output;
 }
