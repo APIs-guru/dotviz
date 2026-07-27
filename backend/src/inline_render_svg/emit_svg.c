@@ -718,15 +718,15 @@ static void emit_end_node(output_string *output) {
 }
 
 static void emit_node(output_string *output, SafeLayer *safe_layer,
-                      int *viewNum, obj_state_t *parent, node_t *n) {
+                      int viewNum, obj_state_t *parent, node_t *n) {
   int layerNum = safe_layer->layerNum;
   SafeJob *safe_job = safe_layer->safe_job;
   if (ND_shape(n)                                   /* node has a shape */
       && node_in_layer(layerNum, safe_job, agraphof(n), n)  /* and is in layer */
       && node_in_box(n, safe_job->clip) /* and is in page/view */
-      && ND_state(n) != *viewNum)                   /* and not already drawn */
+      && ND_state(n) != viewNum)                   /* and not already drawn */
   {
-    ND_state(n) = *viewNum; /* mark node as drawn */
+    ND_state(n) = viewNum; /* mark node as drawn */
 
     svg_comment(output, agnameof(n));
     char *s = late_string(n, N_comment, "");
@@ -1483,12 +1483,11 @@ static void emit_edge(output_string *output, SafeLayer *safe_layer,
 }
 
 static void emit_view(output_string *output, SafeLayer *safe_layer,
-                      obj_state_t *obj, graph_t *g, int *viewNum,
+                      obj_state_t *obj, graph_t *g, int viewNum,
                       int graph_outputorder) {
   node_t *n;
   edge_t *e;
 
-  *viewNum += 1;
   /* when drawing, lay clusters down before nodes and edges */
   emit_clusters(output, safe_layer, obj, g);
   if (graph_outputorder & EMIT_SORTED) {
@@ -1523,7 +1522,7 @@ static void emit_view(output_string *output, SafeLayer *safe_layer,
 }
 
 static void emit_layer(output_string *output, SafeLayer *safe_layer,
-                       graph_t *g, int *viewNum,
+                       graph_t *g, int viewNum,
                        int graph_outputorder) {
   obj_state_t obj = {0};
   obj.parent = NULL;
@@ -1996,9 +1995,9 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
     lp = layerlist + 2;      // tail layers
   }
 
-  int viewNum = 0; ///< current view - 1 based count of views, all pages
-                   ///< in all layers
   if (num_physical_layers > 1) {
+    int viewNum = 1; ///< current view - 1 based count of views, all pages
+                    ///< in all layers
     /* iterate layers */
     while (layerNum <= safe_job->numLayers) {
         out_puts(&output, "<g");
@@ -2006,7 +2005,7 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
         svg_print_class(&output, "layer", g);
         out_puts(&output, ">\n");
         SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
-        emit_layer(&output, &safe_layer, g, &viewNum, graph_outputorder);
+        emit_layer(&output, &safe_layer, g, viewNum, graph_outputorder);
         out_puts(&output, "</g>\n");
 
       if (lp) {
@@ -2015,10 +2014,11 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
       } else {
         layerNum += 1;
       }
+      viewNum += 1;
     }
   } else {
     SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
-    emit_layer(&output, &safe_layer, g, &viewNum, graph_outputorder);
+    emit_layer(&output, &safe_layer, g, 1, graph_outputorder);
   }
   out_puts(&output, "</svg>\n"); // end graph
   return output;
