@@ -1,10 +1,7 @@
-#include "output_string.h"
-#include "cgraph.h"
-#include "types.h"  // IWYU pragma: keep
-#include "geom.h"   // IWYU pragma: keep
-#include "gvcjob.h" // IWYU pragma: keep
 #include <stdlib.h>
-#include <string.h>
+
+#include "types.h"
+#include "output_string.h"
 
 void out_put(output_string *output, const char *str, size_t len) {
   if (str == NULL || len == 0)
