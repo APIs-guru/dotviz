@@ -1,12 +1,11 @@
-#include <stdio.h>
+#include <stdbool.h>
 
 #include "const.h"
 #include "gvc.h"
-#include "gvplugin.h"
-#include "gvcint.h"  // IWYU pragma: keep
-#include "strview.h" // IWYU pragma: keep
-
-extern gvplugin_library_t gvplugin_core_LTX_library;
+#include "gvcint.h" // IWYU pragma: keep
+#include "cgraph.h"
+#include "textspan.h"
+#include "util/alloc.h"
 
 static char *LibInfo[] = {
     "graphviz", /* Program */
