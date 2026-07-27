@@ -1,11 +1,10 @@
-// clang-format off
+#include <stdio.h>
+
 #include "const.h"
-#include "gvc.h" // IWYU pragma: keep
+#include "gvc.h"
 #include "gvplugin.h"
-#include "gvcint.h" // IWYU pragma: keep
+#include "gvcint.h"  // IWYU pragma: keep
 #include "strview.h" // IWYU pragma: keep
-#include <stdio.h> // IWYU pragma: keep
-// clang-format on
 
 extern gvplugin_library_t gvplugin_core_LTX_library;
 

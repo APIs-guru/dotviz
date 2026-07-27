@@ -731,7 +731,7 @@ void svg_html_label(output_string *output, SafeLayer *safe_layer,
 
     /* set basic graphics context */
     /* Need to override line style set by node. */
-    char* pencolor = tbl->data.pencolor ? tbl->data.pencolor : DEFAULT_COLOR;
+    char *pencolor = tbl->data.pencolor ? tbl->data.pencolor : DEFAULT_COLOR;
     obj.pencolor = svg_resolve_color(pencolor);
     obj.pen = PEN_SOLID; // default line style
     obj.penwidth = 1.0;  // default line style
@@ -1695,7 +1695,7 @@ int make_html_label(void *obj, textlabel_t *lp) {
     agxbuf xb = {0};
     lp->html = false;
     lp->text = gv_strdup(nameOf(obj, &xb));
-    char* s = htmlEntityUTF8(lp->text, env.g);
+    char *s = htmlEntityUTF8(lp->text, env.g);
     free(lp->text);
     lp->text = s;
     make_simple_label(GD_gvc(g), lp);

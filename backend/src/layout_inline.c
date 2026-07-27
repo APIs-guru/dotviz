@@ -1,16 +1,13 @@
-#include "cgraph.h"
-#include "gvc.h" // IWYU pragma: keep
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
-// undirected
-#include "const.h"           // IWYU pragma: keep
-#include "gvcint.h"          // IWYU pragma: keep
-#include "gvplugin_layout.h" // IWYU pragma: keep
-// undirected
+#include "cgraph.h"
 
+#include "const.h"
+#include "types.h"
+#include "geom.h"
 #include "streq.h"
 
 extern char *Gvfilepath;  /* Per-process path of files allowed in image
@@ -128,7 +125,7 @@ void my_graph_init(Agraph_t *g, bool use_rankdir) {
    * with record shapes, so we store the real rankdir in the next 2 bits.
    */
   int rankdir = RANKDIR_TB;
-  char* p;
+  char *p;
   if ((p = agget(g, "rankdir"))) {
     if (streq(p, "LR"))
       rankdir = RANKDIR_LR;
@@ -143,7 +140,7 @@ void my_graph_init(Agraph_t *g, bool use_rankdir) {
     SET_RANKDIR(g, rankdir << 2);
 
   double xf = late_double(g, agfindgraphattr(g, "nodesep"), DEFAULT_NODESEP,
-                   MIN_NODESEP);
+                          MIN_NODESEP);
   GD_nodesep(g) = POINTS(xf);
 
   p = late_string(g, agfindgraphattr(g, "ranksep"), NULL);

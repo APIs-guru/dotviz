@@ -31,7 +31,7 @@ extern Agsym_t *N_height, *N_width, *N_vertices;
 /* drawing phases */
 #define GVSPLINES 1
 /*	node,edge types */
-#define IGNORED 6      /* concentrated multi-edges */
+#define IGNORED 6 /* concentrated multi-edges */
 
 #define CL_EDGE_TAG "cl_edge_info"
 #define HAS_CLUST_EDGE(g) (aggetrec(g, CL_EDGE_TAG, 0))
