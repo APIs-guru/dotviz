@@ -27,7 +27,6 @@
 #include "geomprocs.h"
 #include "streq.h"
 
-#include "safe_job.h"
 #include "core_svg.h"
 #include "gvio_svg.h"
 #include "internal_render_svg.h"
@@ -358,9 +357,7 @@ void svg_begin_anchor(output_string *output, char *href, char *tooltip,
   out_puts(output, ">\n");
 }
 
-void svg_end_anchor(output_string *output) {
-  out_puts(output, "</a>\n</g>\n");
-}
+void svg_end_anchor(output_string *output) { out_puts(output, "</a>\n</g>\n"); }
 
 // GD_fontnames(job->gvc->g)
 void svg_textspan(output_string *output, fontname_kind fontnames,

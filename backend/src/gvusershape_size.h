@@ -2,7 +2,9 @@
 #define GVUSERSHAPE_SIZE_H_
 
 #include "geom.h"
-#include "cgraph_wrapper.h"
+
+typedef struct pointf_s pointf;
+typedef struct Agraph_s Agraph_t;
 
 point convert_image_dimensions(pointf dpi, const char *raw_height,
                                const char *raw_width);

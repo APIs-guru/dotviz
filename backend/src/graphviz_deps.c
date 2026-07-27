@@ -1,6 +1,6 @@
+#include "types.h"
 #include "geom.h"
 #include "geomprocs.h"
-#include "types.h"
 #include "utils.h"
 #include <stdbool.h>
 

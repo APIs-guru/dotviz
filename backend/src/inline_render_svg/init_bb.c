@@ -63,7 +63,7 @@ static void init_bb_node(graph_t *g, node_t *n) {
   ND_bb(n).UR.x = ND_coord(n).x + ND_rw(n);
   ND_bb(n).UR.y = ND_coord(n).y + ND_ht(n) / 2.;
 
-  for (edge_t *e = agfstout(g, n); e; e = agnxtout(g, e)){
+  for (edge_t *e = agfstout(g, n); e; e = agnxtout(g, e)) {
     init_bb_edge(e);
   }
 

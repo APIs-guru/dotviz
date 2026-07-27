@@ -7,10 +7,6 @@ Agraph_t *wrapped_agopen(const char *name, bool directed) {
   return agopen((char *)name, desc, NULL);
 }
 
-Agraphinfo_t* graphInfo(Agraph_t *g) {
-  return (Agraphinfo_t *)g->base.data;
-}
+Agraphinfo_t *graphInfo(Agraph_t *g) { return (Agraphinfo_t *)g->base.data; }
 
-Agnodeinfo_t* nodeInfoPtr(Agnode_t *n) {
-  return (Agnodeinfo_t *)n->base.data;
-}
+Agnodeinfo_t *nodeInfoPtr(Agnode_t *n) { return (Agnodeinfo_t *)n->base.data; }

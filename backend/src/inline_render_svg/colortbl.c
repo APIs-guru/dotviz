@@ -3421,7 +3421,8 @@ static int schemecmpf(const void *p0, const void *p1) {
 }
 
 static const colorscheme_t *findScheme(char const *schemeName) {
-  return bsearch(schemeName, color_lib, sizeof(color_lib) / sizeof(colorscheme_t),
+  return bsearch(schemeName, color_lib,
+                 sizeof(color_lib) / sizeof(colorscheme_t),
                  sizeof(color_lib[0]), schemecmpf);
 }
 
@@ -3429,7 +3430,8 @@ static int colorcmpf(const void *p0, const void *p1) {
   return strcasecmp(p0, ((const color_t *)p1)->name);
 }
 
-static const color_t *findColor(colorscheme_t const *scheme, char const *colorName) {
+static const color_t *findColor(colorscheme_t const *scheme,
+                                char const *colorName) {
   if (scheme == NULL)
     return NULL;
   return bsearch(colorName, scheme->colors, scheme->num_colors, sizeof(color_t),

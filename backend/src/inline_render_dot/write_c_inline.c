@@ -8,8 +8,6 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
-// clang-format off
-// non-graphviz headers
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -25,7 +23,6 @@
 #include "cdt.h"
 #include "cghdr.h"
 #include "cgraph.h"
-// clang-format on
 
 #define EMPTY(s) (((s) == 0) || (s)[0] == '\0')
 #define MAX(a, b) ((a) > (b) ? (a) : (b))

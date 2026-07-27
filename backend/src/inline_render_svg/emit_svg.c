@@ -1,4 +1,3 @@
-// clang-format off
 /**
  * @file
  * @brief graphics code generator
@@ -623,7 +622,8 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
   }
 }
 
-static bool node_in_layer(int layerNum, SafeJob *safe_job, graph_t *g, node_t *n) {
+static bool node_in_layer(int layerNum, SafeJob *safe_job, graph_t *g,
+                          node_t *n) {
   char *pn, *pe;
   edge_t *e;
 
@@ -717,14 +717,14 @@ static void emit_end_node(output_string *output) {
   saved_color_scheme = NULL;
 }
 
-static void emit_node(output_string *output, SafeLayer *safe_layer,
-                      int viewNum, obj_state_t *parent, node_t *n) {
+static void emit_node(output_string *output, SafeLayer *safe_layer, int viewNum,
+                      obj_state_t *parent, node_t *n) {
   int layerNum = safe_layer->layerNum;
   SafeJob *safe_job = safe_layer->safe_job;
-  if (ND_shape(n)                                   /* node has a shape */
-      && node_in_layer(layerNum, safe_job, agraphof(n), n)  /* and is in layer */
+  if (ND_shape(n) /* node has a shape */
+      && node_in_layer(layerNum, safe_job, agraphof(n), n) /* and is in layer */
       && node_in_box(n, safe_job->clip) /* and is in page/view */
-      && ND_state(n) != viewNum)                   /* and not already drawn */
+      && ND_state(n) != viewNum)        /* and not already drawn */
   {
     ND_state(n) = viewNum; /* mark node as drawn */
 
@@ -802,9 +802,9 @@ static void emit_attachment(output_string *output, obj_state_t *obj,
 
   pointf sz = lp->dimen;
   pointf AF[3] = {
-    {lp->pos.x + sz.x / 2., lp->pos.y - sz.y / 2.},
-    {AF[0].x - sz.x, AF[0].y},
-    dotneato_closest(spl, lp->pos),
+      {lp->pos.x + sz.x / 2., lp->pos.y - sz.y / 2.},
+      {AF[0].x - sz.x, AF[0].y},
+      dotneato_closest(spl, lp->pos),
   };
   /* Don't use edge style to draw attachment */
   obj->pen = PEN_SOLID; // default line style
@@ -1017,12 +1017,12 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
   char *previous_color_scheme = setColorScheme(agget(e, "colorscheme"));
   if (ED_spl(e)) {
     double arrowsize = late_double(e, E_arrowsz, 1.0, 0.0);
-    char* color = late_string(e, E_color, "");
+    char *color = late_string(e, E_color, "");
     bool tapered = false;
 
     if (styles) {
       char **sp = styles;
-      char* p;
+      char *p;
       while ((p = *sp++)) {
         if (streq(p, "tapered")) {
           tapered = true;
@@ -1034,7 +1034,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     /* need to know how many colors separated by ':' */
     int numsemi = 0;
     size_t numc = 0;
-    for (char* p = color; *p; p++) {
+    for (char *p = color; *p; p++) {
       if (*p == ':')
         numc++;
       else if (*p == ';')
@@ -1048,7 +1048,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         goto done;
     }
 
-    char* fillcolor = late_nnstring(e, E_fillcolor, color);
+    char *fillcolor = late_nnstring(e, E_fillcolor, color);
     if (fillcolor != color)
       obj->fillcolor = svg_resolve_color(fillcolor);
 
@@ -1089,8 +1089,10 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
       for (size_t i = 0; i < offspl.size; i++) {
         bz = ED_spl(e)->list[i];
         tmpspl.list[i].size = offspl.list[i].size = bz.size;
-        pointf *offlist = offspl.list[i].list = gv_calloc(bz.size, sizeof(pointf));
-        pointf *tmplist = tmpspl.list[i].list = gv_calloc(bz.size, sizeof(pointf));
+        pointf *offlist = offspl.list[i].list =
+            gv_calloc(bz.size, sizeof(pointf));
+        pointf *tmplist = tmpspl.list[i].list =
+            gv_calloc(bz.size, sizeof(pointf));
         pointf pf2 = {0, 0};
         pointf pf3 = bz.list[0];
         size_t j;
@@ -1120,13 +1122,12 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         tmplist[j].y = pf3.y - numc2 * offlist[j].y;
       }
 
-      char* lastcolor = color;
-      char* headcolor = color;
-      char* tailcolor = color;
+      char *lastcolor = color;
+      char *headcolor = color;
+      char *tailcolor = color;
       char *colors = gv_strdup(color);
       int cnum = 0;
-      for (color = strtok(colors, ":"); color;
-           cnum++, color = strtok(0, ":")) {
+      for (color = strtok(colors, ":"); color; cnum++, color = strtok(0, ":")) {
         if (!color[0])
           color = DEFAULT_COLOR;
         if (color != lastcolor) {
@@ -1444,8 +1445,7 @@ static void emit_edge(output_string *output, SafeLayer *safe_layer,
   int layerNum = safe_layer->layerNum;
   SafeJob *safe_job = safe_layer->safe_job;
 
-  if (edge_in_box(e, safe_job->clip) &&
-      edge_in_layer(layerNum, safe_job, e)) {
+  if (edge_in_box(e, safe_job->clip) && edge_in_layer(layerNum, safe_job, e)) {
 
     agxbuf edge = {0};
     agxbput(&edge, agnameof(agtail(e)));
@@ -1521,9 +1521,8 @@ static void emit_view(output_string *output, SafeLayer *safe_layer,
   }
 }
 
-static void emit_layer(output_string *output, SafeLayer *safe_layer,
-                       graph_t *g, int viewNum,
-                       int graph_outputorder) {
+static void emit_layer(output_string *output, SafeLayer *safe_layer, graph_t *g,
+                       int viewNum, int graph_outputorder) {
   obj_state_t obj = {0};
   obj.parent = NULL;
   obj.pen = PEN_SOLID;
@@ -1678,7 +1677,7 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
     }
     int filled = 0;
     graphviz_polygon_style_t istyle = {0};
-    char** style = checkClusterStyle(sg, &istyle);
+    char **style = checkClusterStyle(sg, &istyle);
     if (style != NULL) {
       svg_set_style(&obj, style);
       if (istyle.filled)
@@ -1860,7 +1859,8 @@ char **parse_style(char *s) {
   size_t fun = 0;
   static agxbuf ps_xb;
 
-  parser_state_t state = {.input = s, .p = s, .in_parens = false, .has_error = false};
+  parser_state_t state = {
+      .input = s, .p = s, .in_parens = false, .has_error = false};
   const char *start;
   while ((start = next_token(&state)) != NULL) {
     if (!state.in_parens) {
@@ -1931,8 +1931,7 @@ bool findStopColor(const char *colorlist, char *clrs[2], double *frac) {
   return true;
 }
 
-output_string emit_graph(SafeJob *safe_job, graph_t *g,
-                         int graph_outputorder) {
+output_string emit_graph(SafeJob *safe_job, graph_t *g, int graph_outputorder) {
   /* page size on Linux, Mac OS X and Windows */
   output_string output = {.data_position = 0, .data_allocated = 4096};
   if (!(output.data = malloc(output.data_allocated))) {
@@ -1997,16 +1996,16 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g,
 
   if (num_physical_layers > 1) {
     int viewNum = 1; ///< current view - 1 based count of views, all pages
-                    ///< in all layers
+                     ///< in all layers
     /* iterate layers */
     while (layerNum <= safe_job->numLayers) {
-        out_puts(&output, "<g");
-        svg_print_id(&output, safe_job->layerIDs[layerNum], NULL);
-        svg_print_class(&output, "layer", g);
-        out_puts(&output, ">\n");
-        SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
-        emit_layer(&output, &safe_layer, g, viewNum, graph_outputorder);
-        out_puts(&output, "</g>\n");
+      out_puts(&output, "<g");
+      svg_print_id(&output, safe_job->layerIDs[layerNum], NULL);
+      svg_print_class(&output, "layer", g);
+      out_puts(&output, ">\n");
+      SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
+      emit_layer(&output, &safe_layer, g, viewNum, graph_outputorder);
+      out_puts(&output, "</g>\n");
 
       if (lp) {
         layerNum = *lp;
