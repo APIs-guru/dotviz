@@ -11,6 +11,7 @@
  *************************************************************************/
 
 #include <types.h>
+#include "agxbuf.h"
 #include "const.h"
 #include <utils.h>
 #include <gvcint.h>
@@ -282,56 +283,66 @@ static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
   agxbuf buf = {0};
 
   /* assemble new string */
-  char c;
-  for (char *s = str; (c = *s++);) {
-    if (c == '\\' && *s != '\0') {
-      switch (c = *s++) {
-      case 'G':
-        agxbput(&buf, graph != NULL ? agnameof(graph) : "\\G");
-        break;
-      case 'N':
-        agxbput(&buf, node != NULL ? agnameof(node) : "\\N");
-        break;
-      case 'E':
-        if (edge != NULL) {
-          agxbput(&buf, agnameof(agtail(edge)));
-          port pt = ED_tail_port(obj);
-          if (*pt.name != '\0') {
-            agxbprint(&buf, ":%s", pt.name);
-          }
-          if (agisdirected(graph))
-            agxbput(&buf, "->");
-          else
-            agxbput(&buf, "--");
-          agxbprint(&buf, "%s", agnameof(aghead(edge)));
-          pt = ED_head_port(obj);
-          if (*pt.name != '\0') {
-            agxbprint(&buf, ":%s", pt.name);
-          }
-        }
-        break;
-      case 'T':
-        agxbput(&buf, edge != NULL ? agnameof(aghead(edge)) : "\\T");
-        break;
-      case 'H':
-        agxbput(&buf, edge != NULL ? agnameof(agtail(edge)) : "\\H");
-        break;
-      case 'L':
-        agxbput(&buf, tl != NULL ? tl->text : "\\L");
-        break;
-      case '\\':
-        if (escBackslash) {
-          agxbputc(&buf, '\\');
-          break;
-        }
-        /* Fall through */
-      default: /* leave other escape sequences unmodified, e.g. \n \l \r */
-        agxbprint(&buf, "\\%c", c);
-        break;
+  bool seenSlash = false;
+  for (char *s = str; *s != '\0'; ++s) {
+    char c = *s;
+    if (!seenSlash) {
+      if (c == '\\') {
+        seenSlash = true;
+      } else {
+        agxbputc(&buf, c);
       }
-    } else {
-      agxbputc(&buf, c);
+      continue;
     }
+
+    seenSlash = false;
+    switch (c) {
+    case 'G':
+      agxbput(&buf, graph != NULL ? agnameof(graph) : "\\G");
+      break;
+    case 'N':
+      agxbput(&buf, node != NULL ? agnameof(node) : "\\N");
+      break;
+    case 'E':
+      if (edge != NULL) {
+        agxbput(&buf, agnameof(agtail(edge)));
+        port pt = ED_tail_port(obj);
+        if (*pt.name != '\0') {
+          agxbprint(&buf, ":%s", pt.name);
+        }
+        if (agisdirected(graph))
+          agxbput(&buf, "->");
+        else
+          agxbput(&buf, "--");
+        agxbprint(&buf, "%s", agnameof(aghead(edge)));
+        pt = ED_head_port(obj);
+        if (*pt.name != '\0') {
+          agxbprint(&buf, ":%s", pt.name);
+        }
+        continue;
+      } else {
+        agxbput(&buf, "\\E");
+      }
+      break;
+    case 'T':
+      agxbput(&buf, edge != NULL ? agnameof(aghead(edge)) : "\\T");
+      break;
+    case 'H':
+      agxbput(&buf, edge != NULL ? agnameof(agtail(edge)) : "\\H");
+      break;
+    case 'L':
+      agxbput(&buf, tl != NULL ? tl->text : "\\L");
+      break;
+    case '\\':
+      agxbput(&buf, escBackslash ? "\\" : "\\\\");
+      break;
+    default:
+      /* leave other escape sequences unmodified, e.g. \n \l \r */
+      agxbprint(&buf, "\\%c", c);
+    }
+  }
+  if (seenSlash) {
+    agxbputc(&buf, '\\'); // handle trailing slash
   }
 
   /* extract the final string with replacements applied */
