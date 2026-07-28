@@ -256,45 +256,43 @@ void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
  * of the form \. are passed through unchanged.
  */
 static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
-  char c, *s;
   char *tp_str = "", *hp_str = "";
   char *g_str = "\\G", *n_str = "\\N", *e_str = "\\E", *h_str = "\\H",
        *t_str = "\\T", *l_str = "\\L";
   bool has_hp = false;
   bool has_tp = false;
-  int isEdge = 0;
-  textlabel_t *tl;
-  port pt;
+  bool isEdge = false;
 
   /* prepare substitution strings */
   switch (agobjkind(obj)) {
   case AGRAPH:
     g_str = agnameof(obj);
-    tl = GD_label(obj);
+    textlabel_t *tl = GD_label(obj);
     if (tl) {
       l_str = tl->text;
     }
     break;
-  case AGNODE:
+  case AGNODE: {
     g_str = agnameof(agraphof(obj));
     n_str = agnameof(obj);
-    tl = ND_label(obj);
+    textlabel_t *tl = ND_label(obj);
     if (tl) {
       l_str = tl->text;
     }
     break;
-  case AGEDGE:
-    isEdge = 1;
+  }
+  case AGEDGE: {
+    isEdge = true;
     g_str = agnameof(agroot(agraphof(agtail(((edge_t *)obj)))));
     t_str = agnameof(agtail(((edge_t *)obj)));
-    pt = ED_tail_port(obj);
+    port pt = ED_tail_port(obj);
     if ((tp_str = pt.name))
       has_tp = *tp_str != '\0';
     h_str = agnameof(aghead(((edge_t *)obj)));
     pt = ED_head_port(obj);
     if ((hp_str = pt.name))
       has_hp = *hp_str != '\0';
-    tl = ED_label(obj);
+    textlabel_t *tl = ED_label(obj);
     if (tl) {
       l_str = tl->text;
     }
@@ -304,12 +302,14 @@ static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
       e_str = "--";
     break;
   }
+  }
 
   /* allocate a dynamic buffer that we will use to construct the result */
   agxbuf buf = {0};
 
   /* assemble new string */
-  for (s = str; (c = *s++);) {
+  char c;
+  for (char *s = str; (c = *s++);) {
     if (c == '\\' && *s != '\0') {
       switch (c = *s++) {
       case 'G':
