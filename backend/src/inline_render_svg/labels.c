@@ -256,56 +256,26 @@ void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
  * of the form \. are passed through unchanged.
  */
 static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
-  char *tp_str = "", *hp_str = "";
-  char *g_str = "\\G", *n_str = "\\N", *e_str = "\\E", *h_str = "\\H",
-       *t_str = "\\T", *l_str = "\\L";
-  bool has_hp = false;
-  bool has_tp = false;
-  int objKind = agobjkind(obj);
-
+  textlabel_t *tl = NULL;
+  graph_t *graph = NULL;
+  node_t *node = NULL;
+  edge_t *edge = NULL;
   /* prepare substitution strings */
-  switch (objKind) {
-  case AGRAPH:{
-    g_str = agnameof(obj);
-    textlabel_t *tl = GD_label(obj);
-    if (tl) {
-      l_str = tl->text;
-    }
+  switch (agobjkind(obj)) {
+  case AGRAPH:
+    tl = GD_label(obj);
+    graph = (graph_t *)obj;
     break;
-  }
-  case AGNODE: {
-    g_str = agnameof(agraphof(obj));
-    n_str = agnameof(obj);
-    textlabel_t *tl = ND_label(obj);
-    if (tl) {
-      l_str = tl->text;
-    }
+  case AGNODE:
+    tl = ND_label(obj);
+    graph = agraphof(obj);
+    node = (node_t *)obj;
     break;
-  }
-  case AGEDGE: {
-    node_t *tail = agtail(((edge_t *)obj));
-    node_t *head = aghead(((edge_t *)obj));
-    graph_t *root = agroot(agraphof(tail));
-
-    g_str = agnameof(root);
-    t_str = agnameof(tail);
-    port pt = ED_tail_port(obj);
-    if ((tp_str = pt.name))
-      has_tp = *tp_str != '\0';
-    h_str = agnameof(head);
-    pt = ED_head_port(obj);
-    if ((hp_str = pt.name))
-      has_hp = *hp_str != '\0';
-    textlabel_t *tl = ED_label(obj);
-    if (tl) {
-      l_str = tl->text;
-    }
-    if (agisdirected(agroot(agraphof(tail))))
-      e_str = "->";
-    else
-      e_str = "--";
+  case AGEDGE:
+    graph = agraphof(obj);
+    edge = (edge_t *)obj;
+    tl = ED_label(obj);
     break;
-  }
   }
 
   /* allocate a dynamic buffer that we will use to construct the result */
@@ -317,31 +287,37 @@ static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
     if (c == '\\' && *s != '\0') {
       switch (c = *s++) {
       case 'G':
-        agxbput(&buf, g_str);
+        agxbput(&buf, graph != NULL ? agnameof(graph) : "\\G");
         break;
       case 'N':
-        agxbput(&buf, n_str);
+        agxbput(&buf, node != NULL ? agnameof(node) : "\\N");
         break;
       case 'E':
-        if (objKind == AGEDGE) {
-          agxbput(&buf, t_str);
-          if (has_tp) {
-            agxbprint(&buf, ":%s", tp_str);
+        if (edge != NULL) {
+          agxbput(&buf, agnameof(agtail(edge)));
+          port pt = ED_tail_port(obj);
+          if (*pt.name != '\0') {
+            agxbprint(&buf, ":%s", pt.name);
           }
-          agxbprint(&buf, "%s%s", e_str, h_str);
-          if (has_hp) {
-            agxbprint(&buf, ":%s", hp_str);
+          if (agisdirected(graph))
+            agxbput(&buf, "->");
+          else
+            agxbput(&buf, "--");
+          agxbprint(&buf, "%s", agnameof(aghead(edge)));
+          pt = ED_head_port(obj);
+          if (*pt.name != '\0') {
+            agxbprint(&buf, ":%s", pt.name);
           }
         }
         break;
       case 'T':
-        agxbput(&buf, t_str);
+        agxbput(&buf, edge != NULL ? agnameof(aghead(edge)) : "\\T");
         break;
       case 'H':
-        agxbput(&buf, h_str);
+        agxbput(&buf, edge != NULL ? agnameof(agtail(edge)) : "\\H");
         break;
       case 'L':
-        agxbput(&buf, l_str);
+        agxbput(&buf, tl != NULL ? tl->text : "\\L");
         break;
       case '\\':
         if (escBackslash) {
