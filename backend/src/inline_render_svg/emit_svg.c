@@ -682,16 +682,16 @@ static void emit_end_node(output_string *output) {
   saved_color_scheme = NULL;
 }
 
-static void emit_node(output_string *output, SafeLayer *safe_layer, int viewNum,
+static void emit_node(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *parent, node_t *n) {
   int layerNum = safe_layer->layerNum;
   SafeJob *safe_job = safe_layer->safe_job;
   if (ND_shape(n) /* node has a shape */
       && node_in_layer(layerNum, safe_job, agraphof(n), n) /* and is in layer */
       && node_in_box(n, safe_job->clip) /* and is in page/view */
-      && ND_state(n) != viewNum)        /* and not already drawn */
+      && ND_state(n) != layerNum)        /* and not already drawn */
   {
-    ND_state(n) = viewNum; /* mark node as drawn */
+    ND_state(n) = layerNum; /* mark node as drawn */
 
     svg_comment(output, agnameof(n));
     char *s = late_string(n, N_comment, "");
@@ -1448,8 +1448,7 @@ static void emit_edge(output_string *output, SafeLayer *safe_layer,
 }
 
 static void emit_view(output_string *output, SafeLayer *safe_layer,
-                      obj_state_t *obj, graph_t *g, int viewNum,
-                      int graph_outputorder) {
+                      obj_state_t *obj, graph_t *g, int graph_outputorder) {
   node_t *n;
   edge_t *e;
 
@@ -1458,7 +1457,7 @@ static void emit_view(output_string *output, SafeLayer *safe_layer,
   if (graph_outputorder & EMIT_SORTED) {
     /* output all nodes, then all edges */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_layer, viewNum, obj, n);
+      emit_node(output, safe_layer, obj, n);
     }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
@@ -1472,14 +1471,14 @@ static void emit_view(output_string *output, SafeLayer *safe_layer,
         emit_edge(output, safe_layer, obj, e);
       }
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_layer, viewNum, obj, n);
+      emit_node(output, safe_layer, obj, n);
     }
   } else {
     /* output in breadth first graph walk order */
     for (n = agfstnode(g); n; n = agnxtnode(g, n)) {
-      emit_node(output, safe_layer, viewNum, obj, n);
+      emit_node(output, safe_layer, obj, n);
       for (e = agfstout(g, n); e; e = agnxtout(g, e)) {
-        emit_node(output, safe_layer, viewNum, obj, aghead(e));
+        emit_node(output, safe_layer, obj, aghead(e));
         emit_edge(output, safe_layer, obj, e);
       }
     }
@@ -1487,7 +1486,7 @@ static void emit_view(output_string *output, SafeLayer *safe_layer,
 }
 
 static void emit_layer(output_string *output, SafeLayer *safe_layer, graph_t *g,
-                       int viewNum, int graph_outputorder) {
+                       int graph_outputorder) {
   obj_state_t obj = {0};
   obj.parent = NULL;
   obj.pen = PEN_SOLID;
@@ -1572,7 +1571,7 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer, graph_t *g,
     emit_label(output, safe_layer, &obj, EMIT_GLABEL, GD_label(g));
   if (obj.url || obj.explicit_tooltip)
     svg_end_anchor(output);
-  emit_view(output, safe_layer, &obj, g, viewNum, graph_outputorder);
+  emit_view(output, safe_layer, &obj, g, graph_outputorder);
   out_puts(output, "</g>\n"); // end page
 
   char *color_scheme = setColorScheme(previous_color_scheme);
@@ -1981,22 +1980,20 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int graph_outputorder) {
   }
 
   if (num_physical_layers > 1) {
-    int viewNum = 1; ///< current view - 1 based count of views, all pages
-                     ///< in all layers
     /* iterate layers */
-    for (int i = 0; i < num_physical_layers; ++i, ++viewNum) {
+    for (int i = 0; i < num_physical_layers; ++i) {
       int layerNum = layerlist[i];
       out_puts(&output, "<g");
       svg_print_id(&output, safe_job->layerIDs[layerNum], NULL);
       svg_print_class(&output, "layer", g);
       out_puts(&output, ">\n");
       SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
-      emit_layer(&output, &safe_layer, g, viewNum, graph_outputorder);
+      emit_layer(&output, &safe_layer, g, graph_outputorder);
       out_puts(&output, "</g>\n");
     }
   } else {
     SafeLayer safe_layer = {.layerNum = *layerlist, .safe_job = safe_job};
-    emit_layer(&output, &safe_layer, g, 1, graph_outputorder);
+    emit_layer(&output, &safe_layer, g, graph_outputorder);
   }
   out_puts(&output, "</svg>\n"); // end graph
   free(layerlist);
