@@ -1,8 +1,9 @@
-#include "types.h"
+#include <stdbool.h>
+
+#include "types.h" // IWYU pragma: keep
 #include "geom.h"
 #include "geomprocs.h"
 #include "utils.h"
-#include <stdbool.h>
 
 #define HW 2.0 /* maximum distance away from line, in points */
 
