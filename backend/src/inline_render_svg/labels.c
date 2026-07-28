@@ -261,17 +261,18 @@ static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
        *t_str = "\\T", *l_str = "\\L";
   bool has_hp = false;
   bool has_tp = false;
-  bool isEdge = false;
+  int objKind = agobjkind(obj);
 
   /* prepare substitution strings */
-  switch (agobjkind(obj)) {
-  case AGRAPH:
+  switch (objKind) {
+  case AGRAPH:{
     g_str = agnameof(obj);
     textlabel_t *tl = GD_label(obj);
     if (tl) {
       l_str = tl->text;
     }
     break;
+  }
   case AGNODE: {
     g_str = agnameof(agraphof(obj));
     n_str = agnameof(obj);
@@ -282,13 +283,16 @@ static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
     break;
   }
   case AGEDGE: {
-    isEdge = true;
-    g_str = agnameof(agroot(agraphof(agtail(((edge_t *)obj)))));
-    t_str = agnameof(agtail(((edge_t *)obj)));
+    node_t *tail = agtail(((edge_t *)obj));
+    node_t *head = aghead(((edge_t *)obj));
+    graph_t *root = agroot(agraphof(tail));
+
+    g_str = agnameof(root);
+    t_str = agnameof(tail);
     port pt = ED_tail_port(obj);
     if ((tp_str = pt.name))
       has_tp = *tp_str != '\0';
-    h_str = agnameof(aghead(((edge_t *)obj)));
+    h_str = agnameof(head);
     pt = ED_head_port(obj);
     if ((hp_str = pt.name))
       has_hp = *hp_str != '\0';
@@ -296,7 +300,7 @@ static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
     if (tl) {
       l_str = tl->text;
     }
-    if (agisdirected(agroot(agraphof(agtail(((edge_t *)obj))))))
+    if (agisdirected(agroot(agraphof(tail))))
       e_str = "->";
     else
       e_str = "--";
@@ -319,7 +323,7 @@ static char *strdup_and_subst_obj0(char *str, void *obj, int escBackslash) {
         agxbput(&buf, n_str);
         break;
       case 'E':
-        if (isEdge) {
+        if (objKind == AGEDGE) {
           agxbput(&buf, t_str);
           if (has_tp) {
             agxbprint(&buf, ":%s", tp_str);
