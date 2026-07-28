@@ -17,6 +17,7 @@
 #include <stdatomic.h>
 
 #include "agxbuf.h"
+#include "alloc.h"
 #include "types.h"
 #include "const.h"
 #include "utils.h"
@@ -543,42 +544,6 @@ static bool selectedLayer(int layerNum, SafeJob *safe_job, char *spec) {
 }
 
 DEFINE_LIST(layer_names, char *)
-
-/* Parse the graph's layerselect attribute, which determines
- * which layers are emitted. The specification is the same used
- * by the layer attribute.
- *
- * If we find n layers, we return an array arr of n+2 ints. arr[0]=n.
- * arr[n+1]=numLayers+1, acting as a sentinel. The other entries give
- * the desired layer indices.
- *
- * If no layers are detected, NULL is returned.
- *
- * This implementation does a linear walk through each layer index and
- * uses selectedLayer to match it against p. There is probably a more
- * efficient way to do this, but this is simple and until we find people
- * using huge numbers of layers, it should be adequate.
- */
-static int *parse_layerselect(SafeJob *safe_job, char *p) {
-  int numLayers = safe_job->numLayers;
-  int *laylist = gv_calloc(numLayers + 2, sizeof(int));
-  int cnt = 0;
-  for (int i = 1; i <= numLayers; i++) {
-    if (selectedLayer(i, safe_job, p)) {
-      laylist[++cnt] = i;
-    }
-  }
-  if (cnt == 0) {
-    agwarningf("The layerselect attribute \"%s\" does not match any layer "
-               "specifed by the layers attribute - ignored.\n",
-               p);
-    free(laylist);
-    return NULL;
-  }
-  laylist[0] = cnt;
-  laylist[cnt + 1] = numLayers + 1;
-  return laylist;
-}
 
 static void emit_background(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, graph_t *g) {
@@ -1982,23 +1947,45 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int graph_outputorder) {
   for (node_t *n = agfstnode(g); n; n = agnxtnode(g, n))
     ND_state(n) = 0;
 
-  int *lp = NULL;
-  int layerNum = 1;
-  int num_physical_layers = safe_job->numLayers;
-
+  int *layerlist = NULL;
+  int num_physical_layers = 0;
   char *layerselect_str = agget(g, "layerselect");
   if (layerselect_str != NULL && *layerselect_str) {
-    int *layerlist = parse_layerselect(safe_job, layerselect_str);
-    num_physical_layers = layerlist[0];
-    layerNum = layerlist[1]; // first layer
-    lp = layerlist + 2;      // tail layers
+    /* This implementation does a linear walk through each layer index and
+     * uses selectedLayer to match it against p. There is probably a more
+     * efficient way to do this, but this is simple and until we find people
+     * using huge numbers of layers, it should be adequate.
+     */
+    int numLayers = safe_job->numLayers;
+    layerlist = gv_calloc(numLayers, sizeof(int));
+    for (int i = 1; i <= numLayers; i++) {
+      if (selectedLayer(i, safe_job, layerselect_str)) {
+        layerlist[num_physical_layers++] = i;
+      }
+    }
+    if (num_physical_layers == 0) {
+      agwarningf("The layerselect attribute \"%s\" does not match any layer "
+                 "specifed by the layers attribute - ignored.\n",
+                 layerselect_str);
+      free(layerlist);
+      layerlist = NULL;
+    }
+  }
+
+  if (layerlist == NULL) {
+    num_physical_layers = safe_job->numLayers;
+    layerlist = gv_calloc(num_physical_layers, sizeof(int));
+    for (int i = 1; i <= num_physical_layers; i++) {
+      layerlist[i - 1] = i;
+    }
   }
 
   if (num_physical_layers > 1) {
     int viewNum = 1; ///< current view - 1 based count of views, all pages
                      ///< in all layers
     /* iterate layers */
-    while (layerNum <= safe_job->numLayers) {
+    for (int i = 0; i < num_physical_layers; ++i, ++viewNum) {
+      int layerNum = layerlist[i];
       out_puts(&output, "<g");
       svg_print_id(&output, safe_job->layerIDs[layerNum], NULL);
       svg_print_class(&output, "layer", g);
@@ -2006,19 +1993,12 @@ output_string emit_graph(SafeJob *safe_job, graph_t *g, int graph_outputorder) {
       SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
       emit_layer(&output, &safe_layer, g, viewNum, graph_outputorder);
       out_puts(&output, "</g>\n");
-
-      if (lp) {
-        layerNum = *lp;
-        lp += 1;
-      } else {
-        layerNum += 1;
-      }
-      viewNum += 1;
     }
   } else {
-    SafeLayer safe_layer = {.layerNum = layerNum, .safe_job = safe_job};
+    SafeLayer safe_layer = {.layerNum = *layerlist, .safe_job = safe_job};
     emit_layer(&output, &safe_layer, g, 1, graph_outputorder);
   }
   out_puts(&output, "</svg>\n"); // end graph
+  free(layerlist);
   return output;
 }
