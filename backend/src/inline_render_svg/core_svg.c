@@ -367,8 +367,6 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
          || obj->pen != PEN_NONE))) {
     return;
   }
-  PostscriptAlias *pA;
-  char *family = NULL, *weight = NULL, *stretch = NULL, *style = NULL;
   unsigned int flags;
 
   out_puts(output, "<text xml:space=\"preserve\"");
@@ -392,7 +390,9 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
     gvprintdouble(output, -p.y);
     out_puts(output, "\"");
   }
-  pA = span->font->postscript_alias;
+
+  PostscriptAlias *pA = span->font->postscript_alias;
+  char *family = NULL, *weight = NULL, *style = NULL;
   if (pA) {
     switch (fontnames) {
     case PSFONTS:
@@ -412,7 +412,6 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
       style = pA->style;
       break;
     }
-    stretch = pA->stretch;
 
     gvprintf(output, " font-family=\"%s", family);
     if (pA->svg_font_family && pA->svg_font_family != family)
@@ -420,6 +419,8 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
     out_putc(output, '"');
     if (weight)
       gvprintf(output, " font-weight=\"%s\"", weight);
+
+    char *stretch = pA->stretch;
     if (stretch)
       gvprintf(output, " font-stretch=\"%s\"", stretch);
     if (style)
