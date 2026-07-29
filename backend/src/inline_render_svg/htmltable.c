@@ -103,29 +103,26 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
                             obj_state_t *obj, size_t nspans, htextspan_t *spans,
                             pointf p, double halfwidth_x, textfont_t finfo,
                             boxf b, int simple) {
-  double center_x = p.x;
-  double left_x = center_x - halfwidth_x;
-  double right_x = center_x + halfwidth_x;
-
-  // Initial p is in center of text block; set initial baseline to top of text
+  // Initial y is in center of text block; set initial baseline to top of text
   // block.
-  pointf p_ = {.x = p.x, .y = p.y + (b.UR.y - b.LL.y) / 2.0};
+  double y = p.y + (b.UR.y - b.LL.y) / 2.0;
 
   for (size_t i = 0; i < nspans; i++) {
-    /* set _p.x to leftmost point where the line of text begins */
+    // set x to leftmost point where the line of text begins
+    double x = p.x;
     switch (spans[i].just) {
     case 'l':
-      p_.x = left_x;
+      x -= halfwidth_x;
       break;
     case 'r':
-      p_.x = right_x - spans[i].size;
+      x += halfwidth_x - spans[i].size;
       break;
     default:
     case 'n':
-      p_.x = center_x - spans[i].size / 2.0;
+      x -= spans[i].size / 2.0;
       break;
     }
-    p_.y -= spans[i].lfsize; /* move to current base line */
+    y -= spans[i].lfsize; // move to current base line
 
     textspan_t *ti = spans[i].items;
     for (size_t j = 0; j < spans[i].nitems; j++) {
@@ -163,8 +160,9 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
       tl.size.y = spans[i].lfsize;
       tl.just = 'l';
 
+      pointf p_ = {.x = x, .y = y};
       svg_textspan(output, fontnames, obj, p_, &tl);
-      p_.x += ti->size.x;
+      x += ti->size.x;
       ti++;
     }
   }
