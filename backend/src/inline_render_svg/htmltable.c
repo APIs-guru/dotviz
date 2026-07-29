@@ -193,6 +193,18 @@ static void doSide(output_string *output, obj_state_t *obj, pointf p, double wd,
   svg_box(output, obj, BF, 1);
 }
 
+// If border is > 1, inset the points by half the border.
+static boxf addBorder(boxf b, int border) {
+  if (border > 1) {
+    const double delta = border / 2.0;
+    b.LL.x += delta;
+    b.LL.y += delta;
+    b.UR.x -= delta;
+    b.UR.y -= delta;
+  }
+  return b;
+}
+
 /* Convert boxf into four corner points
  * If border is > 1, inset the points by half the border.
  * It is assumed AF is pointf[4], so the data is store there
@@ -235,9 +247,7 @@ static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
     obj->pen = PEN_DOTTED;
 
   if (dp->style.rounded) {
-    pointf AF[7];
-    round_corners(output, obj, mkPts(AF, b, dp->border), 4,
-                  (graphviz_polygon_style_t){.rounded = true}, 0);
+    rounded_svg_box(output, obj, addBorder(b, dp->border), 0);
   } else if ((sides = (dp->flags & BORDER_MASK))) {
     pointf AF[7];
     mkPts(AF + 1, b, dp->border); /* AF[1-4] has LL=SW,SE,UR=NE,NW */
@@ -517,9 +527,7 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
       int filled = setFill(obj, tbl->data.bgcolor, tbl->data.gradientangle,
                            tbl->data.style, clrs);
       if (tbl->data.style.rounded) {
-        pointf AF[4];
-        round_corners(output, obj, mkPts(AF, pts, tbl->data.border), 4,
-                      (graphviz_polygon_style_t){.rounded = true}, filled);
+        rounded_svg_box(output, obj, addBorder(pts, tbl->data.border), filled);
       } else
         svg_box(output, obj, pts, filled);
       free(clrs[0]);
@@ -605,9 +613,7 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
       int filled = setFill(obj, cp->data.bgcolor, cp->data.gradientangle,
                            cp->data.style, clrs);
       if (cp->data.style.rounded) {
-        pointf AF[4];
-        round_corners(output, obj, mkPts(AF, pts, cp->data.border), 4,
-                      (graphviz_polygon_style_t){.rounded = true}, filled);
+        rounded_svg_box(output, obj, addBorder(pts, cp->data.border), filled);
       } else
         svg_box(output, obj, pts, filled);
       free(clrs[0]);

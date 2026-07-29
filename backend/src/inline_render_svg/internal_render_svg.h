@@ -57,5 +57,5 @@ pointf textspan_size(GVC_t *gvc, textspan_t *span);
 int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
                   const char *clrs);
 void init_bb(graph_t *g);
-void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
-                   size_t sides, graphviz_polygon_style_t style, int filled);
+void rounded_svg_box(output_string *output, obj_state_t *obj, boxf B,
+                     int filled);
