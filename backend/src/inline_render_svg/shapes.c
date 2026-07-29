@@ -640,8 +640,7 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
   double d = fmin(box.UR.x - box.LL.x, box.UR.y - box.LL.y);
   double rbconst = fmin(RBCONST, d / 3.0);
 
-  size_t i = 0;
-  pointf B[4 * 4 + 4];
+  pointf pts[6 * 4 + 2];
   for (size_t seg = 0; seg < 4; seg++) {
     pointf p0 = AF[seg];
     pointf p1;
@@ -653,28 +652,16 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
     double dy = p1.y - p0.y;
     const double d = hypot(dx, dy);
     double t = rbconst / d;
-    B[i++] = interpolate_pointf(RBCURVE * t, p0, p1);
-    B[i++] = interpolate_pointf(t, p0, p1);
-    B[i++] = interpolate_pointf(1.0 - t, p0, p1);
-    B[i++] = interpolate_pointf(1.0 - RBCURVE * t, p0, p1);
-  }
-  B[i++] = B[0];
-  B[i++] = B[1];
-  B[i++] = B[2];
 
-  pointf pts[6 * 4 + 2];
-  i = 0;
-  for (size_t seg = 0; seg < 4; seg++) {
-    pts[i++] = B[4 * seg];
-    pts[i++] = B[4 * seg + 1];
-    pts[i++] = B[4 * seg + 1];
-    pts[i++] = B[4 * seg + 2];
-    pts[i++] = B[4 * seg + 2];
-    pts[i++] = B[4 * seg + 3];
+    pointf* B = &pts[6 * seg];
+    B[0] = interpolate_pointf(RBCURVE * t, p0, p1);
+    B[1] = B[2] = interpolate_pointf(t, p0, p1);
+    B[3] = B[4] = interpolate_pointf(1.0 - t, p0, p1);
+    B[5] = interpolate_pointf(1.0 - RBCURVE * t, p0, p1);
   }
-  pts[i++] = pts[0];
-  pts[i++] = pts[1];
-  svg_bezier(output, obj, pts + 1, i - 1, filled);
+  pts[24] = pts[0];
+  pts[25] = pts[1];
+  svg_bezier(output, obj, pts + 1, 25, filled);
 }
 
 /**
