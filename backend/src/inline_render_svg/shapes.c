@@ -633,10 +633,48 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
   AF[3].x = box.LL.x;
   AF[3].y = box.UR.y;
 
-  pointf *B =
-      alloc_interpolation_points(AF, 4, (graphviz_polygon_style_t){0}, true);
-  pointf pts[6 * 4 + 2];
+  /* rbconst is distance offset from a corner of the polygon.
+   * It should be the same for every corner, and also never
+   * bigger than one-third the length of a side.
+   */
+  double rbconst = RBCONST;
+  for (size_t seg = 0; seg < 4; seg++) {
+    pointf p0 = AF[seg];
+    pointf p1;
+    if (seg + 1 < 4)
+      p1 = AF[seg + 1];
+    else
+      p1 = AF[0];
+    double dx = p1.x - p0.x;
+    double dy = p1.y - p0.y;
+    const double d = hypot(dx, dy);
+    rbconst = fmin(rbconst, d / 3.0);
+  }
+
   size_t i = 0;
+  pointf *B = gv_calloc(4 * 4 + 4, sizeof(pointf));
+  for (size_t seg = 0; seg < 4; seg++) {
+    pointf p0 = AF[seg];
+    pointf p1;
+    if (seg + 1 < 4)
+      p1 = AF[seg + 1];
+    else
+      p1 = AF[0];
+    double dx = p1.x - p0.x;
+    double dy = p1.y - p0.y;
+    const double d = hypot(dx, dy);
+    double t = rbconst / d;
+    B[i++] = interpolate_pointf(RBCURVE * t, p0, p1);
+    B[i++] = interpolate_pointf(t, p0, p1);
+    B[i++] = interpolate_pointf(1.0 - t, p0, p1);
+    B[i++] = interpolate_pointf(1.0 - RBCURVE * t, p0, p1);
+  }
+  B[i++] = B[0];
+  B[i++] = B[1];
+  B[i++] = B[2];
+
+  pointf pts[6 * 4 + 2];
+  i = 0;
   for (size_t seg = 0; seg < 4; seg++) {
     pts[i++] = B[4 * seg];
     pts[i++] = B[4 * seg + 1];
