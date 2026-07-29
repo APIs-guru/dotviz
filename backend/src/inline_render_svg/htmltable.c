@@ -103,39 +103,33 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
                             obj_state_t *obj, size_t nspans, htextspan_t *spans,
                             pointf p, double halfwidth_x, textfont_t finfo,
                             boxf b, int simple) {
-  double center_x, left_x, right_x;
-  textspan_t tl;
-  textfont_t tf;
-  pointf p_ = {0.0, 0.0};
-  textspan_t *ti;
+  double center_x = p.x;
+  double left_x = center_x - halfwidth_x;
+  double right_x = center_x + halfwidth_x;
 
-  center_x = p.x;
-  left_x = center_x - halfwidth_x;
-  right_x = center_x + halfwidth_x;
-
-  /* Initial p is in center of text block; set initial baseline
-   * to top of text block.
-   */
-  p_.y = p.y + (b.UR.y - b.LL.y) / 2.0;
+  // Initial p is in center of text block; set initial baseline to top of text
+  // block.
+  pointf p_ = {.x = p.x, .y = p.y + (b.UR.y - b.LL.y) / 2.0};
 
   for (size_t i = 0; i < nspans; i++) {
-    /* set p.x to leftmost point where the line of text begins */
+    /* set _p.x to leftmost point where the line of text begins */
     switch (spans[i].just) {
     case 'l':
-      p.x = left_x;
+      p_.x = left_x;
       break;
     case 'r':
-      p.x = right_x - spans[i].size;
+      p_.x = right_x - spans[i].size;
       break;
     default:
     case 'n':
-      p.x = center_x - spans[i].size / 2.0;
+      p_.x = center_x - spans[i].size / 2.0;
       break;
     }
     p_.y -= spans[i].lfsize; /* move to current base line */
 
-    ti = spans[i].items;
+    textspan_t *ti = spans[i].items;
     for (size_t j = 0; j < spans[i].nitems; j++) {
+      textfont_t tf;
       if (ti->font && ti->font->size > 0)
         tf.size = ti->font->size;
       else
@@ -155,6 +149,7 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
 
       obj->pencolor = svg_resolve_color(tf.color);
 
+      textspan_t tl;
       tl.str = ti->str;
       tl.font = &tf;
       tl.yoffset_layout = ti->yoffset_layout;
@@ -168,9 +163,8 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
       tl.size.y = spans[i].lfsize;
       tl.just = 'l';
 
-      p_.x = p.x;
       svg_textspan(output, fontnames, obj, p_, &tl);
-      p.x += ti->size.x;
+      p_.x += ti->size.x;
       ti++;
     }
   }
@@ -178,14 +172,12 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
 
 static void emit_html_txt(output_string *output, fontname_kind fontnames,
                           obj_state_t *obj, htmltxt_t *tp, htmlenv_t *env) {
-  double halfwidth_x;
-  pointf p;
-
   /* make sure that there is something to do */
   if (tp->nspans < 1)
     return;
 
-  halfwidth_x = (tp->box.UR.x - tp->box.LL.x) / 2.0;
+  double halfwidth_x = (tp->box.UR.x - tp->box.LL.x) / 2.0;
+  pointf p;
   p.x = env->pos.x + (tp->box.UR.x + tp->box.LL.x) / 2.0;
   p.y = env->pos.y + (tp->box.UR.y + tp->box.LL.y) / 2.0;
 
