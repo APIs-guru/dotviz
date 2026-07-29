@@ -193,10 +193,7 @@ extern void svg_html_label(output_string *output, SafeLayer *safe_layer,
                            textlabel_t *tp);
 void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
                 emit_state_t emit_state, textlabel_t *lp) {
-  pointf p;
-  emit_state_t old_emit_state;
-
-  old_emit_state = obj->emit_state;
+  emit_state_t old_emit_state = obj->emit_state;
   obj->emit_state = emit_state;
 
   if (lp->html) {
@@ -213,38 +210,41 @@ void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
   obj->pencolor = svg_resolve_color(lp->fontcolor);
 
   /* position for first span */
+  double y = lp->pos.y;
   switch (lp->valign) {
   case 't':
-    p.y = lp->pos.y + lp->space.y / 2.0 - lp->fontsize;
+    y += lp->space.y / 2.0 - lp->fontsize;
     break;
   case 'b':
-    p.y = lp->pos.y - lp->space.y / 2.0 + lp->dimen.y - lp->fontsize;
+    y -= lp->space.y / 2.0 + lp->dimen.y - lp->fontsize;
     break;
   case 'c':
   default:
-    p.y = lp->pos.y + lp->dimen.y / 2.0 - lp->fontsize;
+    y += lp->dimen.y / 2.0 - lp->fontsize;
     break;
   }
   if (obj->labeledgealigned)
-    p.y -= lp->pos.y;
+    y -= lp->pos.y;
   for (size_t i = 0; i < lp->u.txt.nspans; i++) {
+    double x = lp->pos.x;
     switch (lp->u.txt.span[i].just) {
     case 'l':
-      p.x = lp->pos.x - lp->space.x / 2.0;
+      x -= lp->space.x / 2.0;
       break;
     case 'r':
-      p.x = lp->pos.x + lp->space.x / 2.0;
+      x += lp->space.x / 2.0;
       break;
     default:
     case 'n':
-      p.x = lp->pos.x;
       break;
     }
+
+    pointf p = {.x = x, .y = y};
     svg_textspan(output, GD_fontnames(safe_layer->safe_job->graph), obj, p,
                  &lp->u.txt.span[i]);
 
     /* UL position for next span */
-    p.y -= lp->u.txt.span[i].size.y;
+    y -= lp->u.txt.span[i].size.y;
   }
 
   obj->emit_state = old_emit_state;
