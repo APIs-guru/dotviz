@@ -623,20 +623,33 @@ static void rounded_draw(output_string *output, obj_state_t *obj, pointf *AF,
   free(B);
 }
 
-void rounded_svg_box(output_string *output, obj_state_t *obj, boxf B,
+void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
                      int filled) {
-  pointf A[4];
-  A[0] = B.LL;
-  A[1].x = B.UR.x;
-  A[1].y = B.LL.y;
-  A[2] = B.UR;
-  A[3].x = B.LL.x;
-  A[3].y = B.UR.y;
+  pointf AF[4];
+  AF[0] = box.LL;
+  AF[1].x = box.UR.x;
+  AF[1].y = box.LL.y;
+  AF[2] = box.UR;
+  AF[3].x = box.LL.x;
+  AF[3].y = box.UR.y;
 
-  rounded_draw(output, obj, A, 4, (graphviz_polygon_style_t){.rounded = true},
-               filled);
+  pointf *B =
+      alloc_interpolation_points(AF, 4, (graphviz_polygon_style_t){0}, true);
+  pointf pts[6 * 4 + 2];
+  size_t i = 0;
+  for (size_t seg = 0; seg < 4; seg++) {
+    pts[i++] = B[4 * seg];
+    pts[i++] = B[4 * seg + 1];
+    pts[i++] = B[4 * seg + 1];
+    pts[i++] = B[4 * seg + 2];
+    pts[i++] = B[4 * seg + 2];
+    pts[i++] = B[4 * seg + 3];
+  }
+  pts[i++] = pts[0];
+  pts[i++] = pts[1];
+  svg_bezier(output, obj, pts + 1, i - 1, filled);
+  free(B);
 }
-
 
 /**
  * @file
