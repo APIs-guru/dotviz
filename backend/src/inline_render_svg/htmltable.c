@@ -701,22 +701,21 @@ static double heightOfLbl(htmllabel_t *lp) {
 
 void svg_html_label(output_string *output, SafeLayer *safe_layer,
                     obj_state_t *parent, htmllabel_t *lp, textlabel_t *tp) {
-  obj_state_t obj = allocObj(parent);
-  htmlenv_t env;
-  pointf p;
-
-  p = tp->pos;
+  pointf p = tp->pos;
   switch (tp->valign) {
   case 't':
-    p.y = tp->pos.y + (tp->space.y - heightOfLbl(lp)) / 2.0 - 1;
+    p.y += (tp->space.y - heightOfLbl(lp)) / 2.0 - 1;
     break;
   case 'b':
-    p.y = tp->pos.y - (tp->space.y - heightOfLbl(lp)) / 2.0 - 1;
+    p.y -= (tp->space.y - heightOfLbl(lp)) / 2.0 - 1;
     break;
   default:
     /* no-op */
     break;
   }
+
+  obj_state_t obj = allocObj(parent);
+  htmlenv_t env;
   env.pos = p;
   env.finfo.color = tp->fontcolor;
   env.finfo.name = tp->fontname;
