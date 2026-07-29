@@ -223,7 +223,6 @@ static pointf *mkPts(pointf *AF, boxf b, int border) {
  */
 static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
                      boxf b) {
-  pointf AF[7];
   char *color = dp->pencolor ? dp->pencolor : DEFAULT_COLOR;
   unsigned short sides;
 
@@ -235,10 +234,12 @@ static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
   else if (dp->style.dotted)
     obj->pen = PEN_DOTTED;
 
-  if (dp->style.rounded)
+  if (dp->style.rounded) {
+    pointf AF[7];
     round_corners(output, obj, mkPts(AF, b, dp->border), 4,
                   (graphviz_polygon_style_t){.rounded = true}, 0);
-  else if ((sides = (dp->flags & BORDER_MASK))) {
+  } else if ((sides = (dp->flags & BORDER_MASK))) {
+    pointf AF[7];
     mkPts(AF + 1, b, dp->border); /* AF[1-4] has LL=SW,SE,UR=NE,NW */
     switch (sides) {
     case BORDER_BOTTOM:
@@ -495,7 +496,6 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
   htmlcell_t *cp;
   static textfont_t savef;
   htmlmap_data_t saved;
-  pointf AF[4];
 
   if (tbl->font)
     pushFontInfo(env, tbl->font, &savef);
@@ -517,6 +517,7 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
       int filled = setFill(obj, tbl->data.bgcolor, tbl->data.gradientangle,
                            tbl->data.style, clrs);
       if (tbl->data.style.rounded) {
+        pointf AF[4];
         round_corners(output, obj, mkPts(AF, pts, tbl->data.border), 4,
                       (graphviz_polygon_style_t){.rounded = true}, filled);
       } else
@@ -588,7 +589,6 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
   htmlmap_data_t saved;
   boxf pts = cp->data.box;
   pointf pos = env->pos;
-  pointf AF[4];
 
   pts.LL.x += pos.x;
   pts.UR.x += pos.x;
@@ -605,6 +605,7 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
       int filled = setFill(obj, cp->data.bgcolor, cp->data.gradientangle,
                            cp->data.style, clrs);
       if (cp->data.style.rounded) {
+        pointf AF[4];
         round_corners(output, obj, mkPts(AF, pts, cp->data.border), 4,
                       (graphviz_polygon_style_t){.rounded = true}, filled);
       } else
