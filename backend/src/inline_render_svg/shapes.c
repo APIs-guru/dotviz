@@ -637,22 +637,11 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
    * It should be the same for every corner, and also never
    * bigger than one-third the length of a side.
    */
-  double rbconst = RBCONST;
-  for (size_t seg = 0; seg < 4; seg++) {
-    pointf p0 = AF[seg];
-    pointf p1;
-    if (seg + 1 < 4)
-      p1 = AF[seg + 1];
-    else
-      p1 = AF[0];
-    double dx = p1.x - p0.x;
-    double dy = p1.y - p0.y;
-    const double d = hypot(dx, dy);
-    rbconst = fmin(rbconst, d / 3.0);
-  }
+  double d = fmin(box.UR.x - box.LL.x, box.UR.y - box.LL.y);
+  double rbconst = fmin(RBCONST, d / 3.0);
 
   size_t i = 0;
-  pointf *B = gv_calloc(4 * 4 + 4, sizeof(pointf));
+  pointf B[4 * 4 + 4];
   for (size_t seg = 0; seg < 4; seg++) {
     pointf p0 = AF[seg];
     pointf p1;
@@ -686,7 +675,6 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
   pts[i++] = pts[0];
   pts[i++] = pts[1];
   svg_bezier(output, obj, pts + 1, i - 1, filled);
-  free(B);
 }
 
 /**
