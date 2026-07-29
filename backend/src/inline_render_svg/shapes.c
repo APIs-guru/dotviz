@@ -623,6 +623,21 @@ static void rounded_draw(output_string *output, obj_state_t *obj, pointf *AF,
   free(B);
 }
 
+void rounded_svg_box(output_string *output, obj_state_t *obj, boxf B,
+                     int filled) {
+  pointf A[4];
+  A[0] = B.LL;
+  A[1].x = B.UR.x;
+  A[1].y = B.LL.y;
+  A[2] = B.UR;
+  A[3].x = B.LL.x;
+  A[3].y = B.UR.y;
+
+  rounded_draw(output, obj, A, 4, (graphviz_polygon_style_t){.rounded = true},
+               filled);
+}
+
+
 /**
  * @file
  * ~~~~

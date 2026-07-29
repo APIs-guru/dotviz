@@ -1695,18 +1695,11 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
     if (istyle.rounded) {
       int doPerim = late_int(sg, G_peripheries, 1, 0);
       if (doPerim != 0 || filled != 0) {
-        pointf AF[4];
-        AF[0] = GD_bb(sg).LL;
-        AF[2] = GD_bb(sg).UR;
-        AF[1].x = AF[2].x;
-        AF[1].y = AF[0].y;
-        AF[3].x = AF[0].x;
-        AF[3].y = AF[2].y;
         if (doPerim)
           obj.pencolor = svg_resolve_color(pencolor);
         else
           obj.pencolor = svg_resolve_color("transparent");
-        round_corners(output, &obj, AF, 4, istyle, filled);
+        rounded_svg_box(output, &obj, GD_bb(sg), filled);
       }
     } else if (istyle.striped) {
       pointf AF[4];
