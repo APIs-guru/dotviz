@@ -629,6 +629,7 @@ pointf add_y(pointf p, double y) { return (pointf){p.x, p.y + y}; }
 
 void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
                      int filled) {
+
   /* rbconst is distance offset from a corner of the polygon.
    * It should be the same for every corner, and also never
    * bigger than one-third the length of a side.
@@ -637,48 +638,35 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
   double dy = box.UR.y - box.LL.y;
   double rbconst = fmin(RBCONST, fmin(dx, dy) / 3.0);
 
-  double x = box.LL.x;
-  double y = box.LL.y;
-  pointf pts[6 * 4 + 2];
-  {
-    pointf p = {x, y};
-    pointf *B = &pts[0];
-    B[0] = add_x(p, rbconst * RBCURVE);
-    B[1] = B[2] = add_x(p, rbconst);
-    B[3] = B[4] = add_x(p, dx - rbconst);
-    B[5] = add_x(p, dx - rbconst * RBCURVE);
-    x += dx;
-  }
-  {
-    pointf p = {x, y};
-    pointf *B = &pts[6];
-    B[0] = add_y(p, rbconst * RBCURVE);
-    B[1] = B[2] = add_y(p, rbconst);
-    B[3] = B[4] = add_y(p, dy - rbconst);
-    B[5] = add_y(p, dy - rbconst * RBCURVE);
-    y += dy;
-  }
-  {
-    pointf p = {x, y};
-    pointf *B = &pts[6 * 2];
-    B[0] = add_x(p, -rbconst * RBCURVE);
-    B[1] = B[2] = add_x(p, -rbconst);
-    B[3] = B[4] = add_x(p, -dx + rbconst);
-    B[5] = add_x(p, -dx + rbconst * RBCURVE);
-    x -= dx;
-  }
-  {
-    pointf p = {x, y};
-    pointf *B = &pts[6 * 3];
-    B[0] = add_y(p, -rbconst * RBCURVE);
-    B[1] = B[2] = add_y(p, -rbconst);
-    B[3] = B[4] = add_y(p, -dy + rbconst);
-    B[5] = add_y(p, -dy + rbconst * RBCURVE);
-    y -= dy;
-  }
-  pts[24] = pts[0];
-  pts[25] = pts[1];
-  svg_bezier(output, obj, &pts[1], 25, filled);
+  pointf B[6 * 4 + 2];
+
+  pointf LL = box.LL;
+  B[0] = add_x(LL, rbconst * RBCURVE);
+  B[1] = B[2] = add_x(LL, rbconst);
+  B[3] = B[4] = add_x(LL, dx - rbconst);
+  B[5] = add_x(LL, dx - rbconst * RBCURVE);
+
+  pointf LR = {box.UR.x, LL.y};
+  B[6] = add_y(LR, rbconst * RBCURVE);
+  B[7] = B[8] = add_y(LR, rbconst);
+  B[9] = B[10] = add_y(LR, dy - rbconst);
+  B[11] = add_y(LR, dy - rbconst * RBCURVE);
+
+  pointf UR = box.UR;
+  B[12] = add_x(UR, -rbconst * RBCURVE);
+  B[13] = B[14] = add_x(UR, -rbconst);
+  B[15] = B[16] = add_x(UR, -dx + rbconst);
+  B[17] = add_x(UR, -dx + rbconst * RBCURVE);
+
+  pointf UL = {LL.x, UR.y};
+  B[18] = add_y(UL, -rbconst * RBCURVE);
+  B[19] = B[20] = add_y(UL, -rbconst);
+  B[21] = B[22] = add_y(UL, -dy + rbconst);
+  B[23] = add_y(UL, -dy + rbconst * RBCURVE);
+
+  B[24] = B[0];
+  B[25] = B[1];
+  svg_bezier(output, obj, &B[1], 25, filled);
 }
 
 /**
