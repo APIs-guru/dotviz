@@ -529,17 +529,16 @@ void my_get_gradient_points(pointf *A, pointf *G, size_t n, double angle) {
       max.y = MAX(A[i].y, max.y);
     }
   }
+  
   double dx = max.x - min.x;
   double dy = max.y - min.y;
+  double sinAngle = sin(angle);
+  double cosAngle = cos(angle);
 
-  pointf center;
-  center.x = min.x + dx / 2;
-  center.y = min.y + dy / 2;
-
-  G[0].y = -center.y + (dy/2) * sin(angle);
-  G[1].y = -center.y - (dy/2) * sin(angle);
-  G[0].x = center.x - (dx / 2) * cos(angle);
-  G[1].x = center.x + (dx / 2) * cos(angle);
+  G[0].y = min.y + (dy / 2) * (1 - sinAngle);
+  G[1].y = min.y + (dy / 2) * (1 + sinAngle);
+  G[0].x = min.x + (dx / 2) * (1 - cosAngle);
+  G[1].x = min.x + (dx / 2) * (1 + cosAngle);
 }
 
 /* svg_gradstyle
@@ -564,11 +563,11 @@ static int svg_gradstyle(output_string *output, obj_state_t *obj, pointf *A,
   out_puts(output, "x1=\"");
   gvprintdouble(output, G[0].x);
   out_puts(output, "\" y1=\"");
-  gvprintdouble(output, G[0].y);
+  gvprintdouble(output, -G[0].y);
   out_puts(output, "\" x2=\"");
   gvprintdouble(output, G[1].x);
   out_puts(output, "\" y2=\"");
-  gvprintdouble(output, G[1].y);
+  gvprintdouble(output, -G[1].y);
   out_puts(output, "\" >\n");
 
   svg_print_stop(output,
