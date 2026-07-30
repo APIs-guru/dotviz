@@ -182,12 +182,10 @@ static const size_t Arrowtypes_size =
 
 static char *arrow_match_name_frag(char *name, const arrowname_t *arrownames,
                                    uint32_t *flag) {
-  size_t namelen = 0;
   char *rest = name;
-
   for (const arrowname_t *arrowname = arrownames; arrowname->name;
        arrowname++) {
-    namelen = strlen(arrowname->name);
+    size_t namelen = strlen(arrowname->name);
     if (startswith(name, arrowname->name)) {
       *flag |= arrowname->type;
       rest += namelen;
@@ -198,17 +196,17 @@ static char *arrow_match_name_frag(char *name, const arrowname_t *arrownames,
 }
 
 static char *arrow_match_shape(char *name, uint32_t *flag) {
-  char *next, *rest;
   uint32_t f = ARR_TYPE_NONE;
-
-  rest = arrow_match_name_frag(name, Arrowsynonyms, &f);
+  char *rest = arrow_match_name_frag(name, Arrowsynonyms, &f);
   if (rest == name) {
+    char *next;
     do {
       next = rest;
       rest = arrow_match_name_frag(next, Arrowmods, &f);
     } while (next != rest);
     rest = arrow_match_name_frag(rest, Arrownames, &f);
   }
+
   if (f && !(f & ((1 << BITS_PER_ARROW_TYPE) - 1)))
     f |= ARR_TYPE_NORM;
   *flag = f;
@@ -216,14 +214,11 @@ static char *arrow_match_shape(char *name, uint32_t *flag) {
 }
 
 static void arrow_match_name(char *name, uint32_t *flag) {
-  char *rest = name;
-  char *next;
-  int i;
-
   *flag = 0;
-  for (i = 0; *rest != '\0' && i < NUMB_OF_ARROW_HEADS;) {
+  char *rest = name;
+  for (int i = 0; *rest != '\0' && i < NUMB_OF_ARROW_HEADS;) {
     uint32_t f = ARR_TYPE_NONE;
-    next = rest;
+    char *next = rest;
     rest = arrow_match_shape(next, &f);
     if (f == ARR_TYPE_NONE) {
       agwarningf("Arrow type \"%s\" unknown - ignoring\n", next);
@@ -239,10 +234,10 @@ static void arrow_match_name(char *name, uint32_t *flag) {
 }
 
 void arrow_flags(Agedge_t *e, uint32_t *sflag, uint32_t *eflag) {
-  char *attr;
-
   *sflag = ARR_TYPE_NONE;
   *eflag = agisdirected(agraphof(e)) ? ARR_TYPE_NORM : ARR_TYPE_NONE;
+
+  char *attr;
   if (E_dir && ((attr = agxget(e, E_dir)))[0]) {
     for (const arrowdir_t *arrowdir = Arrowdirs; arrowdir->dir; arrowdir++) {
       if (streq(attr, arrowdir->dir)) {
@@ -274,17 +269,14 @@ void arrow_flags(Agedge_t *e, uint32_t *sflag, uint32_t *eflag) {
 }
 
 static double arrow_length(edge_t *e, uint32_t flag) {
-  double length = 0.0;
-  int i;
-
-  const double penwidth = late_double(e, E_penwidth, 1.0, 0.0);
   const double arrowsize = late_double(e, E_arrowsz, 1.0, 0.0);
-
   if (arrowsize == 0) {
     return 0;
   }
 
-  for (i = 0; i < NUMB_OF_ARROW_HEADS; i++) {
+  const double penwidth = late_double(e, E_penwidth, 1.0, 0.0);
+  double length = 0.0;
+  for (int i = 0; i < NUMB_OF_ARROW_HEADS; i++) {
     /* we don't simply index with flag because arrowtypes are not necessarily
      * sorted */
     uint32_t f =
@@ -310,23 +302,22 @@ static bool inside(inside_t *inside_context, pointf p) {
 
 size_t arrowEndClip(edge_t *e, pointf *ps, size_t startp, size_t endp,
                     bezier *spl, uint32_t eflag) {
-  inside_t inside_context;
-  pointf sp[4];
-  double elen, elen2;
-
-  elen = arrow_length(e, eflag);
-  elen2 = elen * elen;
+  double elen = arrow_length(e, eflag);
+  double elen2 = elen * elen;
   spl->eflag = eflag;
   spl->ep = ps[endp + 3];
   if (endp > startp && DIST2(ps[endp], ps[endp + 3]) < elen2) {
     endp -= 3;
   }
+
+  pointf sp[4];
   sp[3] = ps[endp];
   sp[2] = ps[endp + 1];
   sp[1] = ps[endp + 2];
   sp[0] = spl->ep; /* ensure endpoint starts inside */
 
   if (elen > 0) {
+    inside_t inside_context;
     inside_context.a.p = &sp[0];
     inside_context.a.r = &elen2;
     bezier_clip(&inside_context, inside, sp, true);
@@ -341,23 +332,22 @@ size_t arrowEndClip(edge_t *e, pointf *ps, size_t startp, size_t endp,
 
 size_t arrowStartClip(edge_t *e, pointf *ps, size_t startp, size_t endp,
                       bezier *spl, uint32_t sflag) {
-  inside_t inside_context;
-  pointf sp[4];
-  double slen, slen2;
-
-  slen = arrow_length(e, sflag);
-  slen2 = slen * slen;
+  double slen = arrow_length(e, sflag);
+  double slen2 = slen * slen;
   spl->sflag = sflag;
   spl->sp = ps[startp];
   if (endp > startp && DIST2(ps[startp], ps[startp + 3]) < slen2) {
     startp += 3;
   }
+
+  pointf sp[4];
   sp[0] = ps[startp + 3];
   sp[1] = ps[startp + 2];
   sp[2] = ps[startp + 1];
   sp[3] = spl->sp; /* ensure endpoint starts inside */
 
   if (slen > 0) {
+    inside_t inside_context;
     inside_context.a.p = &sp[3];
     inside_context.a.r = &slen2;
     bezier_clip(&inside_context, inside, sp, false);
@@ -382,20 +372,19 @@ size_t arrowStartClip(edge_t *e, pointf *ps, size_t startp, size_t endp,
  */
 void arrowOrthoClip(edge_t *e, pointf *ps, size_t startp, size_t endp,
                     bezier *spl, uint32_t sflag, uint32_t eflag) {
-  pointf p, q, r, s, t;
-  double d, tlen, hlen, maxd;
-
   if (sflag && eflag &&
       endp ==
           startp) { /* handle special case of two arrows on a single segment */
-    p = ps[endp];
-    q = ps[endp + 3];
-    tlen = arrow_length(e, sflag);
-    hlen = arrow_length(e, eflag);
-    d = DIST(p, q);
+    pointf p = ps[endp];
+    pointf q = ps[endp + 3];
+    double tlen = arrow_length(e, sflag);
+    double hlen = arrow_length(e, eflag);
+    double d = DIST(p, q);
     if (hlen + tlen >= d) {
       hlen = tlen = d / 3.0;
     }
+
+    pointf s, t;
     if (p.y == q.y) { // horizontal segment
       s.y = t.y = p.y;
       if (p.x < q.x) {
@@ -421,15 +410,18 @@ void arrowOrthoClip(edge_t *e, pointf *ps, size_t startp, size_t endp,
     spl->eflag = eflag, spl->ep = q;
     return;
   }
+
   if (eflag) {
-    hlen = arrow_length(e, eflag);
-    p = ps[endp];
-    q = ps[endp + 3];
-    d = DIST(p, q);
-    maxd = 0.9 * d;
+    double hlen = arrow_length(e, eflag);
+    pointf p = ps[endp];
+    pointf q = ps[endp + 3];
+    double d = DIST(p, q);
+    double maxd = 0.9 * d;
     if (hlen >= maxd) { /* arrow too long */
       hlen = maxd;
     }
+
+    pointf r;
     if (p.y == q.y) { // horizontal segment
       r.y = p.y;
       if (p.x < q.x)
@@ -449,14 +441,16 @@ void arrowOrthoClip(edge_t *e, pointf *ps, size_t startp, size_t endp,
     spl->ep = q;
   }
   if (sflag) {
-    tlen = arrow_length(e, sflag);
-    p = ps[startp];
-    q = ps[startp + 3];
-    d = DIST(p, q);
-    maxd = 0.9 * d;
+    double tlen = arrow_length(e, sflag);
+    pointf p = ps[startp];
+    pointf q = ps[startp + 3];
+    double d = DIST(p, q);
+    double maxd = 0.9 * d;
     if (tlen >= maxd) { /* arrow too long */
       tlen = maxd;
     }
+
+    pointf r;
     if (p.y == q.y) { // horizontal segment
       r.y = p.y;
       if (p.x < q.x)
@@ -479,7 +473,6 @@ void arrowOrthoClip(edge_t *e, pointf *ps, size_t startp, size_t endp,
 
 // See https://www.w3.org/TR/SVG2/painting.html#TermLineJoinShape for the
 // terminology
-
 typedef struct {
   pointf points[3];
 } triangle;
@@ -494,6 +487,7 @@ static triangle miter_shape(pointf base_left, pointf P, pointf base_right,
     const triangle line_join_shape = {{P, P, P}};
     return line_join_shape;
   }
+
   const pointf A[] = {base_left, P};
   const double dxA = A[1].x - A[0].x;
   const double dyA = A[1].y - A[0].y;
@@ -553,15 +547,15 @@ static triangle miter_shape(pointf base_left, pointf P, pointf base_right,
 
 static pointf arrow_type_normal0(pointf p, pointf u, double penwidth,
                                  uint32_t flag, pointf *a) {
-  pointf q, v;
-  double arrowwidth;
-
-  arrowwidth = 0.35;
+  double arrowwidth = 0.35;
   if (penwidth > 4)
     arrowwidth *= penwidth / 4;
 
+  pointf v;
   v.x = -u.y * arrowwidth;
   v.y = u.x * arrowwidth;
+
+  pointf q;
   q.x = p.x + u.x;
   q.y = p.y + u.y;
 
@@ -659,7 +653,6 @@ static pointf arrow_type_normal(output_string *output, obj_state_t *obj,
   (void)arrowsize;
 
   pointf a[5];
-
   pointf q = arrow_type_normal0(p, u, penwidth, flag, a);
 
   if (flag & ARR_MOD_LEFT)
@@ -674,19 +667,17 @@ static pointf arrow_type_normal(output_string *output, obj_state_t *obj,
 
 static pointf arrow_type_crow0(pointf p, pointf u, double arrowsize,
                                double penwidth, uint32_t flag, pointf *a) {
-  pointf m, q, v, w;
-  double arrowwidth, shaftwidth;
-
-  arrowwidth = 0.45;
+  double arrowwidth = 0.45;
   if (penwidth > 4 * arrowsize && (flag & ARR_MOD_INV))
     arrowwidth *= penwidth / (4 * arrowsize);
 
-  shaftwidth = 0;
+  double shaftwidth = 0;
   if (penwidth > 1 && (flag & ARR_MOD_INV))
     shaftwidth =
         0.05 * (penwidth - 1) /
         arrowsize; /* arrowsize to cancel the arrowsize term already in u */
 
+  pointf m, q, v, w;
   v.x = -u.y * arrowwidth;
   v.y = u.x * arrowwidth;
   w.x = -u.y * shaftwidth;
@@ -831,7 +822,6 @@ static pointf arrow_type_crow(output_string *output, obj_state_t *obj, pointf p,
   (void)arrowsize;
 
   pointf a[9];
-
   pointf q = arrow_type_crow0(p, u, arrowsize, penwidth, flag, a);
   if (flag & ARR_MOD_LEFT)
     svg_polygon(output, obj, a, 5, 1);
@@ -850,14 +840,12 @@ static pointf arrow_type_gap(output_string *output, obj_state_t *obj, pointf p,
   (void)penwidth;
   (void)flag;
 
-  pointf q, a[2];
-
+  pointf q;
   q.x = p.x + u.x;
   q.y = p.y + u.y;
-  a[0] = p;
-  a[1] = q;
-  svg_polyline(output, obj, a, 2);
 
+  pointf a[2] = {p, q};
+  svg_polyline(output, obj, a, 2);
   return q;
 }
 
@@ -866,8 +854,7 @@ static pointf arrow_type_tee(output_string *output, obj_state_t *obj, pointf p,
                              uint32_t flag) {
   (void)arrowsize;
 
-  pointf m, n, q, v, a[4];
-
+  pointf m, n, q, v;
   v.x = -u.y;
   v.y = u.x;
   q.x = p.x + u.x;
@@ -897,6 +884,7 @@ static pointf arrow_type_tee(output_string *output, obj_state_t *obj, pointf p,
     q = sub_pointf(q, delta);
   }
 
+  pointf a[4];
   a[0].x = m.x + v.x;
   a[0].y = m.y + v.y;
   a[1].x = m.x - v.x;
@@ -919,7 +907,6 @@ static pointf arrow_type_tee(output_string *output, obj_state_t *obj, pointf p,
 
   // A polyline doesn't extend visually beyond its starting point, so we
   // return the starting point as it is, without taking penwidth into account
-
   return q;
 }
 
@@ -929,8 +916,7 @@ static pointf arrow_type_box(output_string *output, obj_state_t *obj, pointf p,
   (void)arrowsize;
   (void)penwidth;
 
-  pointf m, q, v, a[4];
-
+  pointf m, q, v;
   v.x = -u.y * 0.4;
   v.y = u.x * 0.4;
   m.x = p.x + u.x * 0.8;
@@ -939,7 +925,6 @@ static pointf arrow_type_box(output_string *output, obj_state_t *obj, pointf p,
   q.y = p.y + u.y;
 
   pointf delta = {0, 0};
-
   if (u.x != 0 || u.y != 0) {
     const pointf P = {-u.x, -u.y};
     // phi = angle of arrow
@@ -956,6 +941,7 @@ static pointf arrow_type_box(output_string *output, obj_state_t *obj, pointf p,
   q.x -= delta.x;
   q.y -= delta.y;
 
+  pointf a[4];
   a[0].x = p.x + v.x;
   a[0].y = p.y + v.y;
   a[1].x = p.x - v.x;
@@ -978,14 +964,12 @@ static pointf arrow_type_box(output_string *output, obj_state_t *obj, pointf p,
 
   // A polyline doesn't extend visually beyond its starting point, so we
   // return the starting point as it is, without taking penwidth into account
-
   return q;
 }
 
 static pointf arrow_type_diamond0(pointf p, pointf u, double penwidth,
                                   uint32_t flag, pointf *a) {
   pointf q, r, v;
-
   v.x = -u.y / 3.;
   v.y = u.x / 3.;
   r.x = p.x + u.x / 2.;
@@ -1020,9 +1004,7 @@ static pointf arrow_type_diamond0(pointf p, pointf u, double penwidth,
   a[3].y = r.y - v.y;
 
   // return the visual starting point of the arrow outline
-  q = sub_pointf(q, delta);
-
-  return q;
+  return sub_pointf(q, delta);
 }
 
 static pointf arrow_type_diamond(output_string *output, obj_state_t *obj,
@@ -1031,7 +1013,6 @@ static pointf arrow_type_diamond(output_string *output, obj_state_t *obj,
   (void)arrowsize;
 
   pointf a[5];
-
   pointf q = arrow_type_diamond0(p, u, penwidth, flag, a);
 
   if (flag & ARR_MOD_LEFT)
@@ -1050,11 +1031,7 @@ static pointf arrow_type_dot(output_string *output, obj_state_t *obj, pointf p,
   (void)arrowsize;
   (void)penwidth;
 
-  double r;
-  pointf AF[2];
-
-  r = hypot(u.x, u.y) / 2.;
-
+  double r = hypot(u.x, u.y) / 2.;
   pointf delta = {0, 0};
 
   if (u.x != 0 || u.y != 0) {
@@ -1069,6 +1046,7 @@ static pointf arrow_type_dot(output_string *output, obj_state_t *obj, pointf p,
     p.y -= delta.y;
   }
 
+  pointf AF[2];
   AF[0].x = p.x + u.x / 2. - r;
   AF[0].y = p.y + u.y / 2. - r;
   AF[1].x = p.x + u.x / 2. + r;
@@ -1080,7 +1058,6 @@ static pointf arrow_type_dot(output_string *output, obj_state_t *obj, pointf p,
   // return the visual starting point of the arrow outline
   q.x -= delta.x;
   q.y -= delta.y;
-
   return q;
 }
 
@@ -1094,10 +1071,8 @@ static pointf arrow_type_curve(output_string *output, obj_state_t *obj,
                                double penwidth, uint32_t flag) {
   (void)arrowsize;
 
-  double arrowwidth = penwidth > 4 ? 0.5 * penwidth / 4 : 0.5;
-  pointf q, v, w;
-  pointf AF[4], a[2];
 
+  pointf a[2];
   a[0] = p;
   if (!(flag & ARR_MOD_INV) && (u.x != 0 || u.y != 0)) {
     const pointf P = {-u.x, -u.y};
@@ -1111,6 +1086,8 @@ static pointf arrow_type_curve(output_string *output, obj_state_t *obj,
     p.y -= delta.y;
   }
 
+  double arrowwidth = penwidth > 4 ? 0.5 * penwidth / 4 : 0.5;
+  pointf q, v, w;
   q.x = p.x + u.x;
   q.y = p.y + u.y;
   v.x = -u.y * arrowwidth;
@@ -1119,6 +1096,7 @@ static pointf arrow_type_curve(output_string *output, obj_state_t *obj,
   w.y = -v.x;
   a[1] = q;
 
+  pointf AF[4];
   AF[0].x = p.x + v.x + w.x;
   AF[0].y = p.y + v.y + w.y;
 
@@ -1166,50 +1144,41 @@ static pointf arrow_gen_type(output_string *output, obj_state_t *obj, pointf p,
 }
 
 boxf arrow_bb(pointf p, pointf u, double arrowsize) {
-  double s;
-  boxf bb;
-  double ax, ay, bx, by, cx, cy, dx, dy;
-  double ux2, uy2;
-
   /* generate arrowhead vector */
   u.x -= p.x;
   u.y -= p.y;
   /* the EPSILONs are to keep this stable as length of u approaches 0.0 */
-  s = ARROW_LENGTH * arrowsize / (hypot(u.x, u.y) + EPSILON);
+  double s = ARROW_LENGTH * arrowsize / (hypot(u.x, u.y) + EPSILON);
   u.x += (u.x >= 0.0) ? EPSILON : -EPSILON;
   u.y += (u.y >= 0.0) ? EPSILON : -EPSILON;
   u.x *= s;
   u.y *= s;
 
   /* compute all 4 corners of rotated arrowhead bounding box */
-  ux2 = u.x / 2.;
-  uy2 = u.y / 2.;
-  ax = p.x - uy2;
-  ay = p.y - ux2;
-  bx = p.x + uy2;
-  by = p.y + ux2;
-  cx = ax + u.x;
-  cy = ay + u.y;
-  dx = bx + u.x;
-  dy = by + u.y;
+  double ux2 = u.x / 2.;
+  double uy2 = u.y / 2.;
+  double ax = p.x - uy2;
+  double ay = p.y - ux2;
+  double bx = p.x + uy2;
+  double by = p.y + ux2;
+  double cx = ax + u.x;
+  double cy = ay + u.y;
+  double dx = bx + u.x;
+  double dy = by + u.y;
 
   /* compute a right bb */
+  boxf bb;
   bb.UR.x = fmax(ax, fmax(bx, fmax(cx, dx)));
   bb.UR.y = fmax(ay, fmax(by, fmax(cy, dy)));
   bb.LL.x = fmin(ax, fmin(bx, fmin(cx, dx)));
   bb.LL.y = fmin(ay, fmin(by, fmin(cy, dy)));
-
   return bb;
 }
 
 void arrow_gen(output_string *output, obj_state_t *obj, emit_state_t emit_state,
                pointf p, pointf u, double arrowsize, double penwidth,
                uint32_t flag) {
-  double s;
-  int i;
-  emit_state_t old_emit_state;
-
-  old_emit_state = obj->emit_state;
+  emit_state_t old_emit_state = obj->emit_state;
   obj->emit_state = emit_state;
 
   /* Dotted and dashed styles on the arrowhead are ugly (dds) */
@@ -1222,14 +1191,14 @@ void arrow_gen(output_string *output, obj_state_t *obj, emit_state_t emit_state,
   u.x -= p.x;
   u.y -= p.y;
   /* the EPSILONs are to keep this stable as length of u approaches 0.0 */
-  s = ARROW_LENGTH / (hypot(u.x, u.y) + EPSILON);
+  double s = ARROW_LENGTH / (hypot(u.x, u.y) + EPSILON);
   u.x += (u.x >= 0.0) ? EPSILON : -EPSILON;
   u.y += (u.y >= 0.0) ? EPSILON : -EPSILON;
   u.x *= s;
   u.y *= s;
 
   /* the first arrow head - closest to node */
-  for (i = 0; i < NUMB_OF_ARROW_HEADS; i++) {
+  for (int i = 0; i < NUMB_OF_ARROW_HEADS; i++) {
     uint32_t f = (flag >> (i * BITS_PER_ARROW)) & ((1 << BITS_PER_ARROW) - 1);
     if (f == ARR_TYPE_NONE)
       break;
@@ -1249,13 +1218,13 @@ static double arrow_length_generic(double lenfact, double arrowsize,
 
 static double arrow_length_normal(double lenfact, double arrowsize,
                                   double penwidth, uint32_t flag) {
-  pointf a[5];
   // set arrow end point at origin
   const pointf p = {0, 0};
   // generate an arrowhead vector along x-axis
   const pointf u = {lenfact * arrowsize * ARROW_LENGTH, 0};
 
   // arrow start point
+  pointf a[5];
   pointf q = arrow_type_normal0(p, u, penwidth, flag, a);
 
   const pointf base1 = a[1];
@@ -1322,18 +1291,17 @@ static double arrow_length_box(double lenfact, double arrowsize,
   // The `box` arrow shape begins with a polyline which doesn't extend
   // visually beyond its starting point, so we only have to take penwidth
   // into account at the end point.
-
   return lenfact * arrowsize * ARROW_LENGTH + penwidth / 2;
 }
 
 static double arrow_length_diamond(double lenfact, double arrowsize,
                                    double penwidth, uint32_t flag) {
-  pointf a[5];
   // set arrow end point at origin
   const pointf p = {0, 0};
   // generate an arrowhead vector along x-axis
   const pointf u = {lenfact * arrowsize * ARROW_LENGTH, 0};
 
+  pointf a[5];
   // arrow start point
   pointf q = arrow_type_diamond0(p, u, penwidth, flag, a);
 
@@ -1383,12 +1351,12 @@ static double arrow_length_curve(double lenfact, double arrowsize,
 
 static double arrow_length_crow(double lenfact, double arrowsize,
                                 double penwidth, uint32_t flag) {
-  pointf a[9];
   // set arrow end point at origin
   const pointf p = {0, 0};
   // generate an arrowhead vector along x-axis
   const pointf u = {lenfact * arrowsize * ARROW_LENGTH, 0};
 
+  pointf a[9];
   // arrow start point
   pointf q = arrow_type_crow0(p, u, arrowsize, penwidth, flag, a);
 
