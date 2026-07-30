@@ -535,7 +535,7 @@ boxf compute_polygon_bb(pointf *A, size_t n) {
 /* svg_gradstyle
  * Outputs the SVG statements that define the gradient pattern
  */
-static int svg_gradstyle(output_string *output, obj_state_t *obj, boxf bb) {
+static int svg_define_linearGradient(output_string *output, obj_state_t *obj, boxf bb) {
   static int gradId;
   int id = gradId++;
 
@@ -575,18 +575,17 @@ static int svg_gradstyle(output_string *output, obj_state_t *obj, boxf bb) {
 /* svg_rgradstyle
  * Outputs the SVG statements that define the radial gradient pattern
  */
-static int svg_rgradstyle(output_string *output, obj_state_t *obj) {
-  double ifx, ify;
+static int svg_define_radialGradient(output_string *output, obj_state_t *obj) {
   static int rgradId;
   int id = rgradId++;
 
-  if (obj->gradient_angle == 0) {
-    ifx = ify = 50;
-  } else {
+  double ifx = 50, ify = 50;
+  if (obj->gradient_angle != 0) {
     double angle = obj->gradient_angle * M_PI / 180; // angle of gradient line
     ifx = round(50 * (1 + cos(angle)));
     ify = round(50 * (1 - sin(angle)));
   }
+
   out_puts(output, "<defs>\n<radialGradient id=\"");
   if (obj->id != NULL) {
     gvputs_xml(output, obj->id);
@@ -620,9 +619,9 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
   /* A[] contains 2 points: the center and corner. */
   if (filled == GRADIENT) {
     boxf bb = compute_polygon_bb(A, 2);
-    gid = svg_gradstyle(output, obj, bb);
+    gid = svg_define_linearGradient(output, obj, bb);
   } else if (filled == RGRADIENT) {
-    gid = svg_rgradstyle(output, obj);
+    gid = svg_define_radialGradient(output, obj);
   }
   out_puts(output, "<ellipse");
   svg_grstyle(output, obj, filled, gid);
@@ -646,9 +645,9 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
   int gid = 0;
   if (filled == GRADIENT) {
     boxf bb = compute_polygon_bb(A, n);
-    gid = svg_gradstyle(output, obj, bb);
+    gid = svg_define_linearGradient(output, obj, bb);
   } else if (filled == RGRADIENT) {
-    gid = svg_rgradstyle(output, obj);
+    gid = svg_define_radialGradient(output, obj);
   }
 
   out_puts(output, "<path");
@@ -677,7 +676,7 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
 
 void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
                  int filled) {
-  if (obj->pen != PEN_NONE) {
+  if (obj->pen == PEN_NONE) {
     return;
   }
 
@@ -693,9 +692,9 @@ void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
   int gid = 0;
   if (filled == GRADIENT) {
     boxf bb = compute_polygon_bb(A, n);
-    gid = svg_gradstyle(output, obj, bb);
+    gid = svg_define_linearGradient(output, obj, bb);
   } else if (filled == RGRADIENT) {
-    gid = svg_rgradstyle(output, obj);
+    gid = svg_define_radialGradient(output, obj);
   }
   out_puts(output, "<polygon");
   svg_grstyle(output, obj, filled, gid);
