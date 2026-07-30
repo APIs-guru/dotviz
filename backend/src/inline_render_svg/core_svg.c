@@ -542,16 +542,12 @@ static int svg_gradstyle(output_string *output, obj_state_t *obj, pointf *A,
 
   boxf bb = compute_polygon_bb(A, n);
 
-  double angle = obj->gradient_angle * M_PI / 180; // angle of gradient line
-  double sinAngle = sin(angle);
-  double cosAngle = cos(angle);
-  double dx = bb.UR.x - bb.LL.x;
-  double dy = bb.UR.y - bb.LL.y;
-
-  double x1 = bb.LL.x + (dx / 2) * (1 - cosAngle);
-  double x2 = bb.LL.x + (dx / 2) * (1 + cosAngle);
-  double y1 = bb.LL.y + (dy / 2) * (1 - sinAngle);
-  double y2 = bb.LL.y + (dy / 2) * (1 + sinAngle);
+  double angle = obj->gradient_angle * M_PI / 180;
+  pointf center = mid_pointf(bb.LL, bb.UR);
+  pointf half = {(bb.UR.x - bb.LL.x) / 2 * cos(angle),
+                 (bb.UR.y - bb.LL.y) / 2 * sin(angle)};
+  pointf start = sub_pointf(center, half);
+  pointf end = add_pointf(center, half);
 
   out_puts(output, "<defs>\n<linearGradient id=\"");
   if (obj->id != NULL) {
@@ -560,13 +556,13 @@ static int svg_gradstyle(output_string *output, obj_state_t *obj, pointf *A,
   }
   gvprintf(output, "l_%d\" gradientUnits=\"userSpaceOnUse\" ", id);
   out_puts(output, "x1=\"");
-  gvprintdouble(output, x1);
+  gvprintdouble(output, start.x);
   out_puts(output, "\" y1=\"");
-  gvprintdouble(output, -y1);
+  gvprintdouble(output, -start.y);
   out_puts(output, "\" x2=\"");
-  gvprintdouble(output, x2);
+  gvprintdouble(output, end.x);
   out_puts(output, "\" y2=\"");
-  gvprintdouble(output, -y2);
+  gvprintdouble(output, -end.y);
   out_puts(output, "\" >\n");
 
   svg_print_stop(output,
