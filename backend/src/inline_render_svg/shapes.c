@@ -3292,11 +3292,10 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
 
   bool filled = true;
   for (size_t j = 0; j < peripheries; j++) {
-    enum { A_size = 2 };
-    pointf AF[A_size] = {{0}};
+    pointf AF[2] = {{0}};
     for (size_t i = 0; i < sides; i++) {
       pointf P = vertices[i + j * sides];
-      if (i < A_size) {
+      if (i < 2) {
         AF[i].x = P.x + ND_coord(n).x;
         AF[i].y = P.y + ND_coord(n).y;
       }
