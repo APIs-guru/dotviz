@@ -623,45 +623,60 @@ static void rounded_draw(output_string *output, obj_state_t *obj, pointf *AF,
   free(B);
 }
 
+pointf add_x(pointf p, double x) { return (pointf){p.x + x, p.y}; }
+
+pointf add_y(pointf p, double y) { return (pointf){p.x, p.y + y}; }
+
 void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
                      int filled) {
-  pointf AF[4];
-  AF[0] = box.LL;
-  AF[1].x = box.UR.x;
-  AF[1].y = box.LL.y;
-  AF[2] = box.UR;
-  AF[3].x = box.LL.x;
-  AF[3].y = box.UR.y;
-
   /* rbconst is distance offset from a corner of the polygon.
    * It should be the same for every corner, and also never
    * bigger than one-third the length of a side.
    */
-  double d = fmin(box.UR.x - box.LL.x, box.UR.y - box.LL.y);
-  double rbconst = fmin(RBCONST, d / 3.0);
+  double dx = box.UR.x - box.LL.x;
+  double dy = box.UR.y - box.LL.y;
+  double rbconst = fmin(RBCONST, fmin(dx, dy) / 3.0);
 
   pointf pts[6 * 4 + 2];
-  for (size_t seg = 0; seg < 4; seg++) {
-    pointf p0 = AF[seg];
-    pointf p1;
-    if (seg + 1 < 4)
-      p1 = AF[seg + 1];
-    else
-      p1 = AF[0];
-    double dx = p1.x - p0.x;
-    double dy = p1.y - p0.y;
-    const double d = hypot(dx, dy);
-    double t = rbconst / d;
-
-    pointf* B = &pts[6 * seg];
-    B[0] = interpolate_pointf(RBCURVE * t, p0, p1);
-    B[1] = B[2] = interpolate_pointf(t, p0, p1);
-    B[3] = B[4] = interpolate_pointf(1.0 - t, p0, p1);
-    B[5] = interpolate_pointf(1.0 - RBCURVE * t, p0, p1);
+  {
+    pointf p = box.LL;
+    double t = rbconst / dx;
+    pointf *B = &pts[0];
+    B[0] = add_x(p, dx * RBCURVE * t);
+    B[1] = B[2] = add_x(p, dx * t);
+    B[3] = B[4] = add_x(p, dx * (1.0 - t));
+    B[5] = add_x(p, dx * (1.0 - RBCURVE * t));
+  }
+  {
+    pointf p = {.x = box.UR.x, .y = box.LL.y};
+    double t = rbconst / dy;
+    pointf *B = &pts[6];
+    B[0] = add_y(p, dy * RBCURVE * t);
+    B[1] = B[2] = add_y(p, dy * t);
+    B[3] = B[4] = add_y(p, dy * (1.0 - t));
+    B[5] = add_y(p, dy * (1.0 - RBCURVE * t));
+  }
+  {
+    pointf p = box.UR;
+    double t = rbconst / dx;
+    pointf *B = &pts[6 * 2];
+    B[0] = add_x(p, -dx * RBCURVE * t);
+    B[1] = B[2] = add_x(p, -dx * t);
+    B[3] = B[4] = add_x(p, -dx * (1.0 - t));
+    B[5] = add_x(p, -dx * (1.0 - RBCURVE * t));
+  }
+  {
+    pointf p = {.x = box.LL.x, .y = box.UR.y};
+    double t = rbconst / dy;
+    pointf *B = &pts[6 * 3];
+    B[0] = add_y(p, -dy * RBCURVE * t);
+    B[1] = B[2] = add_y(p, -dy * t);
+    B[3] = B[4] = add_y(p, -dy * (1.0 - t));
+    B[5] = add_y(p, -dy * (1.0 - RBCURVE * t));
   }
   pts[24] = pts[0];
   pts[25] = pts[1];
-  svg_bezier(output, obj, pts + 1, 25, filled);
+  svg_bezier(output, obj, &pts[1], 25, filled);
 }
 
 /**
