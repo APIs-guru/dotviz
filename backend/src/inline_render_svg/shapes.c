@@ -637,42 +637,44 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
   double dy = box.UR.y - box.LL.y;
   double rbconst = fmin(RBCONST, fmin(dx, dy) / 3.0);
 
+  double x = box.LL.x;
+  double y = box.LL.y;
   pointf pts[6 * 4 + 2];
   {
-    pointf p = box.LL;
-    double t = rbconst / dx;
+    pointf p = {x, y};
     pointf *B = &pts[0];
-    B[0] = add_x(p, dx * RBCURVE * t);
-    B[1] = B[2] = add_x(p, dx * t);
-    B[3] = B[4] = add_x(p, dx * (1.0 - t));
-    B[5] = add_x(p, dx * (1.0 - RBCURVE * t));
+    B[0] = add_x(p, rbconst * RBCURVE);
+    B[1] = B[2] = add_x(p, rbconst);
+    B[3] = B[4] = add_x(p, dx - rbconst);
+    B[5] = add_x(p, dx - rbconst * RBCURVE);
+    x += dx;
   }
   {
-    pointf p = {.x = box.UR.x, .y = box.LL.y};
-    double t = rbconst / dy;
+    pointf p = {x, y};
     pointf *B = &pts[6];
-    B[0] = add_y(p, dy * RBCURVE * t);
-    B[1] = B[2] = add_y(p, dy * t);
-    B[3] = B[4] = add_y(p, dy * (1.0 - t));
-    B[5] = add_y(p, dy * (1.0 - RBCURVE * t));
+    B[0] = add_y(p, rbconst * RBCURVE);
+    B[1] = B[2] = add_y(p, rbconst);
+    B[3] = B[4] = add_y(p, dy - rbconst);
+    B[5] = add_y(p, dy - rbconst * RBCURVE);
+    y += dy;
   }
   {
-    pointf p = box.UR;
-    double t = rbconst / dx;
+    pointf p = {x, y};
     pointf *B = &pts[6 * 2];
-    B[0] = add_x(p, -dx * RBCURVE * t);
-    B[1] = B[2] = add_x(p, -dx * t);
-    B[3] = B[4] = add_x(p, -dx * (1.0 - t));
-    B[5] = add_x(p, -dx * (1.0 - RBCURVE * t));
+    B[0] = add_x(p, -rbconst * RBCURVE);
+    B[1] = B[2] = add_x(p, -rbconst);
+    B[3] = B[4] = add_x(p, -dx + rbconst);
+    B[5] = add_x(p, -dx + rbconst * RBCURVE);
+    x -= dx;
   }
   {
-    pointf p = {.x = box.LL.x, .y = box.UR.y};
-    double t = rbconst / dy;
+    pointf p = {x, y};
     pointf *B = &pts[6 * 3];
-    B[0] = add_y(p, -dy * RBCURVE * t);
-    B[1] = B[2] = add_y(p, -dy * t);
-    B[3] = B[4] = add_y(p, -dy * (1.0 - t));
-    B[5] = add_y(p, -dy * (1.0 - RBCURVE * t));
+    B[0] = add_y(p, -rbconst * RBCURVE);
+    B[1] = B[2] = add_y(p, -rbconst);
+    B[3] = B[4] = add_y(p, -dy + rbconst);
+    B[5] = add_y(p, -dy + rbconst * RBCURVE);
+    y -= dy;
   }
   pts[24] = pts[0];
   pts[25] = pts[1];
