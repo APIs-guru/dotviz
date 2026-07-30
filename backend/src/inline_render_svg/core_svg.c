@@ -535,12 +535,9 @@ boxf compute_polygon_bb(pointf *A, size_t n) {
 /* svg_gradstyle
  * Outputs the SVG statements that define the gradient pattern
  */
-static int svg_gradstyle(output_string *output, obj_state_t *obj, pointf *A,
-                         size_t n) {
+static int svg_gradstyle(output_string *output, obj_state_t *obj, boxf bb) {
   static int gradId;
   int id = gradId++;
-
-  boxf bb = compute_polygon_bb(A, n);
 
   double angle = obj->gradient_angle * M_PI / 180;
   pointf center = mid_pointf(bb.LL, bb.UR);
@@ -622,7 +619,8 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
 
   /* A[] contains 2 points: the center and corner. */
   if (filled == GRADIENT) {
-    gid = svg_gradstyle(output, obj, A, 2);
+    boxf bb = compute_polygon_bb(A, 2);
+    gid = svg_gradstyle(output, obj, bb);
   } else if (filled == RGRADIENT) {
     gid = svg_rgradstyle(output, obj);
   }
@@ -647,7 +645,8 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
   int gid = 0;
 
   if (filled == GRADIENT) {
-    gid = svg_gradstyle(output, obj, A, n);
+    boxf bb = compute_polygon_bb(A, n);
+    gid = svg_gradstyle(output, obj, bb);
   } else if (filled == RGRADIENT) {
     gid = svg_rgradstyle(output, obj);
   }
@@ -689,7 +688,8 @@ void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
     }
     int gid = 0;
     if (filled == GRADIENT) {
-      gid = svg_gradstyle(output, obj, A, n);
+      boxf bb = compute_polygon_bb(A, n);
+      gid = svg_gradstyle(output, obj, bb);
     } else if (filled == RGRADIENT) {
       gid = svg_rgradstyle(output, obj);
     }
