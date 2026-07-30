@@ -510,7 +510,7 @@ static void svg_print_stop(output_string *output, double offset,
  * defines the gradient direction By default, this assumes a left-hand
  * coordinate system (for svg)
  */
-void my_get_gradient_points(pointf *A, pointf *G, size_t n, double angle) {
+boxf compute_polygon_bb(pointf *A, size_t n) {
   pointf min, max;
   if (n == 2) {
     double rx = A[1].x - A[0].x;
@@ -529,16 +529,7 @@ void my_get_gradient_points(pointf *A, pointf *G, size_t n, double angle) {
       max.y = MAX(A[i].y, max.y);
     }
   }
-  
-  double dx = max.x - min.x;
-  double dy = max.y - min.y;
-  double sinAngle = sin(angle);
-  double cosAngle = cos(angle);
-
-  G[0].y = min.y + (dy / 2) * (1 - sinAngle);
-  G[1].y = min.y + (dy / 2) * (1 + sinAngle);
-  G[0].x = min.x + (dx / 2) * (1 - cosAngle);
-  G[1].x = min.x + (dx / 2) * (1 + cosAngle);
+  return (boxf){.LL = min, .UR = max};
 }
 
 /* svg_gradstyle
@@ -546,13 +537,21 @@ void my_get_gradient_points(pointf *A, pointf *G, size_t n, double angle) {
  */
 static int svg_gradstyle(output_string *output, obj_state_t *obj, pointf *A,
                          size_t n) {
-  pointf G[2];
   static int gradId;
   int id = gradId++;
 
+  boxf bb = compute_polygon_bb(A, n);
+
   double angle = obj->gradient_angle * M_PI / 180; // angle of gradient line
-  G[0].x = G[0].y = G[1].x = G[1].y = 0.;
-  my_get_gradient_points(A, G, n, angle); // get points on gradient line
+  double sinAngle = sin(angle);
+  double cosAngle = cos(angle);
+  double dx = bb.UR.x - bb.LL.x;
+  double dy = bb.UR.y - bb.LL.y;
+
+  double x1 = bb.LL.x + (dx / 2) * (1 - cosAngle);
+  double x2 = bb.LL.x + (dx / 2) * (1 + cosAngle);
+  double y1 = bb.LL.y + (dy / 2) * (1 - sinAngle);
+  double y2 = bb.LL.y + (dy / 2) * (1 + sinAngle);
 
   out_puts(output, "<defs>\n<linearGradient id=\"");
   if (obj->id != NULL) {
@@ -561,13 +560,13 @@ static int svg_gradstyle(output_string *output, obj_state_t *obj, pointf *A,
   }
   gvprintf(output, "l_%d\" gradientUnits=\"userSpaceOnUse\" ", id);
   out_puts(output, "x1=\"");
-  gvprintdouble(output, G[0].x);
+  gvprintdouble(output, x1);
   out_puts(output, "\" y1=\"");
-  gvprintdouble(output, -G[0].y);
+  gvprintdouble(output, -y1);
   out_puts(output, "\" x2=\"");
-  gvprintdouble(output, G[1].x);
+  gvprintdouble(output, x2);
   out_puts(output, "\" y2=\"");
-  gvprintdouble(output, -G[1].y);
+  gvprintdouble(output, -y2);
   out_puts(output, "\" >\n");
 
   svg_print_stop(output,
