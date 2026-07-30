@@ -508,12 +508,10 @@ static void svg_print_stop(output_string *output, double offset,
  * If isRadial is true,sets the inner radius to half the distance to the min
  * point; else uses the angle parameter to identify two points on a line that
  * defines the gradient direction By default, this assumes a left-hand
- * coordinate system (for svg); if RHS = 2 flag is set, use standard coordinate
- * system.
+ * coordinate system (for svg)
  */
 void my_get_gradient_points(pointf *A, pointf *G, size_t n, double angle) {
-  pointf min, max, center;
-
+  pointf min, max;
   if (n == 2) {
     double rx = A[1].x - A[0].x;
     double ry = A[1].y - A[0].y;
@@ -531,15 +529,17 @@ void my_get_gradient_points(pointf *A, pointf *G, size_t n, double angle) {
       max.y = MAX(A[i].y, max.y);
     }
   }
-  center.x = min.x + (max.x - min.x) / 2;
-  center.y = min.y + (max.y - min.y) / 2;
+  double dx = max.x - min.x;
+  double dy = max.y - min.y;
 
-  double half_x = max.x - center.x;
-  double cosa = cos(angle);
-  G[0].y = -center.y + (max.y - center.y) * sin(angle);
-  G[1].y = -center.y - (center.y - min.y) * sin(angle);
-  G[0].x = center.x - half_x * cosa;
-  G[1].x = center.x + half_x * cosa;
+  pointf center;
+  center.x = min.x + dx / 2;
+  center.y = min.y + dy / 2;
+
+  G[0].y = -center.y + (dy/2) * sin(angle);
+  G[1].y = -center.y - (dy/2) * sin(angle);
+  G[0].x = center.x - (dx / 2) * cos(angle);
+  G[1].x = center.x + (dx / 2) * cos(angle);
 }
 
 /* svg_gradstyle
