@@ -503,6 +503,45 @@ static void svg_print_stop(output_string *output, double offset,
   out_puts(output, ";\"/>\n");
 }
 
+/** Evaluates the extreme points of an ellipse or polygon
+ * Determines the point at the center of the extreme points
+ * If isRadial is true,sets the inner radius to half the distance to the min
+ * point; else uses the angle parameter to identify two points on a line that
+ * defines the gradient direction By default, this assumes a left-hand
+ * coordinate system (for svg); if RHS = 2 flag is set, use standard coordinate
+ * system.
+ */
+void my_get_gradient_points(pointf *A, pointf *G, size_t n, double angle) {
+  pointf min, max, center;
+
+  if (n == 2) {
+    double rx = A[1].x - A[0].x;
+    double ry = A[1].y - A[0].y;
+    min.x = A[0].x - rx;
+    max.x = A[0].x + rx;
+    min.y = A[0].y - ry;
+    max.y = A[0].y + ry;
+  } else {
+    min.x = max.x = A[0].x;
+    min.y = max.y = A[0].y;
+    for (size_t i = 0; i < n; i++) {
+      min.x = MIN(A[i].x, min.x);
+      min.y = MIN(A[i].y, min.y);
+      max.x = MAX(A[i].x, max.x);
+      max.y = MAX(A[i].y, max.y);
+    }
+  }
+  center.x = min.x + (max.x - min.x) / 2;
+  center.y = min.y + (max.y - min.y) / 2;
+
+  double half_x = max.x - center.x;
+  double cosa = cos(angle);
+  G[0].y = -center.y + (max.y - center.y) * sin(angle);
+  G[1].y = -center.y - (center.y - min.y) * sin(angle);
+  G[0].x = center.x - half_x * cosa;
+  G[1].x = center.x + half_x * cosa;
+}
+
 /* svg_gradstyle
  * Outputs the SVG statements that define the gradient pattern
  */
@@ -514,7 +553,7 @@ static int svg_gradstyle(output_string *output, obj_state_t *obj, pointf *A,
 
   double angle = obj->gradient_angle * M_PI / 180; // angle of gradient line
   G[0].x = G[0].y = G[1].x = G[1].y = 0.;
-  get_gradient_points(A, G, n, angle, 0); // get points on gradient line
+  my_get_gradient_points(A, G, n, angle); // get points on gradient line
 
   out_puts(output, "<defs>\n<linearGradient id=\"");
   if (obj->id != NULL) {
