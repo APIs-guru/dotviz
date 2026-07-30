@@ -642,14 +642,15 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
   if (obj->pen == PEN_NONE) {
     return;
   }
-  int gid = 0;
 
+  int gid = 0;
   if (filled == GRADIENT) {
     boxf bb = compute_polygon_bb(A, n);
     gid = svg_gradstyle(output, obj, bb);
   } else if (filled == RGRADIENT) {
     gid = svg_rgradstyle(output, obj);
   }
+
   out_puts(output, "<path");
   if (obj->labeledgealigned) {
     out_puts(output, " id=\"");
@@ -676,41 +677,43 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
 
 void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
                  int filled) {
+  if (obj->pen != PEN_NONE) {
+    return;
+  }
+
   int noPoly = 0;
   gvcolor_t save_pencolor;
 
-  if (obj->pen != PEN_NONE) {
-    if (filled & NO_POLY) {
-      noPoly = 1;
-      filled &= ~NO_POLY;
-      save_pencolor = obj->pencolor;
-      obj->pencolor = obj->fillcolor;
-    }
-    int gid = 0;
-    if (filled == GRADIENT) {
-      boxf bb = compute_polygon_bb(A, n);
-      gid = svg_gradstyle(output, obj, bb);
-    } else if (filled == RGRADIENT) {
-      gid = svg_rgradstyle(output, obj);
-    }
-    out_puts(output, "<polygon");
-    svg_grstyle(output, obj, filled, gid);
-    out_puts(output, " points=\"");
-    for (size_t i = 0; i < n; i++) {
-      gvprintdouble(output, A[i].x);
-      out_putc(output, ',');
-      gvprintdouble(output, -A[i].y);
-      out_putc(output, ' ');
-    }
-    /* repeat the first point because Adobe SVG is broken */
-    gvprintdouble(output, A[0].x);
-    out_putc(output, ',');
-    gvprintdouble(output, -A[0].y);
-    out_puts(output, "\"/>\n");
-
-    if (noPoly)
-      obj->pencolor = save_pencolor;
+  if (filled & NO_POLY) {
+    noPoly = 1;
+    filled &= ~NO_POLY;
+    save_pencolor = obj->pencolor;
+    obj->pencolor = obj->fillcolor;
   }
+  int gid = 0;
+  if (filled == GRADIENT) {
+    boxf bb = compute_polygon_bb(A, n);
+    gid = svg_gradstyle(output, obj, bb);
+  } else if (filled == RGRADIENT) {
+    gid = svg_rgradstyle(output, obj);
+  }
+  out_puts(output, "<polygon");
+  svg_grstyle(output, obj, filled, gid);
+  out_puts(output, " points=\"");
+  for (size_t i = 0; i < n; i++) {
+    gvprintdouble(output, A[i].x);
+    out_putc(output, ',');
+    gvprintdouble(output, -A[i].y);
+    out_putc(output, ' ');
+  }
+  /* repeat the first point because Adobe SVG is broken */
+  gvprintdouble(output, A[0].x);
+  out_putc(output, ',');
+  gvprintdouble(output, -A[0].y);
+  out_puts(output, "\"/>\n");
+
+  if (noPoly)
+    obj->pencolor = save_pencolor;
 }
 
 void svg_box(output_string *output, obj_state_t *obj, boxf B, int filled) {
