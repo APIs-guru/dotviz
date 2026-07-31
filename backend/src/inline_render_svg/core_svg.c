@@ -241,43 +241,29 @@ void svg_print_class(output_string *output, char *kind, void *obj) {
   out_putc(output, '"');
 }
 
-/* svg_print_paint assumes the caller will set the opacity if the alpha channel
- * is greater than 0 and less than 255
- */
-static void svg_print_paint(output_string *output, gvcolor_t color) {
+static bool isTransparent(gvcolor_t color) {
   switch (color.type) {
   case COLOR_STRING:
-    if (!strcmp(color.u.string, "transparent"))
-      out_puts(output, "none");
-    else
-      out_puts(output, color.u.string);
-    break;
+    return !strcmp(color.u.string, "transparent");
   case RGBA_BYTE:
-    if (color.u.rgba[3] == 0) /* transparent */
-      out_puts(output, "none");
-    else
-      gvprintf(output, "#%02x%02x%02x", color.u.rgba[0], color.u.rgba[1],
-               color.u.rgba[2]);
-    break;
+    return color.u.rgba[3] == 0;
   default:
-    UNREACHABLE(); // internal error
+    return false;
   }
 }
 
-/* svg_print_gradient_color assumes the caller will set the opacity if the
- * alpha channel is less than 255.
- *
- * "transparent" in SVG 2 gradients is considered to be black with 0 opacity,
- * so for compatibility with SVG 1.1 output we use black when the color string
- * is transparent and assume the caller will also check and set opacity 0.
+/* svg_print_paint assumes the caller will set the opacity if the alpha channel
+ * is greater than 0 and less than 255
  */
-static void svg_print_gradient_color(output_string *output, gvcolor_t color) {
+static void svg_print_color(output_string *output, gvcolor_t color) {
+  if (isTransparent(color)) {
+    out_puts(output, "none");
+    return;
+  }
+
   switch (color.type) {
   case COLOR_STRING:
-    if (!strcmp(color.u.string, "transparent"))
-      out_puts(output, "black");
-    else
-      out_puts(output, color.u.string);
+    out_puts(output, color.u.string);
     break;
   case RGBA_BYTE:
     gvprintf(output, "#%02x%02x%02x", color.u.rgba[0], color.u.rgba[1],
@@ -291,31 +277,36 @@ static void svg_print_gradient_color(output_string *output, gvcolor_t color) {
 static void svg_grstyle(output_string *output, obj_state_t *obj, int filled,
                         int gid) {
   out_puts(output, " fill=\"");
-  if (filled == GRADIENT) {
+  switch (filled) {
+  case 0:
+    out_puts(output, "none");
+    break;
+  case GRADIENT:
     out_puts(output, "url(#");
     if (obj->id != NULL) {
       gvputs_xml(output, obj->id);
       out_putc(output, '_');
     }
     gvprintf(output, "l_%d)", gid);
-  } else if (filled == RGRADIENT) {
+    break;
+  case RGRADIENT:
     out_puts(output, "url(#");
     if (obj->id != NULL) {
       gvputs_xml(output, obj->id);
       out_putc(output, '_');
     }
     gvprintf(output, "r_%d)", gid);
-  } else if (filled) {
-    svg_print_paint(output, obj->fillcolor);
+    break;
+  default:
+    svg_print_color(output, obj->fillcolor);
     if (obj->fillcolor.type == RGBA_BYTE && obj->fillcolor.u.rgba[3] > 0 &&
         obj->fillcolor.u.rgba[3] < 255)
       gvprintf(output, "\" fill-opacity=\"%f",
                (float)obj->fillcolor.u.rgba[3] / 255.0);
-  } else {
-    out_puts(output, "none");
   }
+
   out_puts(output, "\" stroke=\"");
-  svg_print_paint(output, obj->pencolor);
+  svg_print_color(output, obj->pencolor);
   // will `gvprintdouble` output something different from `PENWIDTH_NORMAL`?
   const double GVPRINT_DOUBLE_THRESHOLD = 0.005;
   if (!(fabs(obj->penwidth - PENWIDTH_NORMAL) < GVPRINT_DOUBLE_THRESHOLD)) {
@@ -502,7 +493,15 @@ static void svg_print_stop(output_string *output, double offset,
     out_puts(output, "<stop offset=\"1\" style=\"stop-color:");
   else
     gvprintf(output, "<stop offset=\"%.03f\" style=\"stop-color:", offset);
-  svg_print_gradient_color(output, color);
+
+  // "transparent" in SVG 2 gradients is considered to be black with 0 opacity,
+  // so for compatibility with SVG 1.1 output we use black when the color string
+  // is transparent and assume the caller will also check and set opacity 0.
+  if (isTransparent(color))
+    out_puts(output, "black");
+  else
+    svg_print_color(output, color);
+
   out_puts(output, ";stop-opacity:");
   if (color.type == RGBA_BYTE && color.u.rgba[3] < 255)
     gvprintf(output, "%f", (float)color.u.rgba[3] / 255.0);
