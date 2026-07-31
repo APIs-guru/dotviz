@@ -376,15 +376,8 @@ void svg_begin_anchor(output_string *output, char *href, char *tooltip,
 
 void svg_end_anchor(output_string *output) { out_puts(output, "</a>\n</g>\n"); }
 
-// GD_fontnames(job->gvc->g)
 void svg_textspan(output_string *output, fontname_kind fontnames,
                   obj_state_t *obj, pointf p, textspan_t *span) {
-  if (!(span->str && span->str[0] &&
-        (!obj /* because of xdgen non-conformity */
-         || obj->pen != PEN_NONE))) {
-    return;
-  }
-
   out_puts(output, "<text xml:space=\"preserve\"");
   switch (span->just) {
   case 'l':
