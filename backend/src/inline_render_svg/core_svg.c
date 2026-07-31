@@ -70,6 +70,27 @@ imagepos_t get_imagepos(char *s) {
   return IMAGEPOS_MIDDLE_CENTER;
 }
 
+boxf compute_polygon_bb(pointf *A, size_t n) {
+  assert(n > 2);
+  pointf min = A[0];
+  pointf max = A[0];
+  for (size_t i = 1; i < n; ++i) {
+    pointf p = A[i];
+    if (p.x < min.x) {
+      min.x = p.x;
+    } else if (p.x > max.x) {
+      max.x = p.x;
+    }
+
+    if (p.y < min.y) {
+      min.y = p.y;
+    } else if (p.y > max.y) {
+      max.y = p.y;
+    }
+  }
+  return (boxf){.LL = min, .UR = max};
+}
+
 extern point get_dimensions_by_name(const char *name, pointf dpi);
 /* gvrender_usershape:
  * Scale image to fill polygon bounding box accordingus to "imagescale",
@@ -87,11 +108,7 @@ void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
     return;
 
   /* compute bb of polygon */
-  boxf b; /* target box */
-  b.LL = b.UR = a[0];
-  for (size_t i = 1; i < n; i++) {
-    expandbp(&b, a[i]);
-  }
+  boxf b = compute_polygon_bb(a, n);
 
   double pw = b.UR.x - b.LL.x;
   double ph = b.UR.y - b.LL.y;
@@ -367,7 +384,6 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
          || obj->pen != PEN_NONE))) {
     return;
   }
-  unsigned int flags;
 
   out_puts(output, "<text xml:space=\"preserve\"");
   switch (span->just) {
@@ -427,7 +443,9 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
       gvprintf(output, " font-style=\"%s\"", style);
   } else
     gvprintf(output, " font-family=\"%s\"", span->font->name);
-  if ((flags = span->font->flags)) {
+
+  unsigned int flags = span->font->flags;
+  if (flags != 0) {
     if ((flags & HTML_BF) && !weight)
       out_puts(output, " font-weight=\"bold\"");
     if ((flags & HTML_IF) && !style)
@@ -501,27 +519,6 @@ static void svg_print_stop(output_string *output, double offset,
   else
     out_puts(output, "1.");
   out_puts(output, ";\"/>\n");
-}
-
-boxf compute_polygon_bb(pointf *A, size_t n) {
-  assert(n > 2);
-  pointf min = A[0];
-  pointf max = A[0];
-  for (size_t i = 1; i < n; ++i) {
-    pointf p = A[i];
-    if (p.x < min.x) {
-      min.x = p.x;
-    } else if (p.x > max.x) {
-      max.x = p.x;
-    }
-
-    if (p.y < min.y) {
-      min.y = p.y;
-    } else if (p.y > max.y) {
-      max.y = p.y;
-    }
-  }
-  return (boxf){.LL = min, .UR = max};
 }
 
 /* svg_gradstyle
