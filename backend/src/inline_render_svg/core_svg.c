@@ -503,30 +503,22 @@ static void svg_print_stop(output_string *output, double offset,
   out_puts(output, ";\"/>\n");
 }
 
-/** Evaluates the extreme points of an ellipse or polygon
- * Determines the point at the center of the extreme points
- * If isRadial is true,sets the inner radius to half the distance to the min
- * point; else uses the angle parameter to identify two points on a line that
- * defines the gradient direction By default, this assumes a left-hand
- * coordinate system (for svg)
- */
 boxf compute_polygon_bb(pointf *A, size_t n) {
-  pointf min, max;
-  if (n == 2) {
-    double rx = A[1].x - A[0].x;
-    double ry = A[1].y - A[0].y;
-    min.x = A[0].x - rx;
-    max.x = A[0].x + rx;
-    min.y = A[0].y - ry;
-    max.y = A[0].y + ry;
-  } else {
-    min.x = max.x = A[0].x;
-    min.y = max.y = A[0].y;
-    for (size_t i = 0; i < n; i++) {
-      min.x = MIN(A[i].x, min.x);
-      min.y = MIN(A[i].y, min.y);
-      max.x = MAX(A[i].x, max.x);
-      max.y = MAX(A[i].y, max.y);
+  assert(n > 2);
+  pointf min = A[0];
+  pointf max = A[0];
+  for (size_t i = 1; i < n; ++i) {
+    pointf p = A[i];
+    if (p.x < min.x) {
+      min.x = p.x;
+    } else if (p.x > max.x) {
+      max.x = p.x;
+    }
+
+    if (p.y < min.y) {
+      min.y = p.y;
+    } else if (p.y > max.y) {
+      max.y = p.y;
     }
   }
   return (boxf){.LL = min, .UR = max};
@@ -535,7 +527,8 @@ boxf compute_polygon_bb(pointf *A, size_t n) {
 /* svg_gradstyle
  * Outputs the SVG statements that define the gradient pattern
  */
-static int svg_define_linearGradient(output_string *output, obj_state_t *obj, boxf bb) {
+static int svg_define_linearGradient(output_string *output, obj_state_t *obj,
+                                     boxf bb) {
   static int gradId;
   int id = gradId++;
 
@@ -618,7 +611,15 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
 
   /* A[] contains 2 points: the center and corner. */
   if (filled == GRADIENT) {
-    boxf bb = compute_polygon_bb(A, 2);
+    double rx = A[1].x - A[0].x;
+    double ry = A[1].y - A[0].y;
+
+    boxf bb;
+    bb.LL.x = A[0].x - rx;
+    bb.UR.x = A[0].x + rx;
+    bb.LL.y = A[0].y - ry;
+    bb.UR.y = A[0].y + ry;
+
     gid = svg_define_linearGradient(output, obj, bb);
   } else if (filled == RGRADIENT) {
     gid = svg_define_radialGradient(output, obj);
