@@ -13,8 +13,8 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
                 int filled);
 void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
                  int filled);
-void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
-                 int filled);
+void svg_ellipse(output_string *output, obj_state_t *obj, pointf center,
+                 pointf radius, int filled);
 void svg_polyline(output_string *output, obj_state_t *obj, pointf *A, size_t n);
 void svg_textspan(output_string *output, fontname_kind fontnames,
                   obj_state_t *obj, pointf p, textspan_t *span);

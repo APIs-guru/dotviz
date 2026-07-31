@@ -596,14 +596,11 @@ static int svg_define_radialGradient(output_string *output, obj_state_t *obj) {
   return id;
 }
 
-void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
-                 int filled) {
+void svg_ellipse(output_string *output, obj_state_t *obj, pointf center,
+                 pointf radius, int filled) {
   if (obj->pen == PEN_NONE) {
     return;
   }
-
-  pointf center = mid_pointf(pf[0], pf[1]);
-  pointf radius = {pf[1].x - center.x, pf[1].y - center.y};
 
   int gid = 0;
   /* A[] contains 2 points: the center and corner. */
