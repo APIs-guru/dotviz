@@ -391,7 +391,6 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
     out_puts(output, " text-anchor=\"middle\"");
     break;
   }
-  p.y += span->yoffset_centerline;
   if (!obj->labeledgealigned) {
     out_puts(output, " x=\"");
     gvprintdouble(output, p.x);

@@ -229,21 +229,21 @@ void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
   fontname_kind fontnames = GD_fontnames(safe_layer->safe_job->graph);
   for (size_t i = 0; i < lp->u.txt.nspans; i++) {
     textspan_t *span = &lp->u.txt.span[i];
-
-    pointf p = {.x = lp->pos.x, .y = y};
-    switch (span->just) {
-    case 'l':
-      p.x -= lp->space.x / 2.0;
-      break;
-    case 'r':
-      p.x += lp->space.x / 2.0;
-      break;
-    default:
-    case 'n':
-      break;
-    }
-
     if (span->str && span->str[0] && obj->pen != PEN_NONE) {
+      pointf p = {.x = lp->pos.x, .y = y};
+      switch (span->just) {
+      case 'l':
+        p.x -= lp->space.x / 2.0;
+        break;
+      case 'r':
+        p.x += lp->space.x / 2.0;
+        break;
+      default:
+      case 'n':
+        break;
+      }
+      p.y += span->yoffset_centerline;
+
       svg_textspan(output, fontnames, obj, p, span);
     }
 

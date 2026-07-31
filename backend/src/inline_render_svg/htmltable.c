@@ -162,6 +162,7 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
 
       if (tl.str && tl.str[0] && obj->pen != PEN_NONE) {
         pointf p_ = {.x = x, .y = y};
+        p_.y += tl.yoffset_centerline;
         svg_textspan(output, fontnames, obj, p_, &tl);
       }
 
