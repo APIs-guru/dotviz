@@ -243,8 +243,6 @@ void svg_print_class(output_string *output, char *kind, void *obj) {
 
 static bool isTransparent(gvcolor_t color) {
   switch (color.type) {
-  case COLOR_STRING:
-    return !strcmp(color.u.string, "transparent");
   case RGBA_BYTE:
     return color.u.rgba[3] == 0;
   default:
@@ -505,8 +503,6 @@ static void svg_print_stop(output_string *output, double offset,
   out_puts(output, ";stop-opacity:");
   if (color.type == RGBA_BYTE && color.u.rgba[3] < 255)
     gvprintf(output, "%f", (float)color.u.rgba[3] / 255.0);
-  else if (color.type == COLOR_STRING && !strcmp(color.u.string, "transparent"))
-    out_puts(output, "0");
   else
     out_puts(output, "1.");
   out_puts(output, ";\"/>\n");
