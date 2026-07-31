@@ -160,8 +160,11 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
       tl.size.y = spans[i].lfsize;
       tl.just = 'l';
 
-      pointf p_ = {.x = x, .y = y};
-      svg_textspan(output, fontnames, obj, p_, &tl);
+      if (tl.str && tl.str[0] && obj->pen != PEN_NONE) {
+        pointf p_ = {.x = x, .y = y};
+        svg_textspan(output, fontnames, obj, p_, &tl);
+      }
+
       x += ti->size.x;
       ti++;
     }

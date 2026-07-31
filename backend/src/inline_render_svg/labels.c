@@ -243,7 +243,9 @@ void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
       break;
     }
 
-    svg_textspan(output, fontnames, obj, p, span);
+    if (span->str && span->str[0] && obj->pen != PEN_NONE) {
+      svg_textspan(output, fontnames, obj, p, span);
+    }
 
     /* UL position for next span */
     y -= span->size.y;
