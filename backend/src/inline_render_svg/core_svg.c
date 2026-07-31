@@ -241,12 +241,12 @@ void svg_print_class(output_string *output, char *kind, void *obj) {
   out_putc(output, '"');
 }
 
-static bool isTransparent(gvcolor_t color) {
+static unsigned char getOpacity(gvcolor_t color) {
   switch (color.type) {
   case RGBA_BYTE:
-    return color.u.rgba[3] == 0;
+    return color.u.rgba[3];
   default:
-    return false;
+    return 255;
   }
 }
 
@@ -254,7 +254,7 @@ static bool isTransparent(gvcolor_t color) {
  * is greater than 0 and less than 255
  */
 static void svg_print_color(output_string *output, gvcolor_t color) {
-  if (isTransparent(color)) {
+  if (getOpacity(color) == 0) {
     out_puts(output, "none");
     return;
   }
@@ -295,12 +295,12 @@ static void svg_grstyle(output_string *output, obj_state_t *obj, int filled,
     }
     gvprintf(output, "r_%d)", gid);
     break;
-  default:
+  default: {
     svg_print_color(output, obj->fillcolor);
-    if (obj->fillcolor.type == RGBA_BYTE && obj->fillcolor.u.rgba[3] > 0 &&
-        obj->fillcolor.u.rgba[3] < 255)
-      gvprintf(output, "\" fill-opacity=\"%f",
-               (float)obj->fillcolor.u.rgba[3] / 255.0);
+    unsigned char opacity = getOpacity(obj->fillcolor);
+    if (opacity > 0 && opacity < 255)
+      gvprintf(output, "\" fill-opacity=\"%f", (float)opacity / 255.0);
+  }
   }
 
   out_puts(output, "\" stroke=\"");
@@ -317,10 +317,10 @@ static void svg_grstyle(output_string *output, obj_state_t *obj, int filled,
   } else if (obj->pen == PEN_DOTTED) {
     out_puts(output, "\" stroke-dasharray=\"1,5");
   }
-  if (obj->pencolor.type == RGBA_BYTE && obj->pencolor.u.rgba[3] > 0 &&
-      obj->pencolor.u.rgba[3] < 255)
-    gvprintf(output, "\" stroke-opacity=\"%f",
-             (float)obj->pencolor.u.rgba[3] / 255.0);
+
+  unsigned char opacity = getOpacity(obj->pencolor);
+  if (opacity > 0 && opacity < 255)
+    gvprintf(output, "\" stroke-opacity=\"%f", (float)opacity / 255.0);
 
   out_putc(output, '"');
 }
@@ -453,22 +453,19 @@ void svg_textspan(output_string *output, fontname_kind fontnames,
   }
 
   gvprintf(output, " font-size=\"%.2f\"", span->font->size);
-  switch (obj->pencolor.type) {
-  case COLOR_STRING:
-    if (strcasecmp(obj->pencolor.u.string, "black"))
-      gvprintf(output, " fill=\"%s\"", obj->pencolor.u.string);
-    break;
-  case RGBA_BYTE:
-    gvprintf(output, " fill=\"#%02x%02x%02x\"", obj->pencolor.u.rgba[0],
-             obj->pencolor.u.rgba[1], obj->pencolor.u.rgba[2]);
-    if (obj->pencolor.u.rgba[3] < 255)
-      gvprintf(output, " fill-opacity=\"%f\"",
-               (float)obj->pencolor.u.rgba[3] / 255.0);
-    break;
-  default:
-    UNREACHABLE(); // internal error
+
+  gvcolor_t color = obj->pencolor;
+  if (color.type != COLOR_STRING ||
+      strcasecmp(obj->pencolor.u.string, "black") != 0) {
+    out_puts(output, " fill=\"");
+    svg_print_color(output, color);
+    out_puts(output, "\"");
+    unsigned char opacity = getOpacity(color);
+    if (opacity > 0 && opacity < 255)
+      gvprintf(output, " fill-opacity=\"%f\"", (float)opacity / 255.0);
   }
   out_putc(output, '>');
+
   if (obj->labeledgealigned) {
     out_puts(output, "<textPath xlink:href=\"#");
     gvputs_xml(output, obj->id);
@@ -492,20 +489,19 @@ static void svg_print_stop(output_string *output, double offset,
   else
     gvprintf(output, "<stop offset=\"%.03f\" style=\"stop-color:", offset);
 
+  unsigned char opacity = getOpacity(color);
   // "transparent" in SVG 2 gradients is considered to be black with 0 opacity,
   // so for compatibility with SVG 1.1 output we use black when the color string
   // is transparent and assume the caller will also check and set opacity 0.
-  if (isTransparent(color))
-    out_puts(output, "black");
-  else
+  if (opacity == 0)
+    out_puts(output, "black;stop-opacity:0;\"/>\n");
+  else {
     svg_print_color(output, color);
-
-  out_puts(output, ";stop-opacity:");
-  if (color.type == RGBA_BYTE && color.u.rgba[3] < 255)
-    gvprintf(output, "%f", (float)color.u.rgba[3] / 255.0);
-  else
-    out_puts(output, "1.");
-  out_puts(output, ";\"/>\n");
+    if (opacity < 255)
+      gvprintf(output, ";stop-opacity:%f;\"/>\n", (float)opacity / 255.0);
+    else
+      out_puts(output, ";stop-opacity:1.;\"/>\n");
+  }
 }
 
 /* svg_gradstyle
