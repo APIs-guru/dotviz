@@ -1031,7 +1031,6 @@ static pointf arrow_type_dot(output_string *output, obj_state_t *obj, pointf p,
   (void)arrowsize;
   (void)penwidth;
 
-  double r = hypot(u.x, u.y) / 2.;
   pointf delta = {0, 0};
 
   if (u.x != 0 || u.y != 0) {
@@ -1046,12 +1045,10 @@ static pointf arrow_type_dot(output_string *output, obj_state_t *obj, pointf p,
     p.y -= delta.y;
   }
 
-  pointf AF[2];
-  AF[0].x = p.x + u.x / 2. - r;
-  AF[0].y = p.y + u.y / 2. - r;
-  AF[1].x = p.x + u.x / 2. + r;
-  AF[1].y = p.y + u.y / 2. + r;
-  svg_ellipse(output, obj, AF, !(flag & ARR_MOD_OPEN));
+  pointf center = {.x = p.x + u.x / 2.0, .y = p.y + u.y / 2.0};
+  double r = hypot(u.x, u.y) / 2.0;
+  int filled = !(flag & ARR_MOD_OPEN);
+  svg_ellipse(output, obj, center, (pointf){r, r}, filled);
 
   pointf q = {p.x + u.x, p.y + u.y};
 
@@ -1070,7 +1067,6 @@ static pointf arrow_type_curve(output_string *output, obj_state_t *obj,
                                pointf p, pointf u, double arrowsize,
                                double penwidth, uint32_t flag) {
   (void)arrowsize;
-
 
   pointf a[2];
   a[0] = p;

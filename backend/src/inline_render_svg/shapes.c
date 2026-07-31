@@ -3034,7 +3034,10 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
           agerr(AGPREV, "in node %s\n", agnameof(n));
         filled = 0;
       }
-      svg_ellipse(output, obj, AF, filled);
+
+      pointf center = mid_pointf(AF[0], AF[1]);
+      pointf radius = sub_pointf(AF[1], center);
+      svg_ellipse(output, obj, center, radius, filled);
       if (style.diagonals) {
         Mcircle_hack(output, obj, n);
       }
@@ -3087,7 +3090,10 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
             agerr(AGPREV, "in node %s\n", agnameof(n));
           filled = 0;
         }
-        svg_ellipse(output, obj, AF, filled);
+
+        pointf center = mid_pointf(AF[0], AF[1]);
+        pointf radius = sub_pointf(AF[1], center);
+        svg_ellipse(output, obj, center, radius, filled);
         if (style.diagonals) {
           Mcircle_hack(output, obj, n);
         }
@@ -3300,7 +3306,10 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
         AF[i].y = P.y + ND_coord(n).y;
       }
     }
-    svg_ellipse(output, obj, AF, filled);
+
+    pointf center = mid_pointf(AF[0], AF[1]);
+    pointf radius = sub_pointf(AF[1], center);
+    svg_ellipse(output, obj, center, radius, filled);
     /* fill innermost periphery only */
     filled = false;
   }
