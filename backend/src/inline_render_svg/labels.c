@@ -225,26 +225,28 @@ void emit_label(output_string *output, SafeLayer *safe_layer, obj_state_t *obj,
   }
   if (obj->labeledgealigned)
     y -= lp->pos.y;
+
+  fontname_kind fontnames = GD_fontnames(safe_layer->safe_job->graph);
   for (size_t i = 0; i < lp->u.txt.nspans; i++) {
-    double x = lp->pos.x;
-    switch (lp->u.txt.span[i].just) {
+    textspan_t *span = &lp->u.txt.span[i];
+
+    pointf p = {.x = lp->pos.x, .y = y};
+    switch (span->just) {
     case 'l':
-      x -= lp->space.x / 2.0;
+      p.x -= lp->space.x / 2.0;
       break;
     case 'r':
-      x += lp->space.x / 2.0;
+      p.x += lp->space.x / 2.0;
       break;
     default:
     case 'n':
       break;
     }
 
-    pointf p = {.x = x, .y = y};
-    svg_textspan(output, GD_fontnames(safe_layer->safe_job->graph), obj, p,
-                 &lp->u.txt.span[i]);
+    svg_textspan(output, fontnames, obj, p, span);
 
     /* UL position for next span */
-    y -= lp->u.txt.span[i].size.y;
+    y -= span->size.y;
   }
 
   obj->emit_state = old_emit_state;
