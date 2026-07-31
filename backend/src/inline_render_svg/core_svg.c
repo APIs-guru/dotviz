@@ -602,24 +602,14 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
     return;
   }
 
-  pointf A[] = {
-      mid_pointf(pf[0], pf[1]), // center
-      pf[1]                     // corner
-  };
+  pointf center = mid_pointf(pf[0], pf[1]);
+  pointf radius = {pf[1].x - center.x, pf[1].y - center.y};
 
   int gid = 0;
-
   /* A[] contains 2 points: the center and corner. */
   if (filled == GRADIENT) {
-    double rx = A[1].x - A[0].x;
-    double ry = A[1].y - A[0].y;
-
-    boxf bb;
-    bb.LL.x = A[0].x - rx;
-    bb.UR.x = A[0].x + rx;
-    bb.LL.y = A[0].y - ry;
-    bb.UR.y = A[0].y + ry;
-
+    boxf bb = {.LL = sub_pointf(center, radius),
+               .UR = add_pointf(center, radius)};
     gid = svg_define_linearGradient(output, obj, bb);
   } else if (filled == RGRADIENT) {
     gid = svg_define_radialGradient(output, obj);
@@ -627,13 +617,13 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf *pf,
   out_puts(output, "<ellipse");
   svg_grstyle(output, obj, filled, gid);
   out_puts(output, " cx=\"");
-  gvprintdouble(output, A[0].x);
+  gvprintdouble(output, center.x);
   out_puts(output, "\" cy=\"");
-  gvprintdouble(output, -A[0].y);
+  gvprintdouble(output, -center.y);
   out_puts(output, "\" rx=\"");
-  gvprintdouble(output, A[1].x - A[0].x);
+  gvprintdouble(output, radius.x);
   out_puts(output, "\" ry=\"");
-  gvprintdouble(output, A[1].y - A[0].y);
+  gvprintdouble(output, radius.y);
   out_puts(output, "\"/>\n");
 }
 
