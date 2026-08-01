@@ -99,15 +99,23 @@ static void popFontInfo(htmlenv_t *env, textfont_t *savp) {
     env->finfo.size = savp->size;
 }
 
-static void emit_htextspans(output_string *output, fontname_kind fontnames,
-                            obj_state_t *obj, size_t nspans, htextspan_t *spans,
-                            pointf p, double halfwidth_x, textfont_t finfo,
-                            boxf b, int simple) {
+static void emit_html_txt(output_string *output, fontname_kind fontnames,
+                          obj_state_t *obj, htmltxt_t *tp, htmlenv_t *env) {
+  /* make sure that there is something to do */
+  if (tp->nspans < 1)
+    return;
+
+  double halfwidth_x = (tp->box.UR.x - tp->box.LL.x) / 2.0;
+  pointf p;
+  p.x = env->pos.x + (tp->box.UR.x + tp->box.LL.x) / 2.0;
+  p.y = env->pos.y + (tp->box.UR.y + tp->box.LL.y) / 2.0;
+
   // Initial y is in center of text block; set initial baseline to top of text
   // block.
-  double y = p.y + (b.UR.y - b.LL.y) / 2.0;
+  double y = p.y + (tp->box.UR.y - tp->box.LL.y) / 2.0;
 
-  for (size_t i = 0; i < nspans; i++) {
+  htextspan_t *spans = tp->spans;
+  for (size_t i = 0; i < tp->nspans; i++) {
     // set x to leftmost point where the line of text begins
     double x = p.x;
     switch (spans[i].just) {
@@ -130,15 +138,15 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
       if (ti->font && ti->font->size > 0)
         tf.size = ti->font->size;
       else
-        tf.size = finfo.size;
+        tf.size = env->finfo.size;
       if (ti->font && ti->font->name)
         tf.name = ti->font->name;
       else
-        tf.name = finfo.name;
+        tf.name = env->finfo.name;
       if (ti->font && ti->font->color)
         tf.color = ti->font->color;
       else
-        tf.color = finfo.color;
+        tf.color = env->finfo.color;
       if (ti->font && ti->font->flags)
         tf.flags = ti->font->flags;
       else
@@ -150,7 +158,7 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
       tl.str = ti->str;
       tl.font = &tf;
       tl.yoffset_layout = ti->yoffset_layout;
-      if (simple)
+      if (tp->simple)
         tl.yoffset_centerline = ti->yoffset_centerline;
       else
         tl.yoffset_centerline = 1;
@@ -170,21 +178,6 @@ static void emit_htextspans(output_string *output, fontname_kind fontnames,
       ti++;
     }
   }
-}
-
-static void emit_html_txt(output_string *output, fontname_kind fontnames,
-                          obj_state_t *obj, htmltxt_t *tp, htmlenv_t *env) {
-  /* make sure that there is something to do */
-  if (tp->nspans < 1)
-    return;
-
-  double halfwidth_x = (tp->box.UR.x - tp->box.LL.x) / 2.0;
-  pointf p;
-  p.x = env->pos.x + (tp->box.UR.x + tp->box.LL.x) / 2.0;
-  p.y = env->pos.y + (tp->box.UR.y + tp->box.LL.y) / 2.0;
-
-  emit_htextspans(output, fontnames, obj, tp->nspans, tp->spans, p, halfwidth_x,
-                  env->finfo, tp->box, tp->simple);
 }
 
 static void doSide(output_string *output, obj_state_t *obj, pointf p, double wd,
