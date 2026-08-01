@@ -264,22 +264,20 @@ DEFINE_LIST_WITH_DTOR(colorsegs, colorseg_t, freeSeg)
  */
 static double getSegLen(strview_t *s) {
   char *p = memchr(s->data, ';', s->size);
-  char *endp;
-  double v;
-
   if (!p) {
     return 0;
   }
+
   s->size = (size_t)(p - s->data);
   ++p;
   // Calling `strtod` on something that originated from a `strview_t` here
   // looks dangerous. But we know `s` points to something obtained from `tok`
   // with ':'. So `strtod` will run into either a ':' or a '\0' to safely stop
   // it.
-  v = strtod(p, &endp);
-  if (endp != p) { /* scanned something */
-    if (v >= 0)
-      return v;
+  char *endp;
+  double v = strtod(p, &endp);
+  if (endp != p && v >= 0) { /* scanned something */
+    return v;
   }
   return -1;
 }
@@ -689,7 +687,7 @@ static void emit_node(output_string *output, SafeLayer *safe_layer,
   if (ND_shape(n) /* node has a shape */
       && node_in_layer(layerNum, safe_job, agraphof(n), n) /* and is in layer */
       && node_in_box(n, safe_job->clip) /* and is in page/view */
-      && ND_state(n) != layerNum)        /* and not already drawn */
+      && ND_state(n) != layerNum)       /* and not already drawn */
   {
     ND_state(n) = layerNum; /* mark node as drawn */
 
