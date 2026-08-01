@@ -114,58 +114,60 @@ static void emit_html_txt(output_string *output, fontname_kind fontnames,
   // block.
   double y = p.y + (tp->box.UR.y - tp->box.LL.y) / 2.0;
 
-  htextspan_t *spans = tp->spans;
   for (size_t i = 0; i < tp->nspans; i++) {
+    htextspan_t span = tp->spans[i];
+
     // set x to leftmost point where the line of text begins
     double x = p.x;
-    switch (spans[i].just) {
+    switch (span.just) {
     case 'l':
       x -= halfwidth_x;
       break;
     case 'r':
-      x += halfwidth_x - spans[i].size;
+      x += halfwidth_x - span.size;
       break;
     default:
     case 'n':
-      x -= spans[i].size / 2.0;
+      x -= span.size / 2.0;
       break;
     }
-    y -= spans[i].lfsize; // move to current base line
+    y -= span.lfsize; // move to current base line
 
-    textspan_t *ti = spans[i].items;
-    for (size_t j = 0; j < spans[i].nitems; j++) {
+    for (size_t j = 0; j < span.nitems; j++) {
+      textspan_t ti = span.items[j];
+
       textfont_t tf;
-      if (ti->font && ti->font->size > 0)
-        tf.size = ti->font->size;
+      if (ti.font && ti.font->size > 0)
+        tf.size = ti.font->size;
       else
         tf.size = env->finfo.size;
-      if (ti->font && ti->font->name)
-        tf.name = ti->font->name;
+      if (ti.font && ti.font->name)
+        tf.name = ti.font->name;
       else
         tf.name = env->finfo.name;
-      if (ti->font && ti->font->color)
-        tf.color = ti->font->color;
+      if (ti.font && ti.font->color)
+        tf.color = ti.font->color;
       else
         tf.color = env->finfo.color;
-      if (ti->font && ti->font->flags)
-        tf.flags = ti->font->flags;
+      if (ti.font && ti.font->flags)
+        tf.flags = ti.font->flags;
       else
         tf.flags = 0;
 
       obj->pencolor = svg_resolve_color(tf.color);
 
       textspan_t tl;
-      tl.str = ti->str;
+      tl.str = ti.str;
       tl.font = &tf;
-      tl.yoffset_layout = ti->yoffset_layout;
+      tl.yoffset_layout = ti.yoffset_layout;
       if (tp->simple)
-        tl.yoffset_centerline = ti->yoffset_centerline;
+        tl.yoffset_centerline = ti.yoffset_centerline;
       else
         tl.yoffset_centerline = 1;
-      tl.font->postscript_alias = ti->font->postscript_alias;
-      tl.layout = ti->layout;
-      tl.size.x = ti->size.x;
-      tl.size.y = spans[i].lfsize;
+      tl.font->postscript_alias = ti.font->postscript_alias;
+      tl.layout = ti.layout;
+      tl.size.x = ti.size.x;
+      tl.size.y = span.lfsize;
       tl.just = 'l';
 
       if (tl.str && tl.str[0] && obj->pen != PEN_NONE) {
@@ -174,8 +176,7 @@ static void emit_html_txt(output_string *output, fontname_kind fontnames,
         svg_textspan(output, fontnames, obj, p_, &tl);
       }
 
-      x += ti->size.x;
-      ti++;
+      x += ti.size.x;
     }
   }
 }
