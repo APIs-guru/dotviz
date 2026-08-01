@@ -713,7 +713,7 @@ static double mid_y(const pointf line[2]) {
  * consist of a region, filled or unfilled, followed by additional line
  * segments. A single fill is necessary for gradient colors to work.
  */
-void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
+static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
                    size_t sides, graphviz_polygon_style_t style, int filled) {
   assert(AF != NULL);
   assert(sides > 0);
