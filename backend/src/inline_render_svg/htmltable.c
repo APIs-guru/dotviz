@@ -188,7 +188,7 @@ static void doSide(output_string *output, obj_state_t *obj, pointf p, double wd,
   BF.LL = p;
   BF.UR.x = p.x + wd;
   BF.UR.y = p.y + ht;
-  svg_box(output, obj, BF, 1);
+  svg_box(output, obj, BF, SVG_FILL_SOLID);
 }
 
 // If border is > 1, inset the points by half the border.
@@ -245,7 +245,7 @@ static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
     obj->pen = PEN_DOTTED;
 
   if (dp->style.rounded) {
-    rounded_svg_box(output, obj, addBorder(b, dp->border), 0);
+    rounded_svg_box(output, obj, addBorder(b, dp->border), SVG_FILL_NONE);
   } else if ((sides = (dp->flags & BORDER_MASK))) {
     pointf AF[7];
     mkPts(AF + 1, b, dp->border); /* AF[1-4] has LL=SW,SE,UR=NE,NW */
@@ -313,16 +313,16 @@ static void doBorder(output_string *output, obj_state_t *obj, htmldata_t *dp,
       b.UR.x -= delta;
       b.UR.y -= delta;
     }
-    svg_box(output, obj, b, 0);
+    svg_box(output, obj, b, SVG_FILL_NONE);
   }
 }
 
 /* Set up fill values from given color; make pen transparent.
  * Return type of fill required.
  */
-static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
-                   char *clrs[2]) {
-  int filled;
+static svg_fill_type_t setFill(obj_state_t *obj, char *color, int angle,
+                               htmlstyle_t style, char *clrs[2]) {
+  svg_fill_type_t fill_type;
   double frac;
   if (findStopColor(color, clrs, &frac)) {
     obj->fillcolor = svg_resolve_color(clrs[0]);
@@ -333,15 +333,15 @@ static int setFill(obj_state_t *obj, char *color, int angle, htmlstyle_t style,
     obj->gradient_angle = angle;
     obj->gradient_frac = frac;
     if (style.radial)
-      filled = RGRADIENT;
+      fill_type = SVG_FILL_RGRADIENT;
     else
-      filled = GRADIENT;
+      fill_type = SVG_FILL_GRADIENT;
   } else {
     obj->fillcolor = svg_resolve_color(color);
-    filled = FILL;
+    fill_type = SVG_FILL_SOLID;
   }
   obj->pencolor = svg_resolve_color("transparent");
-  return filled;
+  return fill_type;
 }
 
 /* Save current map values.
@@ -522,12 +522,14 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
     /* Fill first */
     if (tbl->data.bgcolor) {
       char *clrs[2] = {0};
-      int filled = setFill(obj, tbl->data.bgcolor, tbl->data.gradientangle,
-                           tbl->data.style, clrs);
+      svg_fill_type_t fill_type =
+          setFill(obj, tbl->data.bgcolor, tbl->data.gradientangle,
+                  tbl->data.style, clrs);
       if (tbl->data.style.rounded) {
-        rounded_svg_box(output, obj, addBorder(pts, tbl->data.border), filled);
+        rounded_svg_box(output, obj, addBorder(pts, tbl->data.border),
+                        fill_type);
       } else
-        svg_box(output, obj, pts, filled);
+        svg_box(output, obj, pts, fill_type);
       free(clrs[0]);
       free(clrs[1]);
     }
@@ -608,12 +610,13 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
   if (!cp->data.style.invisible) {
     if (cp->data.bgcolor) {
       char *clrs[2];
-      int filled = setFill(obj, cp->data.bgcolor, cp->data.gradientangle,
-                           cp->data.style, clrs);
+      svg_fill_type_t fill_type = setFill(
+          obj, cp->data.bgcolor, cp->data.gradientangle, cp->data.style, clrs);
       if (cp->data.style.rounded) {
-        rounded_svg_box(output, obj, addBorder(pts, cp->data.border), filled);
+        rounded_svg_box(output, obj, addBorder(pts, cp->data.border),
+                        fill_type);
       } else
-        svg_box(output, obj, pts, filled);
+        svg_box(output, obj, pts, fill_type);
       free(clrs[0]);
     }
 

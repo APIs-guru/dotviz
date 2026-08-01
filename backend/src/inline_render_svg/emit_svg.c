@@ -412,7 +412,7 @@ int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
     else
       angle1 = angle0 + 2 * M_PI * s.t;
     pp = ellipticWedge(ctr, semi.x, semi.y, angle0, angle1);
-    svg_bezier(output, obj, pp->ps, pp->pn, 1);
+    svg_bezier(output, obj, pp->ps, pp->pn, SVG_FILL_SOLID);
     angle0 = angle1;
     freePath(pp);
   }
@@ -469,7 +469,7 @@ int stripedBox(output_string *output, obj_state_t *obj, pointf *AF,
       pts[1].x = pts[2].x = lastx;
     else
       pts[1].x = pts[2].x = pts[0].x + xdelta * (s.t);
-    svg_polygon(output, obj, pts, 4, FILL);
+    svg_polygon(output, obj, pts, 4, SVG_FILL_SOLID);
     pts[0].x = pts[3].x = pts[1].x;
   }
   if (save_penwidth > THIN_LINE)
@@ -559,7 +559,6 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
     double frac;
 
     if ((findStopColor(str, clrs, &frac))) {
-      int filled;
       graphviz_polygon_style_t istyle = {0};
       obj->fillcolor = svg_resolve_color(clrs[0]);
       obj->pencolor = svg_resolve_color("transparent");
@@ -570,17 +569,16 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
         obj->stopcolor = svg_resolve_color(DEFAULT_COLOR);
       obj->gradient_angle = late_int(g, G_gradientangle, 0, 0);
       obj->gradient_frac = frac;
+      svg_fill_type_t fill_type = SVG_FILL_GRADIENT;
       if (istyle.radial)
-        filled = RGRADIENT;
-      else
-        filled = GRADIENT;
-      svg_box(output, obj, safe_layer->safe_job->clip, filled);
+        fill_type = SVG_FILL_RGRADIENT;
+      svg_box(output, obj, safe_layer->safe_job->clip, fill_type);
       free(clrs[0]);
       free(clrs[1]);
     } else {
       obj->fillcolor = svg_resolve_color(str);
       obj->pencolor = svg_resolve_color("transparent");
-      svg_box(output, obj, safe_layer->safe_job->clip, FILL); /* filled */
+      svg_box(output, obj, safe_layer->safe_job->clip, SVG_FILL_SOLID);
     }
   }
 }
@@ -887,21 +885,21 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
       if (first) {
         first = 0;
         splitBSpline(&bz, s.t, &bz_l, &bz_r);
-        svg_bezier(output, obj, bz_l.list, bz_l.size, 0);
+        svg_bezier(output, obj, bz_l.list, bz_l.size, SVG_FILL_NONE);
         free(bz_l.list);
         if (AEQ0(left)) {
           free(bz_r.list);
           break;
         }
       } else if (AEQ0(left)) {
-        svg_bezier(output, obj, bz_r.list, bz_r.size, 0);
+        svg_bezier(output, obj, bz_r.list, bz_r.size, SVG_FILL_NONE);
         free(bz_r.list);
         break;
       } else {
         bz0 = bz_r;
         splitBSpline(&bz0, s.t / (left + s.t), &bz_l, &bz_r);
         free(bz0.list);
-        svg_bezier(output, obj, bz_l.list, bz_l.size, 0);
+        svg_bezier(output, obj, bz_l.list, bz_l.size, SVG_FILL_NONE);
         free(bz_l.list);
       }
     }
@@ -1025,7 +1023,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
       bz = ED_spl(e)->list[0];
       stroke_t stp = taper(&bz, taperfun(e), penwidth);
       assert(stp.nvertices <= INT_MAX);
-      svg_polygon(output, obj, stp.vertices, stp.nvertices, 1);
+      svg_polygon(output, obj, stp.vertices, stp.nvertices, SVG_FILL_SOLID);
       free_stroke(stp);
       obj->pencolor = svg_resolve_color(color);
       if (fillcolor != color)
@@ -1109,7 +1107,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
             tmplist[j].x += offlist[j].x;
             tmplist[j].y += offlist[j].y;
           }
-          svg_bezier(output, obj, tmplist, tmpspl.list[i].size, 0);
+          svg_bezier(output, obj, tmplist, tmpspl.list[i].size, SVG_FILL_NONE);
         }
       }
       if (bz.sflag) {
@@ -1150,7 +1148,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
       }
       for (size_t i = 0; i < ED_spl(e)->size; i++) {
         bz = ED_spl(e)->list[i];
-        svg_bezier(output, obj, bz.list, bz.size, 0);
+        svg_bezier(output, obj, bz.list, bz.size, SVG_FILL_NONE);
         if (bz.sflag) {
           arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
                     penwidth, bz.sflag);
@@ -1637,13 +1635,13 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
     if (doAnchor) {
       svg_begin_anchor(output, obj.url, obj.tooltip, obj.target, obj.id);
     }
-    int filled = 0;
+    svg_fill_type_t fill_type = SVG_FILL_NONE;
     graphviz_polygon_style_t istyle = {0};
     char **style = checkClusterStyle(sg, &istyle);
     if (style != NULL) {
       svg_set_style(&obj, style);
       if (istyle.filled)
-        filled = FILL;
+        fill_type = SVG_FILL_SOLID;
     }
     fillcolor = pencolor = 0;
     if ((color = agget(sg, "color")) != 0 && color[0])
@@ -1657,17 +1655,17 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
         don't bother checking.
         if gradient is set fillcolor trumps bgcolor
       */
-    if ((filled == 0 || !fillcolor) && (color = agget(sg, "bgcolor")) != 0 &&
-        color[0]) {
+    if ((fill_type == SVG_FILL_NONE || !fillcolor) &&
+        (color = agget(sg, "bgcolor")) != 0 && color[0]) {
       fillcolor = color;
-      filled = FILL;
+      fill_type = SVG_FILL_SOLID;
     }
     if (!pencolor)
       pencolor = DEFAULT_COLOR;
     if (!fillcolor)
       fillcolor = DEFAULT_FILL;
     char *clrs[2] = {0};
-    if (filled != 0) {
+    if (fill_type != SVG_FILL_NONE) {
       double frac;
       if (findStopColor(fillcolor, clrs, &frac)) {
         obj.fillcolor = svg_resolve_color(clrs[0]);
@@ -1678,9 +1676,9 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
         obj.gradient_angle = late_int(sg, G_gradientangle, 0, 0);
         obj.gradient_frac = frac;
         if (istyle.radial)
-          filled = RGRADIENT;
+          fill_type = SVG_FILL_RGRADIENT;
         else
-          filled = GRADIENT;
+          fill_type = SVG_FILL_GRADIENT;
       } else
         obj.fillcolor = svg_resolve_color(fillcolor);
     }
@@ -1692,12 +1690,12 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
 
     if (istyle.rounded) {
       int doPerim = late_int(sg, G_peripheries, 1, 0);
-      if (doPerim != 0 || filled != 0) {
+      if (doPerim != 0 || fill_type != SVG_FILL_NONE) {
         if (doPerim)
           obj.pencolor = svg_resolve_color(pencolor);
         else
           obj.pencolor = svg_resolve_color("transparent");
-        rounded_svg_box(output, &obj, GD_bb(sg), filled);
+        rounded_svg_box(output, &obj, GD_bb(sg), fill_type);
       }
     } else if (istyle.striped) {
       pointf AF[4];
@@ -1713,14 +1711,14 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
         obj.pencolor = svg_resolve_color(pencolor);
       if (stripedBox(output, &obj, AF, fillcolor, 0) > 1)
         agerr(AGPREV, "in cluster %s\n", agnameof(sg));
-      svg_box(output, &obj, GD_bb(sg), 0);
+      svg_box(output, &obj, GD_bb(sg), SVG_FILL_NONE);
     } else {
       if (late_int(sg, G_peripheries, 1, 0)) {
         obj.pencolor = svg_resolve_color(pencolor);
-        svg_box(output, &obj, GD_bb(sg), filled);
-      } else if (filled != 0) {
+        svg_box(output, &obj, GD_bb(sg), fill_type);
+      } else if (fill_type != SVG_FILL_NONE) {
         obj.pencolor = svg_resolve_color("transparent");
-        svg_box(output, &obj, GD_bb(sg), filled);
+        svg_box(output, &obj, GD_bb(sg), fill_type);
       }
     }
 

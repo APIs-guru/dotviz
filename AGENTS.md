@@ -77,6 +77,40 @@ Keep these documents up to date when behaviour changes.
 
 ---
 
+## Reviewing code changes
+
+When reviewing conversions or refactorings functionality copied from Graphviz:
+
+- **Trace the history.** Use `git log` and `git show` to understand when code
+  patterns were introduced, modified, or removed. Dead code often remains for
+  years — check if commented-out code was ever actually used.
+- **Search for usage.** Before concluding a feature is unused, search the entire
+  Graphviz fork submodule with `git grep`. A constant defined but never set is
+  dead code.
+- **Compare implementations.** When code in dotvi/ differs from upstream
+  Graphviz, verify whether the difference is intentional or represents actual
+  divergence in behavior. Check the commit history to understand why upstream
+  made changes.
+- **Verify output equivalence.** Confirm that output matches Graphviz, not just
+  that the code structure matches. Equivalence is what matters, even if
+  implementation details differ.
+
+---
+
+## Working with the C backend
+
+This project is an ongoing refactoring effort to make
+graphviz the code clearer, more maintainable, and easier to integrate.
+
+The `backend/graphviz-fork/` submodule serves as a reference implementation:
+
+- Use it to verify behavior when the refactored code's intent is unclear
+- Check its git history to understand why certain patterns exist
+- Search it to determine if features or constants are actually used
+- Run the `dot` binary from it to verify expected output
+
+---
+
 ## Workflow
 
 **Every step in this workflow is mandatory. After completing any task, go through
