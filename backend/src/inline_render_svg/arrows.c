@@ -655,12 +655,15 @@ static pointf arrow_type_normal(output_string *output, obj_state_t *obj,
   pointf a[5];
   pointf q = arrow_type_normal0(p, u, penwidth, flag, a);
 
+  svg_fill_type_t fill_type = SVG_FILL_NONE;
+  if (!(flag & ARR_MOD_OPEN))
+    fill_type = SVG_FILL_SOLID;
   if (flag & ARR_MOD_LEFT)
-    svg_polygon(output, obj, a, 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(output, obj, a, 3, fill_type);
   else if (flag & ARR_MOD_RIGHT)
-    svg_polygon(output, obj, &a[2], 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(output, obj, &a[2], 3, fill_type);
   else
-    svg_polygon(output, obj, &a[1], 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(output, obj, &a[1], 3, fill_type);
 
   return q;
 }
@@ -824,11 +827,11 @@ static pointf arrow_type_crow(output_string *output, obj_state_t *obj, pointf p,
   pointf a[9];
   pointf q = arrow_type_crow0(p, u, arrowsize, penwidth, flag, a);
   if (flag & ARR_MOD_LEFT)
-    svg_polygon(output, obj, a, 5, 1);
+    svg_polygon(output, obj, a, 5, SVG_FILL_SOLID);
   else if (flag & ARR_MOD_RIGHT)
-    svg_polygon(output, obj, &a[4], 5, 1);
+    svg_polygon(output, obj, &a[4], 5, SVG_FILL_SOLID);
   else
-    svg_polygon(output, obj, a, 8, 1);
+    svg_polygon(output, obj, a, 8, SVG_FILL_SOLID);
 
   return q;
 }
@@ -900,7 +903,7 @@ static pointf arrow_type_tee(output_string *output, obj_state_t *obj, pointf p,
     a[1] = m;
     a[2] = n;
   }
-  svg_polygon(output, obj, a, 4, 1);
+  svg_polygon(output, obj, a, 4, SVG_FILL_SOLID);
   a[0] = p;
   a[1] = q;
   svg_polyline(output, obj, a, 2);
@@ -957,7 +960,11 @@ static pointf arrow_type_box(output_string *output, obj_state_t *obj, pointf p,
     a[1] = p;
     a[2] = m;
   }
-  svg_polygon(output, obj, a, 4, !(flag & ARR_MOD_OPEN));
+
+  svg_fill_type_t fill_type = SVG_FILL_NONE;
+  if (!(flag & ARR_MOD_OPEN))
+    fill_type = SVG_FILL_SOLID;
+  svg_polygon(output, obj, a, 4, fill_type);
   a[0] = m;
   a[1] = q;
   svg_polyline(output, obj, a, 2);
@@ -1015,12 +1022,15 @@ static pointf arrow_type_diamond(output_string *output, obj_state_t *obj,
   pointf a[5];
   pointf q = arrow_type_diamond0(p, u, penwidth, flag, a);
 
+  svg_fill_type_t fill_type = SVG_FILL_NONE;
+  if (!(flag & ARR_MOD_OPEN))
+    fill_type = SVG_FILL_SOLID;
   if (flag & ARR_MOD_LEFT)
-    svg_polygon(output, obj, &a[2], 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(output, obj, &a[2], 3, fill_type);
   else if (flag & ARR_MOD_RIGHT)
-    svg_polygon(output, obj, a, 3, !(flag & ARR_MOD_OPEN));
+    svg_polygon(output, obj, a, 3, fill_type);
   else
-    svg_polygon(output, obj, a, 4, !(flag & ARR_MOD_OPEN));
+    svg_polygon(output, obj, a, 4, fill_type);
 
   return q;
 }
@@ -1047,8 +1057,10 @@ static pointf arrow_type_dot(output_string *output, obj_state_t *obj, pointf p,
 
   pointf center = {.x = p.x + u.x / 2.0, .y = p.y + u.y / 2.0};
   double r = hypot(u.x, u.y) / 2.0;
-  int filled = !(flag & ARR_MOD_OPEN);
-  svg_ellipse(output, obj, center, (pointf){r, r}, filled);
+  svg_fill_type_t fill_type = SVG_FILL_SOLID;
+  if (flag & ARR_MOD_OPEN)
+    fill_type = SVG_FILL_NONE;
+  svg_ellipse(output, obj, center, (pointf){r, r}, fill_type);
 
   pointf q = {p.x + u.x, p.y + u.y};
 
@@ -1118,7 +1130,7 @@ static pointf arrow_type_curve(output_string *output, obj_state_t *obj,
     Bezier(AF, 0.5, NULL, AF);
   else if (flag & ARR_MOD_RIGHT)
     Bezier(AF, 0.5, AF, NULL);
-  svg_bezier(output, obj, AF, sizeof(AF) / sizeof(pointf), 0);
+  svg_bezier(output, obj, AF, sizeof(AF) / sizeof(pointf), SVG_FILL_NONE);
 
   return q;
 }

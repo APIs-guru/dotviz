@@ -21,7 +21,6 @@
 #include "agxbuf.h"
 #include "color.h"
 #include "types.h"
-#include "const.h"
 #include "utils.h"
 #include "util/unreachable.h"
 #include "geomprocs.h"
@@ -272,14 +271,21 @@ static void svg_print_color(output_string *output, gvcolor_t color) {
   }
 }
 
-static void svg_grstyle(output_string *output, obj_state_t *obj, int filled,
-                        int gid) {
+static void svg_grstyle(output_string *output, obj_state_t *obj,
+                        svg_fill_type_t fill_type, int gid) {
   out_puts(output, " fill=\"");
-  switch (filled) {
-  case 0:
+  switch (fill_type) {
+  case SVG_FILL_NONE:
     out_puts(output, "none");
     break;
-  case GRADIENT:
+  case SVG_FILL_SOLID: {
+    svg_print_color(output, obj->fillcolor);
+    unsigned char opacity = getOpacity(obj->fillcolor);
+    if (opacity > 0 && opacity < 255)
+      gvprintf(output, "\" fill-opacity=\"%f", (float)opacity / 255.0);
+    break;
+  }
+  case SVG_FILL_GRADIENT:
     out_puts(output, "url(#");
     if (obj->id != NULL) {
       gvputs_xml(output, obj->id);
@@ -287,7 +293,7 @@ static void svg_grstyle(output_string *output, obj_state_t *obj, int filled,
     }
     gvprintf(output, "l_%d)", gid);
     break;
-  case RGRADIENT:
+  case SVG_FILL_RGRADIENT:
     out_puts(output, "url(#");
     if (obj->id != NULL) {
       gvputs_xml(output, obj->id);
@@ -295,12 +301,6 @@ static void svg_grstyle(output_string *output, obj_state_t *obj, int filled,
     }
     gvprintf(output, "r_%d)", gid);
     break;
-  default: {
-    svg_print_color(output, obj->fillcolor);
-    unsigned char opacity = getOpacity(obj->fillcolor);
-    if (opacity > 0 && opacity < 255)
-      gvprintf(output, "\" fill-opacity=\"%f", (float)opacity / 255.0);
-  }
   }
 
   out_puts(output, "\" stroke=\"");
@@ -577,22 +577,22 @@ static int svg_define_radialGradient(output_string *output, obj_state_t *obj) {
 }
 
 void svg_ellipse(output_string *output, obj_state_t *obj, pointf center,
-                 pointf radius, int filled) {
+                 pointf radius, svg_fill_type_t fill_type) {
   if (obj->pen == PEN_NONE) {
     return;
   }
 
   int gid = 0;
   /* A[] contains 2 points: the center and corner. */
-  if (filled == GRADIENT) {
+  if (fill_type == SVG_FILL_GRADIENT) {
     boxf bb = {.LL = sub_pointf(center, radius),
                .UR = add_pointf(center, radius)};
     gid = svg_define_linearGradient(output, obj, bb);
-  } else if (filled == RGRADIENT) {
+  } else if (fill_type == SVG_FILL_RGRADIENT) {
     gid = svg_define_radialGradient(output, obj);
   }
   out_puts(output, "<ellipse");
-  svg_grstyle(output, obj, filled, gid);
+  svg_grstyle(output, obj, fill_type, gid);
   out_puts(output, " cx=\"");
   gvprintdouble(output, center.x);
   out_puts(output, "\" cy=\"");
@@ -605,16 +605,16 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf center,
 }
 
 void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
-                int filled) {
+                svg_fill_type_t fill_type) {
   if (obj->pen == PEN_NONE) {
     return;
   }
 
   int gid = 0;
-  if (filled == GRADIENT) {
+  if (fill_type == SVG_FILL_GRADIENT) {
     boxf bb = compute_polygon_bb(A, n);
     gid = svg_define_linearGradient(output, obj, bb);
-  } else if (filled == RGRADIENT) {
+  } else if (fill_type == SVG_FILL_RGRADIENT) {
     gid = svg_define_radialGradient(output, obj);
   }
 
@@ -624,7 +624,7 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
     gvputs_xml(output, obj->id);
     out_puts(output, "_p\" ");
   }
-  svg_grstyle(output, obj, filled, gid);
+  svg_grstyle(output, obj, fill_type, gid);
 
   out_puts(output, " d=\"");
   char c = 'M'; /* first point */
@@ -643,29 +643,20 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
 }
 
 void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
-                 int filled) {
+                 svg_fill_type_t fill_type) {
   if (obj->pen == PEN_NONE) {
     return;
   }
 
-  int noPoly = 0;
-  gvcolor_t save_pencolor;
-
-  if (filled & NO_POLY) {
-    noPoly = 1;
-    filled &= ~NO_POLY;
-    save_pencolor = obj->pencolor;
-    obj->pencolor = obj->fillcolor;
-  }
   int gid = 0;
-  if (filled == GRADIENT) {
+  if (fill_type == SVG_FILL_GRADIENT) {
     boxf bb = compute_polygon_bb(A, n);
     gid = svg_define_linearGradient(output, obj, bb);
-  } else if (filled == RGRADIENT) {
+  } else if (fill_type == SVG_FILL_RGRADIENT) {
     gid = svg_define_radialGradient(output, obj);
   }
   out_puts(output, "<polygon");
-  svg_grstyle(output, obj, filled, gid);
+  svg_grstyle(output, obj, fill_type, gid);
   out_puts(output, " points=\"");
   for (size_t i = 0; i < n; i++) {
     gvprintdouble(output, A[i].x);
@@ -678,12 +669,10 @@ void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
   out_putc(output, ',');
   gvprintdouble(output, -A[0].y);
   out_puts(output, "\"/>\n");
-
-  if (noPoly)
-    obj->pencolor = save_pencolor;
 }
 
-void svg_box(output_string *output, obj_state_t *obj, boxf B, int filled) {
+void svg_box(output_string *output, obj_state_t *obj, boxf B,
+             svg_fill_type_t fill_type) {
   pointf A[4];
 
   A[0] = B.LL;
@@ -693,14 +682,14 @@ void svg_box(output_string *output, obj_state_t *obj, boxf B, int filled) {
   A[3].x = A[2].x;
   A[3].y = A[0].y;
 
-  svg_polygon(output, obj, A, 4, filled);
+  svg_polygon(output, obj, A, 4, fill_type);
 }
 
 void svg_polyline(output_string *output, obj_state_t *obj, pointf *A,
                   size_t n) {
   if (obj->pen != PEN_NONE) {
     out_puts(output, "<polyline");
-    svg_grstyle(output, obj, 0, 0);
+    svg_grstyle(output, obj, SVG_FILL_NONE, 0);
     out_puts(output, " points=\"");
     for (size_t i = 0; i < n; i++) {
       gvprintdouble(output, A[i].x);

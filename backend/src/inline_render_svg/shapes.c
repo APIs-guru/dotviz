@@ -107,7 +107,7 @@ static poly_desc_t star_gen = {
 static pointf cylinder_size(pointf);
 static void cylinder_vertices(pointf *, pointf *);
 static void cylinder_draw(output_string *output, obj_state_t *obj, pointf *AF,
-                          size_t sides, int filled);
+                          size_t sides, svg_fill_type_t fill_type);
 static poly_desc_t cylinder_gen = {
     cylinder_size,
     cylinder_vertices,
@@ -584,9 +584,9 @@ static pointf *alloc_interpolation_points(pointf *AF, size_t sides,
  */
 static void diagonals_draw(output_string *output, obj_state_t *obj, pointf *AF,
                            size_t sides, graphviz_polygon_style_t style,
-                           int filled) {
+                           svg_fill_type_t fill_type) {
   pointf *B = alloc_interpolation_points(AF, sides, style, false);
-  svg_polygon(output, obj, AF, sides, filled);
+  svg_polygon(output, obj, AF, sides, fill_type);
 
   for (size_t seg = 0; seg < sides; seg++) {
     pointf C[] = {B[3 * seg + 2], B[3 * seg + 4]};
@@ -603,7 +603,7 @@ static void diagonals_draw(output_string *output, obj_state_t *obj, pointf *AF,
  */
 static void rounded_draw(output_string *output, obj_state_t *obj, pointf *AF,
                          size_t sides, graphviz_polygon_style_t style,
-                         int filled) {
+                         svg_fill_type_t fill_type) {
   size_t i = 0;
 
   pointf *B = alloc_interpolation_points(AF, sides, style, true);
@@ -618,7 +618,7 @@ static void rounded_draw(output_string *output, obj_state_t *obj, pointf *AF,
   }
   pts[i++] = pts[0];
   pts[i++] = pts[1];
-  svg_bezier(output, obj, pts + 1, i - 1, filled);
+  svg_bezier(output, obj, pts + 1, i - 1, fill_type);
   free(pts);
   free(B);
 }
@@ -628,7 +628,7 @@ pointf add_x(pointf p, double x) { return (pointf){p.x + x, p.y}; }
 pointf add_y(pointf p, double y) { return (pointf){p.x, p.y + y}; }
 
 void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
-                     int filled) {
+                     svg_fill_type_t fill_type) {
 
   /* rbconst is distance offset from a corner of the polygon.
    * It should be the same for every corner, and also never
@@ -666,7 +666,7 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf box,
 
   B[24] = B[0];
   B[25] = B[1];
-  svg_bezier(output, obj, &B[1], 25, filled);
+  svg_bezier(output, obj, &B[1], 25, fill_type);
 }
 
 /**
@@ -714,24 +714,25 @@ static double mid_y(const pointf line[2]) {
  * segments. A single fill is necessary for gradient colors to work.
  */
 static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
-                   size_t sides, graphviz_polygon_style_t style, int filled) {
+                          size_t sides, graphviz_polygon_style_t style,
+                          svg_fill_type_t fill_type) {
   assert(AF != NULL);
   assert(sides > 0);
   assert(memcmp(&style, &(graphviz_polygon_style_t){0}, sizeof(style)) != 0);
 
   if (style.diagonals) {
-    diagonals_draw(output, obj, AF, sides, style, filled);
+    diagonals_draw(output, obj, AF, sides, style, fill_type);
     return;
   } else if (style.shape != 0) {
   } else if (style.rounded) {
-    rounded_draw(output, obj, AF, sides, style, filled);
+    rounded_draw(output, obj, AF, sides, style, fill_type);
     return;
   } else {
     UNREACHABLE();
   }
 
   if (style.shape == CYLINDER) {
-    cylinder_draw(output, obj, AF, sides, filled);
+    cylinder_draw(output, obj, AF, sides, fill_type);
     return;
   }
   pointf *B = alloc_interpolation_points(AF, sides, style, false);
@@ -743,7 +744,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
       D[seg] = AF[seg];
     D[0] = B[3 * (sides - 1) + 4];
     D[sides] = B[3 * (sides - 1) + 2];
-    svg_polygon(output, obj, D, sides + 1, filled);
+    svg_polygon(output, obj, D, sides + 1, fill_type);
     free(D);
 
     /* Draw the inner edge. */
@@ -782,7 +783,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[3].y = B[3].y + (B[3].y - B[4].y) / 3;
     for (size_t seg = 4; seg < sides + 2; seg++)
       D[seg] = AF[seg - 2];
-    svg_polygon(output, obj, D, sides + 2, filled);
+    svg_polygon(output, obj, D, sides + 2, fill_type);
     free(D);
 
     /* Draw the inner edge. */
@@ -819,7 +820,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[4].y = B[3].y;
     for (size_t seg = 4; seg < sides + 3; seg++)
       D[seg] = AF[seg - 3];
-    svg_polygon(output, obj, D, sides + 3, filled);
+    svg_polygon(output, obj, D, sides + 3, fill_type);
     free(D);
     break;
   }
@@ -833,7 +834,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[3] = AF[2];
     D[4] = B[8];
     D[5] = B[10];
-    svg_polygon(output, obj, D, sides + 2, filled);
+    svg_polygon(output, obj, D, sides + 2, fill_type);
     free(D);
 
     /* Draw the inner vertices. */
@@ -889,7 +890,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
 
     D[10] = AF[2];
     D[11] = AF[3];
-    svg_polygon(output, obj, D, sides + 8, filled);
+    svg_polygon(output, obj, D, sides + 8, fill_type);
 
     /* Draw the internal vertices. */
     pointf C[5];
@@ -950,7 +951,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[7].y = D[6].y + (B[3].y - B[4].y) / 2; // D[6].y + width
     D[8].x = D[0].x;
     D[8].y = D[0].y + (B[3].y - B[4].y) / 4; // D[0].y + width/2
-    svg_polygon(output, obj, D, sides + 5, filled);
+    svg_polygon(output, obj, D, sides + 5, fill_type);
 
     /*dsDNA line*/
     pointf C[5];
@@ -990,7 +991,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[4].y = AF[0].y - (AF[0].y - AF[3].y) / 2;
     D[4].x = AF[0].x;
 
-    svg_polygon(output, obj, D, sides + 1, filled);
+    svg_polygon(output, obj, D, sides + 1, fill_type);
     free(D);
 
     break;
@@ -1030,7 +1031,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[6].y = D[1].y;
     D[7].x = D[6].x;
     D[7].y = D[0].y;
-    svg_polygon(output, obj, D, sides + 4, filled);
+    svg_polygon(output, obj, D, sides + 4, fill_type);
 
     /*dsDNA line*/
     pointf C[5];
@@ -1073,7 +1074,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[4].y = D[1].y;
     D[5].x = D[4].x;
     D[5].y = D[0].y;
-    svg_polygon(output, obj, D, sides + 2, filled);
+    svg_polygon(output, obj, D, sides + 2, fill_type);
 
     /*dsDNA line*/
     pointf C[5];
@@ -1115,7 +1116,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[3].y = D[2].y;
     D[4].x = D[3].x;
     D[4].y = D[0].y;
-    svg_polygon(output, obj, D, sides + 1, filled);
+    svg_polygon(output, obj, D, sides + 1, fill_type);
 
     /*dsDNA line*/
     pointf C[5];
@@ -1162,7 +1163,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[6].y = D[5].y - (B[3].y - B[4].y) / 2;
     D[7].x = D[0].x;
     D[7].y = D[6].y;
-    svg_polygon(output, obj, D, sides + 4, filled);
+    svg_polygon(output, obj, D, sides + 4, fill_type);
 
     /*dsDNA line left half*/
     pointf C[5];
@@ -1208,7 +1209,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*second, lower shape*/
     free(D);
@@ -1221,7 +1222,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*dsDNA line right half*/
     pointf C[5];
@@ -1260,7 +1261,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y;
     D[3].x = D[2].x;
     D[3].y = D[0].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*second, lower shape*/
     free(D);
@@ -1273,7 +1274,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y;
     D[3].x = D[2].x;
     D[3].y = D[0].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*dsDNA line left half*/
     pointf C[5];
@@ -1315,7 +1316,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*lower, left rectangle*/
     free(D);
@@ -1330,7 +1331,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*lower, right rectangle*/
     free(D);
@@ -1344,7 +1345,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*upper, right rectangle*/
     free(D);
@@ -1358,7 +1359,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*dsDNA line right half*/
     pointf C[5];
@@ -1404,7 +1405,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*second, lower shape*/
     free(D);
@@ -1418,7 +1419,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y + (B[3].y - B[4].y) / 2;
     D[3].x = D[0].x;
     D[3].y = D[2].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /*dsDNA line right half*/
     pointf C[5];
@@ -1460,7 +1461,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = AF[2].y + (B[3].y - B[4].y) / 2;
     D[3].x = AF[0].x;
     D[3].y = AF[2].y + (B[3].y - B[4].y) / 2;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
 
     /* "\" of the X*/
     pointf C[5];
@@ -1507,7 +1508,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[2].y = D[1].y;
     D[3].x = D[2].x;
     D[3].y = D[0].y;
-    svg_polygon(output, obj, D, sides, filled);
+    svg_polygon(output, obj, D, sides, fill_type);
     free(D);
 
     /*outer square line*/
@@ -1586,7 +1587,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[14].y = D[1].y;
     D[15].x = D[2].x;
     D[15].y = D[0].y;
-    svg_polygon(output, obj, D, sides + 12, filled);
+    svg_polygon(output, obj, D, sides + 12, fill_type);
 
     // 2-part dash line
 
@@ -1645,7 +1646,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[6].y = D[1].y; // left side
     D[7].x = D[4].x;
     D[7].y = D[0].y; // bottom
-    svg_polygon(output, obj, D, sides + 4, filled);
+    svg_polygon(output, obj, D, sides + 4, fill_type);
 
     // 2-part dash line
 
@@ -1720,7 +1721,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[14].y = D[1].y;
     D[15].x = D[2].x;
     D[15].y = D[0].y;
-    svg_polygon(output, obj, D, sides + 12, filled);
+    svg_polygon(output, obj, D, sides + 12, fill_type);
 
     /*line below the x*/
     pointf C[5];
@@ -1769,7 +1770,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[6].y = D[1].y; // left side
     D[7].x = D[4].x;
     D[7].y = D[0].y; // bottom
-    svg_polygon(output, obj, D, sides + 4, filled);
+    svg_polygon(output, obj, D, sides + 4, fill_type);
 
     /*line below the x*/
     pointf C[5];
@@ -1825,7 +1826,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[8].y = AF[0].y;
     D[8].x = B[1].x - (B[2].x - B[3].x) / 2;
 
-    svg_polygon(output, obj, D, sides + 5, filled);
+    svg_polygon(output, obj, D, sides + 5, fill_type);
     free(D);
     break;
   }
@@ -1861,7 +1862,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[6].y = AF[0].y;
     D[6].x = B[1].x - (B[2].x - B[3].x) / 2;
 
-    svg_polygon(output, obj, D, sides + 3, filled);
+    svg_polygon(output, obj, D, sides + 3, fill_type);
     free(D);
     break;
   }
@@ -1895,7 +1896,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[6].y = AF[3].y + (B[3].y - B[4].y) / 2;
     D[6].x = AF[0].x; /*D[0]*/
 
-    svg_polygon(output, obj, D, sides + 3, filled);
+    svg_polygon(output, obj, D, sides + 3, fill_type);
     free(D);
     break;
   }
@@ -1935,7 +1936,7 @@ static void round_corners(output_string *output, obj_state_t *obj, pointf *AF,
     D[8].x = AF[3].x;
     D[8].y = AF[3].y;
 
-    svg_polygon(output, obj, D, sides + 5, filled);
+    svg_polygon(output, obj, D, sides + 5, fill_type);
     free(D);
     break;
   }
@@ -2981,7 +2982,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   const graphviz_polygon_style_t style = stylenode(obj, n);
 
   char *clrs[2] = {0};
-  int filled = 0;
+  svg_fill_type_t fill_type = SVG_FILL_NONE;
   char *fillcolor = NULL;
   if (style.filled) {
     double frac;
@@ -2995,16 +2996,16 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
       obj->gradient_angle = late_int(n, N_gradientangle, 0, 0);
       obj->gradient_frac = frac;
       if (style.radial)
-        filled = RGRADIENT;
+        fill_type = SVG_FILL_RGRADIENT;
       else
-        filled = GRADIENT;
+        fill_type = SVG_FILL_GRADIENT;
     } else {
       obj->fillcolor = svg_resolve_color(fillcolor);
-      filled = FILL;
+      fill_type = SVG_FILL_SOLID;
     }
   } else if (style.striped || style.wedged) {
     fillcolor = findFillDflt(n, DEFAULT_FILL);
-    filled = 1;
+    fill_type = SVG_FILL_SOLID;
   }
 
   gvcolor_t pencolor =
@@ -3014,7 +3015,7 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
   bool pfilled = !ND_shape(n)->usershape || streq(ND_shape(n)->name, "custom");
 
   /* if no boundary but filled, set boundary color to transparent */
-  if (peripheries == 0 && filled != 0 && pfilled) {
+  if (peripheries == 0 && fill_type != SVG_FILL_NONE && pfilled) {
     peripheries = 1;
     obj->pencolor = svg_resolve_color("transparent");
   }
@@ -3032,12 +3033,12 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
         int rv = wedgedEllipse(output, obj, AF, fillcolor);
         if (rv > 1)
           agerr(AGPREV, "in node %s\n", agnameof(n));
-        filled = 0;
+        fill_type = SVG_FILL_NONE;
       }
 
       pointf center = mid_pointf(AF[0], AF[1]);
       pointf radius = sub_pointf(AF[1], center);
-      svg_ellipse(output, obj, center, radius, filled);
+      svg_ellipse(output, obj, center, radius, fill_type);
       if (style.diagonals) {
         Mcircle_hack(output, obj, n);
       }
@@ -3047,19 +3048,19 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
         if (rv > 1)
           agerr(AGPREV, "in node %s\n", agnameof(n));
       }
-      svg_polygon(output, obj, AF, sides, 0);
+      svg_polygon(output, obj, AF, sides, SVG_FILL_NONE);
     } else if (style.underline) {
       obj->pencolor = svg_resolve_color("transparent");
-      svg_polygon(output, obj, AF, sides, filled);
+      svg_polygon(output, obj, AF, sides, fill_type);
       obj->pencolor = pencolor;
       svg_polyline(output, obj, AF + 2, 2);
     } else if (SPECIAL_CORNERS(style)) {
-      round_corners(output, obj, AF, sides, style, filled);
+      round_corners(output, obj, AF, sides, style, fill_type);
     } else {
-      svg_polygon(output, obj, AF, sides, filled);
+      svg_polygon(output, obj, AF, sides, fill_type);
     }
     /* fill innermost periphery only */
-    filled = 0;
+    fill_type = SVG_FILL_NONE;
   }
 
   bool usershape_p = false;
@@ -3082,18 +3083,18 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
       AF[i].y = P.y * ysize + ND_coord(n).y;
     }
     /* lay down fill first */
-    if (filled != 0 && pfilled) {
+    if (fill_type != SVG_FILL_NONE && pfilled) {
       if (sides <= 2) {
         if (style.wedged && j == 0 && multicolor(fillcolor)) {
           int rv = wedgedEllipse(output, obj, AF, fillcolor);
           if (rv > 1)
             agerr(AGPREV, "in node %s\n", agnameof(n));
-          filled = 0;
+          fill_type = SVG_FILL_NONE;
         }
 
         pointf center = mid_pointf(AF[0], AF[1]);
         pointf radius = sub_pointf(AF[1], center);
-        svg_ellipse(output, obj, center, radius, filled);
+        svg_ellipse(output, obj, center, radius, fill_type);
         if (style.diagonals) {
           Mcircle_hack(output, obj, n);
         }
@@ -3101,11 +3102,11 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
         int rv = stripedBox(output, obj, AF, fillcolor, 1);
         if (rv > 1)
           agerr(AGPREV, "in node %s\n", agnameof(n));
-        svg_polygon(output, obj, AF, sides, 0);
+        svg_polygon(output, obj, AF, sides, SVG_FILL_NONE);
       } else if (style.rounded || style.diagonals) {
-        round_corners(output, obj, AF, sides, style, filled);
+        round_corners(output, obj, AF, sides, style, fill_type);
       } else {
-        svg_polygon(output, obj, AF, sides, filled);
+        svg_polygon(output, obj, AF, sides, fill_type);
       }
     }
 
@@ -3115,7 +3116,8 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
     svg_usershape(output, safe_layer->safe_job->rotation,
                   safe_layer->safe_job->dpi, name, AF, sides, imagescale,
                   imagepos);
-    filled = 0; /* with user shapes, we have done the fill if needed */
+    fill_type =
+        SVG_FILL_NONE; /* with user shapes, we have done the fill if needed */
   }
 
   free(AF);
@@ -3296,7 +3298,7 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
     obj->pencolor = obj->fillcolor;
   }
 
-  bool filled = true;
+  svg_fill_type_t fill_type = SVG_FILL_SOLID;
   for (size_t j = 0; j < peripheries; j++) {
     pointf AF[2] = {{0}};
     for (size_t i = 0; i < sides; i++) {
@@ -3309,9 +3311,9 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
 
     pointf center = mid_pointf(AF[0], AF[1]);
     pointf radius = sub_pointf(AF[1], center);
-    svg_ellipse(output, obj, center, radius, filled);
+    svg_ellipse(output, obj, center, radius, fill_type);
     /* fill innermost periphery only */
-    filled = false;
+    fill_type = SVG_FILL_NONE;
   }
 
   if (doMap) {
@@ -3842,7 +3844,7 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
 
   graphviz_polygon_style_t style = stylenode(obj, n);
   obj->pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
-  int filled = 0;
+  svg_fill_type_t fill_type = SVG_FILL_NONE;
   char *clrs[2] = {0};
   if (style.filled) {
     char *fillcolor = findFillDflt(n, DEFAULT_FILL);
@@ -3857,11 +3859,11 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
       obj->gradient_angle = late_int(n, N_gradientangle, 0, 0);
       obj->gradient_frac = frac;
       if (style.radial)
-        filled = RGRADIENT;
+        fill_type = SVG_FILL_RGRADIENT;
       else
-        filled = GRADIENT;
+        fill_type = SVG_FILL_GRADIENT;
     } else {
-      filled = FILL;
+      fill_type = SVG_FILL_SOLID;
       obj->fillcolor = svg_resolve_color(fillcolor);
     }
   }
@@ -3876,9 +3878,9 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
     AF[1].y = AF[0].y;
     AF[3].x = AF[0].x;
     AF[3].y = AF[2].y;
-    round_corners(output, obj, AF, 4, style, filled);
+    round_corners(output, obj, AF, 4, style, fill_type);
   } else {
-    svg_box(output, obj, BF, filled);
+    svg_box(output, obj, BF, fill_type);
   }
 
   gen_fields(output, safe_layer, obj, n, f);
@@ -4142,7 +4144,7 @@ static void cylinder_vertices(pointf *vertices, pointf *bb) {
 }
 
 static void cylinder_draw(output_string *output, obj_state_t *obj, pointf *AF,
-                          size_t sides, int filled) {
+                          size_t sides, svg_fill_type_t fill_type) {
   pointf vertices[7];
   double y0 = AF[0].y;
   double y02 = y0 + y0;
@@ -4160,8 +4162,8 @@ static void cylinder_draw(output_string *output, obj_state_t *obj, pointf *AF,
   vertices[5].y = y02 - AF[5].y;
   vertices[6] = AF[6];
 
-  svg_bezier(output, obj, AF, sides, filled);
-  svg_bezier(output, obj, vertices, 7, 0);
+  svg_bezier(output, obj, AF, sides, fill_type);
+  svg_bezier(output, obj, vertices, 7, SVG_FILL_NONE);
 }
 
 static const char *side_port[] = {"s", "e", "n", "w"};

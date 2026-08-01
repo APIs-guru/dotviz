@@ -7,18 +7,26 @@
 typedef struct color_s gvcolor_t;
 typedef struct output_string_s output_string;
 
+typedef enum {
+  SVG_FILL_NONE,
+  SVG_FILL_SOLID,
+  SVG_FILL_GRADIENT,
+  SVG_FILL_RGRADIENT,
+} svg_fill_type_t;
+
 void svg_print_id(output_string *output, char *id, char *idx);
 void svg_print_class(output_string *output, char *kind, void *obj);
 void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
-                int filled);
+                svg_fill_type_t fill_type);
 void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
-                 int filled);
+                 svg_fill_type_t fill_type);
 void svg_ellipse(output_string *output, obj_state_t *obj, pointf center,
-                 pointf radius, int filled);
+                 pointf radius, svg_fill_type_t fill_type);
 void svg_polyline(output_string *output, obj_state_t *obj, pointf *A, size_t n);
 void svg_textspan(output_string *output, fontname_kind fontnames,
                   obj_state_t *obj, pointf p, textspan_t *span);
-void svg_box(output_string *output, obj_state_t *obj, boxf B, int filled);
+void svg_box(output_string *output, obj_state_t *obj, boxf B,
+             svg_fill_type_t fill_type);
 
 void svg_comment(output_string *output, char *str);
 void svg_begin_anchor(output_string *output, char *href, char *tooltip,

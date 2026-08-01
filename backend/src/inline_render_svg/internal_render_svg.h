@@ -20,6 +20,8 @@
 #include "gvcjob.h"
 #include "agxbuf.h"
 
+#include "core_svg.h"
+
 typedef struct SafeJob_s SafeJob;
 
 void arrow_flags(Agedge_t *e, uint32_t *sflag, uint32_t *eflag);
@@ -58,4 +60,4 @@ int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
                   const char *clrs);
 void init_bb(graph_t *g);
 void rounded_svg_box(output_string *output, obj_state_t *obj, boxf B,
-                     int filled);
+                     svg_fill_type_t fill_type);
