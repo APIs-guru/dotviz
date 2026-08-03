@@ -271,8 +271,8 @@ static void svg_print_color(output_string *output, gvcolor_t color) {
   }
 }
 
-static void svg_grstyle(output_string *output, obj_state_t *obj,
-                        svg_fill_type_t fill_type, int gid) {
+static void svg_fill_attribute(output_string *output, obj_state_t *obj,
+                               svg_fill_type_t fill_type, int gid) {
   out_puts(output, " fill=\"");
   switch (fill_type) {
   case SVG_FILL_NONE:
@@ -302,8 +302,11 @@ static void svg_grstyle(output_string *output, obj_state_t *obj,
     gvprintf(output, "r_%d)", gid);
     break;
   }
+  out_putc(output, '"');
+}
 
-  out_puts(output, "\" stroke=\"");
+static void svg_stroke_attribute(output_string *output, obj_state_t *obj) {
+  out_puts(output, " stroke=\"");
   svg_print_color(output, obj->pencolor);
   // will `gvprintdouble` output something different from `PENWIDTH_NORMAL`?
   const double GVPRINT_DOUBLE_THRESHOLD = 0.005;
@@ -592,7 +595,8 @@ void svg_ellipse(output_string *output, obj_state_t *obj, pointf center,
     gid = svg_define_radialGradient(output, obj);
   }
   out_puts(output, "<ellipse");
-  svg_grstyle(output, obj, fill_type, gid);
+  svg_fill_attribute(output, obj, fill_type, gid);
+  svg_stroke_attribute(output, obj);
   out_puts(output, " cx=\"");
   gvprintdouble(output, center.x);
   out_puts(output, "\" cy=\"");
@@ -624,7 +628,9 @@ void svg_bezier(output_string *output, obj_state_t *obj, pointf *A, size_t n,
     gvputs_xml(output, obj->id);
     out_puts(output, "_p\" ");
   }
-  svg_grstyle(output, obj, fill_type, gid);
+
+  svg_fill_attribute(output, obj, fill_type, gid);
+  svg_stroke_attribute(output, obj);
 
   out_puts(output, " d=\"");
   char c = 'M'; /* first point */
@@ -656,7 +662,8 @@ void svg_polygon(output_string *output, obj_state_t *obj, pointf *A, size_t n,
     gid = svg_define_radialGradient(output, obj);
   }
   out_puts(output, "<polygon");
-  svg_grstyle(output, obj, fill_type, gid);
+  svg_fill_attribute(output, obj, fill_type, gid);
+  svg_stroke_attribute(output, obj);
   out_puts(output, " points=\"");
   for (size_t i = 0; i < n; i++) {
     gvprintdouble(output, A[i].x);
@@ -687,20 +694,22 @@ void svg_box(output_string *output, obj_state_t *obj, boxf B,
 
 void svg_polyline(output_string *output, obj_state_t *obj, pointf *A,
                   size_t n) {
-  if (obj->pen != PEN_NONE) {
-    out_puts(output, "<polyline");
-    svg_grstyle(output, obj, SVG_FILL_NONE, 0);
-    out_puts(output, " points=\"");
-    for (size_t i = 0; i < n; i++) {
-      gvprintdouble(output, A[i].x);
-      out_putc(output, ',');
-      gvprintdouble(output, -A[i].y);
-      if (i + 1 != n) {
-        out_putc(output, ' ');
-      }
-    }
-    out_puts(output, "\"/>\n");
+  if (obj->pen == PEN_NONE) {
+    return;
   }
+  
+  out_puts(output, "<polyline fill=\"none\"");
+  svg_stroke_attribute(output, obj);
+  out_puts(output, " points=\"");
+  for (size_t i = 0; i < n; i++) {
+    gvprintdouble(output, A[i].x);
+    out_putc(output, ',');
+    gvprintdouble(output, -A[i].y);
+    if (i + 1 != n) {
+      out_putc(output, ' ');
+    }
+  }
+  out_puts(output, "\"/>\n");
 }
 
 bool resolveColor(const char *str, gvcolor_t *result);

@@ -87,7 +87,7 @@ When reviewing conversions or refactorings functionality copied from Graphviz:
 - **Search for usage.** Before concluding a feature is unused, search the entire
   Graphviz fork submodule with `git grep`. A constant defined but never set is
   dead code.
-- **Compare implementations.** When code in dotvi/ differs from upstream
+- **Compare implementations.** When code in dotviz differs from upstream
   Graphviz, verify whether the difference is intentional or represents actual
   divergence in behavior. Check the commit history to understand why upstream
   made changes.
