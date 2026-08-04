@@ -843,25 +843,11 @@ static void splitBSpline(bezier *bz, double t, bezier *left, bezier *right) {
 }
 
 /* Draw an edge as a sequence of colors.
- * Not sure how to handle multiple B-splines, so do a naive
- * implementation.
- * Return non-zero if color spec is incorrect
+ * Not sure how to handle multiple B-splines, so do a naive implementation.
  */
-static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
-                      char **styles, const char *colors, double arrowsize,
-                      double penwidth) {
-  colorsegs_t segs;
-  int rv = parseSegs(colors, &segs);
-  if (rv > 1) {
-    Agraph_t *g = agraphof(agtail(e));
-    agerr(AGPREV, "in edge %s%s%s\n", agnameof(agtail(e)),
-          (agisdirected(g) ? " -> " : " -- "), agnameof(aghead(e)));
-
-    if (rv == 2)
-      return 1;
-  } else if (rv == 1)
-    return 1;
-
+static void multicolor(output_string *output, obj_state_t *obj, edge_t *e,
+                       char **styles, colorsegs_t segs, double arrowsize,
+                       double penwidth) {
   for (size_t i = 0; i < ED_spl(e)->size; i++) {
     char *endcolor = NULL;
     double left = 1;
@@ -917,8 +903,6 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
     if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
       svg_set_style(obj, styles);
   }
-  colorsegs_free(&segs);
-  return 0;
 }
 
 static void free_stroke(stroke_t sp) { free(sp.vertices); }
@@ -998,10 +982,19 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
   }
 
   if (numsemi && numc) {
-    if (multicolor(output, obj, e, styles, color, arrowsize, penwidth)) {
-      color = DEFAULT_COLOR;
-    } else
+    colorsegs_t segs;
+    int rv = parseSegs(color, &segs);
+    if (rv > 1) {
+      Agraph_t *g = agraphof(agtail(e));
+      agerr(AGPREV, "in edge %s%s%s\n", agnameof(agtail(e)),
+            (agisdirected(g) ? " -> " : " -- "), agnameof(aghead(e)));
+    }
+    if (rv != 1 && rv != 2) {
+      multicolor(output, obj, e, styles, segs, arrowsize, penwidth);
+      colorsegs_free(&segs);
       goto done;
+    }
+    color = DEFAULT_COLOR;
   }
 
   char *fillcolor = late_nnstring(e, E_fillcolor, color);
