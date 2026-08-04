@@ -1171,14 +1171,11 @@ done:;
 }
 
 static bool edge_in_box(edge_t *e, boxf b) {
-  splines *spl;
-  textlabel_t *lp;
-
-  spl = ED_spl(e);
+  splines *spl = ED_spl(e);
   if (spl && boxf_overlap(spl->bb, b))
     return true;
 
-  lp = ED_label(e);
+  textlabel_t *lp = ED_label(e);
   if (lp && overlap_label(lp, b))
     return true;
 
@@ -1398,16 +1395,10 @@ static void emit_end_edge(output_string *output, SafeLayer *safe_layer,
 
 static void emit_edge(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *parent, edge_t *e) {
-  char *s;
-  char *style;
-  char **styles = NULL;
-  char **sp;
-  char *p;
   int layerNum = safe_layer->layerNum;
   SafeJob *safe_job = safe_layer->safe_job;
 
   if (edge_in_box(e, safe_job->clip) && edge_in_layer(layerNum, safe_job, e)) {
-
     agxbuf edge = {0};
     agxbput(&edge, agnameof(agtail(e)));
     if (agisdirected(agraphof(aghead(e))))
@@ -1418,17 +1409,19 @@ static void emit_edge(output_string *output, SafeLayer *safe_layer,
     svg_comment(output, agxbuse(&edge));
     agxbfree(&edge);
 
-    s = late_string(e, E_comment, "");
+    char *s = late_string(e, E_comment, "");
     svg_comment(output, s);
 
-    style = late_string(e, E_style, "");
+    char *style = late_string(e, E_style, "");
+    char **styles = NULL;
     /* We shortcircuit drawing an invisible edge because the arrowhead
      * code resets the style to solid, and most of the code generators
      * (except PostScript) won't honor a previous style of invis.
      */
     if (style[0]) {
       styles = parse_style(style);
-      sp = styles;
+      char **sp = styles;
+      char *p;
       while ((p = *sp++)) {
         if (streq(p, "invis"))
           return;
