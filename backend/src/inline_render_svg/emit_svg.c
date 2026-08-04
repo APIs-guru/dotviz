@@ -976,7 +976,6 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
   char *previous_color_scheme = setColorScheme(agget(e, "colorscheme"));
   bezier bz;
   double penwidth = obj->penwidth;
-  agxbuf buf = {0};
 
   double arrowsize = late_double(e, E_arrowsz, 1.0, 0.0);
   char *color = late_string(e, E_color, "");
@@ -1167,7 +1166,6 @@ done:;
   char *color_scheme = setColorScheme(previous_color_scheme);
   free(color_scheme);
   free(previous_color_scheme);
-  agxbfree(&buf);
 }
 
 static bool edge_in_box(edge_t *e, boxf b) {
