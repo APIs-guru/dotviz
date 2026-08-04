@@ -850,15 +850,8 @@ static void splitBSpline(bezier *bz, double t, bezier *left, bezier *right) {
 static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
                       char **styles, const char *colors, double arrowsize,
                       double penwidth) {
-  bezier bz;
-  bezier bz0, bz_l, bz_r;
-  int rv;
   colorsegs_t segs;
-  char *endcolor = NULL;
-  double left;
-  int first; /* first segment with t > 0 */
-
-  rv = parseSegs(colors, &segs);
+  int rv = parseSegs(colors, &segs);
   if (rv > 1) {
     Agraph_t *g = agraphof(agtail(e));
     agerr(AGPREV, "in edge %s%s%s\n", agnameof(agtail(e)),
@@ -870,9 +863,11 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
     return 1;
 
   for (size_t i = 0; i < ED_spl(e)->size; i++) {
-    left = 1;
-    bz = ED_spl(e)->list[i];
-    first = 1;
+    char *endcolor = NULL;
+    double left = 1;
+    bezier bz = ED_spl(e)->list[i];
+    int first = 1; /* first segment with t > 0 */
+    bezier bz_l, bz_r;
     for (size_t j = 0; j < colorsegs_size(&segs); ++j) {
       const colorseg_t s = colorsegs_get(&segs, j);
       if (s.color == NULL)
@@ -896,7 +891,7 @@ static int multicolor(output_string *output, obj_state_t *obj, edge_t *e,
         free(bz_r.list);
         break;
       } else {
-        bz0 = bz_r;
+        bezier bz0 = bz_r;
         splitBSpline(&bz0, s.t / (left + s.t), &bz_l, &bz_r);
         free(bz0.list);
         svg_bezier(output, obj, bz_l.list, bz_l.size, SVG_FILL_NONE);
