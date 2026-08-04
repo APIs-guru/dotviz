@@ -967,199 +967,199 @@ static radfunc_t taperfun(edge_t *e) {
   return agisdirected(agraphof(aghead(e))) ? forfunc : nonefunc;
 }
 
+#define SEP 2.0
 static void emit_edge_graphics(output_string *output, obj_state_t *obj,
                                edge_t *e, char **styles) {
+  if (!ED_spl(e))
+    return;
+
+  char *previous_color_scheme = setColorScheme(agget(e, "colorscheme"));
   bezier bz;
   double penwidth = obj->penwidth;
   agxbuf buf = {0};
 
-#define SEP 2.0
+  double arrowsize = late_double(e, E_arrowsz, 1.0, 0.0);
+  char *color = late_string(e, E_color, "");
+  bool tapered = false;
 
-  char *previous_color_scheme = setColorScheme(agget(e, "colorscheme"));
-  if (ED_spl(e)) {
-    double arrowsize = late_double(e, E_arrowsz, 1.0, 0.0);
-    char *color = late_string(e, E_color, "");
-    bool tapered = false;
-
-    if (styles) {
-      char **sp = styles;
-      char *p;
-      while ((p = *sp++)) {
-        if (streq(p, "tapered")) {
-          tapered = true;
-          break;
-        }
+  if (styles) {
+    char **sp = styles;
+    char *p;
+    while ((p = *sp++)) {
+      if (streq(p, "tapered")) {
+        tapered = true;
+        break;
       }
     }
+  }
 
-    /* need to know how many colors separated by ':' */
-    int numsemi = 0;
-    size_t numc = 0;
-    for (char *p = color; *p; p++) {
-      if (*p == ':')
-        numc++;
-      else if (*p == ';')
-        numsemi++;
-    }
+  /* need to know how many colors separated by ':' */
+  int numsemi = 0;
+  size_t numc = 0;
+  for (char *p = color; *p; p++) {
+    if (*p == ':')
+      numc++;
+    else if (*p == ';')
+      numsemi++;
+  }
 
-    if (numsemi && numc) {
-      if (multicolor(output, obj, e, styles, color, arrowsize, penwidth)) {
-        color = DEFAULT_COLOR;
-      } else
-        goto done;
-    }
+  if (numsemi && numc) {
+    if (multicolor(output, obj, e, styles, color, arrowsize, penwidth)) {
+      color = DEFAULT_COLOR;
+    } else
+      goto done;
+  }
 
-    char *fillcolor = late_nnstring(e, E_fillcolor, color);
+  char *fillcolor = late_nnstring(e, E_fillcolor, color);
+  if (fillcolor != color)
+    obj->fillcolor = svg_resolve_color(fillcolor);
+
+  if (tapered) {
+    if (*color == '\0')
+      color = DEFAULT_COLOR;
+    if (*fillcolor == '\0')
+      fillcolor = DEFAULT_COLOR;
+    obj->pencolor = svg_resolve_color("transparent");
+    obj->fillcolor = svg_resolve_color(color);
+    bz = ED_spl(e)->list[0];
+    stroke_t stp = taper(&bz, taperfun(e), penwidth);
+    assert(stp.nvertices <= INT_MAX);
+    svg_polygon(output, obj, stp.vertices, stp.nvertices, SVG_FILL_SOLID);
+    free_stroke(stp);
+    obj->pencolor = svg_resolve_color(color);
     if (fillcolor != color)
       obj->fillcolor = svg_resolve_color(fillcolor);
-
-    if (tapered) {
-      if (*color == '\0')
-        color = DEFAULT_COLOR;
-      if (*fillcolor == '\0')
-        fillcolor = DEFAULT_COLOR;
-      obj->pencolor = svg_resolve_color("transparent");
-      obj->fillcolor = svg_resolve_color(color);
-      bz = ED_spl(e)->list[0];
-      stroke_t stp = taper(&bz, taperfun(e), penwidth);
-      assert(stp.nvertices <= INT_MAX);
-      svg_polygon(output, obj, stp.vertices, stp.nvertices, SVG_FILL_SOLID);
-      free_stroke(stp);
-      obj->pencolor = svg_resolve_color(color);
-      if (fillcolor != color)
-        obj->fillcolor = svg_resolve_color(fillcolor);
-      if (bz.sflag) {
-        arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
-                  penwidth, bz.sflag);
+    if (bz.sflag) {
+      arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
+                bz.sflag);
+    }
+    if (bz.eflag) {
+      arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
+                penwidth, bz.eflag);
+    }
+  }
+  /* if more than one color - then generate parallel beziers, one per color */
+  else if (numc) {
+    /* calculate and save offset vector spline and initialize first offset
+     * spline */
+    splines tmpspl;
+    splines offspl;
+    tmpspl.size = offspl.size = ED_spl(e)->size;
+    offspl.list = gv_calloc(offspl.size, sizeof(bezier));
+    tmpspl.list = gv_calloc(tmpspl.size, sizeof(bezier));
+    double numc2 = (2 + (double)numc) / 2.0;
+    for (size_t i = 0; i < offspl.size; i++) {
+      bz = ED_spl(e)->list[i];
+      tmpspl.list[i].size = offspl.list[i].size = bz.size;
+      pointf *offlist = offspl.list[i].list =
+          gv_calloc(bz.size, sizeof(pointf));
+      pointf *tmplist = tmpspl.list[i].list =
+          gv_calloc(bz.size, sizeof(pointf));
+      pointf pf2 = {0, 0};
+      pointf pf3 = bz.list[0];
+      size_t j;
+      for (j = 0; j < bz.size - 1; j += 3) {
+        pointf pf0 = pf3;
+        pointf pf1 = bz.list[j + 1];
+        /* calculate perpendicular vectors for each bezier point */
+        if (j == 0) /* first segment, no previous pf2 */
+          offlist[j] = computeoffset_p(pf0, pf1, SEP);
+        else /* i.e. pf2 is available from previous segment */
+          offlist[j] = computeoffset_p(pf2, pf1, SEP);
+        pf2 = bz.list[j + 2];
+        pf3 = bz.list[j + 3];
+        offlist[j + 1] = offlist[j + 2] =
+            computeoffset_qr(pf0, pf1, pf2, pf3, SEP);
+        /* initialize tmpspl to outermost position */
+        tmplist[j].x = pf0.x - numc2 * offlist[j].x;
+        tmplist[j].y = pf0.y - numc2 * offlist[j].y;
+        tmplist[j + 1].x = pf1.x - numc2 * offlist[j + 1].x;
+        tmplist[j + 1].y = pf1.y - numc2 * offlist[j + 1].y;
+        tmplist[j + 2].x = pf2.x - numc2 * offlist[j + 2].x;
+        tmplist[j + 2].y = pf2.y - numc2 * offlist[j + 2].y;
       }
-      if (bz.eflag) {
-        arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
-                  arrowsize, penwidth, bz.eflag);
+      /* last segment, no next pf1 */
+      offlist[j] = computeoffset_p(pf2, pf3, SEP);
+      tmplist[j].x = pf3.x - numc2 * offlist[j].x;
+      tmplist[j].y = pf3.y - numc2 * offlist[j].y;
+    }
+
+    char *lastcolor = color;
+    char *headcolor = color;
+    char *tailcolor = color;
+    char *colors = gv_strdup(color);
+    int cnum = 0;
+    for (color = strtok(colors, ":"); color; cnum++, color = strtok(0, ":")) {
+      if (!color[0])
+        color = DEFAULT_COLOR;
+      if (color != lastcolor) {
+        obj->pencolor = svg_resolve_color(color);
+        obj->fillcolor = svg_resolve_color(color);
+        lastcolor = color;
+      }
+      if (cnum == 0)
+        headcolor = tailcolor = color;
+      if (cnum == 1)
+        tailcolor = color;
+      for (size_t i = 0; i < tmpspl.size; i++) {
+        pointf *tmplist = tmpspl.list[i].list;
+        pointf *offlist = offspl.list[i].list;
+        for (size_t j = 0; j < tmpspl.list[i].size; j++) {
+          tmplist[j].x += offlist[j].x;
+          tmplist[j].y += offlist[j].y;
+        }
+        svg_bezier(output, obj, tmplist, tmpspl.list[i].size, SVG_FILL_NONE);
       }
     }
-    /* if more than one color - then generate parallel beziers, one per color */
-    else if (numc) {
-      /* calculate and save offset vector spline and initialize first offset
-       * spline */
-      splines tmpspl;
-      splines offspl;
-      tmpspl.size = offspl.size = ED_spl(e)->size;
-      offspl.list = gv_calloc(offspl.size, sizeof(bezier));
-      tmpspl.list = gv_calloc(tmpspl.size, sizeof(bezier));
-      double numc2 = (2 + (double)numc) / 2.0;
-      for (size_t i = 0; i < offspl.size; i++) {
-        bz = ED_spl(e)->list[i];
-        tmpspl.list[i].size = offspl.list[i].size = bz.size;
-        pointf *offlist = offspl.list[i].list =
-            gv_calloc(bz.size, sizeof(pointf));
-        pointf *tmplist = tmpspl.list[i].list =
-            gv_calloc(bz.size, sizeof(pointf));
-        pointf pf2 = {0, 0};
-        pointf pf3 = bz.list[0];
-        size_t j;
-        for (j = 0; j < bz.size - 1; j += 3) {
-          pointf pf0 = pf3;
-          pointf pf1 = bz.list[j + 1];
-          /* calculate perpendicular vectors for each bezier point */
-          if (j == 0) /* first segment, no previous pf2 */
-            offlist[j] = computeoffset_p(pf0, pf1, SEP);
-          else /* i.e. pf2 is available from previous segment */
-            offlist[j] = computeoffset_p(pf2, pf1, SEP);
-          pf2 = bz.list[j + 2];
-          pf3 = bz.list[j + 3];
-          offlist[j + 1] = offlist[j + 2] =
-              computeoffset_qr(pf0, pf1, pf2, pf3, SEP);
-          /* initialize tmpspl to outermost position */
-          tmplist[j].x = pf0.x - numc2 * offlist[j].x;
-          tmplist[j].y = pf0.y - numc2 * offlist[j].y;
-          tmplist[j + 1].x = pf1.x - numc2 * offlist[j + 1].x;
-          tmplist[j + 1].y = pf1.y - numc2 * offlist[j + 1].y;
-          tmplist[j + 2].x = pf2.x - numc2 * offlist[j + 2].x;
-          tmplist[j + 2].y = pf2.y - numc2 * offlist[j + 2].y;
-        }
-        /* last segment, no next pf1 */
-        offlist[j] = computeoffset_p(pf2, pf3, SEP);
-        tmplist[j].x = pf3.x - numc2 * offlist[j].x;
-        tmplist[j].y = pf3.y - numc2 * offlist[j].y;
+    if (bz.sflag) {
+      if (color != tailcolor) {
+        color = tailcolor;
+        obj->pencolor = svg_resolve_color(color);
+        obj->fillcolor = svg_resolve_color(color);
       }
-
-      char *lastcolor = color;
-      char *headcolor = color;
-      char *tailcolor = color;
-      char *colors = gv_strdup(color);
-      int cnum = 0;
-      for (color = strtok(colors, ":"); color; cnum++, color = strtok(0, ":")) {
-        if (!color[0])
-          color = DEFAULT_COLOR;
-        if (color != lastcolor) {
-          obj->pencolor = svg_resolve_color(color);
-          obj->fillcolor = svg_resolve_color(color);
-          lastcolor = color;
-        }
-        if (cnum == 0)
-          headcolor = tailcolor = color;
-        if (cnum == 1)
-          tailcolor = color;
-        for (size_t i = 0; i < tmpspl.size; i++) {
-          pointf *tmplist = tmpspl.list[i].list;
-          pointf *offlist = offspl.list[i].list;
-          for (size_t j = 0; j < tmpspl.list[i].size; j++) {
-            tmplist[j].x += offlist[j].x;
-            tmplist[j].y += offlist[j].y;
-          }
-          svg_bezier(output, obj, tmplist, tmpspl.list[i].size, SVG_FILL_NONE);
-        }
+      arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
+                bz.sflag);
+    }
+    if (bz.eflag) {
+      if (color != headcolor) {
+        color = headcolor;
+        obj->pencolor = svg_resolve_color(color);
+        obj->fillcolor = svg_resolve_color(color);
       }
+      arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
+                penwidth, bz.eflag);
+    }
+    free(colors);
+    for (size_t i = 0; i < offspl.size; i++) {
+      free(offspl.list[i].list);
+      free(tmpspl.list[i].list);
+    }
+    free(offspl.list);
+    free(tmpspl.list);
+  } else {
+    if (color[0]) {
+      obj->pencolor = svg_resolve_color(color);
+      obj->fillcolor = svg_resolve_color(fillcolor);
+    } else {
+      obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
+      if (fillcolor[0])
+        obj->fillcolor = svg_resolve_color(fillcolor);
+      else
+        obj->fillcolor = svg_resolve_color(DEFAULT_COLOR);
+    }
+    for (size_t i = 0; i < ED_spl(e)->size; i++) {
+      bz = ED_spl(e)->list[i];
+      svg_bezier(output, obj, bz.list, bz.size, SVG_FILL_NONE);
       if (bz.sflag) {
-        if (color != tailcolor) {
-          color = tailcolor;
-          obj->pencolor = svg_resolve_color(color);
-          obj->fillcolor = svg_resolve_color(color);
-        }
         arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
                   penwidth, bz.sflag);
       }
       if (bz.eflag) {
-        if (color != headcolor) {
-          color = headcolor;
-          obj->pencolor = svg_resolve_color(color);
-          obj->fillcolor = svg_resolve_color(color);
-        }
         arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
                   arrowsize, penwidth, bz.eflag);
       }
-      free(colors);
-      for (size_t i = 0; i < offspl.size; i++) {
-        free(offspl.list[i].list);
-        free(tmpspl.list[i].list);
-      }
-      free(offspl.list);
-      free(tmpspl.list);
-    } else {
-      if (color[0]) {
-        obj->pencolor = svg_resolve_color(color);
-        obj->fillcolor = svg_resolve_color(fillcolor);
-      } else {
-        obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
-        if (fillcolor[0])
-          obj->fillcolor = svg_resolve_color(fillcolor);
-        else
-          obj->fillcolor = svg_resolve_color(DEFAULT_COLOR);
-      }
-      for (size_t i = 0; i < ED_spl(e)->size; i++) {
-        bz = ED_spl(e)->list[i];
-        svg_bezier(output, obj, bz.list, bz.size, SVG_FILL_NONE);
-        if (bz.sflag) {
-          arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize,
-                    penwidth, bz.sflag);
-        }
-        if (bz.eflag) {
-          arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
-                    arrowsize, penwidth, bz.eflag);
-        }
-        if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-          svg_set_style(obj, styles);
-      }
+      if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
+        svg_set_style(obj, styles);
     }
   }
 
