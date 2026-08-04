@@ -1121,8 +1121,6 @@ void arrow_gen(output_string *output, obj_state_t *obj, emit_state_t emit_state,
   /* the first arrow head - closest to node */
   for (int i = 0; i < NUMB_OF_ARROW_HEADS; i++) {
     uint32_t f = (flag >> (i * BITS_PER_ARROW)) & ((1 << BITS_PER_ARROW) - 1);
-    if (f == ARR_TYPE_NONE)
-      break;
     p = arrow_gen_type(output, obj, p, u, arrowsize, penwidth, f);
   }
 
