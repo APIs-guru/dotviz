@@ -697,7 +697,7 @@ void svg_polyline(output_string *output, obj_state_t *obj, pointf *A,
   if (obj->pen == PEN_NONE) {
     return;
   }
-  
+
   out_puts(output, "<polyline fill=\"none\"");
   svg_stroke_attribute(output, obj);
   out_puts(output, " points=\"");
@@ -742,32 +742,33 @@ gvcolor_t svg_resolve_color(char *name) {
 }
 
 void svg_set_style(obj_state_t *obj, char **s) {
+  if (s == NULL)
+    return;
   char *line, *p;
-  if (s)
-    while ((p = line = *s++)) {
-      if (streq(line, "solid"))
-        obj->pen = PEN_SOLID;
-      else if (streq(line, "dashed"))
-        obj->pen = PEN_DASHED;
-      else if (streq(line, "dotted"))
-        obj->pen = PEN_DOTTED;
-      else if (streq(line, "invis") || streq(line, "invisible"))
-        obj->pen = PEN_NONE;
-      else if (streq(line, "bold"))
-        obj->penwidth = PENWIDTH_BOLD;
-      else if (streq(line, "setlinewidth")) {
-        while (*p)
-          p++;
+  while ((p = line = *s++)) {
+    if (streq(line, "solid"))
+      obj->pen = PEN_SOLID;
+    else if (streq(line, "dashed"))
+      obj->pen = PEN_DASHED;
+    else if (streq(line, "dotted"))
+      obj->pen = PEN_DOTTED;
+    else if (streq(line, "invis") || streq(line, "invisible"))
+      obj->pen = PEN_NONE;
+    else if (streq(line, "bold"))
+      obj->penwidth = PENWIDTH_BOLD;
+    else if (streq(line, "setlinewidth")) {
+      while (*p)
         p++;
-        obj->penwidth = atof(p);
-      } else if (streq(line, "filled"))
-        obj->fill = FILL_SOLID;
-      else if (streq(line, "unfilled"))
-        obj->fill = FILL_NONE;
-      else if (streq(line, "tapered"))
-        ;
-      else {
-        agwarningf("svg_set_style: unsupported style %s - ignoring\n", line);
-      }
+      p++;
+      obj->penwidth = atof(p);
+    } else if (streq(line, "filled"))
+      obj->fill = FILL_SOLID;
+    else if (streq(line, "unfilled"))
+      obj->fill = FILL_NONE;
+    else if (streq(line, "tapered"))
+      ;
+    else {
+      agwarningf("svg_set_style: unsupported style %s - ignoring\n", line);
     }
+  }
 }
