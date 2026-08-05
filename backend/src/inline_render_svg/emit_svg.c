@@ -47,6 +47,122 @@ extern Agsym_t *E_layer, *E_dir, *E_arrowsz, *E_color, *E_fillcolor,
 
 #define EPSILON .0001
 
+typedef struct {
+  bool in_parens;
+  bool has_error;
+  char const *input;
+  char const *p;
+} parser_state_t;
+
+static char const *next_token(parser_state_t *state) {
+  for (const char *start = NULL;; ++state->p) {
+    switch (*state->p) {
+    case '\0':
+      if (state->in_parens) {
+        agerrorf("unmatched '(' in style: %s\n", state->input);
+        state->has_error = true;
+        return NULL;
+      }
+      return start;
+    case '\t':
+    case '\n':
+    case '\v':
+    case '\f':
+    case '\r':
+    case ' ':
+    case ',':
+      if (start != NULL)
+        return start;
+      break;
+    case '(':
+      if (state->in_parens) {
+        agerrorf("nesting not allowed in style: %s\n", state->input);
+        state->has_error = true;
+        return NULL;
+      }
+      if (start != NULL)
+        return start;
+      state->in_parens = true;
+      break;
+    case ')':
+      if (!state->in_parens) {
+        agerrorf("unmatched ')' in style: %s\n", state->input);
+        state->has_error = true;
+        return NULL;
+      }
+      if (start != NULL)
+        return start;
+      state->in_parens = false;
+      break;
+    default:
+      if (start == NULL)
+        start = state->p;
+    }
+  }
+}
+
+typedef struct {
+  unsigned int isTapered : 1;
+  unsigned int setPen : 1;
+  unsigned int setPenwidth : 1;
+  pen_type pen;
+  double penwidth;
+} edge_style_t;
+
+edge_style_t get_edge_style(edge_t *e) {
+  char *s = late_string(e, E_style, "");
+  parser_state_t state = {
+      .input = s, .p = s, .in_parens = false, .has_error = false};
+
+  edge_style_t style = {0};
+  char const *start;
+  while ((start = next_token(&state)) != NULL) {
+    size_t len = state.p - start;
+    if (state.in_parens) {
+      agwarningf("get_edge_style: unexpected argument %.*s - ignoring\n",
+                 (int)len, start);
+      continue;
+    }
+
+    if (strncmp(start, "solid", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_SOLID;
+    } else if (strncmp(start, "dashed", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_DASHED;
+    } else if (strncmp(start, "dotted", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_DOTTED;
+    } else if (strncmp(start, "invis", len) == 0 ||
+               strncmp(start, "invisible", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_NONE;
+    } else if (strncmp(start, "bold", len) == 0) {
+      style.setPenwidth = true;
+      style.penwidth = PENWIDTH_BOLD;
+    } else if (strncmp(start, "setlinewidth", len) == 0) {
+      style.setPenwidth = true;
+      style.penwidth = 0;
+
+      parser_state_t argState = state;
+      char const *arg = next_token(&argState);
+      if (arg != NULL && argState.in_parens) {
+        style.penwidth = atof(arg);
+        state = argState;
+      }
+    } else if (strncmp(start, "tapered", len) == 0) {
+      style.isTapered = 1;
+    } else {
+      agwarningf("get_edge_style: unsupported edge style %.*s - ignoring\n",
+                 (int)len, start);
+    }
+  }
+  if (state.has_error) {
+    return (edge_style_t){0};
+  }
+  return style;
+}
+
 /* push empty graphic state for current object */
 obj_state_t child_obj_state(obj_state_t *parent) {
   obj_state_t child = {0};
@@ -846,7 +962,7 @@ static void splitBSpline(bezier *bz, double t, bezier *left, bezier *right) {
  * Not sure how to handle multiple B-splines, so do a naive implementation.
  */
 static void multicolor(output_string *output, obj_state_t *obj, edge_t *e,
-                       char **styles, colorsegs_t segs, double arrowsize,
+                       edge_style_t style, colorsegs_t segs, double arrowsize,
                        double penwidth) {
   for (size_t i = 0; i < ED_spl(e)->size; i++) {
     char *endcolor = NULL;
@@ -900,8 +1016,8 @@ static void multicolor(output_string *output, obj_state_t *obj, edge_t *e,
       arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1], arrowsize,
                 penwidth, bz.eflag);
     }
-    if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-      svg_set_style(obj, styles);
+    // FIXME: reset pen after arrow_gen
+    obj->pen = style.setPen ? style.pen : PEN_SOLID;
   }
 }
 
@@ -948,7 +1064,7 @@ static radfunc_t taperfun(edge_t *e) {
 
 #define SEP 2.0
 static void emit_edge_graphics(output_string *output, obj_state_t *obj,
-                               edge_t *e, char **styles) {
+                               edge_t *e, edge_style_t style) {
   if (!ED_spl(e))
     return;
 
@@ -958,18 +1074,6 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
 
   double arrowsize = late_double(e, E_arrowsz, 1.0, 0.0);
   char *color = late_string(e, E_color, "");
-  bool tapered = false;
-
-  if (styles) {
-    char **sp = styles;
-    char *p;
-    while ((p = *sp++)) {
-      if (streq(p, "tapered")) {
-        tapered = true;
-        break;
-      }
-    }
-  }
 
   /* need to know how many colors separated by ':' */
   int numsemi = 0;
@@ -990,14 +1094,14 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
             (agisdirected(g) ? " -> " : " -- "), agnameof(aghead(e)));
     }
     if (rv != 1 && rv != 2) {
-      multicolor(output, obj, e, styles, segs, arrowsize, penwidth);
+      multicolor(output, obj, e, style, segs, arrowsize, penwidth);
       colorsegs_free(&segs);
       goto done;
     }
     color = DEFAULT_COLOR;
   }
 
-  if (tapered) {
+  if (style.isTapered) {
     if (*color == '\0')
       color = DEFAULT_COLOR;
     char *fillcolor = late_nnstring(e, E_fillcolor, color);
@@ -1137,8 +1241,8 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
         arrow_gen(output, obj, EMIT_HDRAW, bz.ep, bz.list[bz.size - 1],
                   arrowsize, penwidth, bz.eflag);
       }
-      if (ED_spl(e)->size > 1 && (bz.sflag || bz.eflag) && styles)
-        svg_set_style(obj, styles);
+      // FIXME: reset pen after arrow_gen
+      obj->pen = style.setPen ? style.pen : PEN_SOLID;
     }
   }
 
@@ -1165,7 +1269,7 @@ static bool edge_in_box(edge_t *e, boxf b) {
 }
 
 static void emit_begin_edge(output_string *output, SafeLayer *safe_layer,
-                            obj_state_t *obj, edge_t *e, char **styles) {
+                            obj_state_t *obj, edge_t *e, edge_style_t style) {
   char *s;
   textlabel_t *lab = NULL, *tlab = NULL, *hlab = NULL;
   char *dflt_url = NULL;
@@ -1181,8 +1285,12 @@ static void emit_begin_edge(output_string *output, SafeLayer *safe_layer,
   /* We handle the edge style and penwidth here because the width
    * is needed below for calculating polygonal image maps
    */
-  if (styles && ED_spl(e))
-    svg_set_style(obj, styles);
+  if (ED_spl(e)) {
+    if (style.setPen)
+      obj->pen = style.pen;
+    if (style.setPenwidth)
+      obj->penwidth = style.penwidth;
+  }
 
   if (E_penwidth && (s = agxget(e, E_penwidth)) && s[0]) {
     penwidth = late_double(e, E_penwidth, 1.0, 0.0);
@@ -1391,25 +1499,18 @@ static void emit_edge(output_string *output, SafeLayer *safe_layer,
   char *s = late_string(e, E_comment, "");
   svg_comment(output, s);
 
-  char *style = late_string(e, E_style, "");
-  char **styles = NULL;
+  edge_style_t style = get_edge_style(e);
   /* We shortcircuit drawing an invisible edge because the arrowhead
    * code resets the style to solid, and most of the code generators
    * (except PostScript) won't honor a previous style of invis.
    */
-  if (style[0]) {
-    styles = parse_style(style);
-    char **sp = styles;
-    char *p;
-    while ((p = *sp++)) {
-      if (streq(p, "invis"))
-        return;
-    }
+  if (style.setPen && style.pen == PEN_NONE) {
+    return;
   }
 
   obj_state_t obj = child_obj_state(parent);
-  emit_begin_edge(output, safe_layer, &obj, e, styles);
-  emit_edge_graphics(output, &obj, e, styles);
+  emit_begin_edge(output, safe_layer, &obj, e, style);
+  emit_edge_graphics(output, &obj, e, style);
   emit_end_edge(output, safe_layer, &obj);
   free_child_obj(&obj);
 }
@@ -1711,60 +1812,6 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
     char *color_scheme = setColorScheme(previous_color_scheme);
     free(color_scheme);
     free(previous_color_scheme);
-  }
-}
-
-typedef struct {
-  bool in_parens;
-  bool has_error;
-  char const *input;
-  char const *p;
-} parser_state_t;
-
-static char const *next_token(parser_state_t *state) {
-  for (const char *start = NULL;; ++state->p) {
-    switch (*state->p) {
-    case '\0':
-      if (state->in_parens) {
-        agerrorf("unmatched '(' in style: %s\n", state->input);
-        state->has_error = true;
-        return NULL;
-      }
-      return start;
-    case '\t':
-    case '\n':
-    case '\v':
-    case '\f':
-    case '\r':
-    case ' ':
-    case ',':
-      if (start != NULL)
-        return start;
-      break;
-    case '(':
-      if (state->in_parens) {
-        agerrorf("nesting not allowed in style: %s\n", state->input);
-        state->has_error = true;
-        return NULL;
-      }
-      if (start != NULL)
-        return start;
-      state->in_parens = true;
-      break;
-    case ')':
-      if (!state->in_parens) {
-        agerrorf("unmatched ')' in style: %s\n", state->input);
-        state->has_error = true;
-        return NULL;
-      }
-      if (start != NULL)
-        return start;
-      state->in_parens = false;
-      break;
-    default:
-      if (start == NULL)
-        start = state->p;
-    }
   }
 }
 
