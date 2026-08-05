@@ -997,15 +997,11 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     color = DEFAULT_COLOR;
   }
 
-  char *fillcolor = late_nnstring(e, E_fillcolor, color);
-  if (fillcolor != color)
-    obj->fillcolor = svg_resolve_color(fillcolor);
-
   if (tapered) {
     if (*color == '\0')
       color = DEFAULT_COLOR;
-    if (*fillcolor == '\0')
-      fillcolor = DEFAULT_COLOR;
+    char *fillcolor = late_nnstring(e, E_fillcolor, color);
+
     obj->pencolor = svg_resolve_color("transparent");
     obj->fillcolor = svg_resolve_color(color);
     bz = ED_spl(e)->list[0];
@@ -1014,8 +1010,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     svg_polygon(output, obj, stp.vertices, stp.nvertices, SVG_FILL_SOLID);
     free_stroke(stp);
     obj->pencolor = svg_resolve_color(color);
-    if (fillcolor != color)
-      obj->fillcolor = svg_resolve_color(fillcolor);
+    obj->fillcolor = svg_resolve_color(fillcolor);
     if (bz.sflag) {
       arrow_gen(output, obj, EMIT_TDRAW, bz.sp, bz.list[0], arrowsize, penwidth,
                 bz.sflag);
@@ -1077,7 +1072,7 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     char *colors = gv_strdup(color);
     int cnum = 0;
     for (color = strtok(colors, ":"); color; cnum++, color = strtok(0, ":")) {
-      if (!color[0])
+      if (color[0] == '\0')
         color = DEFAULT_COLOR;
       if (color != lastcolor) {
         obj->pencolor = svg_resolve_color(color);
@@ -1124,16 +1119,13 @@ static void emit_edge_graphics(output_string *output, obj_state_t *obj,
     free(offspl.list);
     free(tmpspl.list);
   } else {
-    if (color[0]) {
-      obj->pencolor = svg_resolve_color(color);
-      obj->fillcolor = svg_resolve_color(fillcolor);
-    } else {
-      obj->pencolor = svg_resolve_color(DEFAULT_COLOR);
-      if (fillcolor[0])
-        obj->fillcolor = svg_resolve_color(fillcolor);
-      else
-        obj->fillcolor = svg_resolve_color(DEFAULT_COLOR);
-    }
+    if (color[0] == '\0')
+      color = DEFAULT_COLOR;
+    obj->pencolor = svg_resolve_color(color);
+
+    char *fillcolor = late_nnstring(e, E_fillcolor, color);
+    obj->fillcolor = svg_resolve_color(fillcolor);
+
     for (size_t i = 0; i < ED_spl(e)->size; i++) {
       bz = ED_spl(e)->list[i];
       svg_bezier(output, obj, bz.list, bz.size, SVG_FILL_NONE);
