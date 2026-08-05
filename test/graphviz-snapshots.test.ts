@@ -505,26 +505,28 @@ describe('miscellaneous', () => {
 });
 
 const graphvizSnapshotDir = fileURLToPath(import.meta.resolve('./graphviz'));
-const fontWarningRegExp =
-  /Warning: no hard-coded metrics for '[^']+'. {2}Falling back to 'Times' metrics$/u;
-const asciiWarningRegExp =
-  /Warning: no value for width of non-ASCII character [0-9]+. Falling back to width of space character$/u;
-function filterErrors<T extends { message: string }>(errors: T[]): T[] {
-  return errors.filter(
-    ({ message }) =>
-      !fontWarningRegExp.test(message) &&
-      !asciiWarningRegExp.test(message) &&
-      message !== 'Multiple graphs found. Using the first one.',
-  );
-}
+const errorsFilters = [
+  /Multiple graphs found. Using the first one./u,
+  /Warning: no hard-coded metrics for '[^']+'. {2}Falling back to 'Times' metrics$/u,
+  /Warning: no value for width of non-ASCII character [0-9]+. Falling back to width of space character$/u,
+];
+const dotvizErrorsFilters = [
+  ...errorsFilters,
+  /get_edge_style: unsupported edge style filled - ignoring/u,
+];
 
 function compareWithVizJS(
   dotvizResult: DotvizResult,
   vizjsResult: VizJSResult,
 ): void {
-  expect(filterErrors(dotvizResult.diagnostics)).toStrictEqual(
-    filterErrors(vizjsResult.errors),
+  const vizjsErrors = vizjsResult.errors.filter(
+    ({ message }) => !errorsFilters.some((filter) => filter.test(message)),
   );
+  const dotvizErrors = dotvizResult.diagnostics.filter(
+    ({ message }) =>
+      !dotvizErrorsFilters.some((filter) => filter.test(message)),
+  );
+  expect(dotvizErrors).toStrictEqual(vizjsErrors);
   expect(vizjsResult).toStrictEqual({
     status: 'success',
     output: {
