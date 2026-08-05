@@ -744,8 +744,9 @@ gvcolor_t svg_resolve_color(char *name) {
 void svg_set_style(obj_state_t *obj, char **s) {
   if (s == NULL)
     return;
-  char *line, *p;
-  while ((p = line = *s++)) {
+  
+  char *line;
+  while ((line = *s++)) {
     if (streq(line, "solid"))
       obj->pen = PEN_SOLID;
     else if (streq(line, "dashed"))
@@ -757,6 +758,7 @@ void svg_set_style(obj_state_t *obj, char **s) {
     else if (streq(line, "bold"))
       obj->penwidth = PENWIDTH_BOLD;
     else if (streq(line, "setlinewidth")) {
+      char *p = line;
       while (*p)
         p++;
       p++;
