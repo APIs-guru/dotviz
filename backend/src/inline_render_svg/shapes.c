@@ -2136,7 +2136,6 @@ static void poly_init(node_t *n) {
       bb.x *= SQRT2;
       bb.y = temp;
     }
-#if 1
     if (sides > 2) {
       temp = cos(M_PI / (double)sides);
       bb.x /= temp;
@@ -2144,7 +2143,6 @@ static void poly_init(node_t *n) {
       /* FIXME - for odd-sided polygons, e.g. triangles, there
          would be a better fit with some vertical adjustment of the shape */
     }
-#endif
   }
 
   /* at this point, bb is the minimum size of node that can hold the label */
