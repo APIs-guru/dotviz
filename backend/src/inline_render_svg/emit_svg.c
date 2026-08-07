@@ -124,7 +124,9 @@ edge_style_t get_edge_style(edge_t *e) {
       continue;
     }
 
-    if (strncmp(start, "solid", len) == 0) {
+    if (strncmp(start, "tapered", len) == 0) {
+      style.isTapered = 1;
+    } else if (strncmp(start, "solid", len) == 0) {
       style.setPen = true;
       style.pen = PEN_SOLID;
     } else if (strncmp(start, "dashed", len) == 0) {
@@ -150,8 +152,6 @@ edge_style_t get_edge_style(edge_t *e) {
         style.penwidth = atof(arg);
         state = argState;
       }
-    } else if (strncmp(start, "tapered", len) == 0) {
-      style.isTapered = 1;
     } else {
       agwarningf("get_edge_style: unsupported edge style %.*s - ignoring\n",
                  (int)len, start);
@@ -159,6 +159,82 @@ edge_style_t get_edge_style(edge_t *e) {
   }
   if (state.has_error) {
     return (edge_style_t){0};
+  }
+  return style;
+}
+
+typedef struct {
+  unsigned int isFilled : 1;
+  unsigned int isRadial : 1;
+  unsigned int isStriped : 1;
+  unsigned int isRounded : 1;
+  unsigned int setPen : 1;
+  unsigned int setPenwidth : 1;
+  pen_type pen;
+  double penwidth;
+} cluster_style_t;
+
+cluster_style_t get_cluster_style(graph_t *sg) {
+  char *s = agget(sg, "style");
+  if (s == NULL || s[0] == 0) {
+    return (cluster_style_t){0};
+  }
+
+  parser_state_t state = {
+      .input = s, .p = s, .in_parens = false, .has_error = false};
+
+  cluster_style_t style = {0};
+  char const *start;
+  while ((start = next_token(&state)) != NULL) {
+    size_t len = state.p - start;
+    if (state.in_parens) {
+      agwarningf("get_edge_style: unexpected argument %.*s - ignoring\n",
+                 (int)len, start);
+      continue;
+    }
+
+    if (strncmp(start, "filled", len) == 0) {
+      style.isFilled = true;
+    } else if (strncmp(start, "radial", len) == 0) {
+      style.isFilled = true;
+      style.isRadial = true;
+    } else if (strncmp(start, "striped", len) == 0) {
+      style.isStriped = true;
+    } else if (strncmp(start, "rounded", len) == 0) {
+      style.isRounded = true;
+    } else if (strncmp(start, "solid", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_SOLID;
+    } else if (strncmp(start, "dashed", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_DASHED;
+    } else if (strncmp(start, "dotted", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_DOTTED;
+    } else if (strncmp(start, "invis", len) == 0 ||
+               strncmp(start, "invisible", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_NONE;
+    } else if (strncmp(start, "bold", len) == 0) {
+      style.setPenwidth = true;
+      style.penwidth = PENWIDTH_BOLD;
+    } else if (strncmp(start, "setlinewidth", len) == 0) {
+      style.setPenwidth = true;
+      style.penwidth = 0;
+
+      parser_state_t argState = state;
+      char const *arg = next_token(&argState);
+      if (arg != NULL && argState.in_parens) {
+        style.penwidth = atof(arg);
+        state = argState;
+      }
+    } else {
+      agwarningf("get_cluster_style: unsupported edge style %.*s - ignoring\n",
+                 (int)len, start);
+    }
+  }
+  if (state.has_error) {
+    return (cluster_style_t){0};
   }
   return style;
 }
@@ -315,51 +391,6 @@ static void initObjMapData(obj_state_t *obj, textlabel_t *lab, void *gobj) {
   if (target && target[0]) {
     obj->target = strdup_and_subst_obj(target, gobj);
   }
-}
-
-static char **checkClusterStyle(graph_t *sg, graphviz_polygon_style_t *flagp) {
-  char *style;
-  char **pstyle = NULL;
-  graphviz_polygon_style_t istyle = {0};
-
-  if ((style = agget(sg, "style")) != 0 && style[0]) {
-    char **pp;
-    char **qp;
-    char *p;
-    pp = pstyle = parse_style(style);
-    while ((p = *pp)) {
-      if (strcmp(p, "filled") == 0) {
-        istyle.filled = true;
-        pp++;
-      } else if (strcmp(p, "radial") == 0) {
-        istyle.filled = true;
-        istyle.radial = true;
-        qp = pp; /* remove rounded from list passed to renderer */
-        do {
-          qp++;
-          *(qp - 1) = *qp;
-        } while (*qp);
-      } else if (strcmp(p, "striped") == 0) {
-        istyle.striped = true;
-        qp = pp; /* remove rounded from list passed to renderer */
-        do {
-          qp++;
-          *(qp - 1) = *qp;
-        } while (*qp);
-      } else if (strcmp(p, "rounded") == 0) {
-        istyle.rounded = true;
-        qp = pp; /* remove rounded from list passed to renderer */
-        do {
-          qp++;
-          *(qp - 1) = *qp;
-        } while (*qp);
-      } else
-        pp++;
-    }
-  }
-
-  *flagp = istyle;
-  return pstyle;
 }
 
 typedef struct {
@@ -675,18 +706,17 @@ static void emit_background(output_string *output, SafeLayer *safe_layer,
     double frac;
 
     if ((findStopColor(str, clrs, &frac))) {
-      graphviz_polygon_style_t istyle = {0};
       obj->fillcolor = svg_resolve_color(clrs[0]);
       obj->pencolor = svg_resolve_color("transparent");
-      checkClusterStyle(g, &istyle);
       if (clrs[1])
         obj->stopcolor = svg_resolve_color(clrs[1]);
       else
         obj->stopcolor = svg_resolve_color(DEFAULT_COLOR);
       obj->gradient_angle = late_int(g, G_gradientangle, 0, 0);
       obj->gradient_frac = frac;
+      cluster_style_t style = get_cluster_style(g);
       svg_fill_type_t fill_type = SVG_FILL_GRADIENT;
-      if (istyle.radial)
+      if (style.isRadial)
         fill_type = SVG_FILL_RGRADIENT;
       svg_box(output, obj, safe_layer->safe_job->clip, fill_type);
       free(clrs[0]);
@@ -1707,14 +1737,13 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
     if (doAnchor) {
       svg_begin_anchor(output, obj.url, obj.tooltip, obj.target, obj.id);
     }
-    svg_fill_type_t fill_type = SVG_FILL_NONE;
-    graphviz_polygon_style_t istyle = {0};
-    char **style = checkClusterStyle(sg, &istyle);
-    if (style != NULL) {
-      svg_set_style(&obj, style);
-      if (istyle.filled)
-        fill_type = SVG_FILL_SOLID;
-    }
+    cluster_style_t style = get_cluster_style(sg);
+    if (style.setPen)
+      obj.pen = style.pen;
+    if (style.setPenwidth)
+      obj.penwidth = style.penwidth;
+
+    svg_fill_type_t fill_type = style.isFilled ? SVG_FILL_SOLID : SVG_FILL_NONE;
     fillcolor = pencolor = 0;
     if ((color = agget(sg, "color")) != 0 && color[0])
       fillcolor = pencolor = color;
@@ -1747,10 +1776,9 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
           obj.stopcolor = svg_resolve_color(DEFAULT_COLOR);
         obj.gradient_angle = late_int(sg, G_gradientangle, 0, 0);
         obj.gradient_frac = frac;
-        if (istyle.radial)
+        fill_type = SVG_FILL_GRADIENT;
+        if (style.isRadial)
           fill_type = SVG_FILL_RGRADIENT;
-        else
-          fill_type = SVG_FILL_GRADIENT;
       } else
         obj.fillcolor = svg_resolve_color(fillcolor);
     }
@@ -1760,7 +1788,7 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
       obj.penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
     }
 
-    if (istyle.rounded) {
+    if (style.isRounded) {
       int doPerim = late_int(sg, G_peripheries, 1, 0);
       if (doPerim != 0 || fill_type != SVG_FILL_NONE) {
         if (doPerim)
@@ -1769,7 +1797,7 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
           obj.pencolor = svg_resolve_color("transparent");
         rounded_svg_box(output, &obj, GD_bb(sg), fill_type);
       }
-    } else if (istyle.striped) {
+    } else if (style.isStriped) {
       pointf AF[4];
       AF[0] = GD_bb(sg).LL;
       AF[2] = GD_bb(sg).UR;
