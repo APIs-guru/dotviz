@@ -3894,55 +3894,42 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
 static shape_desc **UserShape;
 static size_t N_UserShape;
 
-static shape_desc *find_user_shape(const char *name) {
-  if (UserShape) {
+shape_desc *bind_shape(char *name, node_t *np) {
+  const char *str = safefile(agget(np, "shapefile"));
+
+  /* If shapefile is defined and not epsf, set shape = custom */
+  if (str && !streq(name, "epsf"))
+    name = "custom";
+  if (!streq(name, "custom")) {
+    for (shape_desc *ptr = Shapes; ptr->name; ptr++) {
+      if (streq(ptr->name, name)) {
+        return ptr;
+      }
+    }
+  }
+
+  if (UserShape != NULL) {
     for (size_t i = 0; i < N_UserShape; i++) {
       if (streq(UserShape[i]->name, name))
         return UserShape[i];
     }
   }
-  return NULL;
-}
 
-static shape_desc *user_shape(char *name) {
-  shape_desc *p;
-
-  if ((p = find_user_shape(name)))
-    return p;
-  size_t i = N_UserShape++;
-  UserShape = gv_recalloc(UserShape, N_UserShape - 1, N_UserShape,
-                          sizeof(shape_desc *));
-  p = UserShape[i] = gv_alloc(sizeof(shape_desc));
-  *p = Shapes[0];
-  p->name = strdup(name);
+  shape_desc *shape = gv_alloc(sizeof(shape_desc));
+  *shape = Shapes[0];
+  shape->name = strdup(name);
   if (Lib == NULL && !streq(name, "custom")) {
-    agwarningf("using %s for unknown shape %s\n", Shapes[0].name, p->name);
-    p->usershape = false;
+    agwarningf("using %s for unknown shape %s\n", Shapes[0].name, shape->name);
+    shape->usershape = false;
   } else {
-    p->usershape = true;
+    shape->usershape = true;
   }
-  return p;
-}
 
-shape_desc *bind_shape(char *name, node_t *np) {
-  shape_desc *ptr, *rv = NULL;
-  const char *str;
-
-  str = safefile(agget(np, "shapefile"));
-  /* If shapefile is defined and not epsf, set shape = custom */
-  if (str && !streq(name, "epsf"))
-    name = "custom";
-  if (!streq(name, "custom")) {
-    for (ptr = Shapes; ptr->name; ptr++) {
-      if (streq(ptr->name, name)) {
-        rv = ptr;
-        break;
-      }
-    }
-  }
-  if (rv == NULL)
-    rv = user_shape(name);
-  return rv;
+  UserShape = gv_recalloc(UserShape, N_UserShape + 1, N_UserShape,
+                          sizeof(shape_desc *));
+  UserShape[N_UserShape] = shape;
+  ++N_UserShape;
+  return shape;
 }
 
 static bool epsf_inside(inside_t *inside_context, pointf p) {
