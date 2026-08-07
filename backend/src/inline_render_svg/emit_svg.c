@@ -709,10 +709,10 @@ DEFINE_LIST(layer_names, char *)
 
 static void emit_background(output_string *output, SafeLayer *safe_layer,
                             obj_state_t *obj, graph_t *g) {
-  char *str;
+  char *str = agget(g, "bgcolor");
 
   /* if no bgcolor specified - first assume default of "white" */
-  if (!((str = agget(g, "bgcolor")) && str[0])) {
+  if (str == NULL || str[0] == '\0') {
     str = "white";
   }
 
