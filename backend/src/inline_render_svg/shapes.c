@@ -15,13 +15,10 @@
 #include "types.h"
 #include "utils.h"
 #include "util/gv_math.h"
-#include <util/streq.h>
-#include <util/unreachable.h>
-#include "gvcjob.h"
+#include "util/streq.h"
+#include "util/unreachable.h"
 #include "macros.h"
 #include "geomprocs.h"
-#include <gvcint.h>
-#include "gvcproc.h"
 
 #include "internal_render_svg.h"
 #include "htmltable.h"
@@ -32,8 +29,6 @@ typedef struct epsf_s {
   int macro_id;
   pointf offset;
 } epsf_t;
-
-extern const char **Lib;
 
 extern Agsym_t *G_ordering, *G_peripheries, *G_penwidth, *G_gradientangle,
     *G_margin;
@@ -3916,14 +3911,14 @@ shape_desc *bind_shape(char *name, node_t *np) {
   }
 
   shape_desc *shape = gv_alloc(sizeof(shape_desc));
-  *shape = Shapes[0];
-  shape->name = strdup(name);
-  if (Lib == NULL && !streq(name, "custom")) {
-    agwarningf("using %s for unknown shape %s\n", Shapes[0].name, shape->name);
+  if (!streq(name, "custom")) {
+    agwarningf("using %s for unknown shape %s\n", Shapes[0].name, name);
     shape->usershape = false;
   } else {
     shape->usershape = true;
   }
+  *shape = Shapes[0];
+  shape->name = strdup(name);
 
   UserShape = gv_recalloc(UserShape, N_UserShape + 1, N_UserShape,
                           sizeof(shape_desc *));

@@ -61,3 +61,4 @@ int wedgedEllipse(output_string *output, obj_state_t *obj, pointf *pf,
 void init_bb(graph_t *g);
 void rounded_svg_box(output_string *output, obj_state_t *obj, boxf B,
                      svg_fill_type_t fill_type);
+point gvusershape_size(graph_t *g, char *name);
