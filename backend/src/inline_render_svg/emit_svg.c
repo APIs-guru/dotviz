@@ -160,6 +160,15 @@ edge_style_t get_edge_style(edge_t *e) {
   if (state.has_error) {
     return (edge_style_t){0};
   }
+
+  if (E_penwidth) {
+    char *penwidth = agxget(e, E_penwidth);
+    if (penwidth != NULL && penwidth[0] != '\0') {
+      style.setPenwidth = true;
+      style.penwidth = late_double(e, E_penwidth, 1.0, 0.0);
+    }
+  }
+
   return style;
 }
 
@@ -235,6 +244,14 @@ cluster_style_t get_cluster_style(graph_t *sg) {
   }
   if (state.has_error) {
     return (cluster_style_t){0};
+  }
+
+  if (G_penwidth) {
+    char* penwidth = ag_xget(sg, G_penwidth);
+    if (penwidth != NULL || penwidth[0] != '\0') {
+      style.setPenwidth = true;
+      style.penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
+    }
   }
   return style;
 }
@@ -1304,7 +1321,6 @@ static void emit_begin_edge(output_string *output, SafeLayer *safe_layer,
   textlabel_t *lab = NULL, *tlab = NULL, *hlab = NULL;
   char *dflt_url = NULL;
   char *dflt_target = NULL;
-  double penwidth;
 
   obj->type = EDGE_OBJTYPE;
   obj->u.e = e;
@@ -1320,11 +1336,6 @@ static void emit_begin_edge(output_string *output, SafeLayer *safe_layer,
       obj->pen = style.pen;
     if (style.setPenwidth)
       obj->penwidth = style.penwidth;
-  }
-
-  if (E_penwidth && (s = agxget(e, E_penwidth)) && s[0]) {
-    penwidth = late_double(e, E_penwidth, 1.0, 0.0);
-    obj->penwidth = penwidth;
   }
 
   if ((lab = ED_label(e)))
@@ -1781,11 +1792,6 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
           fill_type = SVG_FILL_RGRADIENT;
       } else
         obj.fillcolor = svg_resolve_color(fillcolor);
-    }
-
-    char *s;
-    if (G_penwidth && ((s = ag_xget(sg, G_penwidth)) && s[0])) {
-      obj.penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
     }
 
     if (style.isRounded) {
