@@ -11,7 +11,6 @@ pub const graphviz = @cImport({
     @cInclude("cgraph_wrapper.h");
     @cInclude("context_inline.h");
     @cInclude("layout_inline.h");
-    @cInclude("gvusershape_size.h");
     @cInclude("inline_render_dot/render_inline_dot.h");
     @cInclude("inline_render_svg/render_svg.h");
 });
@@ -78,8 +77,8 @@ pub const Graph = struct {
 };
 
 pub const ImageDimensions = struct {
-    widthPt: u64,
-    heightPt: u64,
+    widthPt: c_int,
+    heightPt: c_int,
 };
 
 pub const ImageDimensionsMap = std.json.ArrayHashMap(ImageDimensions);

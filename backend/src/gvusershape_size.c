@@ -1,22 +1,20 @@
-#include "geom.h"
 #include "types.h"
-#include <stdio.h>
 
-#define DEFAULT_DPI 96
+extern point get_image_dimensions_by_name_in_points(const char *name);
 
-point convert_image_dimensions(double dpi, uint64_t heightPt,
-                               uint64_t widthPt) {
+point get_dimensions_by_name(const char *name, double dpi) {
+  point size_in_points = get_image_dimensions_by_name_in_points(name);
+
   point rv;
-  rv.x = (int)(widthPt * POINTS_PER_INCH / dpi);
-  rv.y = (int)(heightPt * POINTS_PER_INCH / dpi);
-
+  rv.x = (int)(size_in_points.x * POINTS_PER_INCH / dpi);
+  rv.y = (int)(size_in_points.y * POINTS_PER_INCH / dpi);
   return rv;
 }
 
-point my_gvusershape_size(Agraph_t *g, uint64_t heightPt, uint64_t widthPt) {
+#define DEFAULT_DPI 96
+point gvusershape_size(graph_t *g, char *name) {
   double dpi = GD_drawing(g)->dpi;
   if (dpi < 1.0)
     dpi = DEFAULT_DPI;
-
-  return convert_image_dimensions(dpi, heightPt, widthPt);
+  return get_dimensions_by_name(name, dpi);
 }
