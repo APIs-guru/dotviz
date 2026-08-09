@@ -90,19 +90,13 @@ boxf compute_polygon_bb(pointf *A, size_t n) {
   return (boxf){.LL = min, .UR = max};
 }
 
-extern point get_dimensions_by_name(const char *name, pointf dpi);
 /* gvrender_usershape:
  * Scale image to fill polygon bounding box accordingus to "imagescale",
  * positioned at "imagepos"
  */
-void svg_usershape(output_string *output, int rotation_deg, pointf dpi,
+void svg_usershape(output_string *output, int rotation_deg, point isz,
                    char *name, pointf *a, size_t n, imagescale_t imagescale,
                    imagepos_t imagepos) {
-  assert(name);
-  assert(name[0]);
-
-  point isz = get_dimensions_by_name(name, dpi);
-
   if ((isz.x <= 0) && (isz.y <= 0))
     return;
 
@@ -744,7 +738,7 @@ gvcolor_t svg_resolve_color(char *name) {
 void svg_set_style(obj_state_t *obj, char **s) {
   if (s == NULL)
     return;
-  
+
   char *line;
   while ((line = *s++)) {
     if (streq(line, "solid"))

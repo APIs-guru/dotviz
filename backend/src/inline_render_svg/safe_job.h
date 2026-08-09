@@ -7,7 +7,7 @@
 /// no job :)
 typedef struct SafeJob_s {
   const int layerNum;        /* current layer - 1 based*/
-  const pointf dpi;          /* device resolution device-units-per-inch */
+  const double dpi;          /* device resolution device-units-per-inch */
   const int rotation;        /* viewport rotation (degrees)  0=portrait,
 90=landscape */
   const box pageBoundingBox; /* rotated boundingBox - device units */

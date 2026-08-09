@@ -124,9 +124,9 @@ output_string render_svg(Agraph_t *g) {
     numLayers = parse_layers(&layerIDs, layerDelims, layer_str);
   }
 
-  pointf dpi = (pointf){72, 72}; // FIXME: make dpi single value
-  if (GD_drawing(g)->dpi != 0) {
-    dpi.x = dpi.y = GD_drawing(g)->dpi;
+  double dpi = GD_drawing(g)->dpi;
+  if (dpi <= 0) {
+    dpi = 72;
   }
 
   /* bounding box */
@@ -206,9 +206,9 @@ output_string render_svg(Agraph_t *g) {
 
   /* initial window size */
   unsigned int width =
-      ROUND((imageSize.x + 2 * margin.x) * dpi.x / POINTS_PER_INCH);
+      ROUND((imageSize.x + 2 * margin.x) * dpi / POINTS_PER_INCH);
   unsigned int height =
-      ROUND((imageSize.y + 2 * margin.y) * dpi.y / POINTS_PER_INCH);
+      ROUND((imageSize.y + 2 * margin.y) * dpi / POINTS_PER_INCH);
 
   // FIXME: add warning about ignoring centering attribute
   // https://graphviz.org/docs/attrs/center/
@@ -227,10 +227,10 @@ output_string render_svg(Agraph_t *g) {
 
   /* pageBoundingBox in device units and page orientation */
   box pageBoundingBox = {0};
-  pageBoundingBox.LL.x = ROUND(canvasBox.LL.x * dpi.x / POINTS_PER_INCH);
-  pageBoundingBox.LL.y = ROUND(canvasBox.LL.y * dpi.y / POINTS_PER_INCH);
-  pageBoundingBox.UR.x = ROUND(canvasBox.UR.x * dpi.x / POINTS_PER_INCH);
-  pageBoundingBox.UR.y = ROUND(canvasBox.UR.y * dpi.y / POINTS_PER_INCH);
+  pageBoundingBox.LL.x = ROUND(canvasBox.LL.x * dpi / POINTS_PER_INCH);
+  pageBoundingBox.LL.y = ROUND(canvasBox.LL.y * dpi / POINTS_PER_INCH);
+  pageBoundingBox.UR.x = ROUND(canvasBox.UR.x * dpi / POINTS_PER_INCH);
+  pageBoundingBox.UR.y = ROUND(canvasBox.UR.y * dpi / POINTS_PER_INCH);
   if (rotation) {
     pageBoundingBox.LL = exch_xy(pageBoundingBox.LL);
     pageBoundingBox.UR = exch_xy(pageBoundingBox.UR);
