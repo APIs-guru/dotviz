@@ -78,8 +78,8 @@ pub const Graph = struct {
 };
 
 pub const ImageDimensions = struct {
-    width: [:0]const u8,
-    height: [:0]const u8,
+    widthPt: u64,
+    heightPt: u64,
 };
 
 pub const ImageDimensionsMap = std.json.ArrayHashMap(ImageDimensions);

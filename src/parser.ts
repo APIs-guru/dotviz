@@ -1153,4 +1153,14 @@ export function parseDotNumber(value: NormalizedAttributeValue): number {
     : Number.NaN;
 }
 
+export function parseDotNumberWithUnits(str: string): [number, string] {
+  const lexer = new Lexer(str);
+  const token = lexer.nextToken();
+  if (token.kind !== Kind.Number) {
+    return [Number.NaN, str];
+  }
+
+  return [Number.parseFloat(token.value), str.slice(token.length)];
+}
+
 export const { parseDot } = Parser;
