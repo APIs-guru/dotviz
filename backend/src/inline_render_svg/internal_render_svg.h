@@ -62,3 +62,4 @@ void init_bb(graph_t *g);
 void rounded_svg_box(output_string *output, obj_state_t *obj, boxf B,
                      svg_fill_type_t fill_type);
 point gvusershape_size(graph_t *g, char *name);
+point get_dimensions_by_name(const char *name, double dpi);

@@ -270,7 +270,7 @@ export fn gvusershape_size(graph: *graphviz.Agraph_t, name: [*c]u8) graphviz.poi
     return graphviz.my_gvusershape_size(graph, dimensions.heightPt, dimensions.widthPt);
 }
 
-export fn get_dimensions_by_name(name: [*c]u8, dpi: graphviz.pointf) graphviz.point {
+export fn get_dimensions_by_name(name: [*c]u8, dpi: f64) graphviz.point {
     const dimensions = g_image_map.map.get(std.mem.span(name)) orelse return .{
         .x = -1,
         .y = -1,

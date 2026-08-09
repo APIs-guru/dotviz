@@ -1613,9 +1613,9 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer, graph_t *g,
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
   pointf scale; /* composite device to graph units (zoom and dpi) */
-  scale.x = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi.x /
+  scale.x = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi /
             POINTS_PER_INCH;
-  scale.y = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi.y /
+  scale.y = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi /
             POINTS_PER_INCH;
 
   /* its really just a page of the graph, but its still a graph,

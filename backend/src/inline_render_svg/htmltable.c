@@ -566,7 +566,7 @@ static void emit_html_tbl(output_string *output, SafeLayer *safe_layer,
  * Scaling is determined by either the image's scale attribute,
  * or the imagescale attribute of the graph object being drawn.
  */
-static void emit_html_img(output_string *output, int rotation_deg, pointf dpi,
+static void emit_html_img(output_string *output, int rotation_deg, double dpi,
                           htmlimg_t *cp, htmlenv_t *env) {
   pointf A[4];
   boxf bb = cp->box;
@@ -588,7 +588,8 @@ static void emit_html_img(output_string *output, int rotation_deg, pointf dpi,
     scale = get_imagescale(cp->scale);
   assert(cp->src);
   assert(cp->src[0]);
-  svg_usershape(output, rotation_deg, dpi, cp->src, A, 4, scale,
+  point isz = get_dimensions_by_name(cp->src, dpi);
+  svg_usershape(output, rotation_deg, isz, cp->src, A, 4, scale,
                 IMAGEPOS_MIDDLE_CENTER);
 }
 
@@ -623,12 +624,15 @@ static void emit_html_cell(output_string *output, SafeLayer *safe_layer,
     if (cp->data.border)
       doBorder(output, obj, &cp->data, pts);
 
-    if (cp->child.kind == HTML_TBL)
+    switch (cp->child.kind) {
+    case HTML_TBL:
       emit_html_tbl(output, safe_layer, obj, cp->child.u.tbl, env);
-    else if (cp->child.kind == HTML_IMAGE)
+      break;
+    case HTML_IMAGE:
       emit_html_img(output, safe_layer->safe_job->rotation,
                     safe_layer->safe_job->dpi, cp->child.u.img, env);
-    else {
+      break;
+    default:
       emit_html_txt(output, GD_fontnames(safe_layer->safe_job->graph), obj,
                     cp->child.u.txt, env);
     }
