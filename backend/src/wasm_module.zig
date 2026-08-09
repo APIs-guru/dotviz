@@ -265,15 +265,10 @@ fn freeCString(string: ?[:0]const u8) void {
 }
 
 var g_image_map: vizjs_types.ImageDimensionsMap = undefined;
-export fn gvusershape_size(graph: *graphviz.Agraph_t, name: [*c]u8) graphviz.point {
-    const dimensions = g_image_map.map.get(std.mem.span(name)) orelse @panic("no image found");
-    return graphviz.my_gvusershape_size(graph, dimensions.heightPt, dimensions.widthPt);
-}
 
-export fn get_dimensions_by_name(name: [*c]u8, dpi: f64) graphviz.point {
-    const dimensions = g_image_map.map.get(std.mem.span(name)) orelse return .{
-        .x = -1,
-        .y = -1,
-    };
-    return graphviz.convert_image_dimensions(dpi, dimensions.heightPt, dimensions.widthPt);
+export fn get_image_dimensions_by_name_in_points(name: [*c]u8) graphviz.point {
+    if (g_image_map.map.get(std.mem.span(name))) |size| {
+        return .{ .x = size.widthPt, .y = size.heightPt };
+    }
+    return .{ .x = -1, .y = -1 };
 }
