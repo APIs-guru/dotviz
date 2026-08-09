@@ -5,7 +5,7 @@ import {
   type NormalizedGraph,
   normalizeGraph,
 } from './normalize-graph.ts';
-import { parseDot, parseDotNumber } from './parser.ts';
+import { parseDot, parseDotNumber, parseDotNumberWithUnits } from './parser.ts';
 import { formatValueForDiagnostics } from './utils.ts';
 
 export interface OverrideAttributes {
@@ -278,12 +278,38 @@ export class Viz {
       dotOutputMaxLineLength = number;
     }
 
+    const images: Record<string, { heightPt: number; widthPt: number }> = {};
+    if (options.images !== undefined) {
+      for (const [name, { height, width }] of Object.entries(options.images)) {
+        const heightPt = convertImageSizeToPoints(height);
+        if (Number.isNaN(heightPt)) {
+          const value = formatValueForDiagnostics(height.toString());
+          return failureResult([
+            new RenderingBackendError(
+              `Invalid height for image "${name}": "${value}". Use a number or a string with one of these units: in, px, pc, pt, cm, or mm.`,
+            ),
+          ]);
+        }
+
+        const widthPt = convertImageSizeToPoints(width);
+        if (Number.isNaN(widthPt)) {
+          const value = formatValueForDiagnostics(width.toString());
+          return failureResult([
+            new RenderingBackendError(
+              `Invalid width for image "${name}": "${value}". Use a number or a string with one of these units: in, px, pc, pt, cm, or mm.`,
+            ),
+          ]);
+        }
+        images[name] = { heightPt, widthPt };
+      }
+    }
+
     const request = {
       graph: serializeGraph(graph),
       engine: engine ?? 'dot',
       yInvert: options.yInvert ?? false,
       reduce: options.reduce ?? false,
-      images: normalizeImages(options.images),
+      images,
       renderSvg,
       renderDot,
       dotOutputMaxLineLength,
@@ -416,15 +442,37 @@ class RenderingBackendWarning implements Diagnostic {
   }
 }
 
-function normalizeImages(
-  images: Record<string, ImageSize> = {},
-): Record<string, ImageSize> {
-  return Object.fromEntries(
-    Object.entries(images).map(([name, { height, width }]) => [
-      name,
-      { height: height.toString(), width: width.toString() },
-    ]),
-  );
+// NOTE: could return NaN if parseDotNumberWithUnits fails
+function convertImageSizeToPoints(value: string | number): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  const [n, units] = parseDotNumberWithUnits(value);
+  if (Number.isNaN(n)) {
+    return n;
+  }
+
+  const POINTS_PER_PICAS = 12;
+  const POINTS_PER_INCH = 72;
+  const CSS_POINTS_PER_INCH = 96;
+  const MM_PER_INCH = 0.0393700787;
+  switch (units) {
+    case '':
+    case 'pt':
+      return Math.round(n);
+    case 'px':
+      return Math.round((n * POINTS_PER_INCH) / CSS_POINTS_PER_INCH);
+    case 'pc':
+      return Math.round(n * POINTS_PER_PICAS);
+    case 'in':
+      return Math.round(n * POINTS_PER_INCH);
+    case 'cm':
+      return Math.round(n * 10 * MM_PER_INCH * POINTS_PER_INCH);
+    case 'mm':
+      return Math.round(n * MM_PER_INCH * POINTS_PER_INCH);
+  }
+  return NaN;
 }
 
 function serializeGraph(graph: NormalizedGraph): unknown {
