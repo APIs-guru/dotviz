@@ -63,3 +63,19 @@ void rounded_svg_box(output_string *output, obj_state_t *obj, boxf B,
                      svg_fill_type_t fill_type);
 point gvusershape_size(graph_t *g, char *name);
 point get_dimensions_by_name(const char *name, double dpi);
+
+typedef struct {
+  bool isFilled : 1;
+  bool isRounded : 1;
+  bool isDiagonals : 1;
+  bool isRadial : 1;
+  bool isStriped : 1;
+  bool isWedged : 1;
+
+  bool setPen : 1;
+  bool setPenwidth : 1;
+  pen_type pen;
+  double penwidth;
+} node_style_t;
+
+node_style_t get_node_style(node_t *n);
