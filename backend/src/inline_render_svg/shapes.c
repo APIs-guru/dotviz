@@ -11,6 +11,8 @@
  * Contributors: Details at https://graphviz.org
  *************************************************************************/
 
+#include <stdbool.h>
+
 #include "const.h"
 #include "types.h"
 #include "utils.h"
@@ -413,66 +415,30 @@ static graphviz_polygon_style_t style_or(graphviz_polygon_style_t a,
   };
 }
 
-static char **checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
-  char *style = late_nnstring(n, N_style, "");
-  if (style[0] == '\0') {
-    polygon_t *poly = ND_shape(n)->polygon;
-    if (poly != NULL)
-      *flagp = poly->option;
-    else
-      *flagp = (graphviz_polygon_style_t){0};
-    return NULL;
-  }
-
+static node_style_t checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
+  node_style_t styles = get_node_style(n);
   graphviz_polygon_style_t istyle = {0};
-  char **pstyle = parse_style(style);
-  char **pp = pstyle;
-  char *p;
-  while ((p = *pp)) {
-    if (streq(p, "filled")) {
-      istyle.filled = true;
-      pp++;
-    } else if (streq(p, "rounded")) {
-      istyle.rounded = true;
-      char **qp = pp; /* remove rounded from list passed to renderer */
-      do {
-        qp++;
-        *(qp - 1) = *qp;
-      } while (*qp);
-    } else if (streq(p, "diagonals")) {
-      istyle.diagonals = true;
-      char **qp = pp; /* remove diagonals from list passed to renderer */
-      do {
-        qp++;
-        *(qp - 1) = *qp;
-      } while (*qp);
-    } else if (streq(p, "invis")) {
-      istyle.invisible = true;
-      pp++;
-    } else if (streq(p, "radial")) {
-      istyle.radial = true;
-      istyle.filled = true;
-      char **qp = pp; /* remove radial from list passed to renderer */
-      do {
-        qp++;
-        *(qp - 1) = *qp;
-      } while (*qp);
-    } else if (streq(p, "striped") && isBox(n)) {
-      istyle.striped = true;
-      char **qp = pp; /* remove striped from list passed to renderer */
-      do {
-        qp++;
-        *(qp - 1) = *qp;
-      } while (*qp);
-    } else if (streq(p, "wedged") && isEllipse(n)) {
-      istyle.wedged = true;
-      char **qp = pp; /* remove wedged from list passed to renderer */
-      do {
-        qp++;
-        *(qp - 1) = *qp;
-      } while (*qp);
-    } else
-      pp++;
+  if (styles.setPen && styles.pen == PEN_NONE) {
+    istyle.invisible = true;
+  }
+  if (styles.isFilled) {
+    istyle.filled = true;
+  }
+  if (styles.isRounded) {
+    istyle.rounded = true;
+  }
+  if (styles.isDiagonals) {
+    istyle.diagonals = true;
+  }
+  if (styles.isRadial) {
+    istyle.radial = true;
+    istyle.filled = true;
+  }
+  if (styles.isStriped && isBox(n)) {
+    istyle.striped = true;
+  }
+  if (styles.isWedged && isEllipse(n)) {
+    istyle.wedged = true;
   }
 
   polygon_t *poly = ND_shape(n)->polygon;
@@ -480,18 +446,17 @@ static char **checkStyle(node_t *n, graphviz_polygon_style_t *flagp) {
     istyle = style_or(istyle, poly->option);
 
   *flagp = istyle;
-  return pstyle;
+  return styles;
 }
 
 static graphviz_polygon_style_t stylenode(obj_state_t *obj, node_t *n) {
   graphviz_polygon_style_t istyle = {0};
-  char **pstyle = checkStyle(n, &istyle);
-  if (pstyle)
-    svg_set_style(obj, pstyle);
-
-  char *s = agxget(n, N_penwidth);
-  if (N_penwidth && s && s[0]) {
-    obj->penwidth = late_double(n, N_penwidth, 1.0, 0.0);
+  node_style_t styles = checkStyle(n, &istyle);
+  if (styles.setPen) {
+    obj->pen = styles.pen;
+  }
+  if (styles.setPenwidth) {
+    obj->penwidth = styles.penwidth;
   }
 
   return istyle;
@@ -3249,14 +3214,13 @@ static void point_gencode(output_string *output, SafeLayer *safe_layer,
   const size_t sides = poly->sides;
   size_t peripheries = poly->peripheries;
 
-  graphviz_polygon_style_t style = {0};
-  checkStyle(n, &style);
+  graphviz_polygon_style_t istyle = {0};
+  node_style_t style = checkStyle(n, &istyle);
 
-  obj->fill = FILL_SOLID;
-  if (style.invisible)
+  if (istyle.invisible)
     obj->pen = PEN_NONE;
-  if (N_penwidth)
-    obj->penwidth = late_double(n, N_penwidth, 1.0, 0.0);
+  if (style.setPen)
+    obj->penwidth = style.penwidth;
 
   obj->pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
   obj->fillcolor = svg_resolve_color(findFillDflt(n, "black"));

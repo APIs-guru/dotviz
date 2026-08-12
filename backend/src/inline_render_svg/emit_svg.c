@@ -41,7 +41,7 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
                           obj_state_t *parent, Agraph_t *g);
 
 extern Agsym_t *G_gradientangle, *G_peripheries, *G_penwidth;
-extern Agsym_t *N_style, *N_layer, *N_comment;
+extern Agsym_t *N_penwidth, *N_style, *N_layer, *N_comment;
 extern Agsym_t *E_layer, *E_dir, *E_arrowsz, *E_color, *E_fillcolor,
     *E_penwidth, *E_decorate, *E_comment, *E_style;
 
@@ -247,10 +247,86 @@ cluster_style_t get_cluster_style(graph_t *sg) {
   }
 
   if (G_penwidth) {
-    char* penwidth = ag_xget(sg, G_penwidth);
+    char *penwidth = ag_xget(sg, G_penwidth);
     if (penwidth != NULL || penwidth[0] != '\0') {
       style.setPenwidth = true;
       style.penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
+    }
+  }
+  return style;
+}
+
+node_style_t get_node_style(node_t *n) {
+  char *s = late_string(n, N_style, "");
+  if (s == NULL || s[0] == 0) {
+    return (node_style_t){0};
+  }
+
+  parser_state_t state = {
+      .input = s, .p = s, .in_parens = false, .has_error = false};
+
+  node_style_t style = {0};
+  char const *start;
+  while ((start = next_token(&state)) != NULL) {
+    size_t len = state.p - start;
+    if (state.in_parens) {
+      agwarningf("get_node_style: unexpected argument %.*s - ignoring\n",
+                 (int)len, start);
+      continue;
+    }
+
+    if (strncmp(start, "filled", len) == 0) {
+      style.isFilled = true;
+    } else if (strncmp(start, "rounded", len) == 0) {
+      style.isRounded = true;
+    } else if (strncmp(start, "diagonals", len) == 0) {
+      style.isDiagonals = true;
+    } else if (strncmp(start, "radial", len) == 0) {
+      style.isRadial = true;
+    } else if (strncmp(start, "striped", len) == 0) {
+      style.isStriped = true;
+    } else if (strncmp(start, "wedged", len) == 0) {
+      style.isWedged = true;
+    } else if (strncmp(start, "solid", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_SOLID;
+    } else if (strncmp(start, "dashed", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_DASHED;
+    } else if (strncmp(start, "dotted", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_DOTTED;
+    } else if (strncmp(start, "invis", len) == 0 ||
+               strncmp(start, "invisible", len) == 0) {
+      style.setPen = true;
+      style.pen = PEN_NONE;
+    } else if (strncmp(start, "bold", len) == 0) {
+      style.setPenwidth = true;
+      style.penwidth = PENWIDTH_BOLD;
+    } else if (strncmp(start, "setlinewidth", len) == 0) {
+      style.setPenwidth = true;
+      style.penwidth = 0;
+
+      parser_state_t argState = state;
+      char const *arg = next_token(&argState);
+      if (arg != NULL && argState.in_parens) {
+        style.penwidth = atof(arg);
+        state = argState;
+      }
+    } else {
+      agwarningf("get_node_style: unsupported edge style %.*s - ignoring\n",
+                 (int)len, start);
+    }
+  }
+  if (state.has_error) {
+    return (node_style_t){0};
+  }
+
+  if (N_penwidth) {
+    char* penwidth = ag_xget(n, N_penwidth);
+    if (penwidth != NULL || penwidth[0] != '\0') {
+      style.setPenwidth = true;
+      style.penwidth = late_double(n, N_penwidth, 1.0, 0.0);
     }
   }
   return style;
@@ -856,16 +932,9 @@ static void emit_node(output_string *output, SafeLayer *safe_layer,
     char *s = late_string(n, N_comment, "");
     svg_comment(output, s);
 
-    char *style = late_string(n, N_style, "");
-    if (style[0]) {
-      char **styles = parse_style(style);
-      char **sp = styles;
-      char *p;
-      while ((p = *sp++)) {
-        if (streq(p, "invis")) {
-          return;
-        }
-      }
+    node_style_t nodestyles = get_node_style(n);
+    if (nodestyles.setPen && nodestyles.pen == PEN_NONE) {
+      return;
     }
 
     obj_state_t obj = child_obj_state(parent);
@@ -1613,10 +1682,10 @@ static void emit_layer(output_string *output, SafeLayer *safe_layer, graph_t *g,
 
   char *previous_color_scheme = setColorScheme(agget(g, "colorscheme"));
   pointf scale; /* composite device to graph units (zoom and dpi) */
-  scale.x = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi /
-            POINTS_PER_INCH;
-  scale.y = safe_layer->safe_job->zoom * safe_layer->safe_job->dpi /
-            POINTS_PER_INCH;
+  scale.x =
+      safe_layer->safe_job->zoom * safe_layer->safe_job->dpi / POINTS_PER_INCH;
+  scale.y =
+      safe_layer->safe_job->zoom * safe_layer->safe_job->dpi / POINTS_PER_INCH;
 
   /* its really just a page of the graph, but its still a graph,
    * and it is the entire graph if we're not currently paging */
@@ -1847,51 +1916,6 @@ static void emit_clusters(output_string *output, SafeLayer *safe_layer,
     free(color_scheme);
     free(previous_color_scheme);
   }
-}
-
-#define FUNLIMIT 64
-
-/* This is one of the worst internal designs in graphviz.
- * The use of '\0' characters within strings seems cute but it
- * makes all of the standard functions useless if not dangerous.
- * Plus the function uses static memory for both the array and
- * the character buffer. One hopes all of the values are used
- * before the function is called again.
- */
-char **parse_style(char *s) {
-  static char *parse[FUNLIMIT];
-  size_t parse_offsets[FUNLIMIT];
-  size_t fun = 0;
-  static agxbuf ps_xb;
-
-  parser_state_t state = {
-      .input = s, .p = s, .in_parens = false, .has_error = false};
-  const char *start;
-  while ((start = next_token(&state)) != NULL) {
-    if (!state.in_parens) {
-      if (fun == FUNLIMIT - 1) {
-        agwarningf("truncating style '%s'\n", s);
-        parse[fun] = NULL;
-        return parse;
-      }
-      parse_offsets[fun++] = agxblen(&ps_xb);
-    }
-    agxbput_n(&ps_xb, start, state.p - start);
-    agxbputc(&ps_xb, '\0');
-  }
-  if (state.has_error) {
-    agxbstart(&ps_xb);
-    parse[0] = NULL;
-    return parse;
-  }
-
-  char *base = agxbuse(&ps_xb); // add final '\0' to buffer
-  // construct list of style strings
-  for (size_t i = 0; i < fun; ++i) {
-    parse[i] = base + parse_offsets[i];
-  }
-  parse[fun] = NULL;
-  return parse;
 }
 
 /* Check for colon in colorlist. If one exists, and not the first
