@@ -350,17 +350,14 @@ static void unrecognized(node_t *n, char *p) {
 static double quant(double val, double q) { return ceil(val / q) * q; }
 
 /* test if both p0 and p1 are on the same side of the line L0,L1 */
-static int same_side(pointf p0, pointf p1, pointf L0, pointf L1) {
-  int s0, s1;
-  double a, b, c;
-
+static bool same_side(pointf p0, pointf p1, pointf L0, pointf L1) {
   /* a x + b y = c */
-  a = -(L1.y - L0.y);
-  b = L1.x - L0.x;
-  c = a * L0.x + b * L0.y;
+  double a = -(L1.y - L0.y);
+  double b = L1.x - L0.x;
+  double c = a * L0.x + b * L0.y;
 
-  s0 = a * p0.x + b * p0.y - c >= 0;
-  s1 = a * p1.x + b * p1.y - c >= 0;
+  int s0 = a * p0.x + b * p0.y - c >= 0;
+  int s1 = a * p1.x + b * p1.y - c >= 0;
   return s0 == s1;
 }
 
@@ -374,22 +371,22 @@ static char *findFillDflt(node_t *n, char *dflt) {
 }
 
 static bool isBox(node_t *n) {
-  polygon_t *p;
-
-  if ((p = ND_shape(n)->polygon)) {
-    return p->sides == 4 && fabs(fmod(p->orientation, 90)) < 0.5 &&
-           is_exactly_zero(p->distortion) && is_exactly_zero(p->skew);
+  polygon_t *p = ND_shape(n)->polygon;
+  if (p == NULL) {
+    return false;
   }
-  return false;
+
+  return p->sides == 4 && fabs(fmod(p->orientation, 90)) < 0.5 &&
+         is_exactly_zero(p->distortion) && is_exactly_zero(p->skew);
 }
 
 static bool isEllipse(node_t *n) {
-  polygon_t *p;
-
-  if ((p = ND_shape(n)->polygon)) {
-    return p->sides <= 2;
+  polygon_t *p = ND_shape(n)->polygon;
+  if (p == NULL) {
+    return false;
   }
-  return false;
+
+  return p->sides <= 2;
 }
 
 /// bitwise-OR styles
@@ -501,14 +498,13 @@ static graphviz_polygon_style_t stylenode(obj_state_t *obj, node_t *n) {
 }
 
 static void Mcircle_hack(output_string *output, obj_state_t *obj, node_t *n) {
-  double x, y;
-  pointf AF[2], p;
-
-  y = .7500;
-  x = .6614; /* x^2 + y^2 = 1.0 */
+  double y = .7500;
+  double x = .6614; /* x^2 + y^2 = 1.0 */
+  pointf p;
   p.y = y * ND_ht(n) / 2.0;
   p.x = ND_rw(n) * x; /* assume node is symmetric */
 
+  pointf AF[2];
   AF[0] = add_pointf(p, ND_coord(n));
   AF[1].y = AF[0].y;
   AF[1].x = AF[0].x - 2 * p.x;
@@ -1976,26 +1972,9 @@ bool isPolygon(node_t *n) {
 }
 
 static void poly_init(node_t *n) {
-  pointf dimen, min_bb;
-  pointf outline_bb;
-  point imagesize;
-  pointf *vertices;
-  char *p, *sfile, *fxd;
-  double temp, alpha, beta, gamma;
-  double orientation, distortion, skew;
-  double scalex, scaley;
-  double width, height, marginx, marginy, spacex;
-  polygon_t *poly = gv_alloc(sizeof(polygon_t));
   bool isPlain = IS_PLAIN(n);
-
-  bool regular = !!ND_shape(n)->polygon->regular;
-  size_t peripheries = ND_shape(n)->polygon->peripheries;
-  size_t sides = ND_shape(n)->polygon->sides;
-  orientation = ND_shape(n)->polygon->orientation;
-  skew = ND_shape(n)->polygon->skew;
-  distortion = ND_shape(n)->polygon->distortion;
-  regular |= mapbool(agget(n, "regular"));
-
+  bool regular =
+      (!!ND_shape(n)->polygon->regular) | mapbool(agget(n, "regular"));
   /* all calculations in floating point POINTS */
 
   /* make x and y dimensions equal if node is regular
@@ -2003,6 +1982,7 @@ static void poly_init(node_t *n) {
    *   Else use minimum default value.
    * If node is not regular, use the current width and height.
    */
+  double width, height;
   if (isPlain) {
     width = height = 0;
   } else if (regular) {
@@ -2019,8 +1999,13 @@ static void poly_init(node_t *n) {
     height = INCH2PS(ND_height(n));
   }
 
-  peripheries = (size_t)late_int(n, N_peripheries, (int)peripheries, 0);
-  orientation += late_double(n, N_orientation, 0.0, -360.0);
+  size_t peripheries =
+      late_int(n, N_peripheries, (int)ND_shape(n)->polygon->peripheries, 0);
+  double orientation = ND_shape(n)->polygon->orientation +
+                       late_double(n, N_orientation, 0.0, -360.0);
+  double skew = ND_shape(n)->polygon->skew;
+  size_t sides = ND_shape(n)->polygon->sides;
+  double distortion = ND_shape(n)->polygon->distortion;
   if (sides == 0) { /* not for builtins */
     skew = late_double(n, N_skew, 0.0, -100.0);
     sides = (size_t)late_int(n, N_sides, 4, 0);
@@ -2028,14 +2013,15 @@ static void poly_init(node_t *n) {
   }
 
   /* get label dimensions */
-  dimen = ND_label(n)->dimen;
+  pointf dimen = ND_label(n)->dimen;
 
   /* minimal whitespace around label */
   if (dimen.x > 0 || dimen.y > 0) {
     /* padding */
     if (!isPlain) {
-      if ((p = agget(n, "margin"))) {
-        marginx = marginy = 0;
+      char *p = agget(n, "margin");
+      if (p != NULL) {
+        double marginx = 0, marginy = 0;
         const int i = sscanf(p, "%lf,%lf", &marginx, &marginy);
         marginx = fmax(marginx, 0);
         marginy = fmax(marginy, 0);
@@ -2051,16 +2037,19 @@ static void poly_init(node_t *n) {
         PAD(dimen);
     }
   }
-  spacex = dimen.x - ND_label(n)->dimen.x;
+  double spacex = dimen.x - ND_label(n)->dimen.x;
 
   /* quantization */
+  double temp;
   if ((temp = GD_drawing(agraphof(n))->quantum) > 0.0) {
     temp = INCH2PS(temp);
     dimen.x = quant(dimen.x, temp);
     dimen.y = quant(dimen.y, temp);
   }
 
+  point imagesize;
   imagesize.x = imagesize.y = 0;
+  char *sfile;
   if (ND_shape(n)->usershape) {
     /* custom requires a shapefile
      * not custom is an adaptable user shape such as a postscript
@@ -2103,7 +2092,7 @@ static void poly_init(node_t *n) {
   }
 
   /* extra sizing depends on if label is centered vertically */
-  p = agget(n, "labelloc");
+  char *p = agget(n, "labelloc");
   if (p && (p[0] == 't' || p[0] == 'b'))
     ND_label(n)->valign = p[0];
   else
@@ -2141,10 +2130,11 @@ static void poly_init(node_t *n) {
   }
 
   /* at this point, bb is the minimum size of node that can hold the label */
-  min_bb = bb;
+  pointf min_bb = bb;
 
   /* increase node size to width/height if needed */
-  fxd = late_string(n, N_fixed, "false");
+  polygon_t *poly = gv_alloc(sizeof(polygon_t));
+  char *fxd = late_string(n, N_fixed, "false");
   if (*fxd == 's' && streq(fxd, "shape")) {
     bb = (pointf){.x = width, .y = height};
     poly->option.fixedshape = true;
@@ -2199,6 +2189,8 @@ static void poly_init(node_t *n) {
     ++outp;
   }
 
+  pointf outline_bb;
+  pointf *vertices;
   if (sides < 3) { /* ellipses */
     sides = 2;
     vertices = gv_calloc(outp * sides, sizeof(pointf));
@@ -2246,6 +2238,7 @@ static void poly_init(node_t *n) {
      *   the current segments, and outside by GAP distance, intersect.
      */
 
+    double alpha;
     double sinx = 0, cosx = 0, xmax, ymax;
     vertices = gv_calloc(outp * sides, sizeof(pointf));
     if (ND_shape(n)->polygon->vertices) {
@@ -2312,8 +2305,8 @@ static void poly_init(node_t *n) {
     bb = (pointf){.x = fmax(width, xmax), .y = fmax(height, ymax)};
     outline_bb = bb;
 
-    scalex = bb.x / xmax;
-    scaley = bb.y / ymax;
+    double scalex = bb.x / xmax;
+    double scaley = bb.y / ymax;
 
     size_t i;
     for (i = 0; i < sides; i++) {
@@ -2333,7 +2326,7 @@ static void poly_init(node_t *n) {
         }
       }
       assert(!is_exactly_equal(R.x, Q.x) || !is_exactly_equal(R.y, Q.y));
-      beta = atan2(R.y - Q.y, R.x - Q.x);
+      double beta = atan2(R.y - Q.y, R.x - Q.x);
       pointf Qprev = Q;
       for (i = 0; i < sides; i++) {
 
@@ -2357,7 +2350,7 @@ static void poly_init(node_t *n) {
           assert(!is_exactly_equal(R.x, Q.x) || !is_exactly_equal(R.y, Q.y));
           alpha = beta;
           beta = atan2(R.y - Q.y, R.x - Q.x);
-          gamma = (alpha + M_PI - beta) / 2.;
+          double gamma = (alpha + M_PI - beta) / 2.;
 
           /*find distance along bisector to */
           /*intersection of next periphery */
@@ -2435,29 +2428,22 @@ static void poly_free(node_t *n) {
  * are rotated if the graph is flipped.
  */
 static bool poly_inside(inside_t *inside_context, pointf p) {
-  size_t sides;
-  const pointf O = {0};
-  pointf *vertex = NULL;
-
-  int s;
-  pointf P, Q, R;
-  boxf *bp;
-  node_t *n;
-
-  if (!inside_context) {
+  if (inside_context == NULL) {
     return false;
   }
 
-  bp = inside_context->s.bp;
-  n = inside_context->s.n;
-  P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
+  node_t *n = inside_context->s.n;
+  pointf P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
 
   /* Quick test if port rectangle is target */
+  boxf *bp = inside_context->s.bp;
   if (bp) {
     boxf bbox = *bp;
     return INSIDE(P, bbox);
   }
 
+  size_t sides;
+  pointf *vertex = NULL;
   if (n != inside_context->s.lastn) {
     double n_width, n_height;
     double n_outline_width;
@@ -2544,13 +2530,14 @@ static bool poly_inside(inside_t *inside_context, pointf p) {
   size_t i = inside_context->s.last %
              sides; // in case last left over from larger polygon
   size_t i1 = (i + 1) % sides;
-  Q = vertex[i + inside_context->s.outp];
-  R = vertex[i1 + inside_context->s.outp];
+  pointf Q = vertex[i + inside_context->s.outp];
+  pointf R = vertex[i1 + inside_context->s.outp];
+  const pointf O = {0};
   if (!same_side(P, O, Q, R)) /* false if outside the segment's face */
     return false;
   /* else inside the segment face... */
-  if ((s = same_side(P, Q, R, O)) &&
-      same_side(P, R, O, Q)) /* true if between the segment's sides */
+  bool s = same_side(P, Q, R, O);
+  if (s && same_side(P, R, O, Q)) /* true if between the segment's sides */
     return true;
   /* else maybe in another segment */
   for (size_t j = 1; j < sides; j++) { // iterate over remaining segments
@@ -2686,17 +2673,14 @@ static double invflip_angle(double angle, int rankdir) {
  * rotate the answer counterclockwise.
  */
 static pointf compassPoint(inside_t *ictxt, double y, double x) {
-  pointf curve[4]; /* bezier control points for a straight line */
   node_t *n = ictxt->s.n;
-  graph_t *g = agraphof(n);
-  int rd = GD_rankdir(g);
-  pointf p;
 
-  p.x = x;
-  p.y = y;
+  pointf p = {.x = x, .y = y};
+  int rd = GD_rankdir(agraphof(n));
   if (rd)
     p = cwrotatepf(p, 90 * rd);
 
+  pointf curve[4]; /* bezier control points for a straight line */
   curve[0].x = curve[0].y = 0;
   curve[1] = curve[0];
   curve[3] = curve[2] = p;
@@ -2735,17 +2719,9 @@ static pointf compassPoint(inside_t *ictxt, double y, double x) {
 static int compassPort(node_t *n, boxf *bp, port *pp, const char *compass,
                        unsigned char sides, inside_t *ictxt) {
   boxf b;
-  pointf p, ctr;
-  int rv = 0;
-  double theta = 0.0;
-  bool constrain = false;
-  bool dyna = false;
-  unsigned char side = 0;
-  bool clip = true;
+  pointf p;
   bool defined;
-  double maxv; /* sufficiently large value outside of range of node */
-
-  if (bp) {
+  if (bp != NULL) {
     b = *bp;
     p = (pointf){(b.LL.x + b.UR.x) / 2, (b.LL.y + b.UR.y) / 2};
     defined = true;
@@ -2764,9 +2740,16 @@ static int compassPort(node_t *n, boxf *bp, port *pp, const char *compass,
     }
     defined = false;
   }
-  maxv = fmax(b.UR.x, b.UR.y);
-  maxv *= 4.0;
-  ctr = p;
+  pointf ctr = p;
+  // sufficiently large value outside of range of node
+  double maxv = fmax(b.UR.x, b.UR.y) * 4.0;
+
+  int rv = 0;
+  bool clip = true;
+  bool dyna = false;
+  bool constrain = false;
+  unsigned char side = 0;
+  double theta = 0.0;
   if (compass && *compass) {
     switch (*compass++) {
     case 'e':
@@ -2915,16 +2898,16 @@ static int compassPort(node_t *n, boxf *bp, port *pp, const char *compass,
 }
 
 static port poly_port(node_t *n, char *portname, char *compass) {
-  port rv;
-  boxf *bp;
-  unsigned char sides; // bitmap of which sides the port lies along
 
   if (portname[0] == '\0')
     return Center;
 
   if (compass == NULL)
     compass = "_";
-  sides = BOTTOM | RIGHT | TOP | LEFT;
+  unsigned char sides =
+      BOTTOM | RIGHT | TOP | LEFT; // bitmap of which sides the port lies along
+  port rv;
+  boxf *bp;
   if (ND_label(n)->html && (bp = html_port(n, portname, &sides))) {
     if (compassPort(n, bp, &rv, compass, sides, NULL)) {
       agwarningf(
@@ -3131,20 +3114,13 @@ static void poly_gencode(output_string *output, SafeLayer *safe_layer,
  * shorthand for shape=circle, style=filled, width=0.05, label=""
  */
 static void point_init(node_t *n) {
-  polygon_t *poly = gv_alloc(sizeof(polygon_t));
-  size_t sides, outp, peripheries = ND_shape(n)->polygon->peripheries;
-  double sz;
-  pointf P, *vertices;
-  size_t i, j;
-  double w, h;
-
   /* set width and height, and make them equal
    * if user has set weight or height, use it.
    * if both are set, use smallest.
    * if neither, use default
    */
-  w = late_double(n, N_width, DBL_MAX, MIN_NODEWIDTH);
-  h = late_double(n, N_height, DBL_MAX, MIN_NODEHEIGHT);
+  double w = late_double(n, N_width, DBL_MAX, MIN_NODEWIDTH);
+  double h = late_double(n, N_height, DBL_MAX, MIN_NODEHEIGHT);
   w = fmin(w, h);
   if (is_exactly_equal(w, DBL_MAX) &&
       is_exactly_equal(h, DBL_MAX)) // neither defined
@@ -3159,13 +3135,11 @@ static void point_init(node_t *n) {
     ND_width(n) = ND_height(n) = w;
   }
 
-  sz = ND_width(n) * POINTS_PER_INCH;
-  peripheries = (size_t)late_int(n, N_peripheries, (int)peripheries, 0);
-  if (peripheries < 1)
+  size_t peripheries =
+      late_int(n, N_peripheries, (int)ND_shape(n)->polygon->peripheries, 0);
+  size_t outp = peripheries;
+  if (outp < 1)
     outp = 1;
-  else
-    outp = peripheries;
-  sides = 2;
   const double penwidth =
       late_double(n, N_penwidth, DEFAULT_NODEPENWIDTH, MIN_NODEPENWIDTH);
   if (peripheries >= 1 && penwidth > 0) {
@@ -3173,13 +3147,18 @@ static void point_init(node_t *n) {
     // periphery with penwidth taken into account
     ++outp;
   }
-  vertices = gv_calloc(outp * sides, sizeof(pointf));
+
+  double sz = ND_width(n) * POINTS_PER_INCH;
+  pointf P;
   P.y = P.x = sz / 2.;
+  size_t sides = 2;
+  pointf *vertices = gv_calloc(outp * sides, sizeof(pointf));
   vertices[0].x = -P.x;
   vertices[0].y = -P.y;
   vertices[1] = P;
+  size_t i = 2;
   if (peripheries > 1) {
-    for (j = 1, i = 2; j < peripheries; j++) {
+    for (size_t j = 1; j < peripheries; j++) {
       P.x += GAP;
       P.y += GAP;
       vertices[i].x = -P.x;
@@ -3207,6 +3186,10 @@ static void point_init(node_t *n) {
   }
   const double sz_outline = 2. * P.x;
 
+  ND_height(n) = ND_width(n) = PS2INCH(sz);
+  ND_outline_height(n) = ND_outline_width(n) = PS2INCH(sz_outline);
+
+  polygon_t *poly = gv_alloc(sizeof(polygon_t));
   poly->regular = true;
   poly->peripheries = peripheries;
   poly->sides = 2;
@@ -3214,23 +3197,16 @@ static void point_init(node_t *n) {
   poly->skew = 0;
   poly->distortion = 0;
   poly->vertices = vertices;
-
-  ND_height(n) = ND_width(n) = PS2INCH(sz);
-  ND_outline_height(n) = ND_outline_width(n) = PS2INCH(sz_outline);
   ND_shape_info(n) = poly;
 }
 
 static bool point_inside(inside_t *inside_context, pointf p) {
-  pointf P;
-  node_t *n;
-
-  if (!inside_context) {
+  if (inside_context == NULL) {
     return false;
   }
 
-  n = inside_context->s.n;
-  P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
-
+  node_t *n = inside_context->s.n;
+  pointf P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
   if (n != inside_context->s.lastn) {
     size_t outp;
     polygon_t *poly = ND_shape_info(n);
@@ -3329,9 +3305,7 @@ static bool ISCTRL(int c) {
 static char *reclblp;
 
 static void free_field(field_t *f) {
-  int i;
-
-  for (i = 0; i < f->n_flds; i++) {
+  for (int i = 0; i < f->n_flds; i++) {
     free_field(f->fld[i]);
   }
 
@@ -3351,16 +3325,9 @@ static field_t *parse_error(field_t *rv, char *portname) {
 }
 
 static field_t *parse_reclbl(node_t *n, bool LR, bool flag, char *text) {
-  field_t *fp, *rv = gv_alloc(sizeof(field_t));
-  char *tsp, *psp = NULL, *hstsp, *hspsp = NULL, *sp;
-  char *tmpport = NULL;
-  int cnt, mode, fi;
-  textlabel_t *lbl = ND_label(n);
-  unsigned char uc;
-
-  fp = NULL;
-  size_t maxf;
-  for (maxf = 1, cnt = 0, sp = reclblp; *sp; sp++) {
+  int cnt = 0;
+  size_t maxf = 1;
+  for (char *sp = reclblp; *sp; sp++) {
     if (*sp == '\\') {
       sp++;
       if (*sp && (*sp == '{' || *sp == '}' || *sp == '|' || *sp == '\\'))
@@ -3375,14 +3342,25 @@ static field_t *parse_reclbl(node_t *n, bool LR, bool flag, char *text) {
     if (cnt < 0)
       break;
   }
+
+  field_t *fp = NULL;
+  field_t *rv = gv_alloc(sizeof(field_t));
   rv->fld = gv_calloc(maxf, sizeof(field_t *));
   rv->LR = LR;
-  mode = 0;
-  fi = 0;
-  hstsp = tsp = text;
+
+  char *tsp = text;
+  char *hstsp = text;
+  char *psp = NULL;
+  char *hspsp = NULL;
+
+  int mode = 0;
+  int fi = 0;
+  textlabel_t *lbl = ND_label(n);
   bool wflag = true;
   bool ishardspace = false;
+  char *tmpport = NULL;
   while (wflag) {
+    unsigned char uc;
     if ((uc = *(unsigned char *)reclblp) &&
         uc < ' ') { /* Ignore non-0 control characters */
       reclblp++;
@@ -3496,20 +3474,16 @@ static field_t *parse_reclbl(node_t *n, bool LR, bool flag, char *text) {
 }
 
 static pointf size_reclbl(node_t *n, field_t *f) {
-  int i;
-  char *p;
-  double marginx, marginy;
-  pointf d, d0;
-  pointf dimen;
-
   if (f->lp) {
-    dimen = f->lp->dimen;
+    pointf dimen = f->lp->dimen;
 
     /* minimal whitespace around label */
     if (dimen.x > 0.0 || dimen.y > 0.0) {
       /* padding */
+      char *p;
       if ((p = agget(n, "margin"))) {
-        i = sscanf(p, "%lf,%lf", &marginx, &marginy);
+        double marginx, marginy;
+        int i = sscanf(p, "%lf,%lf", &marginx, &marginy);
         if (i > 0) {
           dimen.x += 2 * INCH2PS(marginx);
           if (i > 1)
@@ -3521,18 +3495,19 @@ static pointf size_reclbl(node_t *n, field_t *f) {
       } else
         PAD(dimen);
     }
-    d = dimen;
-  } else {
-    d.x = d.y = 0;
-    for (i = 0; i < f->n_flds; i++) {
-      d0 = size_reclbl(n, f->fld[i]);
-      if (f->LR) {
-        d.x += d0.x;
-        d.y = fmax(d.y, d0.y);
-      } else {
-        d.y += d0.y;
-        d.x = fmax(d.x, d0.x);
-      }
+    f->size = dimen;
+    return dimen;
+  }
+
+  pointf d = {.x = 0, .y = 0};
+  for (int i = 0; i < f->n_flds; i++) {
+    pointf d0 = size_reclbl(n, f->fld[i]);
+    if (f->LR) {
+      d.x += d0.x;
+      d.y = fmax(d.y, d0.y);
+    } else {
+      d.y += d0.y;
+      d.x = fmax(d.x, d0.x);
     }
   }
   f->size = d;
@@ -3540,13 +3515,8 @@ static pointf size_reclbl(node_t *n, field_t *f) {
 }
 
 static void resize_reclbl(field_t *f, pointf sz, bool nojustify_p) {
-  int i, amt;
-  double inc;
-  pointf d;
-  pointf newsz;
-  field_t *sf;
-
   /* adjust field */
+  pointf d;
   d.x = sz.x - f->size.x;
   d.y = sz.y - f->size.y;
   f->size = sz;
@@ -3559,14 +3529,16 @@ static void resize_reclbl(field_t *f, pointf sz, bool nojustify_p) {
 
   /* adjust children */
   if (f->n_flds) {
-
+    double inc;
     if (f->LR)
       inc = d.x / f->n_flds;
     else
       inc = d.y / f->n_flds;
-    for (i = 0; i < f->n_flds; i++) {
-      sf = f->fld[i];
-      amt = (int)((i + 1) * inc) - (int)(i * inc);
+
+    for (int i = 0; i < f->n_flds; i++) {
+      field_t *sf = f->fld[i];
+      pointf newsz;
+      int amt = (int)((i + 1) * inc) - (int)(i * inc);
       if (f->LR)
         newsz = (pointf){sf->size.x + amt, sz.y};
       else
@@ -3582,14 +3554,13 @@ static void resize_reclbl(field_t *f, pointf sz, bool nojustify_p) {
  * record are accessible to the field.
  */
 static void pos_reclbl(field_t *f, pointf ul, unsigned char sides) {
-  int i, last;
-  unsigned char mask;
-
   f->sides = sides;
   f->b.LL = (pointf){ul.x, ul.y - f->size.y};
   f->b.UR = (pointf){ul.x + f->size.x, ul.y};
-  last = f->n_flds - 1;
-  for (i = 0; i <= last; i++) {
+
+  int last = f->n_flds - 1;
+  for (int i = 0; i <= last; i++) {
+    unsigned char mask;
     if (sides) {
       if (f->LR) {
         if (i == 0) {
@@ -3624,30 +3595,26 @@ static void pos_reclbl(field_t *f, pointf ul, unsigned char sides) {
 
 /* syntax of labels: foo|bar|baz or foo|(recursive|label)|baz */
 static void record_init(node_t *n) {
-  field_t *info;
-  pointf sz;
-  int flip;
-  size_t len;
-  unsigned char sides = BOTTOM | RIGHT | TOP | LEFT;
-
   /* Always use rankdir to determine how records are laid out */
-  flip = !GD_realflip(agraphof(n));
+  int flip = !GD_realflip(agraphof(n));
   reclblp = ND_label(n)->text;
-  len = strlen(reclblp);
   /* For some forgotten reason, an empty label is parsed into a space, so
    * we need at least two bytes in textbuf, as well as accounting for the
    * error path involving "\\N" below.
    */
-  len = MAX(MAX(len, 1), strlen("\\N"));
+  size_t len = MAX(MAX(strlen(reclblp), 1), strlen("\\N"));
   char *textbuf =
       gv_calloc(len + 1, sizeof(char)); // temp buffer for storing labels
-  if (!(info = parse_reclbl(n, flip, true, textbuf))) {
+  field_t *info = parse_reclbl(n, flip, true, textbuf);
+  if (info == NULL) {
     agerrorf("bad label format %s\n", ND_label(n)->text);
     reclblp = "\\N";
     info = parse_reclbl(n, flip, true, textbuf);
   }
   free(textbuf);
   size_reclbl(n, info);
+
+  pointf sz;
   sz.x = INCH2PS(ND_width(n));
   sz.y = INCH2PS(ND_height(n));
   if (mapbool(late_string(n, N_fixed, "false"))) {
@@ -3664,7 +3631,7 @@ static void record_init(node_t *n) {
   pointf ul = {-sz.x / 2.,
                sz.y / 2.}; /* FIXME - is this still true:    suspected to
                               introduce rounding error - see Kluge below */
-  pos_reclbl(info, ul, sides);
+  pos_reclbl(info, ul, BOTTOM | RIGHT | TOP | LEFT);
   ND_width(n) = PS2INCH(info->size.x);
   ND_height(n) =
       PS2INCH(info->size.y +
@@ -3673,49 +3640,43 @@ static void record_init(node_t *n) {
   ND_shape_info(n) = info;
 }
 
-static void record_free(node_t *n) {
-  field_t *p = ND_shape_info(n);
-
-  free_field(p);
-}
+static void record_free(node_t *n) { free_field(ND_shape_info(n)); }
 
 static field_t *map_rec_port(field_t *f, char *str) {
-  field_t *rv;
-  int sub;
-
   if (f->id && streq(f->id, str))
-    rv = f;
-  else {
-    rv = NULL;
-    for (sub = 0; sub < f->n_flds; sub++)
-      if ((rv = map_rec_port(f->fld[sub], str)))
-        break;
+    return f;
+
+  for (int sub = 0; sub < f->n_flds; sub++) {
+    field_t *subf = map_rec_port(f->fld[sub], str);
+    if (subf != NULL)
+      return subf;
   }
-  return rv;
+  return NULL;
 }
 
 static port record_port(node_t *n, char *portname, char *compass) {
-  field_t *f;
-  field_t *subf;
-  port rv;
-  unsigned char sides; // bitmap of which sides the port lies along
-
   if (portname[0] == '\0')
     return Center;
-  sides = BOTTOM | RIGHT | TOP | LEFT;
-  if (compass == NULL)
-    compass = "_";
-  f = ND_shape_info(n);
-  if ((subf = map_rec_port(f, portname))) {
-    if (compassPort(n, &subf->b, &rv, compass, subf->sides, NULL)) {
-      agwarningf(
-          "node %s, port %s, unrecognized compass point '%s' - ignored\n",
-          agnameof(n), portname, compass);
+
+  field_t *f = ND_shape_info(n);
+  field_t *subf = map_rec_port(f, portname);
+  if (subf == NULL) {
+    port rv;
+    if (compassPort(n, &f->b, &rv, portname, BOTTOM | RIGHT | TOP | LEFT,
+                    NULL)) {
+      unrecognized(n, portname);
     }
-  } else if (compassPort(n, &f->b, &rv, portname, sides, NULL)) {
-    unrecognized(n, portname);
+    return rv;
   }
 
+  if (compass == NULL)
+    compass = "_";
+
+  port rv;
+  if (compassPort(n, &subf->b, &rv, compass, subf->sides, NULL)) {
+    agwarningf("node %s, port %s, unrecognized compass point '%s' - ignored\n",
+               agnameof(n), portname, compass);
+  }
   return rv;
 }
 
@@ -3724,21 +3685,15 @@ static port record_port(node_t *n, char *portname, char *compass) {
  * everything is a rectangle.
  */
 static bool record_inside(inside_t *inside_context, pointf p) {
-
-  field_t *fld0;
-  boxf *bp = inside_context->s.bp;
   node_t *n = inside_context->s.n;
-  boxf bbox;
 
-  /* convert point to node coordinate system */
-  p = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
-
+  boxf *bp = inside_context->s.bp;
   if (bp == NULL) {
-    fld0 = ND_shape_info(n);
-    bbox = fld0->b;
-  } else
-    bbox = *bp;
+    field_t *fld0 = ND_shape_info(n);
+    bp = &fld0->b;
+  }
 
+  boxf bbox = *bp; // make a copy of the boxf
   // adjust bbox to outline, i.e., the periphery with penwidth taken into
   // account
   const double penwidth =
@@ -3747,7 +3702,10 @@ static bool record_inside(inside_t *inside_context, pointf p) {
   bbox.LL = sub_pointf(bbox.LL, extension);
   bbox.UR = add_pointf(bbox.UR, extension);
 
-  return INSIDE(p, bbox);
+  /* convert point to node coordinate system */
+  pointf P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
+
+  return INSIDE(P, bbox);
 }
 
 /* record_path:
@@ -3755,17 +3713,14 @@ static bool record_inside(inside_t *inside_context, pointf p) {
  * See poly_path for constraints.
  */
 static int record_path(node_t *n, port *prt, int side, boxf rv[], int *kptr) {
-  int i;
-  double ls, rs;
-  pointf p;
-  field_t *info;
 
   if (!prt->defined)
     return 0;
-  p = prt->p;
-  info = ND_shape_info(n);
 
-  for (i = 0; i < info->n_flds; i++) {
+  pointf p = prt->p;
+  field_t *info = ND_shape_info(n);
+  for (int i = 0; i < info->n_flds; i++) {
+    double ls, rs;
     if (!GD_flip(agraphof(n))) {
       ls = info->fld[i]->b.LL.x;
       rs = info->fld[i]->b.UR.x;
@@ -3773,6 +3728,7 @@ static int record_path(node_t *n, port *prt, int side, boxf rv[], int *kptr) {
       ls = info->fld[i]->b.LL.y;
       rs = info->fld[i]->b.UR.y;
     }
+
     if (BETWEEN(ls, p.x, rs)) {
       /* FIXME: I don't understand this code */
       if (GD_flip(agraphof(n))) {
@@ -3792,18 +3748,17 @@ static int record_path(node_t *n, port *prt, int side, boxf rv[], int *kptr) {
 
 static void gen_fields(output_string *output, SafeLayer *safe_layer,
                        obj_state_t *obj, node_t *n, field_t *f) {
-  int i;
-  pointf AF[2], coord;
-
   if (f->lp) {
     f->lp->pos = add_pointf(mid_pointf(f->b.LL, f->b.UR), ND_coord(n));
     emit_label(output, safe_layer, obj, EMIT_NLABEL, f->lp);
     obj->pencolor = svg_resolve_color(late_nnstring(n, N_color, DEFAULT_COLOR));
   }
 
-  coord = ND_coord(n);
-  for (i = 0; i < f->n_flds; i++) {
+  pointf coord = ND_coord(n);
+  for (int i = 0; i < f->n_flds; i++) {
     if (i > 0) {
+      pointf AF[2];
+
       if (f->LR) {
         AF[0] = f->fld[i]->b.LL;
         AF[1].x = AF[0].x;
@@ -3886,7 +3841,7 @@ static void record_gencode(output_string *output, SafeLayer *safe_layer,
   }
 }
 
-static shape_desc **UserShape;
+static shape_desc **UserShape = NULL;
 static size_t N_UserShape;
 
 shape_desc *bind_shape(char *name, node_t *np) {
@@ -3895,6 +3850,7 @@ shape_desc *bind_shape(char *name, node_t *np) {
   /* If shapefile is defined and not epsf, set shape = custom */
   if (str && !streq(name, "epsf"))
     name = "custom";
+
   if (!streq(name, "custom")) {
     for (shape_desc *ptr = Shapes; ptr->name; ptr++) {
       if (streq(ptr->name, name)) {
@@ -3928,24 +3884,19 @@ shape_desc *bind_shape(char *name, node_t *np) {
 }
 
 static bool epsf_inside(inside_t *inside_context, pointf p) {
-  pointf P;
-  double x2;
   node_t *n = inside_context->s.n;
-
-  P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
-  x2 = ND_ht(n) / 2;
+  pointf P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
+  double x2 = ND_ht(n) / 2;
   return P.y >= -x2 && P.y <= x2 && P.x >= -ND_lw(n) && P.x <= ND_rw(n);
 }
 
 static void epsf_gencode(output_string *output, SafeLayer *safe_layer,
                          obj_state_t *obj, node_t *n) {
-  epsf_t *desc;
-  int doMap = obj->url || obj->explicit_tooltip;
-
-  desc = ND_shape_info(n);
-  if (!desc)
+  epsf_t *desc = ND_shape_info(n);
+  if (desc == NULL)
     return;
 
+  int doMap = obj->url || obj->explicit_tooltip;
   if (doMap) {
     svg_begin_anchor(output, obj->url, obj->tooltip, obj->target, obj->id);
   }
@@ -3969,27 +3920,22 @@ static void epsf_gencode(output_string *output, SafeLayer *safe_layer,
 #define alpha4 (2 * alpha2)
 
 static pointf star_size(pointf sz0) {
-  pointf sz;
-  double r, rx, ry;
-
-  rx = sz0.x / (2 * cos(alpha));
-  ry = sz0.y / (sin(alpha) + sin(alpha3));
+  const double rx = sz0.x / (2 * cos(alpha));
+  const double ry = sz0.y / (sin(alpha) + sin(alpha3));
   const double r0 = fmax(rx, ry);
-  r = r0 * sin(alpha4) * cos(alpha2) / (cos(alpha) * cos(alpha4));
+  const double r = r0 * sin(alpha4) * cos(alpha2) / (cos(alpha) * cos(alpha4));
 
+  pointf sz;
   sz.x = 2 * r * cos(alpha);
   sz.y = r * (1 + sin(alpha3));
   return sz;
 }
 
 static void star_vertices(pointf *vertices, pointf *bb) {
-  int i;
-  pointf sz = *bb;
-  double offset, a, aspect = (1 + sin(alpha3)) / (2 * cos(alpha));
-  double r, r0, theta = alpha;
-
   /* Scale up width or height to required aspect ratio */
-  a = sz.y / sz.x;
+  pointf sz = *bb;
+  double a = sz.y / sz.x;
+  double aspect = (1 + sin(alpha3)) / (2 * cos(alpha));
   if (a > aspect) {
     sz.x = sz.y / aspect;
   } else if (a < aspect) {
@@ -3997,13 +3943,14 @@ static void star_vertices(pointf *vertices, pointf *bb) {
   }
 
   /* for given sz, get radius */
-  r = sz.x / (2 * cos(alpha));
-  r0 = r * cos(alpha) * cos(alpha4) / (sin(alpha4) * cos(alpha2));
+  double r = sz.x / (2 * cos(alpha));
+  double r0 = r * cos(alpha) * cos(alpha4) / (sin(alpha4) * cos(alpha2));
 
   /* offset is the y shift of circle center from bb center */
-  offset = (r * (1 - sin(alpha3))) / 2;
+  double offset = (r * (1 - sin(alpha3))) / 2;
 
-  for (i = 0; i < 10; i += 2) {
+  double theta = alpha;
+  for (int i = 0; i < 10; i += 2) {
     vertices[i].x = r * cos(theta);
     vertices[i].y = r * sin(theta) - offset;
     theta += alpha2;
@@ -4016,26 +3963,22 @@ static void star_vertices(pointf *vertices, pointf *bb) {
 }
 
 static bool star_inside(inside_t *inside_context, pointf p) {
-  size_t sides;
-  pointf *vertex;
-  const pointf O = {0};
-
-  if (!inside_context) {
+  if (inside_context == NULL) {
     return false;
   }
-  boxf *bp = inside_context->s.bp;
-  node_t *n = inside_context->s.n;
-  pointf P, Q, R;
-  int outcnt;
 
-  P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
+  node_t *n = inside_context->s.n;
+  pointf P = ccwrotatepf(p, 90 * GD_rankdir(agraphof(n)));
 
   /* Quick test if port rectangle is target */
-  if (bp) {
+  boxf *bp = inside_context->s.bp;
+  if (bp != NULL) {
     boxf bbox = *bp;
     return INSIDE(P, bbox);
   }
 
+  size_t sides;
+  pointf *vertex;
   if (n != inside_context->s.lastn) {
     inside_context->s.last_poly = ND_shape_info(n);
     vertex = inside_context->s.last_poly->vertices;
@@ -4061,10 +4004,11 @@ static bool star_inside(inside_t *inside_context, pointf p) {
     sides = inside_context->s.last_poly->sides;
   }
 
-  outcnt = 0;
+  int outcnt = 0;
+  const pointf O = {0};
   for (size_t i = 0; i < sides; i += 2) {
-    Q = vertex[i + inside_context->s.outp];
-    R = vertex[(i + 4) % sides + inside_context->s.outp];
+    pointf Q = vertex[i + inside_context->s.outp];
+    pointf R = vertex[(i + 4) % sides + inside_context->s.outp];
     if (!(same_side(P, O, Q, R))) {
       outcnt++;
     }
@@ -4125,10 +4069,10 @@ static void cylinder_vertices(pointf *vertices, pointf *bb) {
 
 static void cylinder_draw(output_string *output, obj_state_t *obj, pointf *AF,
                           size_t sides, svg_fill_type_t fill_type) {
-  pointf vertices[7];
   double y0 = AF[0].y;
   double y02 = y0 + y0;
 
+  pointf vertices[7];
   vertices[0] = AF[0];
   vertices[1].x = AF[1].x;
   vertices[1].y = y02 - AF[1].y;
@@ -4185,17 +4129,11 @@ static pointf cvtPt(pointf p, int rankdir) {
  *     or center. (This latter may require spline routing to cooperate.)
  */
 static const char *closestSide(node_t *n, node_t *other, port *oldport) {
-  boxf b;
-  int rkd = GD_rankdir(agraphof(n)->root);
-  pointf p = {0};
-  const pointf pt = cvtPt(ND_coord(n), rkd);
-  const pointf opt = cvtPt(ND_coord(other), rkd);
   int sides = oldport->side;
-  const char *rv = NULL;
-
   if (sides == 0 || sides == (TOP | BOTTOM | LEFT | RIGHT))
-    return rv; /* use center */
+    return NULL; /* use center */
 
+  boxf b;
   if (oldport->bp) {
     b = *oldport->bp;
   } else {
@@ -4212,10 +4150,16 @@ static const char *closestSide(node_t *n, node_t *other, port *oldport) {
     }
   }
 
+  const int rkd = GD_rankdir(agraphof(n)->root);
+  const pointf pt = cvtPt(ND_coord(n), rkd);
+  const pointf opt = cvtPt(ND_coord(other), rkd);
+
   double mind = 0;
+  const char *rv = NULL;
   for (int i = 0; i < 4; i++) {
     if ((sides & (1 << i)) == 0)
       continue;
+    pointf p = {0};
     switch (i) {
     case BOTTOM_IX:
       p.y = b.LL.y;
@@ -4239,7 +4183,7 @@ static const char *closestSide(node_t *n, node_t *other, port *oldport) {
     p.x += pt.x;
     p.y += pt.y;
     const double d = DIST2(p, opt);
-    if (!rv || d < mind) {
+    if (rv == NULL || d < mind) {
       mind = d;
       rv = side_port[i];
     }
@@ -4248,10 +4192,10 @@ static const char *closestSide(node_t *n, node_t *other, port *oldport) {
 }
 
 port resolvePort(node_t *n, node_t *other, port *oldport) {
-  port rv;
   const char *compass = closestSide(n, other, oldport);
 
   /* transfer name pointer; all other necessary fields will be regenerated */
+  port rv;
   rv.name = oldport->name;
   compassPort(n, oldport->bp, &rv, compass, oldport->side, NULL);
 
