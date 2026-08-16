@@ -1155,12 +1155,12 @@ export function parseDotNumber(value: NormalizedAttributeValue): number {
 
 export function parseDotNumberWithUnits(str: string): [number, string] {
   const lexer = new Lexer(str);
-  const token = lexer.nextToken();
-  if (token.kind !== Kind.Number) {
+  const { kind, start, length, value } = lexer.nextToken();
+  if (kind !== Kind.Number || start.index !== 0) {
     return [Number.NaN, str];
   }
 
-  return [Number.parseFloat(token.value), str.slice(token.length)];
+  return [Number.parseFloat(value), str.slice(length)];
 }
 
 export const { parseDot } = Parser;

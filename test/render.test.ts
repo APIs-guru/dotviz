@@ -432,7 +432,7 @@ describe('render', () => {
       { width: '10cm', height: '20cm' },
       { width: '283px', height: '567px' },
     ],
-  ])('accepts an images of size $0', async ([input, expected]) => {
+  ])('accepts mages of size $0', async ([input, expected]) => {
     const graphDot = 'graph { a[ image="test.png"] }';
 
     const vizJS = await useVizJSInstance();

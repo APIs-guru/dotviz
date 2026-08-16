@@ -3840,7 +3840,7 @@ shape_desc *bind_shape(char *name, node_t *np) {
   *shape = Shapes[0];
   shape->name = strdup(name);
 
-  UserShape = gv_recalloc(UserShape, N_UserShape + 1, N_UserShape,
+  UserShape = gv_recalloc(UserShape, N_UserShape, N_UserShape + 1,
                           sizeof(shape_desc *));
   UserShape[N_UserShape] = shape;
   ++N_UserShape;
