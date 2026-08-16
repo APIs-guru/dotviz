@@ -101,6 +101,10 @@ static char const *next_token(parser_state_t *state) {
   }
 }
 
+static bool match_token_str(char const *start, char const *token) {
+  return strncmp(start, token, strlen(token)) == 0;
+}
+
 typedef struct {
   unsigned int isTapered : 1;
   unsigned int setPen : 1;
@@ -124,25 +128,24 @@ edge_style_t get_edge_style(edge_t *e) {
       continue;
     }
 
-    if (strncmp(start, "tapered", len) == 0) {
+    if (match_token_str(start, "tapered")) {
       style.isTapered = 1;
-    } else if (strncmp(start, "solid", len) == 0) {
+    } else if (match_token_str(start, "solid")) {
       style.setPen = true;
       style.pen = PEN_SOLID;
-    } else if (strncmp(start, "dashed", len) == 0) {
+    } else if (match_token_str(start, "dashed")) {
       style.setPen = true;
       style.pen = PEN_DASHED;
-    } else if (strncmp(start, "dotted", len) == 0) {
+    } else if (match_token_str(start, "dotted")) {
       style.setPen = true;
       style.pen = PEN_DOTTED;
-    } else if (strncmp(start, "invis", len) == 0 ||
-               strncmp(start, "invisible", len) == 0) {
+    } else if (match_token_str(start, "invis") || match_token_str(start, "invisible")) {
       style.setPen = true;
       style.pen = PEN_NONE;
-    } else if (strncmp(start, "bold", len) == 0) {
+    } else if (match_token_str(start, "bold")) {
       style.setPenwidth = true;
       style.penwidth = PENWIDTH_BOLD;
-    } else if (strncmp(start, "setlinewidth", len) == 0) {
+    } else if (match_token_str(start, "setlinewidth")) {
       style.setPenwidth = true;
       style.penwidth = 0;
 
@@ -197,37 +200,36 @@ cluster_style_t get_cluster_style(graph_t *sg) {
   while ((start = next_token(&state)) != NULL) {
     size_t len = state.p - start;
     if (state.in_parens) {
-      agwarningf("get_edge_style: unexpected argument %.*s - ignoring\n",
+      agwarningf("get_cluster_style: unexpected argument %.*s - ignoring\n",
                  (int)len, start);
       continue;
     }
 
-    if (strncmp(start, "filled", len) == 0) {
+    if (match_token_str(start, "filled")) {
       style.isFilled = true;
-    } else if (strncmp(start, "radial", len) == 0) {
+    } else if (match_token_str(start, "radial")) {
       style.isFilled = true;
       style.isRadial = true;
-    } else if (strncmp(start, "striped", len) == 0) {
+    } else if (match_token_str(start, "striped")) {
       style.isStriped = true;
-    } else if (strncmp(start, "rounded", len) == 0) {
+    } else if (match_token_str(start, "rounded")) {
       style.isRounded = true;
-    } else if (strncmp(start, "solid", len) == 0) {
+    } else if (match_token_str(start, "solid")) {
       style.setPen = true;
       style.pen = PEN_SOLID;
-    } else if (strncmp(start, "dashed", len) == 0) {
+    } else if (match_token_str(start, "dashed")) {
       style.setPen = true;
       style.pen = PEN_DASHED;
-    } else if (strncmp(start, "dotted", len) == 0) {
+    } else if (match_token_str(start, "dotted")) {
       style.setPen = true;
       style.pen = PEN_DOTTED;
-    } else if (strncmp(start, "invis", len) == 0 ||
-               strncmp(start, "invisible", len) == 0) {
+    } else if (match_token_str(start, "invis") || match_token_str(start, "invisible")) {
       style.setPen = true;
       style.pen = PEN_NONE;
-    } else if (strncmp(start, "bold", len) == 0) {
+    } else if (match_token_str(start, "bold")) {
       style.setPenwidth = true;
       style.penwidth = PENWIDTH_BOLD;
-    } else if (strncmp(start, "setlinewidth", len) == 0) {
+    } else if (match_token_str(start, "setlinewidth")) {
       style.setPenwidth = true;
       style.penwidth = 0;
 
@@ -238,8 +240,9 @@ cluster_style_t get_cluster_style(graph_t *sg) {
         state = argState;
       }
     } else {
-      agwarningf("get_cluster_style: unsupported edge style %.*s - ignoring\n",
-                 (int)len, start);
+      agwarningf(
+          "get_cluster_style: unsupported cluster style %.*s - ignoring\n",
+          (int)len, start);
     }
   }
   if (state.has_error) {
@@ -248,7 +251,7 @@ cluster_style_t get_cluster_style(graph_t *sg) {
 
   if (G_penwidth) {
     char *penwidth = ag_xget(sg, G_penwidth);
-    if (penwidth != NULL || penwidth[0] != '\0') {
+    if (penwidth != NULL && penwidth[0] != '\0') {
       style.setPenwidth = true;
       style.penwidth = late_double(sg, G_penwidth, 1.0, 0.0);
     }
@@ -275,35 +278,34 @@ node_style_t get_node_style(node_t *n) {
       continue;
     }
 
-    if (strncmp(start, "filled", len) == 0) {
+    if (match_token_str(start, "filled")) {
       style.isFilled = true;
-    } else if (strncmp(start, "rounded", len) == 0) {
+    } else if (match_token_str(start, "rounded")) {
       style.isRounded = true;
-    } else if (strncmp(start, "diagonals", len) == 0) {
+    } else if (match_token_str(start, "diagonals")) {
       style.isDiagonals = true;
-    } else if (strncmp(start, "radial", len) == 0) {
+    } else if (match_token_str(start, "radial")) {
       style.isRadial = true;
-    } else if (strncmp(start, "striped", len) == 0) {
+    } else if (match_token_str(start, "striped")) {
       style.isStriped = true;
-    } else if (strncmp(start, "wedged", len) == 0) {
+    } else if (match_token_str(start, "wedged")) {
       style.isWedged = true;
-    } else if (strncmp(start, "solid", len) == 0) {
+    } else if (match_token_str(start, "solid")) {
       style.setPen = true;
       style.pen = PEN_SOLID;
-    } else if (strncmp(start, "dashed", len) == 0) {
+    } else if (match_token_str(start, "dashed")) {
       style.setPen = true;
       style.pen = PEN_DASHED;
-    } else if (strncmp(start, "dotted", len) == 0) {
+    } else if (match_token_str(start, "dotted")) {
       style.setPen = true;
       style.pen = PEN_DOTTED;
-    } else if (strncmp(start, "invis", len) == 0 ||
-               strncmp(start, "invisible", len) == 0) {
+    } else if (match_token_str(start, "invis") || match_token_str(start, "invisible")) {
       style.setPen = true;
       style.pen = PEN_NONE;
-    } else if (strncmp(start, "bold", len) == 0) {
+    } else if (match_token_str(start, "bold")) {
       style.setPenwidth = true;
       style.penwidth = PENWIDTH_BOLD;
-    } else if (strncmp(start, "setlinewidth", len) == 0) {
+    } else if (match_token_str(start, "setlinewidth")) {
       style.setPenwidth = true;
       style.penwidth = 0;
 
@@ -314,7 +316,7 @@ node_style_t get_node_style(node_t *n) {
         state = argState;
       }
     } else {
-      agwarningf("get_node_style: unsupported edge style %.*s - ignoring\n",
+      agwarningf("get_node_style: unsupported node style %.*s - ignoring\n",
                  (int)len, start);
     }
   }
@@ -323,8 +325,8 @@ node_style_t get_node_style(node_t *n) {
   }
 
   if (N_penwidth) {
-    char* penwidth = ag_xget(n, N_penwidth);
-    if (penwidth != NULL || penwidth[0] != '\0') {
+    char *penwidth = ag_xget(n, N_penwidth);
+    if (penwidth != NULL && penwidth[0] != '\0') {
       style.setPenwidth = true;
       style.penwidth = late_double(n, N_penwidth, 1.0, 0.0);
     }
