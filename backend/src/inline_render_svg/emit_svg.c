@@ -889,39 +889,6 @@ static bool node_in_box(node_t *n, boxf b) { return boxf_overlap(ND_bb(n), b); }
 
 static char *saved_color_scheme;
 
-static void emit_begin_node(output_string *output, SafeLayer *safe_layer,
-                            obj_state_t *obj, node_t *n) {
-  obj->type = NODE_OBJTYPE;
-  obj->u.n = n;
-  obj->emit_state = EMIT_NDRAW;
-  agxbuf xb = {0};
-  char *id = getObjId(safe_layer, n, &xb);
-  obj->id = strdup_and_subst_obj(id, n);
-  agxbfree(&xb);
-  initObjMapData(obj, ND_label(n), n);
-  saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
-
-  out_puts(output, "<g");
-  if (safe_layer->layerNum > 1) {
-    char *idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
-    svg_print_id(output, obj->id, idx);
-  } else
-    svg_print_id(output, obj->id, NULL);
-  svg_print_class(output, "node", n);
-  out_puts(output, ">\n<title>");
-  gvputs_xml(output, agnameof(n));
-  out_puts(output, "</title>\n");
-}
-
-static void emit_end_node(output_string *output) {
-  out_puts(output, "</g>\n");
-
-  char *color_scheme = setColorScheme(saved_color_scheme);
-  free(color_scheme);
-  free(saved_color_scheme);
-  saved_color_scheme = NULL;
-}
-
 static void emit_node(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *parent, node_t *n) {
   int layerNum = safe_layer->layerNum;
@@ -944,14 +911,38 @@ static void emit_node(output_string *output, SafeLayer *safe_layer,
   }
 
   obj_state_t obj = child_obj_state(parent);
-  emit_begin_node(output, safe_layer, &obj, n);
+  obj.type = NODE_OBJTYPE;
+  obj.u.n = n;
+  obj.emit_state = EMIT_NDRAW;
+  agxbuf xb = {0};
+  char *id = getObjId(safe_layer, n, &xb);
+  obj.id = strdup_and_subst_obj(id, n);
+  agxbfree(&xb);
+  initObjMapData(&obj, ND_label(n), n);
+  saved_color_scheme = setColorScheme(agget(n, "colorscheme"));
+
+  out_puts(output, "<g");
+  if (safe_layer->layerNum > 1) {
+    char *idx = safe_layer->safe_job->layerIDs[safe_layer->layerNum];
+    svg_print_id(output, obj.id, idx);
+  } else
+    svg_print_id(output, obj.id, NULL);
+  svg_print_class(output, "node", n);
+  out_puts(output, ">\n<title>");
+  gvputs_xml(output, agnameof(n));
+  out_puts(output, "</title>\n");
+
   ND_shape(n)->fns->codefn(output, safe_layer, &obj, n);
 
   if (ND_xlabel(n) && ND_xlabel(n)->set) {
     emit_label(output, safe_layer, &obj, EMIT_NLABEL, ND_xlabel(n));
   }
+  out_puts(output, "</g>\n");
 
-  emit_end_node(output);
+  char *color_scheme = setColorScheme(saved_color_scheme);
+  free(color_scheme);
+  free(saved_color_scheme);
+  saved_color_scheme = NULL;
   free_child_obj(&obj);
 }
 
