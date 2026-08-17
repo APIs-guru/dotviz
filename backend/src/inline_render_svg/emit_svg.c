@@ -893,11 +893,10 @@ static void emit_node(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *parent, node_t *n) {
   int layerNum = safe_layer->layerNum;
   SafeJob *safe_job = safe_layer->safe_job;
-  if (!ND_shape(n) /* node has a shape */
-      ||
-      !node_in_layer(layerNum, safe_job, agraphof(n), n) /* and is in layer */
-      || !node_in_box(n, safe_job->clip) /* and is in page/view */
-      || ND_state(n) == layerNum)        /* and not already drawn */
+  if (!ND_shape(n) /* node has no shape */
+      || !node_in_layer(layerNum, safe_job, agraphof(n), n) /* node not in layer */
+      || !node_in_box(n, safe_job->clip) /* node not in page/view */
+      || ND_state(n) == layerNum)        /* node already drawn */
     return;
 
   ND_state(n) = layerNum; /* mark node as drawn */
