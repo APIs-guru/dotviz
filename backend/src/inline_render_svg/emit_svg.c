@@ -139,7 +139,8 @@ edge_style_t get_edge_style(edge_t *e) {
     } else if (match_token_str(start, "dotted")) {
       style.setPen = true;
       style.pen = PEN_DOTTED;
-    } else if (match_token_str(start, "invis") || match_token_str(start, "invisible")) {
+    } else if (match_token_str(start, "invis") ||
+               match_token_str(start, "invisible")) {
       style.setPen = true;
       style.pen = PEN_NONE;
     } else if (match_token_str(start, "bold")) {
@@ -223,7 +224,8 @@ cluster_style_t get_cluster_style(graph_t *sg) {
     } else if (match_token_str(start, "dotted")) {
       style.setPen = true;
       style.pen = PEN_DOTTED;
-    } else if (match_token_str(start, "invis") || match_token_str(start, "invisible")) {
+    } else if (match_token_str(start, "invis") ||
+               match_token_str(start, "invisible")) {
       style.setPen = true;
       style.pen = PEN_NONE;
     } else if (match_token_str(start, "bold")) {
@@ -299,7 +301,8 @@ node_style_t get_node_style(node_t *n) {
     } else if (match_token_str(start, "dotted")) {
       style.setPen = true;
       style.pen = PEN_DOTTED;
-    } else if (match_token_str(start, "invis") || match_token_str(start, "invisible")) {
+    } else if (match_token_str(start, "invis") ||
+               match_token_str(start, "invisible")) {
       style.setPen = true;
       style.pen = PEN_NONE;
     } else if (match_token_str(start, "bold")) {
@@ -923,33 +926,33 @@ static void emit_node(output_string *output, SafeLayer *safe_layer,
                       obj_state_t *parent, node_t *n) {
   int layerNum = safe_layer->layerNum;
   SafeJob *safe_job = safe_layer->safe_job;
-  if (ND_shape(n) /* node has a shape */
-      && node_in_layer(layerNum, safe_job, agraphof(n), n) /* and is in layer */
-      && node_in_box(n, safe_job->clip) /* and is in page/view */
-      && ND_state(n) != layerNum)       /* and not already drawn */
-  {
-    ND_state(n) = layerNum; /* mark node as drawn */
+  if (!ND_shape(n) /* node has a shape */
+      ||
+      !node_in_layer(layerNum, safe_job, agraphof(n), n) /* and is in layer */
+      || !node_in_box(n, safe_job->clip) /* and is in page/view */
+      || ND_state(n) == layerNum)        /* and not already drawn */
+    return;
 
-    svg_comment(output, agnameof(n));
-    char *s = late_string(n, N_comment, "");
-    svg_comment(output, s);
+  ND_state(n) = layerNum; /* mark node as drawn */
+  svg_comment(output, agnameof(n));
+  char *s = late_string(n, N_comment, "");
+  svg_comment(output, s);
 
-    node_style_t nodestyles = get_node_style(n);
-    if (nodestyles.setPen && nodestyles.pen == PEN_NONE) {
-      return;
-    }
-
-    obj_state_t obj = child_obj_state(parent);
-    emit_begin_node(output, safe_layer, &obj, n);
-    ND_shape(n)->fns->codefn(output, safe_layer, &obj, n);
-
-    if (ND_xlabel(n) && ND_xlabel(n)->set) {
-      emit_label(output, safe_layer, &obj, EMIT_NLABEL, ND_xlabel(n));
-    }
-
-    emit_end_node(output);
-    free_child_obj(&obj);
+  node_style_t nodestyles = get_node_style(n);
+  if (nodestyles.setPen && nodestyles.pen == PEN_NONE) {
+    return;
   }
+
+  obj_state_t obj = child_obj_state(parent);
+  emit_begin_node(output, safe_layer, &obj, n);
+  ND_shape(n)->fns->codefn(output, safe_layer, &obj, n);
+
+  if (ND_xlabel(n) && ND_xlabel(n)->set) {
+    emit_label(output, safe_layer, &obj, EMIT_NLABEL, ND_xlabel(n));
+  }
+
+  emit_end_node(output);
+  free_child_obj(&obj);
 }
 
 /* calculate an offset vector, length d, perpendicular to line p,q */
